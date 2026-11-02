@@ -150,12 +150,15 @@ describe("shaders", () => {
     expect(src).toContain(`uniform float uT[${CAUSTIC_RATES.length}];`);
   });
 
-  it("samples the tile 2 or 4 times, plus the ray table in deep water", () => {
+  it("samples the tile 2 or 4 times, plus the ray table in deep water with rays", () => {
     const count = (s: string, re: RegExp) => s.match(re)?.length ?? 0;
     expect(count(mainFragment(false, false), /texture\(/g)).toBe(2);
     expect(count(mainFragment(false, true), /texture\(/g)).toBe(4);
     expect(count(mainFragment(true, false), /texture\(/g)).toBe(3);
     expect(count(mainFragment(true, true), /texture\(/g)).toBe(5);
+    expect(count(mainFragment(true, false, false), /texture\(/g)).toBe(2);
+    expect(count(mainFragment(true, true, false), /texture\(/g)).toBe(4);
+    expect(mainFragment(true, false, false)).not.toContain("uRayColor *");
   });
 });
 

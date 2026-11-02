@@ -93,8 +93,9 @@ void main() {
  * Full-screen composite: two REPEAT samples of the tile at different scales,
  * angles and drifts (layer A three times with `chromatic`), over either a tinted
  * pool floor with faint tile grout or a deep-water depth gradient with god rays.
+ * `rays` (deep water only) adds the ray table fetch; without it the variant skips it.
  */
-export function mainFragment(deep: boolean, chromatic: boolean): string {
+export function mainFragment(deep: boolean, chromatic: boolean, rays = deep): string {
   const sampleA = chromatic
     ? `vec3 a = vec3(texture(uTile, ua + uChroma).r, texture(uTile, ua).r, texture(uTile, ua - uChroma).r);`
     : `vec3 a = vec3(texture(uTile, ua).r);`;
@@ -103,9 +104,13 @@ export function mainFragment(deep: boolean, chromatic: boolean): string {
   float y = vUv.y;
   float y2 = y * y;
   vec3 col = mix(uBase, uTop, y2) + uLight * c * (0.1 + 0.9 * y2);
-  // Rays fan out downwards from above the top centre: one fetch of the column table.
+  ${
+    rays
+      ? `// Rays fan out downwards from above the top centre: one fetch of the column table.
   float rx = (vUv.x - 0.5) / (1.0 + (1.0 - y) * 0.8) + 0.5;
   col += uRayColor * (texture(uRays, vec2(rx, 0.5)).r * y2);`
+      : ""
+  }`
     : /* glsl */ `
   vec2 g = fract(p * uGrid.x);
   vec2 e = min(g, 1.0 - g);
@@ -256,11 +261,12 @@ export const caustics = defineEffect({
       // `ensureTile` replaces the tile, so dispose whichever one is current.
       scope.defer(() => tile?.dispose());
 
-      // Four variants: [pool, deep] x [mono, chromatic]; index = deep * 2 + chromatic.
-      const mains = [false, true].flatMap((deep) =>
+      // Six variants: [pool, deep, deep + rays] x [mono, chromatic];
+      // index = scene * 2 + chromatic, so deep water without rays skips the ray fetch.
+      const mains = [0, 1, 2].flatMap((scene) =>
         [false, true].map((chroma) => {
           const program = scope.add(
-            createProgram(gl, FULLSCREEN_VERTEX, mainFragment(deep, chroma)),
+            createProgram(gl, FULLSCREEN_VERTEX, mainFragment(scene > 0, chroma, scene > 1)),
             (p) => gl.deleteProgram(p),
           );
           const u = createUniforms(gl, program, MAIN_UNIFORMS);
@@ -456,7 +462,7 @@ export const caustics = defineEffect({
           gl.bindTexture(gl.TEXTURE_2D, tile?.texture ?? null);
 
           // 3. Full-screen composite.
-          const main = mains[(deep ? 2 : 0) + (p.chromatic > 0 ? 1 : 0)];
+          const main = mains[(deep ? (p.rays ? 4 : 2) : 0) + (p.chromatic > 0 ? 1 : 0)];
           gl.useProgram(main.u.program);
           if (main.version !== version) {
             main.version = version;
