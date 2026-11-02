@@ -9,65 +9,25 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-
-const ENUMS = {
-  FRAMEBUFFER: 0x8d40,
-  DEPTH_TEST: 0x0b71,
-  STENCIL_TEST: 0x0b90,
-  CULL_FACE: 0x0b44,
-  SCISSOR_TEST: 0x0c11,
-  BLEND: 0x0be2,
-  FUNC_ADD: 0x8006,
-} as const;
-
-/** A fake context that applies the state calls `beginFrame` makes to a state object. */
-function fakeGl() {
-  const state = {
-    framebuffer: {} as object | null,
-    viewport: [0, 0, 0, 0],
-    enabled: new Set<number>([
-      ENUMS.DEPTH_TEST,
-      ENUMS.STENCIL_TEST,
-      ENUMS.CULL_FACE,
-      ENUMS.SCISSOR_TEST,
-      ENUMS.BLEND,
-    ]),
-    blendEquation: 0x800b, // FUNC_REVERSE_SUBTRACT
-    colorMask: [false, true, false, true],
-    vertexArray: {} as object | null,
-  };
-  const gl = {
-    ...ENUMS,
-    bindFramebuffer: (target: number, fb: object | null) => {
-      expect(target).toBe(ENUMS.FRAMEBUFFER);
-      state.framebuffer = fb;
-    },
-    viewport: (x: number, y: number, w: number, h: number) => {
-      state.viewport = [x, y, w, h];
-    },
-    enable: (cap: number) => state.enabled.add(cap),
-    disable: (cap: number) => state.enabled.delete(cap),
-    blendEquation: (mode: number) => {
-      state.blendEquation = mode;
-    },
-    colorMask: (r: boolean, g: boolean, b: boolean, a: boolean) => {
-      state.colorMask = [r, g, b, a];
-    },
-    bindVertexArray: (vao: object | null) => {
-      state.vertexArray = vao;
-    },
-  };
-  return { gl: gl as unknown as WebGL2RenderingContext, state };
-}
+import { createFakeGl } from "../test/fake-gl";
 
 describe("beginFrame", () => {
   it("resets everything a crashed or careless effect could leave set", () => {
-    const { gl, state } = fakeGl();
+    const { gl, state } = createFakeGl();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, gl.createFramebuffer());
+    for (const cap of [gl.DEPTH_TEST, gl.STENCIL_TEST, gl.CULL_FACE, gl.SCISSOR_TEST, gl.BLEND]) {
+      gl.enable(cap);
+    }
+    gl.blendEquation(gl.FUNC_REVERSE_SUBTRACT);
+    gl.colorMask(false, true, false, true);
+    gl.bindVertexArray(gl.createVertexArray());
     beginFrame(gl, 3840, 2160);
-    expect(state.framebuffer).toBeNull();
+    expect(state.drawFramebuffer).toBeNull();
+    expect(state.readFramebuffer).toBeNull();
     expect(state.viewport).toEqual([0, 0, 3840, 2160]);
     expect([...state.enabled]).toEqual([]);
-    expect(state.blendEquation).toBe(ENUMS.FUNC_ADD);
+    expect(state.blendEquationRgb).toBe("FUNC_ADD");
+    expect(state.blendEquationAlpha).toBe("FUNC_ADD");
     expect(state.colorMask).toEqual([true, true, true, true]);
     expect(state.vertexArray).toBeNull();
   });
@@ -291,37 +251,27 @@ describe("createRenderTarget", () => {
   });
 
   it("restores the state it changes, so it can run mid-frame", () => {
-    const prevFbo = { id: "prev-fbo" };
-    const prevTex = { id: "prev-tex" };
-    const state: Record<string, unknown> = {
-      FRAMEBUFFER_BINDING: prevFbo,
-      TEXTURE_BINDING_2D: prevTex,
-      VIEWPORT: new Int32Array([1, 2, 300, 200]),
-      COLOR_CLEAR_VALUE: new Float32Array([0.1, 0.2, 0.3, 1]),
-      COLOR_WRITEMASK: [true, false, true, false],
-    };
-    const { gl, calls } = recordingGl({
-      FRAMEBUFFER_COMPLETE: COMPLETE,
-      FRAMEBUFFER_BINDING: "FRAMEBUFFER_BINDING",
-      TEXTURE_BINDING_2D: "TEXTURE_BINDING_2D",
-      VIEWPORT: "VIEWPORT",
-      COLOR_CLEAR_VALUE: "COLOR_CLEAR_VALUE",
-      COLOR_WRITEMASK: "COLOR_WRITEMASK",
-      SCISSOR_TEST: "SCISSOR_TEST",
-      createFramebuffer: () => fbo,
-      checkFramebufferStatus: () => COMPLETE,
-      isContextLost: () => false,
-      getParameter: (k: string) => state[k],
-      isEnabled: (k: string) => k === "SCISSOR_TEST",
-    });
-    createRenderTarget(gl, 64, 32, 7);
-    const last = (name: string) => calls.findLast((c) => c.name === name)!.args;
-    expect(last("bindFramebuffer")[1]).toBe(prevFbo);
-    expect(last("bindTexture")[1]).toBe(prevTex);
-    expect(last("viewport")).toEqual([1, 2, 300, 200]);
-    expect(last("clearColor")).toEqual([...(state.COLOR_CLEAR_VALUE as Float32Array)]);
-    expect(last("colorMask")).toEqual([true, false, true, false]);
-    expect(last("enable")).toEqual(["SCISSOR_TEST"]);
+    const { gl, state, errors, live } = createFakeGl();
+    const prevFbo = gl.createFramebuffer();
+    const prevTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 1, 1);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo);
+    gl.viewport(1, 2, 300, 200);
+    gl.clearColor(0.25, 0.5, 0.75, 1);
+    gl.colorMask(true, false, true, false);
+    gl.enable(gl.SCISSOR_TEST);
+    const t = createRenderTarget(gl, 64, 32, gl.RGBA8)!;
+    expect(t).not.toBeNull();
+    expect(state.drawFramebuffer).toBe(prevFbo);
+    expect(state.textures.get(0)).toBe(prevTex);
+    expect(state.viewport).toEqual([1, 2, 300, 200]);
+    expect(state.clearColor).toEqual([0.25, 0.5, 0.75, 1]);
+    expect(state.colorMask).toEqual([true, false, true, false]);
+    expect(state.enabled.has("SCISSOR_TEST")).toBe(true);
+    t.dispose();
+    expect(live()).toEqual([prevFbo, prevTex]);
+    expect(errors).toEqual([]);
   });
 
   it("deletes everything and returns null when the format isn't renderable", () => {
