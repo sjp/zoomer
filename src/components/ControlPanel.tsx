@@ -138,7 +138,8 @@ export function ControlPanel(props: Props) {
 }
 
 /**
- * Live performance readout. Frame time is the CPU cost of the effect's draw call;
+ * Live performance readout. Frame time is the GPU cost of the effect's draw calls
+ * where the browser supports timer queries, otherwise the CPU cost of issuing them;
  * it turns amber past 75% of the frame budget and red once over it.
  */
 function FpsMeter({
@@ -157,10 +158,16 @@ function FpsMeter({
     <div
       className="fps-meter"
       data-level={level}
-      title="Frames per second, and average time each frame takes to draw"
+      title={
+        current.source === "gpu"
+          ? "Frames per second, and average GPU time each frame takes to draw"
+          : "Frames per second, and average CPU time each frame takes to submit (GPU timing is unavailable in this browser)"
+      }
     >
       <span>{Math.round(current.fps)} fps</span>
-      <span>{current.frameMs.toFixed(1)} ms / frame</span>
+      <span>
+        {current.frameMs.toFixed(1)} {current.source === "gpu" ? "GPU" : "CPU"} ms
+      </span>
     </div>
   );
 }

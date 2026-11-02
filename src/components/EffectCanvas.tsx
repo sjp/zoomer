@@ -8,13 +8,20 @@ import {
 } from "../effects/types";
 import { createFrameLimiter, frameDelta, FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { describeError } from "../lib/errors";
+import { createGpuTimer, type GpuTimer } from "../lib/gpuTimer";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 
 export interface FrameStats {
   /** Frames drawn per second, averaged over the last sample window. */
   fps: number;
-  /** Average CPU time spent inside the effect's `frame` call, in ms. */
+  /**
+   * Average time per frame in ms: GPU time for the effect's commands when the browser
+   * supports timer queries, otherwise CPU time spent inside its `frame` call (which
+   * covers only command submission, so it understates GPU-bound effects).
+   */
   frameMs: number;
+  /** Which clock `frameMs` comes from. */
+  source: "gpu" | "cpu";
 }
 
 /** How often stats are reported, in ms. */
@@ -123,6 +130,28 @@ export function EffectCanvas({
     onErrorRef.current?.(undefined);
     let instance = createInstance(effect, canvas, reportError);
 
+    // Times the effect's GL commands on the GPU, when the browser allows it.
+    let gpuTimer: GpuTimer | undefined;
+    const startGpuTimer = () => {
+      if (!instance || effect.context !== "webgl2") return;
+      try {
+        // Returns the context createInstance already made.
+        const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
+        gpuTimer = gl && !gl.isContextLost() ? createGpuTimer(gl) : undefined;
+      } catch (err) {
+        console.warn("GPU timer unavailable:", err);
+      }
+    };
+    const stopGpuTimer = () => {
+      try {
+        gpuTimer?.dispose();
+      } catch {
+        // Only the meter depends on it.
+      }
+      gpuTimer = undefined;
+    };
+    startGpuTimer();
+
     /**
      * Stops a running effect after it throws, so one bad frame logs once instead of
      * 60-120 times a second. Disposes it (which may itself throw) and tells the UI.
@@ -131,6 +160,7 @@ export function EffectCanvas({
       const failed = instance;
       instance = null;
       console.error(`"${effect.name}" crashed in ${stage}():`, err);
+      stopGpuTimer();
       try {
         failed?.dispose?.();
       } catch (disposeErr) {
@@ -171,9 +201,11 @@ export function EffectCanvas({
     const onLost = (e: Event) => {
       e.preventDefault(); // Required for the browser to ever restore the context.
       instance = null;
+      gpuTimer = undefined; // Its queries went with the context.
     };
     const onRestored = () => {
       instance = createInstance(effect, canvas, reportError);
+      startGpuTimer();
       resizeInstance();
     };
     canvas.addEventListener("webglcontextlost", onLost);
@@ -188,6 +220,8 @@ export function EffectCanvas({
     let statsStart = last;
     let statsFrames = 0;
     let statsWork = 0;
+    // The last GPU average, shown until fresh results arrive (they lag a few frames).
+    let gpuMs: number | undefined;
     // Whether the meter currently shows this effect's stats.
     let statsShown = false;
     const tick = (now: number) => {
@@ -200,6 +234,7 @@ export function EffectCanvas({
         statsStart = now;
         statsFrames = 0;
         statsWork = 0;
+        gpuMs = undefined;
         last = now;
         return;
       }
@@ -207,19 +242,24 @@ export function EffectCanvas({
       const dt = frameDelta(now, last);
       last = now;
       const start = performance.now();
+      gpuTimer?.begin();
       try {
         instance.frame(dt, paramsRef.current);
       } catch (err) {
+        gpuTimer?.end();
         crash("frame", err);
         return;
       }
+      gpuTimer?.end();
       statsWork += performance.now() - start;
       statsFrames++;
       const elapsed = now - statsStart;
       if (elapsed >= STATS_INTERVAL) {
+        gpuMs = gpuTimer?.takeAverage() ?? gpuMs;
         onStatsRef.current?.({
           fps: (statsFrames * 1000) / elapsed,
-          frameMs: statsWork / statsFrames,
+          frameMs: gpuMs ?? statsWork / statsFrames,
+          source: gpuMs === undefined ? "cpu" : "gpu",
         });
         statsShown = true;
         statsStart = now;
@@ -234,6 +274,7 @@ export function EffectCanvas({
       observer?.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);
+      stopGpuTimer();
       try {
         instance?.dispose?.();
       } catch (err) {
