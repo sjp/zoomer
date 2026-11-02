@@ -14,6 +14,7 @@ import {
 import { defineEffect } from "./types";
 import { clamp, smoothstep } from "./math";
 import { createRng } from "./noise";
+import { createChangeKey } from "./change-key";
 
 /** Points per mountain ridge (2^n + 1 for midpoint displacement). */
 const RIDGE_POINTS = 129;
@@ -426,6 +427,8 @@ export const synthwave = defineEffect({
        * Per-row values (sky gradient, sun stripes, horizontal grid lines, haze,
        * scanlines) are the same across each row, so they are computed once per row
        * here rather than once per pixel, and uploaded as a tiny float texture.
+       * They are rebuilt only when an input changes, so a static scene
+       * (speed 0, sway 0) does no CPU work or uploads for them.
        */
       const rowTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
       gl.bindTexture(gl.TEXTURE_2D, rowTex);
@@ -437,6 +440,8 @@ export const synthwave = defineEffect({
       let rows = new Float32Array(0);
       /** Rows allocated in rowTex; 0 forces (re)allocation. */
       let rowCount = 0;
+      /** Every input of the row table besides the palette. */
+      const rowInputs = createChangeKey(13);
 
       const gaps = new Float64Array(SUN_STRIPES * 2);
       const [backStep, frontStep] = getRidgeMaxStep();
@@ -482,6 +487,7 @@ export const synthwave = defineEffect({
             u.v3("uGround", pc.ground);
             u.v3("uGrid", pc.grid);
             u.f3("uVCore", pc.core[0] * 0.9, pc.core[1] * 0.9, pc.core[2] * 0.9);
+            rowInputs.invalidate();
           }
           const c = palette;
 
@@ -530,8 +536,23 @@ export const synthwave = defineEffect({
             rows = new Float32Array(n * ROW_FLOATS);
             rowCount = 0;
           }
+          // Everything the rows are built from (the derived values above follow from these).
+          rowInputs.set(0, n);
+          rowInputs.set(1, height);
+          rowInputs.set(2, hy);
+          rowInputs.set(3, k);
+          rowInputs.set(4, r);
+          rowInputs.set(5, stripePhase);
+          rowInputs.set(6, p.sunStripes ? 1 : 0);
+          rowInputs.set(7, scanPeriod);
+          rowInputs.set(8, p.gridGlow);
+          rowInputs.set(9, p.horizon);
+          rowInputs.set(10, cell);
+          rowInputs.set(11, scroll);
+          rowInputs.set(12, scale);
+          const rebuildRows = rowInputs.take();
           const { skyTop, skyMid, skyBottom, grid, core, haze } = c;
-          for (let row = 0; row < n; row++) {
+          for (let row = 0; rebuildRows && row < n; row++) {
             const y = height - row - 0.5;
             const o = row * ROW_FLOATS;
 
@@ -619,8 +640,10 @@ export const synthwave = defineEffect({
             gl.bindTexture(gl.TEXTURE_2D, rowTex);
             resetUnpackState(gl);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
-          } else {
+          } else if (rebuildRows) {
             updateDataTexture(gl, rowTex, 3, n, gl.RGBA, gl.FLOAT, rows);
+          } else {
+            gl.bindTexture(gl.TEXTURE_2D, rowTex);
           }
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, ridge.texture);
