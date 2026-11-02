@@ -109,6 +109,10 @@ export function App() {
     setPanelHidden(true);
     setHoveringPanel(false);
   }, []);
+  const openPanel = useCallback(() => {
+    setPanelHidden(false);
+    setHoveringPanel(false);
+  }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -192,6 +196,26 @@ export function App() {
           />
         </PanelErrorBoundary>
       </div>
+      {/* The way back to a hidden panel without a keyboard: it fades in on any pointer or
+          touch activity and out again with the idle cursor. */}
+      <button
+        type="button"
+        className="show-panel"
+        data-visible={panelHidden && !idle}
+        aria-label="Show controls"
+        title="Show controls (H)"
+        onClick={openPanel}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path
+            d="M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
     </main>
   );
 }

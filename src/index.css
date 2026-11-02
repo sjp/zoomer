@@ -64,6 +64,34 @@ body,
     visibility 0s 300ms;
 }
 
+.show-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  transition: opacity 300ms ease;
+}
+
+/* Stay opaque on hover; the generic translucent hover would vanish over a bright effect. */
+.show-panel:hover:not(:disabled) {
+  background: rgb(40 44 56 / 0.95);
+}
+
+.show-panel[data-visible="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 300ms ease,
+    visibility 0s 300ms;
+}
+
 .panel {
   width: 300px;
   max-width: calc(100vw - 32px);
