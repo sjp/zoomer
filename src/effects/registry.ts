@@ -35,6 +35,7 @@ import { dapple } from "./dapple";
 import { glass } from "./glass";
 import { smoke } from "./smoke";
 import { sea } from "./sea";
+import { bubbles } from "./bubbles";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -74,6 +75,7 @@ export const effects: readonly EffectDefinition[] = [
   glass,
   smoke,
   sea,
+  bubbles,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
