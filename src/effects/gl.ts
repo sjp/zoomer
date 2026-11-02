@@ -603,8 +603,9 @@ export interface RenderTarget {
  * attached to a new framebuffer, cleared to transparent black. Returns null, having
  * deleted both, if the format isn't renderable here (e.g. `RGBA16F` without
  * `EXT_color_buffer_float`), so callers can fall back to another format.
- * Leaves the default framebuffer bound; the clear changes the viewport, clear
- * colour, scissor test and colour mask, which `beginFrame` resets anyway.
+ * Leaves the GL state it touches as it found it (framebuffer and 2D texture
+ * bindings, viewport, clear colour, scissor test and colour mask), so it can be
+ * called mid-frame, after the caller has set up its own state.
  */
 export function createRenderTarget(
   gl: WebGL2RenderingContext,
@@ -615,6 +616,9 @@ export function createRenderTarget(
 ): RenderTarget | null {
   const filter = options.filter ?? gl.LINEAR;
   const wrap = options.wrap ?? gl.CLAMP_TO_EDGE;
+  // Allocation is rare, so querying the state to restore costs nothing that matters.
+  const prevFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
+  const prevTexture = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
@@ -622,20 +626,28 @@ export function createRenderTarget(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.bindTexture(gl.TEXTURE_2D, prevTexture);
   const framebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
   const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
   if (complete) {
     // Start from known contents rather than whatever the driver hands out.
+    const viewport = gl.getParameter(gl.VIEWPORT) as Int32Array;
+    const clearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE) as Float32Array;
+    const mask = gl.getParameter(gl.COLOR_WRITEMASK) as boolean[];
+    const scissor = gl.isEnabled(gl.SCISSOR_TEST);
     gl.disable(gl.SCISSOR_TEST);
     gl.colorMask(true, true, true, true);
     gl.viewport(0, 0, width, height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    if (scissor) gl.enable(gl.SCISSOR_TEST);
+    gl.colorMask(mask[0], mask[1], mask[2], mask[3]);
+    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
   }
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, prevFramebuffer);
   const dispose = () => {
     gl.deleteFramebuffer(framebuffer);
     gl.deleteTexture(texture);

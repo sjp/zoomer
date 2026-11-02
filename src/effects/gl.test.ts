@@ -269,6 +269,10 @@ describe("createRenderTarget", () => {
       createFramebuffer: () => fbo,
       checkFramebufferStatus: () => status,
       isContextLost: () => lost,
+      // Bindings read back as null; the arrays as empty.
+      getParameter: (k: unknown) => (/BINDING/.test(String(k)) ? null : []),
+      FRAMEBUFFER_BINDING: "FRAMEBUFFER_BINDING",
+      TEXTURE_BINDING_2D: "TEXTURE_BINDING_2D",
     });
 
   it("returns a cleared target of the requested size when complete", () => {
@@ -278,12 +282,46 @@ describe("createRenderTarget", () => {
     expect([t.width, t.height, t.texture, t.framebuffer]).toEqual([64, 32, texture, fbo]);
     expect(calls.find((c) => c.name === "texStorage2D")!.args.slice(1)).toEqual([1, 7, 64, 32]);
     expect(calls.some((c) => c.name === "clear")).toBe(true);
-    // Leaves the default framebuffer bound.
+    // Restores the framebuffer that was bound before: the default one here.
     expect(calls.findLast((c) => c.name === "bindFramebuffer")!.args[1]).toBeNull();
 
     calls.length = 0;
     t.dispose();
     expect(calls.map((c) => c.name).sort()).toEqual(["deleteFramebuffer", "deleteTexture"]);
+  });
+
+  it("restores the state it changes, so it can run mid-frame", () => {
+    const prevFbo = { id: "prev-fbo" };
+    const prevTex = { id: "prev-tex" };
+    const state: Record<string, unknown> = {
+      FRAMEBUFFER_BINDING: prevFbo,
+      TEXTURE_BINDING_2D: prevTex,
+      VIEWPORT: new Int32Array([1, 2, 300, 200]),
+      COLOR_CLEAR_VALUE: new Float32Array([0.1, 0.2, 0.3, 1]),
+      COLOR_WRITEMASK: [true, false, true, false],
+    };
+    const { gl, calls } = recordingGl({
+      FRAMEBUFFER_COMPLETE: COMPLETE,
+      FRAMEBUFFER_BINDING: "FRAMEBUFFER_BINDING",
+      TEXTURE_BINDING_2D: "TEXTURE_BINDING_2D",
+      VIEWPORT: "VIEWPORT",
+      COLOR_CLEAR_VALUE: "COLOR_CLEAR_VALUE",
+      COLOR_WRITEMASK: "COLOR_WRITEMASK",
+      SCISSOR_TEST: "SCISSOR_TEST",
+      createFramebuffer: () => fbo,
+      checkFramebufferStatus: () => COMPLETE,
+      isContextLost: () => false,
+      getParameter: (k: string) => state[k],
+      isEnabled: (k: string) => k === "SCISSOR_TEST",
+    });
+    createRenderTarget(gl, 64, 32, 7);
+    const last = (name: string) => calls.findLast((c) => c.name === name)!.args;
+    expect(last("bindFramebuffer")[1]).toBe(prevFbo);
+    expect(last("bindTexture")[1]).toBe(prevTex);
+    expect(last("viewport")).toEqual([1, 2, 300, 200]);
+    expect(last("clearColor")).toEqual([...(state.COLOR_CLEAR_VALUE as Float32Array)]);
+    expect(last("colorMask")).toEqual([true, false, true, false]);
+    expect(last("enable")).toEqual(["SCISSOR_TEST"]);
   });
 
   it("deletes everything and returns null when the format isn't renderable", () => {

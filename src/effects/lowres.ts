@@ -97,7 +97,9 @@ export function rendersDirect(
 export interface LowResTarget {
   /**
    * Sets the full (canvas) size and divisor. Recreates the texture (cleared to
-   * black) when the low-res size changes; no-op otherwise.
+   * black) when the low-res size changes; no-op otherwise. Leaves the GL state
+   * (viewport, framebuffer, program and so on) as it found it, so it is safe to
+   * call mid-frame.
    */
   resize(width: number, height: number, divisor: number): void;
   /**
@@ -243,8 +245,10 @@ function buildLowResTarget(
       isFloat = rt !== null;
       rt ??= createRenderTarget(gl, lw, lh, gl.RGBA8);
       if (!rt) throw new Error("Low-res target: RGBA8 is not renderable");
+      const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
       gl.useProgram(program);
       gl.uniform2f(uSize, lw, lh);
+      gl.useProgram(prevProgram);
     },
     bind() {
       if (direct) {
