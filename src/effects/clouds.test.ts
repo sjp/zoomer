@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildPresetTable,
   cloudNoiseChannels,
+  CLEAR_COVERAGE,
+  coverageOpacity,
   coverageThreshold,
   createPresetTransition,
   layerUniforms,
@@ -289,5 +291,25 @@ describe("coverageThreshold", () => {
     expect(coverageThreshold(0.5)).toBeGreaterThan(coverageThreshold(1));
     expect(coverageThreshold(-1)).toBe(coverageThreshold(0));
     expect(coverageThreshold(2)).toBe(coverageThreshold(1));
+  });
+});
+
+describe("coverageOpacity", () => {
+  it("clears the sky at coverage 0 and leaves the rest of the range alone", () => {
+    expect(coverageOpacity(0)).toBe(0);
+    expect(coverageOpacity(-1)).toBe(0);
+    expect(coverageOpacity(CLEAR_COVERAGE)).toBe(1);
+    expect(coverageOpacity(0.5)).toBe(1);
+    expect(coverageOpacity(1)).toBe(1);
+  });
+
+  it("fades in smoothly and monotonically", () => {
+    let last = 0;
+    for (let c = 0; c <= CLEAR_COVERAGE; c += CLEAR_COVERAGE / 20) {
+      const v = coverageOpacity(c);
+      expect(v).toBeGreaterThanOrEqual(last);
+      last = v;
+    }
+    expect(coverageOpacity(CLEAR_COVERAGE / 2)).toBeCloseTo(0.5, 6);
   });
 });

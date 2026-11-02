@@ -6,7 +6,7 @@
 
 import { hexToUnitRgb } from "./color";
 import type { NoiseChannel } from "./noise";
-import { fract } from "./math";
+import { fract, smoothstep } from "./math";
 
 // ---------------------------------------------------------------------------
 // Noise texture
@@ -121,6 +121,19 @@ export function layerUniforms(
 export function coverageThreshold(coverage: number): number {
   const c = Math.min(1, Math.max(0, coverage));
   return 2.3 - 3.6 * c;
+}
+
+/** Coverage below which the clouds fade out, so a coverage of 0 is a clear sky. */
+export const CLEAR_COVERAGE = 0.05;
+
+/**
+ * Cloud opacity factor for a coverage of 0..1. The threshold alone never clears
+ * the sky: at coverage 0 it is only ~2.3 standard deviations, and the noise's
+ * peaks (more so with the A/B contrast fix) still poke through as wisps. So the
+ * last `CLEAR_COVERAGE` of the slider fades them out: 0 at 0, 1 from there up.
+ */
+export function coverageOpacity(coverage: number): number {
+  return smoothstep(0, CLEAR_COVERAGE, coverage);
 }
 
 // ---------------------------------------------------------------------------

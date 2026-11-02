@@ -1,6 +1,7 @@
 import {
   buildPresetTable,
   cloudNoiseChannels,
+  coverageOpacity,
   coverageThreshold,
   createPresetTransition,
   LAYER_FLOATS,
@@ -285,7 +286,8 @@ export const clouds = defineEffect({
           gl.useProgram(program);
           u.f1("uThreshold", coverageThreshold(p.coverage));
           u.i1("uLayers", layers);
-          layerUniforms(offA, detail, layerP, 0, 0, driftNear, evolve, freq, OPACITY[0]);
+          const cover = coverageOpacity(p.coverage);
+          layerUniforms(offA, detail, layerP, 0, 0, driftNear, evolve, freq, OPACITY[0] * cover);
           layerUniforms(
             offA,
             detail,
@@ -295,7 +297,7 @@ export const clouds = defineEffect({
             driftFar,
             evolve,
             freq * FAR_FREQ,
-            OPACITY[1] * farFade,
+            OPACITY[1] * farFade * cover,
           );
           gl.uniform4fv(u.loc.uOffA, offA);
           gl.uniform4fv(u.loc.uDetail, detail);
