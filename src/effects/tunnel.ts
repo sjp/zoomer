@@ -6,6 +6,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createNoise, fbmPeriodic2 } from "./noise";
 import { defineEffect } from "./types";
@@ -228,129 +229,132 @@ export const tunnel = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT);
-    const triangle = createFullscreenTriangle(gl);
-    const texture = createDataTexture(gl, {
-      width: TEX,
-      height: TEX,
-      // R16F is filterable in core WebGL2 and accepts FLOAT data; R32F is not.
-      internalFormat: gl.R16F,
-      format: gl.RED,
-      type: gl.FLOAT,
-      data: getTextureData(),
-      wrap: gl.REPEAT,
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const texture = scope.add(
+        createDataTexture(gl, {
+          width: TEX,
+          height: TEX,
+          // R16F is filterable in core WebGL2 and accepts FLOAT data; R32F is not.
+          internalFormat: gl.R16F,
+          format: gl.RED,
+          type: gl.FLOAT,
+          data: getTextureData(),
+          wrap: gl.REPEAT,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      const loc = getUniforms(gl, program, [
+        "uTex",
+        "uPixScale",
+        "uPixOffset",
+        "uBend",
+        "uScroll",
+        "uSpiral",
+        "uRings",
+        "uGain",
+        "uColor1",
+        "uColor2",
+        "uRamp12",
+        "uRamp23",
+        "uGlow",
+      ]);
+      // The sampler unit never changes; uniforms persist with the program even in a shared context.
+      gl.useProgram(program);
+      gl.uniform1i(loc.uTex, 0);
+
+      let width = 1;
+      let height = 1;
+      /** Seconds since start, kept in float64 on the CPU; only its sines reach the GPU. */
+      let time = 0;
+      // Scroll offsets in texels, wrapped to [0, TEX) so float32 uniforms stay precise.
+      let vOff = 0;
+      let uOff = 0;
+      let spiralOff = 0;
+      // Last uploaded values of the uniforms that only change with resize or params.
+      let sizeDirty = true;
+      let lastSpiral = NaN;
+      let lastRings = NaN;
+      let lastBrightness = NaN;
+      let lastCore = "";
+      let lastColor1 = "";
+      let lastColor2 = "";
+      let lastColor3 = "";
+
+      return {
+        resize(v) {
+          width = v.width;
+          height = v.height;
+          sizeDirty = true;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time += dt;
+          const dv = p.speed * SPEED_TEX * dt;
+          vOff = wrap(vOff + dv);
+          uOff = wrap(uOff + (p.twist / 60) * U_REPS * TEX * dt);
+          const spk = p.spiral * SPIRAL_K;
+          spiralOff = wrap(spiralOff + spk * dv);
+
+          // Slow lissajous wander of the vanishing point, in frame heights.
+          const amp = p.bend * BEND_MAX;
+          const ox = amp * Math.sin(time * 0.19) * Math.cos(time * 0.07);
+          const oy = amp * 0.75 * Math.sin(time * 0.27 + 1.3);
+
+          gl.useProgram(program);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          if (sizeDirty) {
+            sizeDirty = false;
+            const h = Math.max(1, height);
+            gl.uniform2f(loc.uPixScale, 1 / h, -1 / h);
+            gl.uniform2f(loc.uPixOffset, (-0.5 * width) / h, 0.5);
+          }
+          gl.uniform2f(loc.uBend, ox, oy);
+          // Tile units; the atan half-turn and the half-texel centring ride along in u.
+          const su = wrap(uOff + spiralOff + 0.5 + 0.5 * U_REPS * TEX);
+          gl.uniform2f(loc.uScroll, su / TEX, vOff / TEX);
+          if (spk !== lastSpiral) {
+            lastSpiral = spk;
+            gl.uniform1f(loc.uSpiral, spk);
+          }
+          if (p.rings !== lastRings) {
+            lastRings = p.rings;
+            gl.uniform1f(loc.uRings, p.rings);
+          }
+          if (
+            p.color1 !== lastColor1 ||
+            p.color2 !== lastColor2 ||
+            p.color3 !== lastColor3 ||
+            p.core !== lastCore ||
+            p.brightness !== lastBrightness
+          ) {
+            lastColor1 = p.color1;
+            lastColor2 = p.color2;
+            lastColor3 = p.color3;
+            lastCore = p.core;
+            lastBrightness = p.brightness;
+            const c1 = hexToUnitRgb(p.color1);
+            const c2 = hexToUnitRgb(p.color2);
+            const c3 = hexToUnitRgb(p.color3);
+            gl.uniform3fv(loc.uColor1, c1);
+            gl.uniform3fv(loc.uColor2, c2);
+            gl.uniform3f(loc.uRamp12, c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
+            gl.uniform3f(loc.uRamp23, c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
+            gl.uniform2f(loc.uGain, 0.85 * p.brightness, 0.2 * p.brightness);
+            // The core glow leans colour 3 towards white, pre-multiplied by its gain.
+            const bright = p.core !== "dark";
+            const glow = mixRgb(hexToRgb(p.color3), [255, 255, 255], 0.55);
+            const gain = bright ? (1.15 * p.brightness) / 255 : 0;
+            gl.uniform3f(loc.uGlow, glow[0] * gain, glow[1] * gain, glow[2] * gain);
+          }
+          triangle.draw();
+        },
+        dispose: () => scope.dispose(),
+      };
     });
-    const loc = getUniforms(gl, program, [
-      "uTex",
-      "uPixScale",
-      "uPixOffset",
-      "uBend",
-      "uScroll",
-      "uSpiral",
-      "uRings",
-      "uGain",
-      "uColor1",
-      "uColor2",
-      "uRamp12",
-      "uRamp23",
-      "uGlow",
-    ]);
-    // The sampler unit never changes; uniforms persist with the program even in a shared context.
-    gl.useProgram(program);
-    gl.uniform1i(loc.uTex, 0);
-
-    let width = 1;
-    let height = 1;
-    /** Seconds since start, kept in float64 on the CPU; only its sines reach the GPU. */
-    let time = 0;
-    // Scroll offsets in texels, wrapped to [0, TEX) so float32 uniforms stay precise.
-    let vOff = 0;
-    let uOff = 0;
-    let spiralOff = 0;
-    // Last uploaded values of the uniforms that only change with resize or params.
-    let sizeDirty = true;
-    let lastSpiral = NaN;
-    let lastRings = NaN;
-    let lastBrightness = NaN;
-    let lastCore = "";
-    let lastColor1 = "";
-    let lastColor2 = "";
-    let lastColor3 = "";
-
-    return {
-      resize(v) {
-        width = v.width;
-        height = v.height;
-        sizeDirty = true;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        time += dt;
-        const dv = p.speed * SPEED_TEX * dt;
-        vOff = wrap(vOff + dv);
-        uOff = wrap(uOff + (p.twist / 60) * U_REPS * TEX * dt);
-        const spk = p.spiral * SPIRAL_K;
-        spiralOff = wrap(spiralOff + spk * dv);
-
-        // Slow lissajous wander of the vanishing point, in frame heights.
-        const amp = p.bend * BEND_MAX;
-        const ox = amp * Math.sin(time * 0.19) * Math.cos(time * 0.07);
-        const oy = amp * 0.75 * Math.sin(time * 0.27 + 1.3);
-
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        if (sizeDirty) {
-          sizeDirty = false;
-          const h = Math.max(1, height);
-          gl.uniform2f(loc.uPixScale, 1 / h, -1 / h);
-          gl.uniform2f(loc.uPixOffset, (-0.5 * width) / h, 0.5);
-        }
-        gl.uniform2f(loc.uBend, ox, oy);
-        // Tile units; the atan half-turn and the half-texel centring ride along in u.
-        const su = wrap(uOff + spiralOff + 0.5 + 0.5 * U_REPS * TEX);
-        gl.uniform2f(loc.uScroll, su / TEX, vOff / TEX);
-        if (spk !== lastSpiral) {
-          lastSpiral = spk;
-          gl.uniform1f(loc.uSpiral, spk);
-        }
-        if (p.rings !== lastRings) {
-          lastRings = p.rings;
-          gl.uniform1f(loc.uRings, p.rings);
-        }
-        if (
-          p.color1 !== lastColor1 ||
-          p.color2 !== lastColor2 ||
-          p.color3 !== lastColor3 ||
-          p.core !== lastCore ||
-          p.brightness !== lastBrightness
-        ) {
-          lastColor1 = p.color1;
-          lastColor2 = p.color2;
-          lastColor3 = p.color3;
-          lastCore = p.core;
-          lastBrightness = p.brightness;
-          const c1 = hexToUnitRgb(p.color1);
-          const c2 = hexToUnitRgb(p.color2);
-          const c3 = hexToUnitRgb(p.color3);
-          gl.uniform3fv(loc.uColor1, c1);
-          gl.uniform3fv(loc.uColor2, c2);
-          gl.uniform3f(loc.uRamp12, c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
-          gl.uniform3f(loc.uRamp23, c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
-          gl.uniform2f(loc.uGain, 0.85 * p.brightness, 0.2 * p.brightness);
-          // The core glow leans colour 3 towards white, pre-multiplied by its gain.
-          const bright = p.core !== "dark";
-          const glow = mixRgb(hexToRgb(p.color3), [255, 255, 255], 0.55);
-          const gain = bright ? (1.15 * p.brightness) / 255 : 0;
-          gl.uniform3f(loc.uGlow, glow[0] * gain, glow[1] * gain, glow[2] * gain);
-        }
-        triangle.draw();
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteTexture(texture);
-        triangle.dispose();
-      },
-    };
   },
 });

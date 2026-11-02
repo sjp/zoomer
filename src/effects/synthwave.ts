@@ -7,6 +7,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
+  withScope,
 } from "./gl";
 import { defineEffect } from "./types";
 
@@ -383,274 +384,276 @@ export const synthwave = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT);
-    const triangle = createFullscreenTriangle(gl);
-    const ridgeTex = createDataTexture(gl, {
-      width: RIDGE_POINTS,
-      height: 2,
-      // R16F is filterable in core WebGL2 and accepts FLOAT data; R32F is not.
-      internalFormat: gl.R16F,
-      format: gl.RED,
-      type: gl.FLOAT,
-      data: getRidgeData(),
-    });
-    const loc = getUniforms(gl, program, [
-      "uResolution",
-      "uHorizon",
-      "uCamX",
-      "uRows",
-      "uSun",
-      "uSunClip",
-      "uSunTop",
-      "uSunBottom",
-      "uSunGlowColor",
-      "uSunGlow",
-      "uRidge",
-      "uRidgeSpan",
-      "uRidgeShift",
-      "uRidgeHeight",
-      "uMountains",
-      "uMountainTop",
-      "uBackColor",
-      "uGround",
-      "uGrid",
-      "uVGlow",
-      "uVCore",
-      "uEdgeWidth",
-      "uLine",
-      "uCell",
-      "uInvCell",
-      "uLines",
-    ]);
-    // Uniforms live in the program, so constant ones are set once (or on change).
-    gl.useProgram(program);
-    gl.uniform1i(loc.uRidge, 0);
-    gl.uniform1i(loc.uRows, 1);
-    gl.useProgram(null);
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const ridgeTex = scope.add(
+        createDataTexture(gl, {
+          width: RIDGE_POINTS,
+          height: 2,
+          // R16F is filterable in core WebGL2 and accepts FLOAT data; R32F is not.
+          internalFormat: gl.R16F,
+          format: gl.RED,
+          type: gl.FLOAT,
+          data: getRidgeData(),
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      const loc = getUniforms(gl, program, [
+        "uResolution",
+        "uHorizon",
+        "uCamX",
+        "uRows",
+        "uSun",
+        "uSunClip",
+        "uSunTop",
+        "uSunBottom",
+        "uSunGlowColor",
+        "uSunGlow",
+        "uRidge",
+        "uRidgeSpan",
+        "uRidgeShift",
+        "uRidgeHeight",
+        "uMountains",
+        "uMountainTop",
+        "uBackColor",
+        "uGround",
+        "uGrid",
+        "uVGlow",
+        "uVCore",
+        "uEdgeWidth",
+        "uLine",
+        "uCell",
+        "uInvCell",
+        "uLines",
+      ]);
+      // Uniforms live in the program, so constant ones are set once (or on change).
+      gl.useProgram(program);
+      gl.uniform1i(loc.uRidge, 0);
+      gl.uniform1i(loc.uRows, 1);
+      gl.useProgram(null);
 
-    /*
-     * Per-row values (sky gradient, sun stripes, horizontal grid lines, haze,
-     * scanlines) are the same across each row, so they are computed once per row
-     * here rather than once per pixel, and uploaded as a tiny float texture.
-     */
-    const rowTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, rowTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    let rows = new Float32Array(0);
-    /** Rows allocated in rowTex; 0 forces (re)allocation. */
-    let rowCount = 0;
+      /*
+       * Per-row values (sky gradient, sun stripes, horizontal grid lines, haze,
+       * scanlines) are the same across each row, so they are computed once per row
+       * here rather than once per pixel, and uploaded as a tiny float texture.
+       */
+      const rowTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      gl.bindTexture(gl.TEXTURE_2D, rowTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      let rows = new Float32Array(0);
+      /** Rows allocated in rowTex; 0 forces (re)allocation. */
+      let rowCount = 0;
 
-    const gaps = new Float64Array(SUN_STRIPES * 2);
-    const [backStep, frontStep] = getRidgeMaxStep();
-    let palette: Palette | undefined;
+      const gaps = new Float64Array(SUN_STRIPES * 2);
+      const [backStep, frontStep] = getRidgeMaxStep();
+      let palette: Palette | undefined;
 
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    /** Grid scroll in world units, kept wrapped to one cell. */
-    let scroll = 0;
-    /** Sun stripe drift phase, 0..1. */
-    let stripePhase = 0;
-    /** Seconds for the camera sway, in float64; only its sines reach the GPU. */
-    let time = 0;
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      /** Grid scroll in world units, kept wrapped to one cell. */
+      let scroll = 0;
+      /** Sun stripe drift phase, 0..1. */
+      let stripePhase = 0;
+      /** Seconds for the camera sway, in float64; only its sines reach the GPU. */
+      let time = 0;
 
-    return {
-      resize(v) {
-        ({ width, height, scale } = v);
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        const cell = p.gridSize;
-        scroll = (scroll + dt * p.speed * 1.2) % cell;
-        stripePhase = (stripePhase + dt * p.speed * 0.06) % 1;
-        time += dt;
+      return {
+        resize(v) {
+          ({ width, height, scale } = v);
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          const cell = p.gridSize;
+          scroll = (scroll + dt * p.speed * 1.2) % cell;
+          stripePhase = (stripePhase + dt * p.speed * 0.06) % 1;
+          time += dt;
 
-        gl.useProgram(program);
+          gl.useProgram(program);
 
-        // Colours only change when the params do, so parse, mix and upload them once.
-        const key = `${p.skyTop}|${p.skyBottom}|${p.gridColor}|${p.sunTop}|${p.sunBottom}`;
-        if (palette?.key !== key) {
-          palette = buildPalette(key, p.skyTop, p.skyBottom, p.gridColor, p.sunTop, p.sunBottom);
-          const pc = palette;
-          gl.uniform3fv(loc.uSunTop, pc.sunTop);
-          gl.uniform3fv(loc.uSunBottom, pc.sunBottom);
-          gl.uniform3fv(loc.uSunGlowColor, pc.sunGlow);
-          gl.uniform3fv(loc.uBackColor, pc.backColor);
-          gl.uniform3fv(loc.uGround, pc.ground);
-          gl.uniform3fv(loc.uGrid, pc.grid);
-          gl.uniform3f(loc.uVCore, pc.core[0] * 0.9, pc.core[1] * 0.9, pc.core[2] * 0.9);
-        }
-        const c = palette;
-
-        // Camera: gentle vertical bob and sideways drift.
-        const baseHorizon = height * (1 - p.horizon);
-        const hy = baseHorizon + Math.sin(time * 0.37) * 10 * scale * p.sway;
-        const camX = Math.sin(time * 0.23) * 0.6 * p.sway;
-        const vpx = width / 2;
-        const k = height - baseHorizon;
-
-        const r = p.sunSize * height;
-        const sunY = hy - r * 0.45;
-        const sunTop = sunY - r;
-        const sunClip = Math.min(sunY + r, hy + 1);
-        // Cut-out gaps drift downward and widen toward the bottom of the sun.
-        const regionTop = sunY - r * 0.15;
-        const regionH = sunY + r - regionTop;
-        const maxGap = (regionH / SUN_STRIPES) * 0.75;
-        for (let i = 0; i < SUN_STRIPES; i++) {
-          const u = (i + stripePhase) / SUN_STRIPES;
-          const centre = regionTop + u * regionH;
-          const gap = p.sunStripes ? maxGap * u * u * 0.4 + maxGap * u * 0.6 : 0;
-          // Clipped to the disc's drawn span, as the coverage below needs.
-          gaps[i * 2] = Math.max(centre - gap / 2, sunTop);
-          gaps[i * 2 + 1] = Math.min(centre + gap / 2, sunClip);
-        }
-
-        // Horizontal lines sit at Z_FAR - ((Z_FAR + scroll) % cell) - m * cell.
-        const zTop = Z_FAR - ((Z_FAR + scroll) % cell);
-        const zPhase = zTop % cell;
-        const zMax = zTop + cell / 2;
-        const yFar = hy + k / Z_FAR;
-        const halfWorld = ((width / 2) * Z_VISIBLE) / k + Math.abs(camX);
-        const lines = Math.min(MAX_VERTICAL_LINES, Math.ceil(halfWorld / cell));
-        const scanPeriod = p.scanlines ? Math.max(2, Math.round(4 * scale)) : 0;
-        const scanThick = Math.max(1, Math.round(scanPeriod / 2));
-        const glowW = (2 + 10 * p.gridGlow) * scale;
-        const coreW = 1.6 * scale;
-        const glowA = 0.22 * p.gridGlow;
-        const hazeH = height * 0.07;
-        const groundH = height - hy;
-
-        // Per-row values, bottom row first (gl_FragCoord.y = r + 0.5).
-        const n = Math.max(1, Math.ceil(height));
-        if (n !== rowCount) {
-          rows = new Float32Array(n * ROW_FLOATS);
-          rowCount = 0;
-        }
-        const { skyTop, skyMid, skyBottom, grid, core, haze } = c;
-        for (let row = 0; row < n; row++) {
-          const y = height - row - 0.5;
-          const o = row * ROW_FLOATS;
-
-          // Sky gradient and sun stripe coverage.
-          const t = clamp(y / hy, 0, 1);
-          const lo = t < 0.55 ? skyTop : skyMid;
-          const hi = t < 0.55 ? skyMid : skyBottom;
-          const u = t < 0.55 ? t / 0.55 : (t - 0.55) / 0.45;
-          rows[o] = lo[0] + (hi[0] - lo[0]) * u;
-          rows[o + 1] = lo[1] + (hi[1] - lo[1]) * u;
-          rows[o + 2] = lo[2] + (hi[2] - lo[2]) * u;
-          let cy = 0;
-          if (y < sunClip + 1) {
-            cy = overlap(sunTop, sunClip, y);
-            for (let i = 0; i < SUN_STRIPES * 2; i += 2) cy -= overlap(gaps[i], gaps[i + 1], y);
+          // Colours only change when the params do, so parse, mix and upload them once.
+          const key = `${p.skyTop}|${p.skyBottom}|${p.gridColor}|${p.sunTop}|${p.sunBottom}`;
+          if (palette?.key !== key) {
+            palette = buildPalette(key, p.skyTop, p.skyBottom, p.gridColor, p.sunTop, p.sunBottom);
+            const pc = palette;
+            gl.uniform3fv(loc.uSunTop, pc.sunTop);
+            gl.uniform3fv(loc.uSunBottom, pc.sunBottom);
+            gl.uniform3fv(loc.uSunGlowColor, pc.sunGlow);
+            gl.uniform3fv(loc.uBackColor, pc.backColor);
+            gl.uniform3fv(loc.uGround, pc.ground);
+            gl.uniform3fv(loc.uGrid, pc.grid);
+            gl.uniform3f(loc.uVCore, pc.core[0] * 0.9, pc.core[1] * 0.9, pc.core[2] * 0.9);
           }
-          rows[o + 3] = clamp(cy, 0, 1);
+          const c = palette;
 
-          // Haze, then scanlines: (mix(col, haze, h)) * s = col * a + rgb.
-          const h = 0.45 * Math.max(0, 1 - Math.abs(y - hy) / hazeH);
-          const s = scanPeriod > 0 && Math.floor(y) % scanPeriod < scanThick ? 0.84 : 1;
-          rows[o + 4] = haze[0] * h * s;
-          rows[o + 5] = haze[1] * h * s;
-          rows[o + 6] = haze[2] * h * s;
-          rows[o + 7] = (1 - h) * s;
+          // Camera: gentle vertical bob and sideways drift.
+          const baseHorizon = height * (1 - p.horizon);
+          const hy = baseHorizon + Math.sin(time * 0.37) * 10 * scale * p.sway;
+          const camX = Math.sin(time * 0.23) * 0.6 * p.sway;
+          const vpx = width / 2;
+          const k = height - baseHorizon;
 
-          // Horizontal grid lines at evenly spaced depths. Separate strokes in 2D, so they add.
-          const dy = y - hy;
-          let hg = 0;
-          let hc = 0;
-          let vmask = 0;
-          if (dy > 0) {
-            const tv = dy / groundH;
-            const fv =
-              tv < 0.08 ? (tv / 0.08) * 0.25 : Math.min(1, 0.25 + ((tv - 0.08) / 0.22) * 0.75);
-            vmask = clamp(y + 0.5 - yFar, 0, 1) * fv;
-            const z = k / dy;
-            const j0 = Math.floor((z - zPhase) / cell);
-            for (let j = j0 - 2; j <= j0 + 2; j++) {
-              const zj = zPhase + j * cell;
-              if (zj <= 0 || zj >= zMax) continue;
-              const yj = hy + k / zj;
-              const th = clamp(1.2 / zj, 0.35, 1.8);
-              const fade = smoothstep(0, 0.3, (yj - hy) / groundH);
-              hg += fade * lineCov(y - yj, glowW * th);
-              hc += fade * lineCov(y - yj, coreW * th);
+          const r = p.sunSize * height;
+          const sunY = hy - r * 0.45;
+          const sunTop = sunY - r;
+          const sunClip = Math.min(sunY + r, hy + 1);
+          // Cut-out gaps drift downward and widen toward the bottom of the sun.
+          const regionTop = sunY - r * 0.15;
+          const regionH = sunY + r - regionTop;
+          const maxGap = (regionH / SUN_STRIPES) * 0.75;
+          for (let i = 0; i < SUN_STRIPES; i++) {
+            const u = (i + stripePhase) / SUN_STRIPES;
+            const centre = regionTop + u * regionH;
+            const gap = p.sunStripes ? maxGap * u * u * 0.4 + maxGap * u * 0.6 : 0;
+            // Clipped to the disc's drawn span, as the coverage below needs.
+            gaps[i * 2] = Math.max(centre - gap / 2, sunTop);
+            gaps[i * 2 + 1] = Math.min(centre + gap / 2, sunClip);
+          }
+
+          // Horizontal lines sit at Z_FAR - ((Z_FAR + scroll) % cell) - m * cell.
+          const zTop = Z_FAR - ((Z_FAR + scroll) % cell);
+          const zPhase = zTop % cell;
+          const zMax = zTop + cell / 2;
+          const yFar = hy + k / Z_FAR;
+          const halfWorld = ((width / 2) * Z_VISIBLE) / k + Math.abs(camX);
+          const lines = Math.min(MAX_VERTICAL_LINES, Math.ceil(halfWorld / cell));
+          const scanPeriod = p.scanlines ? Math.max(2, Math.round(4 * scale)) : 0;
+          const scanThick = Math.max(1, Math.round(scanPeriod / 2));
+          const glowW = (2 + 10 * p.gridGlow) * scale;
+          const coreW = 1.6 * scale;
+          const glowA = 0.22 * p.gridGlow;
+          const hazeH = height * 0.07;
+          const groundH = height - hy;
+
+          // Per-row values, bottom row first (gl_FragCoord.y = r + 0.5).
+          const n = Math.max(1, Math.ceil(height));
+          if (n !== rowCount) {
+            rows = new Float32Array(n * ROW_FLOATS);
+            rowCount = 0;
+          }
+          const { skyTop, skyMid, skyBottom, grid, core, haze } = c;
+          for (let row = 0; row < n; row++) {
+            const y = height - row - 0.5;
+            const o = row * ROW_FLOATS;
+
+            // Sky gradient and sun stripe coverage.
+            const t = clamp(y / hy, 0, 1);
+            const lo = t < 0.55 ? skyTop : skyMid;
+            const hi = t < 0.55 ? skyMid : skyBottom;
+            const u = t < 0.55 ? t / 0.55 : (t - 0.55) / 0.45;
+            rows[o] = lo[0] + (hi[0] - lo[0]) * u;
+            rows[o + 1] = lo[1] + (hi[1] - lo[1]) * u;
+            rows[o + 2] = lo[2] + (hi[2] - lo[2]) * u;
+            let cy = 0;
+            if (y < sunClip + 1) {
+              cy = overlap(sunTop, sunClip, y);
+              for (let i = 0; i < SUN_STRIPES * 2; i += 2) cy -= overlap(gaps[i], gaps[i + 1], y);
             }
-            // Where lines crowd closer than a pixel, fade to their average coverage.
-            const spacingH = (k * cell) / (z * z);
-            const thz = clamp(1.2 / z, 0.35, 1.8);
-            const avgH =
-              ((smoothstep(0, 0.3, tv) * thz) / spacingH) * clamp((zMax - z) / cell, 0, 1);
-            const mg = smoothstep(3, 4, (glowW * thz + 1) / spacingH);
-            const mc = smoothstep(3, 4, (coreW * thz + 1) / spacingH);
-            hg = (hg + (avgH * glowW - hg) * mg) * glowA;
-            hc = (hc + (avgH * coreW - hc) * mc) * 0.9;
+            rows[o + 3] = clamp(cy, 0, 1);
+
+            // Haze, then scanlines: (mix(col, haze, h)) * s = col * a + rgb.
+            const h = 0.45 * Math.max(0, 1 - Math.abs(y - hy) / hazeH);
+            const s = scanPeriod > 0 && Math.floor(y) % scanPeriod < scanThick ? 0.84 : 1;
+            rows[o + 4] = haze[0] * h * s;
+            rows[o + 5] = haze[1] * h * s;
+            rows[o + 6] = haze[2] * h * s;
+            rows[o + 7] = (1 - h) * s;
+
+            // Horizontal grid lines at evenly spaced depths. Separate strokes in 2D, so they add.
+            const dy = y - hy;
+            let hg = 0;
+            let hc = 0;
+            let vmask = 0;
+            if (dy > 0) {
+              const tv = dy / groundH;
+              const fv =
+                tv < 0.08 ? (tv / 0.08) * 0.25 : Math.min(1, 0.25 + ((tv - 0.08) / 0.22) * 0.75);
+              vmask = clamp(y + 0.5 - yFar, 0, 1) * fv;
+              const z = k / dy;
+              const j0 = Math.floor((z - zPhase) / cell);
+              for (let j = j0 - 2; j <= j0 + 2; j++) {
+                const zj = zPhase + j * cell;
+                if (zj <= 0 || zj >= zMax) continue;
+                const yj = hy + k / zj;
+                const th = clamp(1.2 / zj, 0.35, 1.8);
+                const fade = smoothstep(0, 0.3, (yj - hy) / groundH);
+                hg += fade * lineCov(y - yj, glowW * th);
+                hc += fade * lineCov(y - yj, coreW * th);
+              }
+              // Where lines crowd closer than a pixel, fade to their average coverage.
+              const spacingH = (k * cell) / (z * z);
+              const thz = clamp(1.2 / z, 0.35, 1.8);
+              const avgH =
+                ((smoothstep(0, 0.3, tv) * thz) / spacingH) * clamp((zMax - z) / cell, 0, 1);
+              const mg = smoothstep(3, 4, (glowW * thz + 1) / spacingH);
+              const mc = smoothstep(3, 4, (coreW * thz + 1) / spacingH);
+              hg = (hg + (avgH * glowW - hg) * mg) * glowA;
+              hc = (hc + (avgH * coreW - hc) * mc) * 0.9;
+            }
+            rows[o + 8] = grid[0] * hg + core[0] * hc;
+            rows[o + 9] = grid[1] * hg + core[1] * hc;
+            rows[o + 10] = grid[2] * hg + core[2] * hc;
+            rows[o + 11] = vmask;
           }
-          rows[o + 8] = grid[0] * hg + core[0] * hc;
-          rows[o + 9] = grid[1] * hg + core[1] * hc;
-          rows[o + 10] = grid[2] * hg + core[2] * hc;
-          rows[o + 11] = vmask;
-        }
 
-        // Highest row either ridge can affect: its peak, plus how far the
-        // anti-aliasing (and the front edge line) reaches up a steep slope,
-        // plus a little slack for half-float rounding.
-        const ridgeSpan = 1.16 * width;
-        const backH = height * 0.16;
-        const frontH = height * 0.09;
-        const edgeWidth = 1.5 * scale;
-        const backS = (backStep * backH * (RIDGE_POINTS - 1)) / ridgeSpan;
-        const frontS = (frontStep * frontH * (RIDGE_POINTS - 1)) / ridgeSpan;
-        const mountainTop =
-          hy +
-          1 -
-          Math.max(
-            backH + 0.5 * Math.sqrt(1 + backS * backS),
-            frontH + (0.5 * edgeWidth + 0.5) * Math.sqrt(1 + frontS * frontS),
-          ) -
-          2;
+          // Highest row either ridge can affect: its peak, plus how far the
+          // anti-aliasing (and the front edge line) reaches up a steep slope,
+          // plus a little slack for half-float rounding.
+          const ridgeSpan = 1.16 * width;
+          const backH = height * 0.16;
+          const frontH = height * 0.09;
+          const edgeWidth = 1.5 * scale;
+          const backS = (backStep * backH * (RIDGE_POINTS - 1)) / ridgeSpan;
+          const frontS = (frontStep * frontH * (RIDGE_POINTS - 1)) / ridgeSpan;
+          const mountainTop =
+            hy +
+            1 -
+            Math.max(
+              backH + 0.5 * Math.sqrt(1 + backS * backS),
+              frontH + (0.5 * edgeWidth + 0.5) * Math.sqrt(1 + frontS * frontS),
+            ) -
+            2;
 
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, rowTex);
-        resetUnpackState(gl);
-        if (rowCount !== n) {
-          rowCount = n;
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 3, n, gl.RGBA, gl.FLOAT, rows);
-        }
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, ridgeTex);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, rowTex);
+          resetUnpackState(gl);
+          if (rowCount !== n) {
+            rowCount = n;
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
+          } else {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 3, n, gl.RGBA, gl.FLOAT, rows);
+          }
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, ridgeTex);
 
-        gl.uniform2f(loc.uResolution, width, height);
-        gl.uniform3f(loc.uHorizon, hy, vpx, k);
-        gl.uniform1f(loc.uCamX, camX);
-        gl.uniform3f(loc.uSun, vpx, sunY, r);
-        gl.uniform1f(loc.uSunClip, sunClip);
-        gl.uniform1f(loc.uSunGlow, p.sunGlow);
-        gl.uniform2f(loc.uRidgeSpan, -0.08 * width, ridgeSpan);
-        gl.uniform2f(loc.uRidgeShift, -camX * k * 0.01, -camX * k * 0.025);
-        gl.uniform2f(loc.uRidgeHeight, backH, frontH);
-        gl.uniform1f(loc.uMountains, p.mountains ? 1 : 0);
-        gl.uniform1f(loc.uMountainTop, mountainTop);
-        gl.uniform3f(loc.uVGlow, c.grid[0] * glowA, c.grid[1] * glowA, c.grid[2] * glowA);
-        gl.uniform1f(loc.uEdgeWidth, edgeWidth);
-        gl.uniform2f(loc.uLine, glowW, coreW);
-        gl.uniform1f(loc.uCell, cell);
-        gl.uniform1f(loc.uInvCell, 1 / cell);
-        gl.uniform1f(loc.uLines, lines);
-        triangle.draw();
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteTexture(ridgeTex);
-        gl.deleteTexture(rowTex);
-        triangle.dispose();
-      },
-    };
+          gl.uniform2f(loc.uResolution, width, height);
+          gl.uniform3f(loc.uHorizon, hy, vpx, k);
+          gl.uniform1f(loc.uCamX, camX);
+          gl.uniform3f(loc.uSun, vpx, sunY, r);
+          gl.uniform1f(loc.uSunClip, sunClip);
+          gl.uniform1f(loc.uSunGlow, p.sunGlow);
+          gl.uniform2f(loc.uRidgeSpan, -0.08 * width, ridgeSpan);
+          gl.uniform2f(loc.uRidgeShift, -camX * k * 0.01, -camX * k * 0.025);
+          gl.uniform2f(loc.uRidgeHeight, backH, frontH);
+          gl.uniform1f(loc.uMountains, p.mountains ? 1 : 0);
+          gl.uniform1f(loc.uMountainTop, mountainTop);
+          gl.uniform3f(loc.uVGlow, c.grid[0] * glowA, c.grid[1] * glowA, c.grid[2] * glowA);
+          gl.uniform1f(loc.uEdgeWidth, edgeWidth);
+          gl.uniform2f(loc.uLine, glowW, coreW);
+          gl.uniform1f(loc.uCell, cell);
+          gl.uniform1f(loc.uInvCell, 1 / cell);
+          gl.uniform1f(loc.uLines, lines);
+          triangle.draw();
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

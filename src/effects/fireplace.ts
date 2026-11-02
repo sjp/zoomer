@@ -6,6 +6,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
+  withScope,
 } from "./gl";
 import {
   buildHearthProfile,
@@ -218,293 +219,311 @@ export const fireplace = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const triangle = createFullscreenTriangle(gl);
-    const target = createLowResTarget(gl, { composite: COMPOSITE });
+    return withScope((scope) => {
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
 
-    // The flame shader ignores vUv; an unused vertex output is fine in GLSL ES 3.00.
-    const flameProgram = createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT);
-    const fl = getUniforms(gl, flameProgram, [
-      "uNoise",
-      "uRamp",
-      "uPxScale",
-      "uPxOffset",
-      "uNoiseScale",
-      "uOff",
-      "uGain",
-    ]);
-    gl.useProgram(flameProgram);
-    gl.uniform1i(fl.uNoise, 0);
-    gl.uniform1i(fl.uRamp, 1);
-    gl.uniform2f(fl.uNoiseScale, CELLS_U / NOISE_PERIOD, CELLS_V / NOISE_PERIOD);
-
-    const co = getUniforms(gl, target.program, [
-      "uProfile",
-      "uBg",
-      "uGlow",
-      "uGlowCenter",
-      "uGlowInvRadius",
-      "uFireOrigin",
-      "uFireInvSize",
-      "uScale",
-      "uProfileMax",
-      "uLog",
-      "uRimInv",
-    ]);
-    gl.useProgram(target.program);
-    gl.uniform1i(co.uProfile, 1);
-
-    const emberProgram = createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT);
-    const em = getUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
-    const batch = createSpriteBatch(gl, MAX_EMBERS, [4]);
-
-    const noiseTex = createDataTexture(gl, {
-      width: NOISE_SIZE,
-      height: NOISE_SIZE,
-      internalFormat: gl.RG8,
-      format: gl.RG,
-      type: gl.UNSIGNED_BYTE,
-      data: buildNoiseTexture(),
-      wrap: gl.REPEAT,
-    });
-    const rampData = new Uint8Array(RAMP_SIZE * 4);
-    const rampTex = createDataTexture(gl, {
-      width: RAMP_SIZE,
-      height: 1,
-      internalFormat: gl.RGBA8,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE,
-      data: rampData,
-    });
-    const profileData = new Float32Array(HEARTH_PROFILE_COLUMNS);
-    const profileTex = createDataTexture(gl, {
-      width: HEARTH_PROFILE_COLUMNS,
-      height: 1,
-      // R16F is filterable in core WebGL2 and accepts FLOAT data.
-      internalFormat: gl.R16F,
-      format: gl.RED,
-      type: gl.FLOAT,
-      data: profileData,
-    });
-
-    const bgColor = unitRgbMemo();
-    const flickerNoise = createNoise(0xf1a3);
-    const rng = createRng(0xe4b3);
-    const embers = createEmberState(MAX_EMBERS);
-    const curl = (x: number, y: number, t: number) =>
-      flickerNoise.noise3(x * 0.006, y * 0.006, t * 0.25);
-    const offsets = new Float32Array(OCTAVES.length * 2);
-
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let refWidth = 1920;
-    let time = 0;
-    let layout: FireLayout = fireLayout(refWidth, 0.42);
-    const env: EmberEnv = { rate: 0, layout, rise: RISE_PX * 0.9, time: 0, top: 1080 };
-
-    /** Inputs the static uniforms and textures were last built from. */
-    const built = { width: 0, height: 0, flame: Number.NaN, quality: "", palette: "", logs: false };
-    let paletteId = "";
-    let glowRgb: readonly number[] = [0, 0, 0];
-    let emberRgb: readonly number[] = [0, 0, 0];
-    let lastBg: unknown = null;
-
-    /** Recomputes the fire rectangle, low-res target and layout-dependent uniforms. */
-    const rebuildLayout = (flameHeight: number, quality: string, logs: boolean) => {
-      layout = fireLayout(refWidth, flameHeight);
-      env.layout = layout;
-      const d = qualityDivisor(quality, DIVISORS);
-      // Fire rectangle in device px (y up), clamped to the canvas.
-      const x0 = Math.max(0, Math.floor((layout.cx - layout.halfW * FIRE_U) * scale));
-      const x1 = Math.min(width, Math.ceil((layout.cx + layout.halfW * FIRE_U) * scale));
-      const y0 = Math.max(0, Math.floor((layout.baseY + layout.flameH * FIRE_V_MIN) * scale));
-      const y1 = Math.min(height, Math.ceil((layout.baseY + layout.flameH * FIRE_V_MAX) * scale));
-      target.resize(Math.max(1, x1 - x0), Math.max(1, y1 - y0), d);
-      // The low-res texels cover a whole number of divisor-sized cells.
-      const coverW = target.width * d;
-      const coverH = target.height * d;
-
+      // The flame shader ignores vUv; an unused vertex output is fine in GLSL ES 3.00.
+      const flameProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const fl = getUniforms(gl, flameProgram, [
+        "uNoise",
+        "uRamp",
+        "uPxScale",
+        "uPxOffset",
+        "uNoiseScale",
+        "uOff",
+        "uGain",
+      ]);
       gl.useProgram(flameProgram);
-      gl.uniform2f(fl.uPxScale, d / scale / layout.halfW, d / scale / layout.flameH);
-      gl.uniform2f(
-        fl.uPxOffset,
-        (x0 / scale - layout.cx) / layout.halfW,
-        (y0 / scale - layout.baseY) / layout.flameH,
-      );
+      gl.uniform1i(fl.uNoise, 0);
+      gl.uniform1i(fl.uRamp, 1);
+      gl.uniform2f(fl.uNoiseScale, CELLS_U / NOISE_PERIOD, CELLS_V / NOISE_PERIOD);
 
-      // Each program's uniforms in one block after its useProgram: a location is
-      // only valid while its own program is current.
+      const co = getUniforms(gl, target.program, [
+        "uProfile",
+        "uBg",
+        "uGlow",
+        "uGlowCenter",
+        "uGlowInvRadius",
+        "uFireOrigin",
+        "uFireInvSize",
+        "uScale",
+        "uProfileMax",
+        "uLog",
+        "uRimInv",
+      ]);
       gl.useProgram(target.program);
-      gl.uniform1f(co.uProfileMax, logs ? hearthMaxHeight(layout) + 1 : -1);
-      gl.uniform2f(co.uFireOrigin, x0, y0);
-      gl.uniform2f(co.uFireInvSize, 1 / coverW, 1 / coverH);
-      gl.uniform1f(co.uScale, scale);
-      gl.uniform2f(co.uGlowCenter, layout.cx * scale, (layout.baseY + 0.3 * layout.flameH) * scale);
-      gl.uniform2f(
-        co.uGlowInvRadius,
-        1 / (layout.halfW * 1.3 * scale),
-        1 / (layout.flameH * 1.1 * scale),
+      gl.uniform1i(co.uProfile, 1);
+
+      const emberProgram = scope.add(createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
       );
-      gl.uniform1f(co.uRimInv, 1 / (RIM_PX * scale));
+      const em = getUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
+      const batch = scope.own(createSpriteBatch(gl, MAX_EMBERS, [4]));
 
-      gl.useProgram(emberProgram);
-      gl.uniform2f(em.uInvResolution, 1 / width, 1 / height);
+      const noiseTex = scope.add(
+        createDataTexture(gl, {
+          width: NOISE_SIZE,
+          height: NOISE_SIZE,
+          internalFormat: gl.RG8,
+          format: gl.RG,
+          type: gl.UNSIGNED_BYTE,
+          data: buildNoiseTexture(),
+          wrap: gl.REPEAT,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      const rampData = new Uint8Array(RAMP_SIZE * 4);
+      const rampTex = scope.add(
+        createDataTexture(gl, {
+          width: RAMP_SIZE,
+          height: 1,
+          internalFormat: gl.RGBA8,
+          format: gl.RGBA,
+          type: gl.UNSIGNED_BYTE,
+          data: rampData,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      const profileData = new Float32Array(HEARTH_PROFILE_COLUMNS);
+      const profileTex = scope.add(
+        createDataTexture(gl, {
+          width: HEARTH_PROFILE_COLUMNS,
+          height: 1,
+          // R16F is filterable in core WebGL2 and accepts FLOAT data.
+          internalFormat: gl.R16F,
+          format: gl.RED,
+          type: gl.FLOAT,
+          data: profileData,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
 
-      if (logs) {
-        buildHearthProfile(profileData, refWidth, layout);
-        gl.bindTexture(gl.TEXTURE_2D, profileTex);
-        resetUnpackState(gl);
-        gl.texSubImage2D(
-          gl.TEXTURE_2D,
-          0,
-          0,
-          0,
-          HEARTH_PROFILE_COLUMNS,
-          1,
-          gl.RED,
-          gl.FLOAT,
-          profileData,
+      const bgColor = unitRgbMemo();
+      const flickerNoise = createNoise(0xf1a3);
+      const rng = createRng(0xe4b3);
+      const embers = createEmberState(MAX_EMBERS);
+      const curl = (x: number, y: number, t: number) =>
+        flickerNoise.noise3(x * 0.006, y * 0.006, t * 0.25);
+      const offsets = new Float32Array(OCTAVES.length * 2);
+
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let refWidth = 1920;
+      let time = 0;
+      let layout: FireLayout = fireLayout(refWidth, 0.42);
+      const env: EmberEnv = { rate: 0, layout, rise: RISE_PX * 0.9, time: 0, top: 1080 };
+
+      /** Inputs the static uniforms and textures were last built from. */
+      const built = {
+        width: 0,
+        height: 0,
+        flame: Number.NaN,
+        quality: "",
+        palette: "",
+        logs: false,
+      };
+      let paletteId = "";
+      let glowRgb: readonly number[] = [0, 0, 0];
+      let emberRgb: readonly number[] = [0, 0, 0];
+      let lastBg: unknown = null;
+
+      /** Recomputes the fire rectangle, low-res target and layout-dependent uniforms. */
+      const rebuildLayout = (flameHeight: number, quality: string, logs: boolean) => {
+        layout = fireLayout(refWidth, flameHeight);
+        env.layout = layout;
+        const d = qualityDivisor(quality, DIVISORS);
+        // Fire rectangle in device px (y up), clamped to the canvas.
+        const x0 = Math.max(0, Math.floor((layout.cx - layout.halfW * FIRE_U) * scale));
+        const x1 = Math.min(width, Math.ceil((layout.cx + layout.halfW * FIRE_U) * scale));
+        const y0 = Math.max(0, Math.floor((layout.baseY + layout.flameH * FIRE_V_MIN) * scale));
+        const y1 = Math.min(height, Math.ceil((layout.baseY + layout.flameH * FIRE_V_MAX) * scale));
+        target.resize(Math.max(1, x1 - x0), Math.max(1, y1 - y0), d);
+        // The low-res texels cover a whole number of divisor-sized cells.
+        const coverW = target.width * d;
+        const coverH = target.height * d;
+
+        gl.useProgram(flameProgram);
+        gl.uniform2f(fl.uPxScale, d / scale / layout.halfW, d / scale / layout.flameH);
+        gl.uniform2f(
+          fl.uPxOffset,
+          (x0 / scale - layout.cx) / layout.halfW,
+          (y0 / scale - layout.baseY) / layout.flameH,
         );
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      }
-    };
 
-    return {
-      resize(v) {
-        ({ width, height, scale } = v);
-        refWidth = width / scale;
-        env.top = height / scale + 20;
-        built.width = 0;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        const step = dt * p.speed;
-        time += step;
+        // Each program's uniforms in one block after its useProgram: a location is
+        // only valid while its own program is current.
+        gl.useProgram(target.program);
+        gl.uniform1f(co.uProfileMax, logs ? hearthMaxHeight(layout) + 1 : -1);
+        gl.uniform2f(co.uFireOrigin, x0, y0);
+        gl.uniform2f(co.uFireInvSize, 1 / coverW, 1 / coverH);
+        gl.uniform1f(co.uScale, scale);
+        gl.uniform2f(
+          co.uGlowCenter,
+          layout.cx * scale,
+          (layout.baseY + 0.3 * layout.flameH) * scale,
+        );
+        gl.uniform2f(
+          co.uGlowInvRadius,
+          1 / (layout.halfW * 1.3 * scale),
+          1 / (layout.flameH * 1.1 * scale),
+        );
+        gl.uniform1f(co.uRimInv, 1 / (RIM_PX * scale));
 
-        if (
-          built.width !== width ||
-          built.height !== height ||
-          built.flame !== p.height ||
-          built.quality !== p.quality ||
-          built.logs !== p.logs
-        ) {
-          rebuildLayout(p.height, p.quality, p.logs);
-          if (import.meta.env.DEV) {
-            const err = gl.getError();
-            if (err !== gl.NO_ERROR)
-              console.error(`fireplace: GL error 0x${err.toString(16)} in rebuildLayout`);
-          }
-          built.width = width;
-          built.height = height;
-          built.flame = p.height;
-          built.quality = p.quality;
-          built.logs = p.logs;
-        }
-        if (paletteId !== p.palette) {
-          paletteId = p.palette;
-          const pal = getPalette(p.palette);
-          buildRamp(pal.ramp, RAMP_SIZE, rampData);
-          gl.bindTexture(gl.TEXTURE_2D, rampTex);
+        gl.useProgram(emberProgram);
+        gl.uniform2f(em.uInvResolution, 1 / width, 1 / height);
+
+        if (logs) {
+          buildHearthProfile(profileData, refWidth, layout);
+          gl.bindTexture(gl.TEXTURE_2D, profileTex);
           resetUnpackState(gl);
           gl.texSubImage2D(
             gl.TEXTURE_2D,
             0,
             0,
             0,
-            RAMP_SIZE,
+            HEARTH_PROFILE_COLUMNS,
             1,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            rampData,
+            gl.RED,
+            gl.FLOAT,
+            profileData,
           );
           gl.bindTexture(gl.TEXTURE_2D, null);
-          glowRgb = pal.glow;
-          emberRgb = pal.ember;
-          gl.useProgram(emberProgram);
-          gl.uniform3f(em.uColor, emberRgb[0], emberRgb[1], emberRgb[2]);
         }
+      };
 
-        // Scroll each octave upwards (flame-height relative) and wrap, so offsets
-        // stay precise and changing the height doesn't make them jump.
-        const riseV = (RISE_PX * step) / layout.flameH;
-        for (let k = 0; k < OCTAVES.length; k++) {
-          const o = OCTAVES[k];
-          const sx = offsets[k * 2] + o.drift * step;
-          const sy = offsets[k * 2 + 1] - riseV * o.rise * o.scale * (CELLS_V / NOISE_PERIOD);
-          offsets[k * 2] = sx - Math.floor(sx);
-          offsets[k * 2 + 1] = sy - Math.floor(sy);
-        }
-        // One slow flicker drives both the flames' heat and the glow.
-        const flicker =
-          flickerNoise.noise2(time * 1.1, 0.3) * 0.65 + flickerNoise.noise2(time * 2.9, 7.7) * 0.35;
-        const gain = p.intensity * (0.93 + 0.1 * flicker);
-        const glow = p.glow * 0.35 * Math.min(1.3, p.intensity) * (0.85 + 0.2 * flicker);
+      return {
+        resize(v) {
+          ({ width, height, scale } = v);
+          refWidth = width / scale;
+          env.top = height / scale + 20;
+          built.width = 0;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          const step = dt * p.speed;
+          time += step;
 
-        // Embers.
-        env.rate = p.embers * EMBER_RATE;
-        env.time = time;
-        stepEmbers(embers, step, env, rng, curl);
-        const data = batch.data;
-        let visible = 0;
-        for (let i = 0; i < embers.count; i++) {
-          const a = emberAlpha(embers.age[i], embers.life[i], embers.seed[i], time) * p.intensity;
-          if (a <= 0.004) continue;
-          const o = visible * 4;
-          data[o] = embers.x[i] * scale;
-          data[o + 1] = embers.y[i] * scale;
-          data[o + 2] = embers.size[i] * EMBER_HALF * scale;
-          data[o + 3] = Math.min(1, a);
-          visible++;
-        }
+          if (
+            built.width !== width ||
+            built.height !== height ||
+            built.flame !== p.height ||
+            built.quality !== p.quality ||
+            built.logs !== p.logs
+          ) {
+            rebuildLayout(p.height, p.quality, p.logs);
+            if (import.meta.env.DEV) {
+              const err = gl.getError();
+              if (err !== gl.NO_ERROR)
+                console.error(`fireplace: GL error 0x${err.toString(16)} in rebuildLayout`);
+            }
+            built.width = width;
+            built.height = height;
+            built.flame = p.height;
+            built.quality = p.quality;
+            built.logs = p.logs;
+          }
+          if (paletteId !== p.palette) {
+            paletteId = p.palette;
+            const pal = getPalette(p.palette);
+            buildRamp(pal.ramp, RAMP_SIZE, rampData);
+            gl.bindTexture(gl.TEXTURE_2D, rampTex);
+            resetUnpackState(gl);
+            gl.texSubImage2D(
+              gl.TEXTURE_2D,
+              0,
+              0,
+              0,
+              RAMP_SIZE,
+              1,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              rampData,
+            );
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            glowRgb = pal.glow;
+            emberRgb = pal.ember;
+            gl.useProgram(emberProgram);
+            gl.uniform3f(em.uColor, emberRgb[0], emberRgb[1], emberRgb[2]);
+          }
 
-        // 1. Flames into the low-res target, covering only the fire rectangle.
-        target.bind();
-        gl.useProgram(flameProgram);
-        gl.uniform2fv(fl.uOff, offsets);
-        gl.uniform1f(fl.uGain, gain);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, rampTex);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTex);
-        triangle.draw();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          // Scroll each octave upwards (flame-height relative) and wrap, so offsets
+          // stay precise and changing the height doesn't make them jump.
+          const riseV = (RISE_PX * step) / layout.flameH;
+          for (let k = 0; k < OCTAVES.length; k++) {
+            const o = OCTAVES[k];
+            const sx = offsets[k * 2] + o.drift * step;
+            const sy = offsets[k * 2 + 1] - riseV * o.rise * o.scale * (CELLS_V / NOISE_PERIOD);
+            offsets[k * 2] = sx - Math.floor(sx);
+            offsets[k * 2 + 1] = sy - Math.floor(sy);
+          }
+          // One slow flicker drives both the flames' heat and the glow.
+          const flicker =
+            flickerNoise.noise2(time * 1.1, 0.3) * 0.65 +
+            flickerNoise.noise2(time * 2.9, 7.7) * 0.35;
+          const gain = p.intensity * (0.93 + 0.1 * flicker);
+          const glow = p.glow * 0.35 * Math.min(1.3, p.intensity) * (0.85 + 0.2 * flicker);
 
-        // 2. Full-res composite: background, glow, flames, silhouette. The target
-        // covers only the fire rectangle, so blit to the whole canvas explicitly.
-        gl.useProgram(target.program);
-        const bg = bgColor(p.background);
-        if (bg !== lastBg) {
-          gl.uniform3fv(co.uBg, bg);
-          // Logs: much darker than the background, slightly warm.
-          gl.uniform3f(co.uLog, bg[0] * 0.3 + 0.006, bg[1] * 0.3 + 0.004, bg[2] * 0.3 + 0.003);
-          lastBg = bg;
-        }
-        gl.uniform3f(co.uGlow, glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, profileTex);
-        target.blit(width, height);
+          // Embers.
+          env.rate = p.embers * EMBER_RATE;
+          env.time = time;
+          stepEmbers(embers, step, env, rng, curl);
+          const data = batch.data;
+          let visible = 0;
+          for (let i = 0; i < embers.count; i++) {
+            const a = emberAlpha(embers.age[i], embers.life[i], embers.seed[i], time) * p.intensity;
+            if (a <= 0.004) continue;
+            const o = visible * 4;
+            data[o] = embers.x[i] * scale;
+            data[o + 1] = embers.y[i] * scale;
+            data[o + 2] = embers.size[i] * EMBER_HALF * scale;
+            data[o + 3] = Math.min(1, a);
+            visible++;
+          }
 
-        // 3. Embers, additive.
-        if (visible > 0) {
-          gl.enable(gl.BLEND);
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          gl.useProgram(emberProgram);
-          batch.upload(visible);
-          batch.draw(0, visible);
-          gl.disable(gl.BLEND);
-        }
-      },
-      dispose() {
-        target.dispose();
-        triangle.dispose();
-        batch.dispose();
-        gl.deleteProgram(flameProgram);
-        gl.deleteProgram(emberProgram);
-        gl.deleteTexture(noiseTex);
-        gl.deleteTexture(rampTex);
-        gl.deleteTexture(profileTex);
-      },
-    };
+          // 1. Flames into the low-res target, covering only the fire rectangle.
+          target.bind();
+          gl.useProgram(flameProgram);
+          gl.uniform2fv(fl.uOff, offsets);
+          gl.uniform1f(fl.uGain, gain);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, rampTex);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+          triangle.draw();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+          // 2. Full-res composite: background, glow, flames, silhouette. The target
+          // covers only the fire rectangle, so blit to the whole canvas explicitly.
+          gl.useProgram(target.program);
+          const bg = bgColor(p.background);
+          if (bg !== lastBg) {
+            gl.uniform3fv(co.uBg, bg);
+            // Logs: much darker than the background, slightly warm.
+            gl.uniform3f(co.uLog, bg[0] * 0.3 + 0.006, bg[1] * 0.3 + 0.004, bg[2] * 0.3 + 0.003);
+            lastBg = bg;
+          }
+          gl.uniform3f(co.uGlow, glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, profileTex);
+          target.blit(width, height);
+
+          // 3. Embers, additive.
+          if (visible > 0) {
+            gl.enable(gl.BLEND);
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.ONE, gl.ONE);
+            gl.useProgram(emberProgram);
+            batch.upload(visible);
+            batch.draw(0, visible);
+            gl.disable(gl.BLEND);
+          }
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

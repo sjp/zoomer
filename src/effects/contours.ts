@@ -4,6 +4,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize } from "./lowres";
 import { hexToUnitRgb } from "./color";
@@ -350,149 +351,149 @@ export const contours = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const noiseProgram = createProgram(gl, FULLSCREEN_VERTEX, NOISE_FRAGMENT);
-    const triangle = createFullscreenTriangle(gl);
-    const target = createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE });
-    const nLoc = getUniforms(gl, noiseProgram, ["uPixToWorld", "uWorldOffset", "uZ", "uFloat"]);
-    const cLoc = getUniforms(gl, target.program, [
-      "uHeight",
-      "uDecode",
-      "uBSpline",
-      "uLevels",
-      "uInvLevels",
-      "uIndexInv",
-      "uHalfWidth",
-      "uAlpha",
-      "uCrowd",
-      "uFill",
-      "uLineColor",
-      "uBackground",
-      "uLowColor",
-      "uHighColor",
-    ]);
-    gl.useProgram(target.program);
-    gl.uniform1i(cLoc.uHeight, 0);
+    return withScope((scope) => {
+      const noiseProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NOISE_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const target = scope.own(createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE }));
+      const nLoc = getUniforms(gl, noiseProgram, ["uPixToWorld", "uWorldOffset", "uZ", "uFloat"]);
+      const cLoc = getUniforms(gl, target.program, [
+        "uHeight",
+        "uDecode",
+        "uBSpline",
+        "uLevels",
+        "uInvLevels",
+        "uIndexInv",
+        "uHalfWidth",
+        "uAlpha",
+        "uCrowd",
+        "uFill",
+        "uLineColor",
+        "uBackground",
+        "uLowColor",
+        "uHighColor",
+      ]);
+      gl.useProgram(target.program);
+      gl.uniform1i(cLoc.uHeight, 0);
 
-    let width = 1;
-    let height = 1;
-    let vpScale = 1;
-    /** Noise z, kept in float64 on the CPU. */
-    let z = 0;
-    let sizeDirty = true;
-    let fieldDirty = true;
-    let lastZ = NaN;
-    let lastTerrain = NaN;
-    let lastLevels = NaN;
-    let lastIndex = NaN;
-    let lastLineWidth = NaN;
-    let lastFill = "";
-    let lastSampling = "";
-    let lastLine = "";
-    let lastBg = "";
-    let lastLow = "";
-    let lastHigh = "";
+      let width = 1;
+      let height = 1;
+      let vpScale = 1;
+      /** Noise z, kept in float64 on the CPU. */
+      let z = 0;
+      let sizeDirty = true;
+      let fieldDirty = true;
+      let lastZ = NaN;
+      let lastTerrain = NaN;
+      let lastLevels = NaN;
+      let lastIndex = NaN;
+      let lastLineWidth = NaN;
+      let lastFill = "";
+      let lastSampling = "";
+      let lastLine = "";
+      let lastBg = "";
+      let lastLow = "";
+      let lastHigh = "";
 
-    return {
-      resize(v) {
-        width = Math.max(1, v.width);
-        height = Math.max(1, v.height);
-        vpScale = v.scale;
-        sizeDirty = true;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        z += dt * p.speed * Z_RATE;
+      return {
+        resize(v) {
+          width = Math.max(1, v.width);
+          height = Math.max(1, v.height);
+          vpScale = v.scale;
+          sizeDirty = true;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          z += dt * p.speed * Z_RATE;
 
-        if (sizeDirty) {
-          target.resize(width, height, fieldDivisor(height));
-          gl.useProgram(noiseProgram);
-          gl.uniform1f(nLoc.uFloat, target.isFloat ? 1 : 0);
+          if (sizeDirty) {
+            target.resize(width, height, fieldDivisor(height));
+            gl.useProgram(noiseProgram);
+            gl.uniform1f(nLoc.uFloat, target.isFloat ? 1 : 0);
+            gl.useProgram(target.program);
+            gl.uniform1f(cLoc.uDecode, target.isFloat ? 1 / RESIDUAL_SCALE : 1 / 255);
+            sizeDirty = false;
+            lastTerrain = NaN;
+            lastLineWidth = NaN;
+            fieldDirty = true;
+          }
+
+          // Height field pass, only when the field changed.
+          if (p.scale !== lastTerrain) {
+            lastTerrain = p.scale;
+            // Field units per frame height; the field is centred on the canvas.
+            const freq = 1 / Math.max(0.01, p.scale);
+            const lw = lowResSize(width, fieldDivisor(height));
+            const lh = lowResSize(height, fieldDivisor(height));
+            const aspect = width / height;
+            gl.useProgram(noiseProgram);
+            gl.uniform2f(nLoc.uPixToWorld, (aspect * freq) / lw, freq / lh);
+            gl.uniform2f(nLoc.uWorldOffset, -0.5 * aspect * freq + 3.7, -0.5 * freq - 1.9);
+            fieldDirty = true;
+          }
+          if (z !== lastZ) {
+            lastZ = z;
+            gl.useProgram(noiseProgram);
+            gl.uniform1f(nLoc.uZ, z);
+            fieldDirty = true;
+          }
+          if (fieldDirty) {
+            fieldDirty = false;
+            target.bind();
+            gl.useProgram(noiseProgram);
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          }
+
+          // Full-res contour pass (the target's composite blit).
           gl.useProgram(target.program);
-          gl.uniform1f(cLoc.uDecode, target.isFloat ? 1 / RESIDUAL_SCALE : 1 / 255);
-          sizeDirty = false;
-          lastTerrain = NaN;
-          lastLineWidth = NaN;
-          fieldDirty = true;
-        }
-
-        // Height field pass, only when the field changed.
-        if (p.scale !== lastTerrain) {
-          lastTerrain = p.scale;
-          // Field units per frame height; the field is centred on the canvas.
-          const freq = 1 / Math.max(0.01, p.scale);
-          const lw = lowResSize(width, fieldDivisor(height));
-          const lh = lowResSize(height, fieldDivisor(height));
-          const aspect = width / height;
-          gl.useProgram(noiseProgram);
-          gl.uniform2f(nLoc.uPixToWorld, (aspect * freq) / lw, freq / lh);
-          gl.uniform2f(nLoc.uWorldOffset, -0.5 * aspect * freq + 3.7, -0.5 * freq - 1.9);
-          fieldDirty = true;
-        }
-        if (z !== lastZ) {
-          lastZ = z;
-          gl.useProgram(noiseProgram);
-          gl.uniform1f(nLoc.uZ, z);
-          fieldDirty = true;
-        }
-        if (fieldDirty) {
-          fieldDirty = false;
-          target.bind();
-          gl.useProgram(noiseProgram);
-          triangle.draw();
-          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
-
-        // Full-res contour pass (the target's composite blit).
-        gl.useProgram(target.program);
-        if (p.levels !== lastLevels) {
-          lastLevels = p.levels;
-          const levels = Math.max(1, p.levels);
-          gl.uniform1f(cLoc.uLevels, levels);
-          gl.uniform1f(cLoc.uInvLevels, 1 / levels);
-        }
-        if (p.indexEvery !== lastIndex) {
-          lastIndex = p.indexEvery;
-          const every = Math.round(p.indexEvery);
-          gl.uniform1f(cLoc.uIndexInv, every >= 1 ? 1 / every : 0);
-        }
-        if (p.lineWidth !== lastLineWidth) {
-          lastLineWidth = p.lineWidth;
-          const s = lineStyle(p.lineWidth, vpScale);
-          gl.uniform2f(cLoc.uHalfWidth, s.halfWidth, s.indexHalfWidth);
-          gl.uniform2f(cLoc.uAlpha, s.alpha, s.indexAlpha);
-          gl.uniform2f(cLoc.uCrowd, s.crowdStart, s.crowdEnd);
-        }
-        if (p.fill !== lastFill) {
-          lastFill = p.fill;
-          gl.uniform2f(cLoc.uFill, p.fill === "none" ? 0 : 1, p.fill === "bands" ? 1 : 0);
-        }
-        if (p.sampling !== lastSampling) {
-          lastSampling = p.sampling;
-          gl.uniform1f(cLoc.uBSpline, p.sampling === "bilinear" ? 0 : 1);
-        }
-        if (p.lineColor !== lastLine) {
-          lastLine = p.lineColor;
-          gl.uniform3fv(cLoc.uLineColor, hexToUnitRgb(p.lineColor));
-        }
-        if (p.background !== lastBg) {
-          lastBg = p.background;
-          gl.uniform3fv(cLoc.uBackground, hexToUnitRgb(p.background));
-        }
-        if (p.lowColor !== lastLow) {
-          lastLow = p.lowColor;
-          gl.uniform3fv(cLoc.uLowColor, hexToUnitRgb(p.lowColor));
-        }
-        if (p.highColor !== lastHigh) {
-          lastHigh = p.highColor;
-          gl.uniform3fv(cLoc.uHighColor, hexToUnitRgb(p.highColor));
-        }
-        target.blit();
-      },
-      dispose() {
-        gl.deleteProgram(noiseProgram);
-        triangle.dispose();
-        target.dispose();
-      },
-    };
+          if (p.levels !== lastLevels) {
+            lastLevels = p.levels;
+            const levels = Math.max(1, p.levels);
+            gl.uniform1f(cLoc.uLevels, levels);
+            gl.uniform1f(cLoc.uInvLevels, 1 / levels);
+          }
+          if (p.indexEvery !== lastIndex) {
+            lastIndex = p.indexEvery;
+            const every = Math.round(p.indexEvery);
+            gl.uniform1f(cLoc.uIndexInv, every >= 1 ? 1 / every : 0);
+          }
+          if (p.lineWidth !== lastLineWidth) {
+            lastLineWidth = p.lineWidth;
+            const s = lineStyle(p.lineWidth, vpScale);
+            gl.uniform2f(cLoc.uHalfWidth, s.halfWidth, s.indexHalfWidth);
+            gl.uniform2f(cLoc.uAlpha, s.alpha, s.indexAlpha);
+            gl.uniform2f(cLoc.uCrowd, s.crowdStart, s.crowdEnd);
+          }
+          if (p.fill !== lastFill) {
+            lastFill = p.fill;
+            gl.uniform2f(cLoc.uFill, p.fill === "none" ? 0 : 1, p.fill === "bands" ? 1 : 0);
+          }
+          if (p.sampling !== lastSampling) {
+            lastSampling = p.sampling;
+            gl.uniform1f(cLoc.uBSpline, p.sampling === "bilinear" ? 0 : 1);
+          }
+          if (p.lineColor !== lastLine) {
+            lastLine = p.lineColor;
+            gl.uniform3fv(cLoc.uLineColor, hexToUnitRgb(p.lineColor));
+          }
+          if (p.background !== lastBg) {
+            lastBg = p.background;
+            gl.uniform3fv(cLoc.uBackground, hexToUnitRgb(p.background));
+          }
+          if (p.lowColor !== lastLow) {
+            lastLow = p.lowColor;
+            gl.uniform3fv(cLoc.uLowColor, hexToUnitRgb(p.lowColor));
+          }
+          if (p.highColor !== lastHigh) {
+            lastHigh = p.highColor;
+            gl.uniform3fv(cLoc.uHighColor, hexToUnitRgb(p.highColor));
+          }
+          target.blit();
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

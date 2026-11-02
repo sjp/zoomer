@@ -1,4 +1,4 @@
-import { beginFrame, createProgram, getUniforms } from "./gl";
+import { beginFrame, createProgram, getUniforms, withScope } from "./gl";
 import { createNoise } from "./noise";
 import {
   createGradientBackground,
@@ -250,195 +250,197 @@ export const fireflies = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const speckProgram = createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT);
-    const speckLoc = getUniforms(gl, speckProgram, ["uResolution"]);
-    const beamProgram = createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT);
-    const beamLoc = getUniforms(gl, beamProgram, ["uResolution", "uColor"]);
-    // Per speck: x, y, extent radius; premultiplied colour.
-    const specks = createSpriteBatch(gl, MAX_SPECKS, [3, 3], [polygonStrip(8, Math.PI / 8)]);
-    // Per beam: x0, slope, half-width; y0, y1, intensity.
-    const beamBatch = createSpriteBatch(gl, MAX_BEAMS, [3, 3], [QUAD]);
-    const background = createGradientBackground(gl);
-    const bgTop = unitRgbMemo();
-    const bgBottom = unitRgbMemo();
-    const glowRgb = unitRgbMemo();
-    const lightRgb = unitRgbMemo();
-    const noise = createNoise(6);
+    return withScope((scope) => {
+      const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const speckLoc = getUniforms(gl, speckProgram, ["uResolution"]);
+      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const beamLoc = getUniforms(gl, beamProgram, ["uResolution", "uColor"]);
+      // Per speck: x, y, extent radius; premultiplied colour.
+      const specks = scope.own(
+        createSpriteBatch(gl, MAX_SPECKS, [3, 3], [polygonStrip(8, Math.PI / 8)]),
+      );
+      // Per beam: x0, slope, half-width; y0, y1, intensity.
+      const beamBatch = scope.own(createSpriteBatch(gl, MAX_BEAMS, [3, 3], [QUAD]));
+      const background = scope.own(createGradientBackground(gl));
+      const bgTop = unitRgbMemo();
+      const bgBottom = unitRgbMemo();
+      const glowRgb = unitRgbMemo();
+      const lightRgb = unitRgbMemo();
+      const noise = createNoise(6);
 
-    const beamShapes: Beam[] = Array.from({ length: MAX_BEAMS }, () => ({
-      x0: 0,
-      slope: 0,
-      halfWidth: 1,
-      y0: 0,
-      y1: 1,
-      intensity: 0,
-    }));
+      const beamShapes: Beam[] = Array.from({ length: MAX_BEAMS }, () => ({
+        x0: 0,
+        slope: 0,
+        halfWidth: 1,
+        y0: 0,
+        y1: 1,
+        intensity: 0,
+      }));
 
-    // Positions are in reference units (1 = 1080 device-independent pixels).
-    const xs = new Float32Array(MAX_SPECKS);
-    const ys = new Float32Array(MAX_SPECKS);
-    const heading = new Float32Array(MAX_SPECKS);
-    const pace = new Float32Array(MAX_SPECKS);
-    /** Size and brightness factors; defocused specks are larger and fainter. */
-    const radiusK = new Float32Array(MAX_SPECKS);
-    const brightK = new Float32Array(MAX_SPECKS);
-    const blinkPhase = new Float32Array(MAX_SPECKS);
-    const blinkPeriod = new Float32Array(MAX_SPECKS);
-    const blinkDuty = new Float32Array(MAX_SPECKS);
-    const seed = new Float32Array(MAX_SPECKS);
+      // Positions are in reference units (1 = 1080 device-independent pixels).
+      const xs = new Float32Array(MAX_SPECKS);
+      const ys = new Float32Array(MAX_SPECKS);
+      const heading = new Float32Array(MAX_SPECKS);
+      const pace = new Float32Array(MAX_SPECKS);
+      /** Size and brightness factors; defocused specks are larger and fainter. */
+      const radiusK = new Float32Array(MAX_SPECKS);
+      const brightK = new Float32Array(MAX_SPECKS);
+      const blinkPhase = new Float32Array(MAX_SPECKS);
+      const blinkPeriod = new Float32Array(MAX_SPECKS);
+      const blinkDuty = new Float32Array(MAX_SPECKS);
+      const seed = new Float32Array(MAX_SPECKS);
 
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let refWidth = 1920;
-    let time = 0;
-    /** Inputs the uniforms were last set from. */
-    let speckW = 0;
-    let speckH = 0;
-    let beamW = 0;
-    let beamH = 0;
-    let beamColorSet: unknown = null;
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let refWidth = 1920;
+      let time = 0;
+      /** Inputs the uniforms were last set from. */
+      let speckW = 0;
+      let speckH = 0;
+      let beamW = 0;
+      let beamH = 0;
+      let beamColorSet: unknown = null;
 
-    const newBlink = (i: number) => {
-      blinkPeriod[i] = 3 + Math.random() * 6;
-      blinkDuty[i] = (0.5 + Math.random() * 0.7) / blinkPeriod[i];
-    };
+      const newBlink = (i: number) => {
+        blinkPeriod[i] = 3 + Math.random() * 6;
+        blinkDuty[i] = (0.5 + Math.random() * 0.7) / blinkPeriod[i];
+      };
 
-    for (let i = 0; i < MAX_SPECKS; i++) {
-      xs[i] = Math.random() * refWidth;
-      ys[i] = Math.random() * 1080;
-      heading[i] = Math.random() * TAU;
-      pace[i] = 0.6 + Math.random() * 0.8;
-      const defocused = Math.random() < DEFOCUS_SHARE;
-      radiusK[i] = defocused ? 1.8 + Math.random() * 1.2 : 0.75 + Math.random() * 0.5;
-      brightK[i] = defocused ? 0.3 + Math.random() * 0.15 : 0.8 + Math.random() * 0.2;
-      newBlink(i);
-      blinkPhase[i] = Math.random();
-      seed[i] = Math.random() * 100;
-    }
+      for (let i = 0; i < MAX_SPECKS; i++) {
+        xs[i] = Math.random() * refWidth;
+        ys[i] = Math.random() * 1080;
+        heading[i] = Math.random() * TAU;
+        pace[i] = 0.6 + Math.random() * 0.8;
+        const defocused = Math.random() < DEFOCUS_SHARE;
+        radiusK[i] = defocused ? 1.8 + Math.random() * 1.2 : 0.75 + Math.random() * 0.5;
+        brightK[i] = defocused ? 0.3 + Math.random() * 0.15 : 0.8 + Math.random() * 0.2;
+        newBlink(i);
+        blinkPhase[i] = Math.random();
+        seed[i] = Math.random() * 100;
+      }
 
-    return {
-      resize(v) {
-        const newRefWidth = v.width / v.scale;
-        const k = newRefWidth / refWidth;
-        for (let i = 0; i < MAX_SPECKS; i++) xs[i] *= k;
-        ({ width, height, scale } = v);
-        refWidth = newRefWidth;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        time = (time + dt) % 10000;
-        const dust = p.scene === "dust";
-        const n = Math.min(p.count, MAX_SPECKS);
-        const nBeams = dust ? layoutBeams(p.beams, p.beamAngle, refWidth, beamShapes) : 0;
-        const color = dust ? lightRgb(p.lightColor) : glowRgb(p.glowColor);
-        const cr = color[0];
-        const cg = color[1];
-        const cb = color[2];
-        const baseRadius = p.size * HALO_EXTENT * (dust ? DUST_SIZE : 1);
-        const drift = p.speed * (dust ? DUST_PX : FIREFLY_PX);
-        const turn = dust ? 0.5 : 1.2;
-        const noiseT = time * (dust ? 0.05 : 0.12);
+      return {
+        resize(v) {
+          const newRefWidth = v.width / v.scale;
+          const k = newRefWidth / refWidth;
+          for (let i = 0; i < MAX_SPECKS; i++) xs[i] *= k;
+          ({ width, height, scale } = v);
+          refWidth = newRefWidth;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time = (time + dt) % 10000;
+          const dust = p.scene === "dust";
+          const n = Math.min(p.count, MAX_SPECKS);
+          const nBeams = dust ? layoutBeams(p.beams, p.beamAngle, refWidth, beamShapes) : 0;
+          const color = dust ? lightRgb(p.lightColor) : glowRgb(p.glowColor);
+          const cr = color[0];
+          const cg = color[1];
+          const cb = color[2];
+          const baseRadius = p.size * HALO_EXTENT * (dust ? DUST_SIZE : 1);
+          const drift = p.speed * (dust ? DUST_PX : FIREFLY_PX);
+          const turn = dust ? 0.5 : 1.2;
+          const noiseT = time * (dust ? 0.05 : 0.12);
 
-        const data = specks.data;
-        const stride = specks.stride;
-        let visible = 0;
-        for (let i = 0; i < n; i++) {
-          // Smooth random walk: the heading turns by slow 1D noise, never jitters.
-          heading[i] += noise.noise2(noiseT, seed[i]) * turn * dt;
-          const sp = drift * pace[i] * radiusK[i] ** 0.5;
-          const radius = baseRadius * radiusK[i];
-          const margin = radius;
-          const x = wrap(xs[i] + Math.cos(heading[i]) * sp * dt, refWidth, margin);
-          // Dust also settles very slowly, as it does in still air.
-          const y = wrap(
-            ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt,
-            1080,
-            margin,
-          );
-          xs[i] = x;
-          ys[i] = y;
+          const data = specks.data;
+          const stride = specks.stride;
+          let visible = 0;
+          for (let i = 0; i < n; i++) {
+            // Smooth random walk: the heading turns by slow 1D noise, never jitters.
+            heading[i] += noise.noise2(noiseT, seed[i]) * turn * dt;
+            const sp = drift * pace[i] * radiusK[i] ** 0.5;
+            const radius = baseRadius * radiusK[i];
+            const margin = radius;
+            const x = wrap(xs[i] + Math.cos(heading[i]) * sp * dt, refWidth, margin);
+            // Dust also settles very slowly, as it does in still air.
+            const y = wrap(
+              ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt,
+              1080,
+              margin,
+            );
+            xs[i] = x;
+            ys[i] = y;
 
-          let level: number;
-          if (dust) {
-            let m = 0;
-            for (let b = 0; b < nBeams; b++) m += beamMembership(x, y, beamShapes[b]);
-            // A gentle glint as each mote tumbles.
-            level = Math.min(1, m) * (0.75 + 0.25 * Math.sin(time * 1.3 + seed[i]));
-          } else {
-            let ph = blinkPhase[i] + dt / blinkPeriod[i];
-            if (ph >= 1) {
-              ph -= Math.floor(ph);
-              newBlink(i);
+            let level: number;
+            if (dust) {
+              let m = 0;
+              for (let b = 0; b < nBeams; b++) m += beamMembership(x, y, beamShapes[b]);
+              // A gentle glint as each mote tumbles.
+              level = Math.min(1, m) * (0.75 + 0.25 * Math.sin(time * 1.3 + seed[i]));
+            } else {
+              let ph = blinkPhase[i] + dt / blinkPeriod[i];
+              if (ph >= 1) {
+                ph -= Math.floor(ph);
+                newBlink(i);
+              }
+              blinkPhase[i] = ph;
+              level = blink(ph, blinkDuty[i]);
             }
-            blinkPhase[i] = ph;
-            level = blink(ph, blinkDuty[i]);
+            const a = level * brightK[i] * p.brightness;
+            if (a <= 0.003) continue;
+            const o = visible * stride;
+            data[o] = x * scale;
+            data[o + 1] = y * scale;
+            data[o + 2] = radius * scale + 1;
+            data[o + 3] = cr * a;
+            data[o + 4] = cg * a;
+            data[o + 5] = cb * a;
+            visible++;
           }
-          const a = level * brightK[i] * p.brightness;
-          if (a <= 0.003) continue;
-          const o = visible * stride;
-          data[o] = x * scale;
-          data[o + 1] = y * scale;
-          data[o + 2] = radius * scale + 1;
-          data[o + 3] = cr * a;
-          data[o + 4] = cg * a;
-          data[o + 5] = cb * a;
-          visible++;
-        }
 
-        background.draw(bgTop(p.topColor), bgBottom(p.bottomColor));
+          background.draw(bgTop(p.topColor), bgBottom(p.bottomColor));
 
-        gl.enable(gl.BLEND);
-        gl.blendEquation(gl.FUNC_ADD);
-        gl.blendFunc(gl.ONE, gl.ONE);
-        if (nBeams > 0) {
-          const bd = beamBatch.data;
-          const bs = beamBatch.stride;
-          for (let b = 0; b < nBeams; b++) {
-            const s = beamShapes[b];
-            const o = b * bs;
-            // Slow, slight breathing, as if thin cloud passes the window.
-            const breathe = 0.85 + 0.15 * Math.sin(time * 0.21 + b * 2.1);
-            bd[o] = s.x0 * scale;
-            bd[o + 1] = s.slope;
-            bd[o + 2] = s.halfWidth * scale;
-            bd[o + 3] = s.y0 * scale;
-            bd[o + 4] = s.y1 * scale;
-            bd[o + 5] = s.intensity * breathe * BEAM_STRENGTH * p.brightness;
+          gl.enable(gl.BLEND);
+          gl.blendEquation(gl.FUNC_ADD);
+          gl.blendFunc(gl.ONE, gl.ONE);
+          if (nBeams > 0) {
+            const bd = beamBatch.data;
+            const bs = beamBatch.stride;
+            for (let b = 0; b < nBeams; b++) {
+              const s = beamShapes[b];
+              const o = b * bs;
+              // Slow, slight breathing, as if thin cloud passes the window.
+              const breathe = 0.85 + 0.15 * Math.sin(time * 0.21 + b * 2.1);
+              bd[o] = s.x0 * scale;
+              bd[o + 1] = s.slope;
+              bd[o + 2] = s.halfWidth * scale;
+              bd[o + 3] = s.y0 * scale;
+              bd[o + 4] = s.y1 * scale;
+              bd[o + 5] = s.intensity * breathe * BEAM_STRENGTH * p.brightness;
+            }
+            beamBatch.upload(nBeams);
+            gl.useProgram(beamProgram);
+            if (beamW !== width || beamH !== height) {
+              beamW = width;
+              beamH = height;
+              gl.uniform2f(beamLoc.uResolution, width, height);
+            }
+            if (beamColorSet !== color) {
+              beamColorSet = color;
+              gl.uniform3fv(beamLoc.uColor, color);
+            }
+            beamBatch.draw(0, nBeams);
           }
-          beamBatch.upload(nBeams);
-          gl.useProgram(beamProgram);
-          if (beamW !== width || beamH !== height) {
-            beamW = width;
-            beamH = height;
-            gl.uniform2f(beamLoc.uResolution, width, height);
-          }
-          if (beamColorSet !== color) {
-            beamColorSet = color;
-            gl.uniform3fv(beamLoc.uColor, color);
-          }
-          beamBatch.draw(0, nBeams);
-        }
 
-        if (visible > 0) {
-          specks.upload(visible);
-          gl.useProgram(speckProgram);
-          if (speckW !== width || speckH !== height) {
-            speckW = width;
-            speckH = height;
-            gl.uniform2f(speckLoc.uResolution, width, height);
+          if (visible > 0) {
+            specks.upload(visible);
+            gl.useProgram(speckProgram);
+            if (speckW !== width || speckH !== height) {
+              speckW = width;
+              speckH = height;
+              gl.uniform2f(speckLoc.uResolution, width, height);
+            }
+            specks.draw(0, visible);
           }
-          specks.draw(0, visible);
-        }
-        gl.disable(gl.BLEND);
-      },
-      dispose() {
-        gl.deleteProgram(speckProgram);
-        gl.deleteProgram(beamProgram);
-        specks.dispose();
-        beamBatch.dispose();
-        background.dispose();
-      },
-    };
+          gl.disable(gl.BLEND);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

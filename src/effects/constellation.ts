@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms } from "./gl";
+import { beginFrame, createProgram, getUniforms, withScope } from "./gl";
 import { createRng } from "./noise";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
@@ -258,178 +258,179 @@ export const constellation = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const background = createGradientBackground(gl);
-    const pointProgram = createProgram(gl, POINT_VERTEX, POINT_FRAGMENT);
-    const pointLoc = getUniforms(gl, pointProgram, ["uResolution", "uColor"]);
-    const points = createSpriteBatch(gl, MAX_POINTS, [4], [polygonStrip(8, Math.PI / 8)]);
-    const streaks = createStreakRenderer(gl, LINK_CAP);
+    return withScope((scope) => {
+      const background = scope.own(createGradientBackground(gl));
+      const pointProgram = scope.add(createProgram(gl, POINT_VERTEX, POINT_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const pointLoc = getUniforms(gl, pointProgram, ["uResolution", "uColor"]);
+      const points = scope.own(
+        createSpriteBatch(gl, MAX_POINTS, [4], [polygonStrip(8, Math.PI / 8)]),
+      );
+      const streaks = scope.own(createStreakRenderer(gl, LINK_CAP));
 
-    const bgTop = unitRgbMemo();
-    const bgBottom = unitRgbMemo();
-    const pointRgb = unitRgbMemo();
-    const lineRgb = createRgbCache();
-    // Last uploaded uniform inputs (colours are memoised references).
-    let pointSetColor: Rgb | null = null;
-    let pointSetW = 0;
-    let pointSetH = 0;
+      const bgTop = unitRgbMemo();
+      const bgBottom = unitRgbMemo();
+      const pointRgb = unitRgbMemo();
+      const lineRgb = createRgbCache();
+      // Last uploaded uniform inputs (colours are memoised references).
+      let pointSetColor: Rgb | null = null;
+      let pointSetW = 0;
+      let pointSetH = 0;
 
-    // Positions in reference px (1080 per frame height), y down.
-    const xs = new Float32Array(MAX_POINTS);
-    const ys = new Float32Array(MAX_POINTS);
-    /** 0 = far, 1 = near. */
-    const z = new Float32Array(MAX_POINTS);
-    const sizeVar = new Float32Array(MAX_POINTS);
-    const heading = new Float32Array(MAX_POINTS);
-    const turnRate = new Float32Array(MAX_POINTS);
-    const turnPhase = new Float32Array(MAX_POINTS);
-    const life = new Float32Array(MAX_POINTS);
-    /** Per-frame depth factor in [1 - depth, 1]. */
-    const near = new Float32Array(MAX_POINTS);
+      // Positions in reference px (1080 per frame height), y down.
+      const xs = new Float32Array(MAX_POINTS);
+      const ys = new Float32Array(MAX_POINTS);
+      /** 0 = far, 1 = near. */
+      const z = new Float32Array(MAX_POINTS);
+      const sizeVar = new Float32Array(MAX_POINTS);
+      const heading = new Float32Array(MAX_POINTS);
+      const turnRate = new Float32Array(MAX_POINTS);
+      const turnPhase = new Float32Array(MAX_POINTS);
+      const life = new Float32Array(MAX_POINTS);
+      /** Per-frame depth factor in [1 - depth, 1]. */
+      const near = new Float32Array(MAX_POINTS);
 
-    const grid = createLinkGrid(MAX_POINTS);
-    const linkA = new Uint16Array(LINK_CAP);
-    const linkB = new Uint16Array(LINK_CAP);
-    const linkT = new Float32Array(LINK_CAP);
+      const grid = createLinkGrid(MAX_POINTS);
+      const linkA = new Uint16Array(LINK_CAP);
+      const linkB = new Uint16Array(LINK_CAP);
+      const linkT = new Float32Array(LINK_CAP);
 
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let refWidth = 1920;
-    let time = 0;
-    let prevCount = 0;
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let refWidth = 1920;
+      let time = 0;
+      let prevCount = 0;
 
-    const rng = createRng(0x51a7);
-    for (let i = 0; i < MAX_POINTS; i++) {
-      xs[i] = rng() * refWidth;
-      ys[i] = rng() * 1080;
-      z[i] = rng();
-      sizeVar[i] = 0.7 + rng() * 0.6;
-      heading[i] = rng() * TAU;
-      turnRate[i] = 0.05 + rng() * 0.15;
-      turnPhase[i] = rng() * TAU;
-    }
+      const rng = createRng(0x51a7);
+      for (let i = 0; i < MAX_POINTS; i++) {
+        xs[i] = rng() * refWidth;
+        ys[i] = rng() * 1080;
+        z[i] = rng();
+        sizeVar[i] = 0.7 + rng() * 0.6;
+        heading[i] = rng() * TAU;
+        turnRate[i] = 0.05 + rng() * 0.15;
+        turnPhase[i] = rng() * TAU;
+      }
 
-    return {
-      resize(v) {
-        const newRefWidth = v.width / v.scale;
-        const k = newRefWidth / refWidth;
-        for (let i = 0; i < MAX_POINTS; i++) xs[i] *= k;
-        ({ width, height, scale } = v);
-        refWidth = newRefWidth;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        time = (time + dt) % 10000;
-        const n = Math.min(Math.floor(p.count), MAX_POINTS);
-        for (let i = prevCount; i < n; i++) life[i] = 0;
-        prevCount = n;
+      return {
+        resize(v) {
+          const newRefWidth = v.width / v.scale;
+          const k = newRefWidth / refWidth;
+          for (let i = 0; i < MAX_POINTS; i++) xs[i] *= k;
+          ({ width, height, scale } = v);
+          refWidth = newRefWidth;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time = (time + dt) % 10000;
+          const n = Math.min(Math.floor(p.count), MAX_POINTS);
+          for (let i = prevCount; i < n; i++) life[i] = 0;
+          prevCount = n;
 
-        // Off-screen margin of one link distance, so links fade out before a wrap.
-        const dist = p.linkDistance * 1080;
-        const minX = -dist;
-        const minY = -dist;
-        const spanX = refWidth + 2 * dist;
-        const spanY = 1080 + 2 * dist;
-        const drift = p.speed * DRIFT_PX * dt;
-        const fadeStep = dt / FADE_IN;
-        const depth = p.depth;
+          // Off-screen margin of one link distance, so links fade out before a wrap.
+          const dist = p.linkDistance * 1080;
+          const minX = -dist;
+          const minY = -dist;
+          const spanX = refWidth + 2 * dist;
+          const spanY = 1080 + 2 * dist;
+          const drift = p.speed * DRIFT_PX * dt;
+          const fadeStep = dt / FADE_IN;
+          const depth = p.depth;
 
-        for (let i = 0; i < n; i++) {
-          const k = 1 - depth * (1 - z[i]);
-          near[i] = k;
-          heading[i] += Math.sin(time * turnRate[i] + turnPhase[i]) * dt * 0.25;
-          const step = drift * (0.35 + 0.65 * k);
-          xs[i] = wrapCoord(xs[i] + Math.cos(heading[i]) * step, minX, spanX);
-          ys[i] = wrapCoord(ys[i] + Math.sin(heading[i]) * step, minY, spanY);
-          life[i] = Math.min(1, life[i] + fadeStep);
-        }
+          for (let i = 0; i < n; i++) {
+            const k = 1 - depth * (1 - z[i]);
+            near[i] = k;
+            heading[i] += Math.sin(time * turnRate[i] + turnPhase[i]) * dt * 0.25;
+            const step = drift * (0.35 + 0.65 * k);
+            xs[i] = wrapCoord(xs[i] + Math.cos(heading[i]) * step, minX, spanX);
+            ys[i] = wrapCoord(ys[i] + Math.sin(heading[i]) * step, minY, spanY);
+            life[i] = Math.min(1, life[i] + fadeStep);
+          }
 
-        // Links.
-        buildGrid(grid, xs, ys, n, minX, minY, spanX, spanY, dist);
-        const links = findLinks(grid, xs, ys, dist, linkA, linkB, linkT, LINK_CAP);
-        const lc = lineRgb(p.lineColor);
-        const halfWidth = p.lineWidth * 0.5 * scale;
-        const sd = streaks.data;
-        let drawn = 0;
-        for (let l = 0; l < links; l++) {
-          const a = linkA[l];
-          const b = linkB[l];
-          const la = life[a];
-          const lb = life[b];
-          const alpha =
-            p.lineOpacity *
-            linkFalloff(linkT[l]) *
-            (0.3 + 0.35 * (near[a] + near[b])) *
-            (la < lb ? la : lb);
-          if (alpha < MIN_LINK_ALPHA) continue;
-          const o = drawn * STREAK_FLOATS;
-          sd[o] = xs[a] * scale;
-          sd[o + 1] = ys[a] * scale;
-          sd[o + 2] = xs[b] * scale;
-          sd[o + 3] = ys[b] * scale;
-          sd[o + 4] = lc[0] * alpha;
-          sd[o + 5] = lc[1] * alpha;
-          sd[o + 6] = lc[2] * alpha;
-          sd[o + 7] = halfWidth;
-          drawn++;
-        }
+          // Links.
+          buildGrid(grid, xs, ys, n, minX, minY, spanX, spanY, dist);
+          const links = findLinks(grid, xs, ys, dist, linkA, linkB, linkT, LINK_CAP);
+          const lc = lineRgb(p.lineColor);
+          const halfWidth = p.lineWidth * 0.5 * scale;
+          const sd = streaks.data;
+          let drawn = 0;
+          for (let l = 0; l < links; l++) {
+            const a = linkA[l];
+            const b = linkB[l];
+            const la = life[a];
+            const lb = life[b];
+            const alpha =
+              p.lineOpacity *
+              linkFalloff(linkT[l]) *
+              (0.3 + 0.35 * (near[a] + near[b])) *
+              (la < lb ? la : lb);
+            if (alpha < MIN_LINK_ALPHA) continue;
+            const o = drawn * STREAK_FLOATS;
+            sd[o] = xs[a] * scale;
+            sd[o + 1] = ys[a] * scale;
+            sd[o + 2] = xs[b] * scale;
+            sd[o + 3] = ys[b] * scale;
+            sd[o + 4] = lc[0] * alpha;
+            sd[o + 5] = lc[1] * alpha;
+            sd[o + 6] = lc[2] * alpha;
+            sd[o + 7] = halfWidth;
+            drawn++;
+          }
 
-        // Points (only those on screen).
-        const pd = points.data;
-        const ps = points.stride;
-        const baseRadius = p.pointSize * scale;
-        let dots = 0;
-        for (let i = 0; i < n; i++) {
-          const k = near[i];
-          const r = baseRadius * sizeVar[i] * (0.45 + 0.55 * k);
-          const x = xs[i] * scale;
-          const y = ys[i] * scale;
-          if (x < -r - 1 || y < -r - 1 || x > width + r + 1 || y > height + r + 1) continue;
-          const o = dots * ps;
-          pd[o] = x;
-          pd[o + 1] = y;
-          pd[o + 2] = r;
-          pd[o + 3] = (0.3 + 0.7 * k) * life[i];
-          dots++;
-        }
+          // Points (only those on screen).
+          const pd = points.data;
+          const ps = points.stride;
+          const baseRadius = p.pointSize * scale;
+          let dots = 0;
+          for (let i = 0; i < n; i++) {
+            const k = near[i];
+            const r = baseRadius * sizeVar[i] * (0.45 + 0.55 * k);
+            const x = xs[i] * scale;
+            const y = ys[i] * scale;
+            if (x < -r - 1 || y < -r - 1 || x > width + r + 1 || y > height + r + 1) continue;
+            const o = dots * ps;
+            pd[o] = x;
+            pd[o + 1] = y;
+            pd[o + 2] = r;
+            pd[o + 3] = (0.3 + 0.7 * k) * life[i];
+            dots++;
+          }
 
-        // 1. Background.
-        background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
+          // 1. Background.
+          background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
 
-        // 2. Lines, additive (streaks set their own blend state).
-        if (drawn > 0) {
-          streaks.upload(drawn);
-          streaks.draw(drawn, width, height);
-        }
+          // 2. Lines, additive (streaks set their own blend state).
+          if (drawn > 0) {
+            streaks.upload(drawn);
+            streaks.draw(drawn, width, height);
+          }
 
-        // 3. Points, premultiplied over.
-        if (dots > 0) {
-          points.upload(dots);
-          gl.enable(gl.BLEND);
+          // 3. Points, premultiplied over.
+          if (dots > 0) {
+            points.upload(dots);
+            gl.enable(gl.BLEND);
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+            gl.useProgram(pointProgram);
+            const pc = pointRgb(p.pointColor);
+            if (pc !== pointSetColor) {
+              gl.uniform3fv(pointLoc.uColor, pc);
+              pointSetColor = pc;
+            }
+            if (pointSetW !== width || pointSetH !== height) {
+              gl.uniform2f(pointLoc.uResolution, width, height);
+              pointSetW = width;
+              pointSetH = height;
+            }
+            points.draw(0, dots);
+          }
+          gl.disable(gl.BLEND);
           gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          gl.useProgram(pointProgram);
-          const pc = pointRgb(p.pointColor);
-          if (pc !== pointSetColor) {
-            gl.uniform3fv(pointLoc.uColor, pc);
-            pointSetColor = pc;
-          }
-          if (pointSetW !== width || pointSetH !== height) {
-            gl.uniform2f(pointLoc.uResolution, width, height);
-            pointSetW = width;
-            pointSetH = height;
-          }
-          points.draw(0, dots);
-        }
-        gl.disable(gl.BLEND);
-        gl.blendEquation(gl.FUNC_ADD);
-      },
-      dispose() {
-        background.dispose();
-        gl.deleteProgram(pointProgram);
-        points.dispose();
-        streaks.dispose();
-      },
-    };
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });
