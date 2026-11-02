@@ -1,0 +1,320 @@
+import { hexToUnitRgb } from "./color";
+import {
+  ambientAt,
+  driftUniform,
+  GRID_ORIGIN,
+  JITTER,
+  palette,
+  PALETTE_OPTIONS,
+  PALETTE_SIZE,
+  PALETTES,
+  sunAt,
+} from "./glass-sim";
+import {
+  beginFrame,
+  createDataTexture,
+  createFullscreenTriangle,
+  createProgram,
+  createUniforms,
+  DITHER_GLSL,
+  FULLSCREEN_VERTEX,
+  glslFloat,
+  withScope,
+} from "./gl";
+import { buildPeriodicNoiseTexture, HASH32_GLSL } from "./noise";
+import { defineEffect } from "./types";
+
+/** Glass texture: texels per side, its tile in reference px, and lattice cells per side of each channel. */
+const TEX_SIZE = 128;
+const TEX_TILE = 256;
+/** R: broad ripples (~64 px features); G: fine noise thresholded into seed bubbles. */
+const RIPPLE_PERIOD = 4;
+const SEEDY_PERIOD = 32;
+/** Brightness modulation at `texture` = 1 for rippled panes, and bubble brightness for seedy ones. */
+const RIPPLE_AMP = 0.24;
+const SEEDY_AMP = 0.3;
+/** Pane brightness lift at its centre, and the per-pane brightness spread of old glass. */
+const CENTRE_GLOW = 0.14;
+const PANE_SPREAD = 0.16;
+/** Sun patch radii in frame heights, and its peak added light at `light` = 1. */
+const SUN_RX = 0.6;
+const SUN_RY = 0.42;
+const SUN_GAIN = 0.62;
+/** Lead highlight peak, its light direction (y down: from the upper left), and bloom strength. */
+const HIGHLIGHT = 0.16;
+const LIGHT_DIR = [-0.6, -0.8] as const;
+const BLOOM = 0.3;
+/** Lead widths in device px over which the highlight fades in (thin leads would shimmer). */
+const HIGHLIGHT_FADE = [3, 6] as const;
+
+/** Every palette as PALETTE_SIZE rgb triples (0..1), built once. */
+const PALETTE_DATA = new Map<readonly string[], Float32Array>(
+  Object.values(PALETTES).map((colors) => {
+    const data = new Float32Array(PALETTE_SIZE * 3);
+    colors.forEach((hex, i) => data.set(hexToUnitRgb(hex), i * 3));
+    return [colors, data];
+  }),
+);
+const paletteData = (name: string) => PALETTE_DATA.get(palette(name))!;
+
+/**
+ * One full-screen pass: a 3x3 jittered-Voronoi search (the twin of `voronoi` in
+ * glass-sim.ts, which proves the search exact), the exact distance to the pane's
+ * edge for constant-width anti-aliased lead, one glass-texture fetch, and the
+ * analytic sun patch.
+ */
+const FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+precision highp int;
+precision mediump sampler2D;
+uniform sampler2D uGlass;
+/** Reference position (1080 tall, y down) = gl_FragCoord.xy * xy + zw. */
+uniform vec4 uPix;
+/** Grid position = reference position * x + yz. */
+uniform vec3 uGrid;
+/** Shared drift path point, pre-scaled (see driftUniform). */
+uniform vec2 uDrift;
+/** Device px per cell. */
+uniform float uCellPx;
+/** Lead half width in device px, opacity, and highlight strength. */
+uniform vec3 uLead;
+uniform vec3 uLeadColor;
+/** Sun centre (reference px), and 1 / radii (reference px). */
+uniform vec4 uSun;
+/** Ambient level and sun gain. */
+uniform vec2 uLight;
+/** Cells to texture tiles, and texture strength. */
+uniform vec2 uTex;
+uniform vec3 uPalette[${PALETTE_SIZE}];
+out vec4 outColor;
+${HASH32_GLSL}
+${DITHER_GLSL}
+void main() {
+  vec2 ref = gl_FragCoord.xy * uPix.xy + uPix.zw;
+  vec2 g = ref * uGrid.x + uGrid.yz;
+  vec2 cell = floor(g);
+  uvec2 ci = uvec2(cell);
+
+  vec2 seeds[9];
+  int best = 0;
+  float f1 = 1e9;
+  uint bestH = 0u;
+  for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 3; i++) {
+      uvec2 c = ci + uvec2(i, j) - 1u;
+      uint h = hash32((c.x & 0xfffu) | ((c.y & 0xfffu) << 12));
+      vec4 b = vec4(uvec4(h, h >> 8, h >> 16, h >> 24) & 255u) * ${glslFloat(2 / 255)} - 1.0;
+      float sg = (h & 1u) == 1u ? 1.0 : -1.0;
+      vec2 cs = vec2(uDrift.x, uDrift.y * sg);
+      vec2 jit = ${glslFloat(JITTER)} * b.xy * sqrt(1.0 - 0.5 * b.yx * b.yx);
+      vec2 s = cell + vec2(float(i), float(j)) - 0.5 + jit
+        + vec2(b.z * cs.x - b.w * cs.y, b.w * cs.x + b.z * cs.y);
+      int k = j * 3 + i;
+      seeds[k] = s;
+      vec2 d = g - s;
+      float dd = dot(d, d);
+      if (dd < f1) {
+        f1 = dd;
+        best = k;
+        bestH = h;
+      }
+    }
+  }
+
+  // Exact distance to the pane's edge: the nearest bisector with any other seed.
+  vec2 a = seeds[best];
+  float edge = 1e9;
+  vec2 nrm = vec2(0.0, 1.0);
+  for (int k = 0; k < 9; k++) {
+    if (k == best) continue;
+    vec2 ab = seeds[k] - a;
+    vec2 d = g - seeds[k];
+    float inv = inversesqrt(dot(ab, ab));
+    float e = (dot(d, d) - f1) * 0.5 * inv;
+    if (e < edge) {
+      edge = e;
+      nrm = ab * inv;
+    }
+  }
+
+  // Pane: palette colour, old-glass brightness spread, centre glow, texture.
+  uint ph = hash32(bestH ^ 0x5bd1e995u);
+  vec3 pane = uPalette[int(ph & ${PALETTE_SIZE - 1}u)];
+  float spread = 1.0 + ${glslFloat(PANE_SPREAD)} * (float((ph >> 26) & 63u) * ${glslFloat(1 / 63)} - 0.5);
+  float glow = 1.0 + ${glslFloat(CENTRE_GLOW)} * max(1.0 - f1 * 2.5, 0.0);
+  vec2 offs = vec2(uvec2(ph >> 8, ph >> 16) & 255u) * ${glslFloat(1 / 256)};
+  vec2 tex = texture(uGlass, (g - a) * uTex.x + offs).rg;
+  float seedy = ((ph >> 24) & 3u) == 0u ? 1.0 : 0.0;
+  float ripple = (tex.r - 0.5) * 2.0 * ${glslFloat(RIPPLE_AMP)};
+  float bubble = smoothstep(0.66, 0.74, tex.g) * ${glslFloat(SEEDY_AMP)};
+  float texMod = 1.0 + uTex.y * mix(ripple, bubble + 0.4 * ripple, seedy);
+
+  // Light: ambient plus the soft sun ellipse.
+  vec2 q = (ref - uSun.xy) * uSun.zw;
+  float light = uLight.x + uLight.y * exp(-2.0 * dot(q, q));
+  vec3 lit = pane * (light * spread * glow);
+  vec3 glass = lit * texMod;
+
+  // Lead: box-filtered coverage of a constant-width line, with a highlight on
+  // the side facing the light and a little bloom from bright panes near its edge.
+  float dpx = edge * uCellPx;
+  float cov = clamp(uLead.x + 0.5 - dpx, 0.0, 1.0) * uLead.y;
+  float x = clamp(dpx / uLead.x, 0.0, 1.0);
+  float facing = max(dot(-nrm, vec2(${glslFloat(LIGHT_DIR[0])}, ${glslFloat(LIGHT_DIR[1])})), 0.0);
+  float hl = uLead.z * facing * (1.0 - smoothstep(0.0, 0.3, abs(x - 0.55)));
+  vec3 lead = uLeadColor * (1.0 - 0.15 * x) + hl + lit * (${glslFloat(BLOOM)} * x * x);
+
+  vec3 c = mix(glass, lead, cov);
+  outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
+}
+`;
+
+/** Lead half width (device px, at least 0.5), opacity and highlight for `leadWidth` px at 1080p. */
+export function leadStyle(leadWidth: number, scale: number): [number, number, number] {
+  const w = Math.max(0, leadWidth * scale);
+  const ew = Math.max(w, 1);
+  const t = Math.min(
+    Math.max((w - HIGHLIGHT_FADE[0]) / (HIGHLIGHT_FADE[1] - HIGHLIGHT_FADE[0]), 0),
+    1,
+  );
+  return [ew / 2, w / ew, HIGHLIGHT * t * t * (3 - 2 * t)];
+}
+
+/**
+ * A stained-glass window lit from behind: jewel-toned Voronoi panes in dark lead,
+ * a soft patch of sun crossing slowly, and panes that breathe as their seeds
+ * drift on small closed paths. One full-resolution pass with one texture fetch.
+ */
+export const glass = defineEffect({
+  id: "glass",
+  name: "Stained glass",
+  description:
+    "A backlit stained-glass window of jewel-toned panes in dark lead, with a soft patch of sunlight drifting across.",
+  params: {
+    palette: {
+      kind: "select",
+      label: "Palette",
+      options: PALETTE_OPTIONS,
+      default: "cathedral",
+    },
+    cellSize: {
+      kind: "number",
+      label: "Pane size (px at 1080p)",
+      min: 100,
+      max: 260,
+      step: 5,
+      default: 160,
+    },
+    leadWidth: {
+      kind: "number",
+      label: "Lead width (px at 1080p)",
+      min: 2,
+      max: 14,
+      step: 0.5,
+      default: 6,
+    },
+    leadColor: { kind: "color", label: "Lead colour", default: "#303236" },
+    drift: { kind: "number", label: "Drift", min: 0, max: 1, step: 0.01, default: 0.5 },
+    light: { kind: "number", label: "Sunlight", min: 0, max: 1, step: 0.01, default: 0.6 },
+    texture: { kind: "number", label: "Glass texture", min: 0, max: 1, step: 0.01, default: 0.5 },
+  },
+  context: "webgl2",
+  create(gl) {
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const u = createUniforms(gl, program, [
+        "uGlass",
+        "uPix",
+        "uGrid",
+        "uDrift",
+        "uCellPx",
+        "uLead",
+        "uLeadColor",
+        "uSun",
+        "uLight",
+        "uTex",
+        "uPalette",
+      ]);
+      gl.useProgram(program);
+      u.i1("uGlass", 0);
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const glassTex = scope.add(
+        createDataTexture(gl, {
+          width: TEX_SIZE,
+          height: TEX_SIZE,
+          internalFormat: gl.RG8,
+          format: gl.RG,
+          type: gl.UNSIGNED_BYTE,
+          data: buildPeriodicNoiseTexture(TEX_SIZE, [
+            { period: RIPPLE_PERIOD, seed: 40 },
+            { period: SEEDY_PERIOD, seed: 41 },
+          ]),
+          wrap: gl.REPEAT,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+
+      const drift = [0, 0];
+      const sun = [0, 0];
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      // CPU-only time, kept unwrapped in float64; only cos/sin of it are uploaded.
+      let time = 0;
+      let lastPalette: Float32Array | undefined;
+      let lastLead = Number.NaN;
+
+      return {
+        resize(v) {
+          width = Math.max(1, v.width);
+          height = Math.max(1, v.height);
+          scale = v.scale > 0 ? v.scale : height / 1080;
+          lastLead = Number.NaN;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time += dt;
+          gl.useProgram(program);
+
+          const inv = 1 / scale;
+          const refW = width * inv;
+          const refH = height * inv;
+          u.f4("uPix", inv, -inv, 0, refH);
+          // Cells anchored on the frame centre, so changing the pane size scales from there.
+          const cellSize = Math.max(1, p.cellSize);
+          const k = 1 / cellSize;
+          u.f3("uGrid", k, GRID_ORIGIN - 0.5 * refW * k, GRID_ORIGIN - 0.5 * refH * k);
+          u.f1("uCellPx", cellSize * scale);
+          u.f2("uTex", cellSize / TEX_TILE, Math.min(Math.max(p.texture, 0), 1));
+          driftUniform(time, p.drift, drift);
+          u.f2("uDrift", drift[0], drift[1]);
+
+          if (p.leadWidth !== lastLead) {
+            lastLead = p.leadWidth;
+            const [hw, alpha, hl] = leadStyle(p.leadWidth, scale);
+            u.f3("uLead", hw, alpha, hl);
+          }
+          u.rgb("uLeadColor", p.leadColor);
+
+          sunAt(time, sun);
+          u.f4("uSun", sun[0] * refW, sun[1] * refH, 1 / (SUN_RX * 1080), 1 / (SUN_RY * 1080));
+          u.f2("uLight", ambientAt(time), SUN_GAIN * Math.min(Math.max(p.light, 0), 1));
+
+          const pal = paletteData(p.palette);
+          if (pal !== lastPalette) {
+            lastPalette = pal;
+            gl.uniform3fv(u.loc.uPalette, pal);
+          }
+
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, glassTex);
+          triangle.draw();
+          gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
+  },
+});
