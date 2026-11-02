@@ -4,9 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Animated WebGL backgrounds for video calls, tuned to stay smooth and light on the GPU. Pick an effect, adjust it, go fullscreen or record a clip."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
     <title>Zoomer</title>
   </head>
   <body>
+    <!-- Before #root: the body clips overflow, so anything after the full-height root is hidden. -->
+    <noscript>
+      <p>Zoomer needs JavaScript and WebGL 2 to draw its animated backgrounds.</p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
