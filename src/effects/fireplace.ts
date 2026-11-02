@@ -331,7 +331,10 @@ void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
         (y0 / scale - layout.baseY) / layout.flameH,
       );
 
+      // Each program's uniforms in one block after its useProgram: a location is
+      // only valid while its own program is current.
       gl.useProgram(target.program);
+      gl.uniform1f(co.uProfileMax, logs ? hearthMaxHeight(layout) + 1 : -1);
       gl.uniform2f(co.uFireOrigin, x0, y0);
       gl.uniform2f(co.uFireInvSize, 1 / coverW, 1 / coverH);
       gl.uniform1f(co.uScale, scale);
@@ -342,10 +345,10 @@ void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
         1 / (layout.flameH * 1.1 * scale),
       );
       gl.uniform1f(co.uRimInv, 1 / (RIM_PX * scale));
+
       gl.useProgram(emberProgram);
       gl.uniform2f(em.uInvResolution, 1 / width, 1 / height);
-      const profileMax = logs ? hearthMaxHeight(layout) + 1 : -1;
-      gl.uniform1f(co.uProfileMax, profileMax);
+
       if (logs) {
         buildHearthProfile(profileData, refWidth, layout);
         gl.bindTexture(gl.TEXTURE_2D, profileTex);
@@ -374,6 +377,11 @@ void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
           built.logs !== p.logs
         ) {
           rebuildLayout(p.height, p.quality, p.logs);
+          if (import.meta.env.DEV) {
+            const err = gl.getError();
+            if (err !== gl.NO_ERROR)
+              console.error(`fireplace: GL error 0x${err.toString(16)} in rebuildLayout`);
+          }
           built.width = width;
           built.height = height;
           built.flame = p.height;
