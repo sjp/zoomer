@@ -33,6 +33,7 @@ import { ripples } from "./ripples";
 import { lanterns } from "./lanterns";
 import { dapple } from "./dapple";
 import { glass } from "./glass";
+import { smoke } from "./smoke";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -70,6 +71,7 @@ export const effects: readonly EffectDefinition[] = [
   lanterns,
   dapple,
   glass,
+  smoke,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
