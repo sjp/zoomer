@@ -40,7 +40,15 @@ const INDEX_WIDTH = 1.8;
 const LINE_ALPHA = 0.7;
 const INDEX_ALPHA = 1;
 /** Scale of the residual channel in the RGBA16F encoding (see `NOISE_FRAGMENT`). */
-const RESIDUAL_SCALE = 1024;
+export const RESIDUAL_SCALE = 1024;
+/** Steps per byte of the RGBA8 fallback encoding (see `NOISE_FRAGMENT`). */
+export const HEIGHT_BYTE = 255;
+/**
+ * Offset of a level's own band and index test from the level: bands take the
+ * colour of their mid-height, and level k is tested at k + LEVEL_CENTRE so float
+ * error can't flip it.
+ */
+export const LEVEL_CENTRE = 0.5;
 
 /** Canvas-to-field divisor that gives `FIELD_ROWS` rows; never below 1. */
 export function fieldDivisor(height: number): number {
@@ -48,25 +56,39 @@ export function fieldDivisor(height: number): number {
 }
 
 /**
- * Cubic B-spline weights for the four taps around a sample at fraction `t`
- * (0..1) past texel i, i.e. taps i-1, i, i+1, i+2. They sum to 1.
+ * Cubic B-spline basis: the weight of each of the four taps around a sample at
+ * fraction `t` past texel i (taps i-1, i, i+1, i+2) as a polynomial in `t`, by
+ * coefficient of 1, t, t² and t³. The shader's weights are generated from it.
  */
+export const BSPLINE_BASIS: readonly (readonly [number, number, number, number])[] = [
+  [1 / 6, -3 / 6, 3 / 6, -1 / 6],
+  [4 / 6, 0, -6 / 6, 3 / 6],
+  [1 / 6, 3 / 6, 3 / 6, -3 / 6],
+  [0, 0, 0, 1 / 6],
+];
+
+/** Evaluates a cubic `c` at `t`. */
+const cubic = (c: readonly number[], t: number) => c[0] + t * (c[1] + t * (c[2] + t * c[3]));
+
+/** GLSL for cubic `c` in the variables `t`, `t2` and `t3`. */
+const cubicGlsl = (c: readonly number[]) =>
+  `${glslFloat(c[0])} + ${glslFloat(c[1])} * t + ${glslFloat(c[2])} * t2 + ${glslFloat(c[3])} * t3`;
+
+/** Cubic B-spline weights of the taps i-1, i, i+1 and i+2 at fraction `t` (0..1). They sum to 1. */
 export function bsplineWeights(t: number): [number, number, number, number] {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return [
-    (1 - 3 * t + 3 * t2 - t3) / 6,
-    (4 - 6 * t2 + 3 * t3) / 6,
-    (1 + 3 * t + 3 * t2 - 3 * t3) / 6,
-    t3 / 6,
-  ];
+  const [b0, b1, b2, b3] = BSPLINE_BASIS;
+  return [cubic(b0, t), cubic(b1, t), cubic(b2, t), cubic(b3, t)];
 }
+
+/** Texel offsets from i of the two bilinear taps' pairs: (i-1, i) and (i+1, i+2). */
+export const BSPLINE_TAP_BASE = [-1, 1] as const;
 
 /**
  * The B-spline as two bilinear taps per axis (Sigg & Hadwiger, GPU Gems 2 ch. 20):
- * weight `g0` at texel position `i - 1 + o0`, weight `g1` at `i + 1 + o1`, where
- * `o0`, `o1` are in [0, 1] so each tap blends a pair of texels linearly. Mirrors
- * `sampleBSpline` in the shader.
+ * weight `g0` at texel position `i + BSPLINE_TAP_BASE[0] + o0`, weight `g1` at
+ * `i + BSPLINE_TAP_BASE[1] + o1`, where `o0`, `o1` are in [0, 1] so each tap blends
+ * a pair of texels linearly. `sampleBSpline` in the shader is generated from the
+ * same basis and tap offsets.
  */
 export function bsplineTaps(t: number): { g0: number; g1: number; o0: number; o1: number } {
   const [w0, w1, w2, w3] = bsplineWeights(t);
@@ -76,40 +98,66 @@ export function bsplineTaps(t: number): { g0: number; g1: number; o0: number; o1
 }
 
 /**
- * RGBA8 fallback encoding of a height in [0, 1): hi and lo bytes with
- * h = hi/255 + lo/255^2. Decoding is linear, so it survives bilinear filtering.
- * Mirrors the 8-bit branch of `NOISE_FRAGMENT` (GPU rounding of `lo` to a byte).
+ * RGBA8 fallback encoding of a height in [0, 1), as the 8-bit branch of
+ * `NOISE_FRAGMENT` writes it: hi and lo bytes with h = hi/255 + lo/255².
  */
 export function packHeight8(h: number): [number, number] {
-  const s = Math.min(Math.max(h, 0), 1) * 255;
+  const s = Math.min(Math.max(h, 0), 1) * HEIGHT_BYTE;
   const hi = Math.floor(s);
-  return [hi, Math.round((s - hi) * 255)];
+  return [hi, Math.round((s - hi) * HEIGHT_BYTE)];
 }
 
-export function unpackHeight8(hi: number, lo: number): number {
-  return hi / 255 + lo / (255 * 255);
+/** `uDecode`: the weight of the second channel in `decodeHeight`, for each encoding. */
+export function heightDecodeScale(isFloat: boolean): number {
+  return isFloat ? 1 / RESIDUAL_SCALE : 1 / HEIGHT_BYTE;
 }
 
-/** True if contour level `k` is an index contour; `every` 0 turns them off. Mirrors the shader. */
-export function isIndexLevel(k: number, every: number): boolean {
-  if (every < 1) return false;
-  const inv = 1 / every;
-  const r = (k + 0.5) * inv;
+/**
+ * The shader's `decode`: height from the field texture's two channels (as sampled,
+ * 0..1 for RGBA8) and `heightDecodeScale`. Linear, so it survives filtering.
+ */
+export function decodeHeight(r: number, g: number, scale: number): number {
+  return r + g * scale;
+}
+
+/** `uIndexInv`: 1 / `every` (rounded), or 0 when index contours are off. */
+export function indexInv(every: number): number {
+  const n = Math.round(every);
+  return n >= 1 ? 1 / n : 0;
+}
+
+/** Whether contour level `k` is an index contour, for `inv` from `indexInv`, as the shader tests it. */
+export function isIndexLevel(k: number, inv: number): boolean {
+  if (!(inv > 0)) return false;
+  const r = (k + LEVEL_CENTRE) * inv;
   return r - Math.floor(r) < inv;
 }
 
 export type FillMode = "none" | "bands" | "smooth";
 
+const FILL_UNIFORMS: Readonly<Record<FillMode, readonly [number, number]>> = {
+  none: [0, 0],
+  bands: [1, 1],
+  smooth: [1, 0],
+};
+
+/** `uFill` for a fill mode: x is 1 if filled, y is 1 for bands and 0 for smooth (the default). */
+export function fillUniform(mode: string): readonly [number, number] {
+  return mode === "none" || mode === "bands" ? FILL_UNIFORMS[mode] : FILL_UNIFORMS.smooth;
+}
+
 /**
  * Fill colour position (0 = low colour, 1 = high colour) for height `h` in [0, 1]
- * with `levels` contour intervals. Bands take the colour of their mid-height.
- * Mirrors the shader, minus its 1 px anti-aliasing across band edges.
+ * with `levels` contour intervals and `fill` from `fillUniform`, as the shader
+ * computes it away from its 1 px anti-aliasing across band edges. Bands take the
+ * colour of their mid-height.
  */
-export function fillT(h: number, levels: number, mode: FillMode): number {
-  if (mode === "none") return 0;
-  if (mode === "smooth") return Math.min(Math.max(h, 0), 1);
-  const band = Math.min(Math.floor(h * levels), levels - 1);
-  return Math.min(Math.max((band + 0.5) / levels, 0), 1);
+export function fillT(h: number, levels: number, fill: readonly [number, number]): number {
+  if (fill[0] === 0) return 0;
+  const smooth = Math.min(Math.max(h, 0), 1);
+  const band = Math.floor(h * levels);
+  const banded = Math.min(Math.max((band + LEVEL_CENTRE) / levels, 0), 1);
+  return smooth + (banded - smooth) * fill[1];
 }
 
 export interface LineStyle {
@@ -152,7 +200,7 @@ export function lineStyle(lineWidth: number, scale: number): LineStyle {
  *   rounding residual * 1024. About 22 bits instead of half float's 11.
  * - RGBA8 fallback: r = hi byte, g = lo byte; 16 bits.
  */
-const NOISE_FRAGMENT = /* glsl */ `#version 300 es
+export const NOISE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 
 /** Field position = gl_FragCoord.xy * uPixToWorld + uWorldOffset. */
@@ -221,9 +269,9 @@ void main() {
     float hr = unpackHalf2x16(packHalf2x16(vec2(h, 0.0))).x;
     enc = vec2(hr, (h - hr) * ${glslFloat(RESIDUAL_SCALE)});
   } else {
-    float s = h * 255.0;
+    float s = h * ${glslFloat(HEIGHT_BYTE)};
     float hi = floor(s);
-    enc = vec2(hi / 255.0, s - hi);
+    enc = vec2(hi / ${glslFloat(HEIGHT_BYTE)}, s - hi);
   }
   outColor = vec4(enc, 0.0, 1.0);
 }
@@ -234,7 +282,7 @@ void main() {
  * (B-spline or bilinear), then draw constant-width anti-aliased contour lines
  * from the screen-space gradient of h * levels, over the fill.
  */
-const COMPOSITE = /* glsl */ `
+export const COMPOSITE = /* glsl */ `
 uniform float uDecode;
 uniform float uBSpline;
 uniform float uLevels;
@@ -261,15 +309,16 @@ float sampleBSpline(vec2 uv) {
   vec2 t = st - i;
   vec2 t2 = t * t;
   vec2 t3 = t2 * t;
-  vec2 w0 = (1.0 - 3.0 * t + 3.0 * t2 - t3) * (1.0 / 6.0);
-  vec2 w1 = (4.0 - 6.0 * t2 + 3.0 * t3) * (1.0 / 6.0);
-  vec2 w3 = t3 * (1.0 / 6.0);
+  // Weights from BSPLINE_BASIS; w2 is implied, as the weights sum to 1.
+  vec2 w0 = ${cubicGlsl(BSPLINE_BASIS[0])};
+  vec2 w1 = ${cubicGlsl(BSPLINE_BASIS[1])};
+  vec2 w3 = ${cubicGlsl(BSPLINE_BASIS[3])};
   vec2 g0 = w0 + w1;
   vec2 g1 = 1.0 - g0;
   // Tap centres in texels (texel k is centred at k + 0.5), then in uv.
   vec2 inv = 1.0 / uLowResSize;
-  vec2 c0 = (i - 0.5 + w1 / g0) * inv;
-  vec2 c1 = (i + 1.5 + w3 / g1) * inv;
+  vec2 c0 = (i + ${glslFloat(BSPLINE_TAP_BASE[0] + 0.5)} + w1 / g0) * inv;
+  vec2 c1 = (i + ${glslFloat(BSPLINE_TAP_BASE[1] + 0.5)} + w3 / g1) * inv;
   vec2 a = texture(uLowRes, c0).rg;
   vec2 b = texture(uLowRes, vec2(c1.x, c0.y)).rg;
   vec2 c = texture(uLowRes, vec2(c0.x, c1.y)).rg;
@@ -290,7 +339,7 @@ vec4 composite(vec2 uv) {
   float k = floor(x + 0.5);
   // Signed distance in px to the nearest level k.
   float sd = (x - k) / grad;
-  bool isIndex = uIndexInv > 0.0 && fract((k + 0.5) * uIndexInv) < uIndexInv;
+  bool isIndex = uIndexInv > 0.0 && fract((k + ${glslFloat(LEVEL_CENTRE)}) * uIndexInv) < uIndexInv;
   float hw = isIndex ? uHalfWidth.y : uHalfWidth.x;
   float alpha = isIndex ? uAlpha.y : uAlpha.x;
   // Box-filtered coverage of a line of width 2 * hw.
@@ -299,7 +348,7 @@ vec4 composite(vec2 uv) {
 
   // Bands blend across a 1 px edge at each level, so they don't alias.
   float band = k - 1.0 + clamp(sd + 0.5, 0.0, 1.0);
-  float bandT = clamp((band + 0.5) * uInvLevels, 0.0, 1.0);
+  float bandT = clamp((band + ${glslFloat(LEVEL_CENTRE)}) * uInvLevels, 0.0, 1.0);
   float t = mix(h, bandT, uFill.y);
   vec3 fill = mix(uBackground, mix(uLowColor, uHighColor, t), uFill.x);
   return vec4(mix(fill, uLineColor, cov * alpha), 1.0);
@@ -433,12 +482,11 @@ export const contours = defineEffect({
 
           // Full-res contour pass (the target's composite blit).
           gl.useProgram(target.program);
-          cu.f1("uDecode", target.isFloat ? 1 / RESIDUAL_SCALE : 1 / 255);
+          cu.f1("uDecode", heightDecodeScale(target.isFloat));
           const levels = Math.max(1, p.levels);
           cu.f1("uLevels", levels);
           cu.f1("uInvLevels", 1 / levels);
-          const every = Math.round(p.indexEvery);
-          cu.f1("uIndexInv", every >= 1 ? 1 / every : 0);
+          cu.f1("uIndexInv", indexInv(p.indexEvery));
           if (p.lineWidth !== lastLineWidth) {
             lastLineWidth = p.lineWidth;
             const s = lineStyle(p.lineWidth, vpScale);
@@ -446,7 +494,8 @@ export const contours = defineEffect({
             cu.f2("uAlpha", s.alpha, s.indexAlpha);
             cu.f2("uCrowd", s.crowdStart, s.crowdEnd);
           }
-          cu.f2("uFill", p.fill === "none" ? 0 : 1, p.fill === "bands" ? 1 : 0);
+          const fill = fillUniform(p.fill);
+          cu.f2("uFill", fill[0], fill[1]);
           cu.f1("uBSpline", p.sampling === "bilinear" ? 0 : 1);
           cu.rgb("uLineColor", p.lineColor);
           cu.rgb("uBackground", p.background);
