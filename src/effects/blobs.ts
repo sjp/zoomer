@@ -3,8 +3,8 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   withScope,
 } from "./gl";
@@ -296,10 +296,10 @@ export const blobs = defineEffect({
       const triangle = scope.own(createFullscreenTriangle(gl));
       const mainT = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const auxT = scope.own(createLowResTarget(gl));
-      const loc = getUniforms(gl, program, ["uToUnits", "uBlobs", "uColors", "uBase", "uCount"]);
-      const cLoc = getUniforms(gl, mainT.program, ["uAux", "uMix", "uGrain"]);
+      const u = createUniforms(gl, program, ["uToUnits", "uBlobs", "uColors", "uBase", "uCount"]);
+      const cu = createUniforms(gl, mainT.program, ["uAux", "uMix", "uGrain"]);
       gl.useProgram(mainT.program);
-      gl.uniform1i(cLoc.uAux, 1);
+      cu.i1("uAux", 1);
 
       const blobData = new Float32Array(MAX_BLOBS * 3);
       const colorData = new Float32Array(MAX_BLOBS * 3);
@@ -316,8 +316,6 @@ export const blobs = defineEffect({
       let simAux = Number.NaN;
       /** True when `main` holds keyframe A (the older one). */
       let mainIsA = true;
-      let lastLowW = 0;
-      let lastLowH = 0;
       let lastAspect = 0;
       let lastPalette = "";
       let lastC1 = "";
@@ -325,10 +323,7 @@ export const blobs = defineEffect({
       let lastC3 = "";
       let lastC4 = "";
       let lastBg = "";
-      let lastCount = -1;
       let lastSoftness = Number.NaN;
-      let lastMix = Number.NaN;
-      let lastGrain = Number.NaN;
       let count = 3;
       let softness = 1;
 
@@ -337,7 +332,7 @@ export const blobs = defineEffect({
         if ((target === mainT ? simMain : simAux) === t) return;
         writeBlobUniforms(blobData, count, t, aspect, softness);
         gl.useProgram(program);
-        gl.uniform3fv(loc.uBlobs, blobData);
+        gl.uniform3fv(u.loc.uBlobs, blobData);
         target.bind();
         triangle.draw();
         if (target === mainT) simMain = t;
@@ -359,19 +354,13 @@ export const blobs = defineEffect({
           mainT.resize(width, height, divisor);
           auxT.resize(width, height, divisor);
           gl.useProgram(program);
-          if (mainT.width !== lastLowW || mainT.height !== lastLowH || aspect !== lastAspect) {
-            lastLowW = mainT.width;
-            lastLowH = mainT.height;
+          // Blob positions depend on the aspect too, so it invalidates on its own.
+          if (u.f2("uToUnits", aspect / mainT.width, 1 / mainT.height) || aspect !== lastAspect) {
             lastAspect = aspect;
-            gl.uniform2f(loc.uToUnits, aspect / lastLowW, 1 / lastLowH);
             invalid = true;
           }
-          const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
-          if (n !== lastCount) {
-            lastCount = count = n;
-            gl.uniform1i(loc.uCount, n);
-            invalid = true;
-          }
+          count = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
+          if (u.i1("uCount", count)) invalid = true;
           if (p.softness !== lastSoftness) {
             lastSoftness = softness = p.softness;
             invalid = true;
@@ -390,12 +379,12 @@ export const blobs = defineEffect({
             custom[3] = lastC4 = p.color4;
             for (let i = 0; i < MAX_BLOBS; i++)
               colorData.set(hexToLinear(paletteColor(p.palette, custom, i)), i * 3);
-            gl.uniform3fv(loc.uColors, colorData);
+            gl.uniform3fv(u.loc.uColors, colorData);
             invalid = true;
           }
           if (p.background !== lastBg) {
             lastBg = p.background;
-            gl.uniform3fv(loc.uBase, hexToLinear(p.background));
+            u.v3("uBase", hexToLinear(p.background));
             invalid = true;
           }
           if (invalid) {
@@ -421,14 +410,8 @@ export const blobs = defineEffect({
           gl.useProgram(mainT.program);
           const b = keyframeMix(clock, KEYFRAME_INTERVAL);
           const mix = mainIsA ? b : 1 - b;
-          if (mix !== lastMix) {
-            lastMix = mix;
-            gl.uniform1f(cLoc.uMix, mix);
-          }
-          if (p.grain !== lastGrain) {
-            lastGrain = p.grain;
-            gl.uniform1f(cLoc.uGrain, Math.max(0, p.grain) * GRAIN_AMP);
-          }
+          cu.f1("uMix", mix);
+          cu.f1("uGrain", Math.max(0, p.grain) * GRAIN_AMP);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, auxT.texture);
           mainT.blit();
