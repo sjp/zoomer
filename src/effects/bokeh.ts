@@ -1,6 +1,14 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, glslFloat, TO_CLIP_GLSL, withScope } from "./gl";
-import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
+import {
+  beginFrame,
+  createGradientBackground,
+  createProgram,
+  getUniforms,
+  glslFloat,
+  TO_CLIP_GLSL,
+  withScope,
+} from "./gl";
+import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
 import { unitRgbMemo } from "./color";
 

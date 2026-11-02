@@ -1,19 +1,9 @@
 /**
- * Shared WebGL2 helpers for the particle effects (bokeh, snow): an instanced sprite
- * batch whose per-instance data is filled on the CPU each frame, and a vertical
- * two-colour gradient background pass.
+ * Shared WebGL2 helpers for the particle effects (bokeh, snow and others): an
+ * instanced sprite batch whose per-instance data is filled on the CPU each frame,
+ * and polygon shapes that fit round sprites tightly.
  */
-import type { Rgb } from "./color";
-import {
-  createFullscreenTriangle,
-  createProgram,
-  createScope,
-  DITHER_GLSL,
-  FULLSCREEN_VERTEX,
-  getUniforms,
-  type Scope,
-  withScope,
-} from "./gl";
+import { createScope } from "./gl";
 
 export interface SpriteBatch {
   /** CPU-side instance data, `stride` floats per instance. Fill, then `upload`. */
@@ -137,73 +127,6 @@ export function createSpriteBatch(
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, shapeFirst[shape], shapeCount[shape], count);
       // Unbind so another effect's element-buffer binding can't land in this VAO.
       gl.bindVertexArray(null);
-    },
-    dispose: () => scope.dispose(),
-  };
-}
-
-const GRADIENT_FRAGMENT = /* glsl */ `#version 300 es
-precision highp float;
-in vec2 vUv;
-uniform vec3 uTop;
-uniform vec3 uBottom;
-out vec4 outColor;
-${DITHER_GLSL}
-void main() {
-  vec3 c = mix(uTop, uBottom, 1.0 - vUv.y);
-  // Sub-LSB dither (interleaved gradient noise, static per pixel): dark, shallow
-  // gradients otherwise band into strips tens of pixels tall at 4K.
-  outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
-}
-`;
-
-export interface GradientBackground {
-  /**
-   * Fills the viewport, top to bottom, with blending disabled and sub-LSB dither.
-   * Colours are 0..1. When top and bottom are equal it clears instead, which
-   * ignores the viewport: the viewport must cover the bound framebuffer.
-   */
-  draw(top: Rgb, bottom: Rgb): void;
-  dispose(): void;
-}
-
-/** Full-screen vertical linear gradient, matching a 2D `createLinearGradient(0, 0, 0, h)`. */
-export function createGradientBackground(gl: WebGL2RenderingContext): GradientBackground {
-  return withScope((scope) => buildGradientBackground(gl, scope));
-}
-
-function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): GradientBackground {
-  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) =>
-    gl.deleteProgram(p),
-  );
-  const triangle = scope.own(createFullscreenTriangle(gl));
-  const loc = getUniforms(gl, program, ["uTop", "uBottom"]);
-  // Uniforms are per-program state, and this program is ours alone: set on change only.
-  // A plain array: values are compared as given, not rounded to float32.
-  const last: number[] = Array.from({ length: 6 }, () => Number.NaN);
-  return {
-    draw(top, bottom) {
-      gl.disable(gl.BLEND);
-      if (top[0] === bottom[0] && top[1] === bottom[1] && top[2] === bottom[2]) {
-        // A flat colour plus sub-LSB dither rounds back to itself: clear instead.
-        gl.clearColor(top[0], top[1], top[2], 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        return;
-      }
-      gl.useProgram(program);
-      if (last[0] !== top[0] || last[1] !== top[1] || last[2] !== top[2]) {
-        gl.uniform3fv(loc.uTop, top);
-        last[0] = top[0];
-        last[1] = top[1];
-        last[2] = top[2];
-      }
-      if (last[3] !== bottom[0] || last[4] !== bottom[1] || last[5] !== bottom[2]) {
-        gl.uniform3fv(loc.uBottom, bottom);
-        last[3] = bottom[0];
-        last[4] = bottom[1];
-        last[5] = bottom[2];
-      }
-      triangle.draw();
     },
     dispose: () => scope.dispose(),
   };

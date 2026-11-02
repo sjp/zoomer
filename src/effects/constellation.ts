@@ -1,7 +1,14 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, TO_CLIP_GLSL, withScope } from "./gl";
+import {
+  beginFrame,
+  createGradientBackground,
+  createProgram,
+  getUniforms,
+  TO_CLIP_GLSL,
+  withScope,
+} from "./gl";
 import { createRng } from "./noise";
-import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
+import { createSpriteBatch, polygonStrip } from "./sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 import { wrap } from "./math";

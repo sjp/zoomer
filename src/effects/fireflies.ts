@@ -1,5 +1,6 @@
 import {
   beginFrame,
+  createGradientBackground,
   createProgram,
   DITHER_GLSL,
   getUniforms,
@@ -8,7 +9,7 @@ import {
   withScope,
 } from "./gl";
 import { createNoise, createRng } from "./noise";
-import { createGradientBackground, createSpriteBatch, polygonStrip, QUAD } from "./sprites";
+import { createSpriteBatch, polygonStrip, QUAD } from "./sprites";
 import { defineEffect } from "./types";
 import { smoothstep, wrap } from "./math";
 import { unitRgbMemo } from "./color";

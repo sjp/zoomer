@@ -1,7 +1,10 @@
 /**
- * Small WebGL2 helpers for full-screen fragment-shader effects: compile and link
- * with readable errors, a full-screen triangle, uniform lookup and data textures.
+ * Small WebGL2 helpers shared by the effects: per-frame state reset, exception-safe
+ * resource scopes, compile and link with readable errors, uniform lookup, a
+ * full-screen triangle and gradient background, shared GLSL snippets, and data
+ * textures, lookup tables and render targets.
  */
+import type { Rgb } from "./color";
 
 /**
  * Vertex shader for `createFullscreenTriangle`. Passes `vUv` (0..1 across the
@@ -251,6 +254,73 @@ export function createFullscreenTriangle(gl: WebGL2RenderingContext): Fullscreen
       gl.deleteVertexArray(vao);
       gl.deleteBuffer(buffer);
     },
+  };
+}
+
+const GRADIENT_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform vec3 uTop;
+uniform vec3 uBottom;
+out vec4 outColor;
+${DITHER_GLSL}
+void main() {
+  vec3 c = mix(uTop, uBottom, 1.0 - vUv.y);
+  // Sub-LSB dither (interleaved gradient noise, static per pixel): dark, shallow
+  // gradients otherwise band into strips tens of pixels tall at 4K.
+  outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
+}
+`;
+
+export interface GradientBackground {
+  /**
+   * Fills the viewport, top to bottom, with blending disabled and sub-LSB dither.
+   * Colours are 0..1. When top and bottom are equal it clears instead, which
+   * ignores the viewport: the viewport must cover the bound framebuffer.
+   */
+  draw(top: Rgb, bottom: Rgb): void;
+  dispose(): void;
+}
+
+/** Full-screen vertical linear gradient, matching a 2D `createLinearGradient(0, 0, 0, h)`. */
+export function createGradientBackground(gl: WebGL2RenderingContext): GradientBackground {
+  return withScope((scope) => buildGradientBackground(gl, scope));
+}
+
+function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): GradientBackground {
+  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) =>
+    gl.deleteProgram(p),
+  );
+  const triangle = scope.own(createFullscreenTriangle(gl));
+  const loc = getUniforms(gl, program, ["uTop", "uBottom"]);
+  // Uniforms are per-program state, and this program is ours alone: set on change only.
+  // A plain array: values are compared as given, not rounded to float32.
+  const last: number[] = Array.from({ length: 6 }, () => Number.NaN);
+  return {
+    draw(top, bottom) {
+      gl.disable(gl.BLEND);
+      if (top[0] === bottom[0] && top[1] === bottom[1] && top[2] === bottom[2]) {
+        // A flat colour plus sub-LSB dither rounds back to itself: clear instead.
+        gl.clearColor(top[0], top[1], top[2], 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        return;
+      }
+      gl.useProgram(program);
+      if (last[0] !== top[0] || last[1] !== top[1] || last[2] !== top[2]) {
+        gl.uniform3fv(loc.uTop, top);
+        last[0] = top[0];
+        last[1] = top[1];
+        last[2] = top[2];
+      }
+      if (last[3] !== bottom[0] || last[4] !== bottom[1] || last[5] !== bottom[2]) {
+        gl.uniform3fv(loc.uBottom, bottom);
+        last[3] = bottom[0];
+        last[4] = bottom[1];
+        last[5] = bottom[2];
+      }
+      triangle.draw();
+    },
+    dispose: () => scope.dispose(),
   };
 }
 

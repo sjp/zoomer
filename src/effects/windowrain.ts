@@ -2,6 +2,7 @@ import type { Rgb } from "./color";
 import {
   beginFrame,
   createFullscreenTriangle,
+  createGradientBackground,
   createProgram,
   createRenderTarget,
   FULLSCREEN_VERTEX,
@@ -13,7 +14,7 @@ import {
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createRng, hash32, HASH32_GLSL } from "./noise";
-import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
+import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
 import {
   createRainSim,
