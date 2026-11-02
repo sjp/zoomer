@@ -4,8 +4,8 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   withScope,
 } from "./gl";
@@ -245,7 +245,7 @@ export const tunnel = defineEffect({
         }),
         (t) => gl.deleteTexture(t),
       );
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         "uTex",
         "uPixScale",
         "uPixOffset",
@@ -262,7 +262,7 @@ export const tunnel = defineEffect({
       ]);
       // The sampler unit never changes; uniforms persist with the program even in a shared context.
       gl.useProgram(program);
-      gl.uniform1i(loc.uTex, 0);
+      u.i1("uTex", 0);
 
       let width = 1;
       let height = 1;
@@ -272,10 +272,7 @@ export const tunnel = defineEffect({
       let vOff = 0;
       let uOff = 0;
       let spiralOff = 0;
-      // Last uploaded values of the uniforms that only change with resize or params.
-      let sizeDirty = true;
-      let lastSpiral = NaN;
-      let lastRings = NaN;
+      // Colours last derived from; the uniforms themselves skip unchanged uploads.
       let lastBrightness = NaN;
       let lastCore = "";
       let lastColor1 = "";
@@ -286,7 +283,6 @@ export const tunnel = defineEffect({
         resize(v) {
           width = v.width;
           height = v.height;
-          sizeDirty = true;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -305,24 +301,15 @@ export const tunnel = defineEffect({
           gl.useProgram(program);
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, texture);
-          if (sizeDirty) {
-            sizeDirty = false;
-            const h = Math.max(1, height);
-            gl.uniform2f(loc.uPixScale, 1 / h, -1 / h);
-            gl.uniform2f(loc.uPixOffset, (-0.5 * width) / h, 0.5);
-          }
-          gl.uniform2f(loc.uBend, ox, oy);
+          const h = Math.max(1, height);
+          u.f2("uPixScale", 1 / h, -1 / h);
+          u.f2("uPixOffset", (-0.5 * width) / h, 0.5);
+          u.f2("uBend", ox, oy);
           // Tile units; the atan half-turn and the half-texel centring ride along in u.
           const su = wrap(uOff + spiralOff + 0.5 + 0.5 * U_REPS * TEX);
-          gl.uniform2f(loc.uScroll, su / TEX, vOff / TEX);
-          if (spk !== lastSpiral) {
-            lastSpiral = spk;
-            gl.uniform1f(loc.uSpiral, spk);
-          }
-          if (p.rings !== lastRings) {
-            lastRings = p.rings;
-            gl.uniform1f(loc.uRings, p.rings);
-          }
+          u.f2("uScroll", su / TEX, vOff / TEX);
+          u.f1("uSpiral", spk);
+          u.f1("uRings", p.rings);
           if (
             p.color1 !== lastColor1 ||
             p.color2 !== lastColor2 ||
@@ -338,16 +325,16 @@ export const tunnel = defineEffect({
             const c1 = hexToUnitRgb(p.color1);
             const c2 = hexToUnitRgb(p.color2);
             const c3 = hexToUnitRgb(p.color3);
-            gl.uniform3fv(loc.uColor1, c1);
-            gl.uniform3fv(loc.uColor2, c2);
-            gl.uniform3f(loc.uRamp12, c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
-            gl.uniform3f(loc.uRamp23, c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
-            gl.uniform2f(loc.uGain, 0.85 * p.brightness, 0.2 * p.brightness);
+            u.v3("uColor1", c1);
+            u.v3("uColor2", c2);
+            u.f3("uRamp12", c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
+            u.f3("uRamp23", c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
+            u.f2("uGain", 0.85 * p.brightness, 0.2 * p.brightness);
             // The core glow leans colour 3 towards white, pre-multiplied by its gain.
             const bright = p.core !== "dark";
             const glow = mixRgb(hexToRgb(p.color3), [255, 255, 255], 0.55);
             const gain = bright ? (1.15 * p.brightness) / 255 : 0;
-            gl.uniform3f(loc.uGlow, glow[0] * gain, glow[1] * gain, glow[2] * gain);
+            u.f3("uGlow", glow[0] * gain, glow[1] * gain, glow[2] * gain);
           }
           triangle.draw();
         },
