@@ -5,6 +5,7 @@ import {
   createProgram,
   createUniforms,
   createRenderTarget,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   type RenderTarget,
   TO_CLIP_GLSL,
@@ -149,10 +150,12 @@ uniform vec3 uBackground;
 uniform vec3 uLayerScale;
 
 out vec4 outColor;
-
+${DITHER_GLSL}
 void main() {
   vec3 l = texelFetch(uLayer, ivec2(gl_FragCoord.xy), 0).rgb;
-  outColor = vec4(uBackground + uLayerScale * l, 1.0);
+  // Sub-LSB dither carries the 10-bit layer's extra precision into the 8-bit
+  // canvas, so faint tails fade smoothly instead of stepping on dark backgrounds.
+  outColor = vec4(uBackground + uLayerScale * l + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
 
