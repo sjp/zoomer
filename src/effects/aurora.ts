@@ -14,6 +14,7 @@ import {
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
 import { createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
+import { approach } from "./math";
 
 /*
  * Aurora: one full-screen pass draws the sky gradient, up to three additive
@@ -46,6 +47,8 @@ const TAU = Math.PI * 2;
 /** Base height (fraction of canvas height from the bottom) and gain of each band. */
 export const BAND_BASE = [0.44, 0.6, 0.3] as const;
 const BAND_GAIN = [1.6, 1.2, 1] as const;
+/** Seconds a band takes to fade in or out when the band count changes. */
+const BAND_FADE = 1;
 /** How far each band's path wanders up and down, in canvas heights. */
 export const PATH_AMPLITUDE = 0.09;
 /** Distances (canvas heights) over which a curtain halves in brightness, up and down. */
@@ -423,6 +426,9 @@ export const aurora = defineEffect({
 
       /** Curtain noise time and ray drifts (wrapped to one table period). */
       let pathTime = 0;
+      /** Fade of bands 2 and 3, 0..1; NaN before the first frame, which starts at its target. */
+      let band2 = Number.NaN;
+      let band3 = Number.NaN;
       let driftFine = 0;
       let driftCoarse = 0;
       let twinkleTime = 0;
@@ -481,12 +487,17 @@ export const aurora = defineEffect({
           u.f3("uSkyBottom", sr * 0.22, sg * 0.22, sb * 0.22);
           u.f3("uSilhouette", sr * 0.07, sg * 0.07, sb * 0.07);
           const g = p.intensity;
-          u.f3(
-            "uGain",
-            BAND_GAIN[0] * g,
-            p.bands >= 2 ? BAND_GAIN[1] * g : 0,
-            p.bands >= 3 ? BAND_GAIN[2] * g : 0,
-          );
+          // Bands fade in and out over a second when the band count changes.
+          const want2 = p.bands >= 1.5 ? 1 : 0;
+          const want3 = p.bands >= 2.5 ? 1 : 0;
+          if (Number.isNaN(band2)) {
+            band2 = want2;
+            band3 = want3;
+          }
+          const bandStep = Math.max(0, dt) / BAND_FADE;
+          band2 = approach(band2, want2, bandStep);
+          band3 = approach(band3, want3, bandStep);
+          u.f3("uGain", BAND_GAIN[0] * g, BAND_GAIN[1] * g * band2, BAND_GAIN[2] * g * band3);
           u.f2("uResolution", width, height);
           u.f2("uRayDrift", driftFine, driftCoarse);
 
