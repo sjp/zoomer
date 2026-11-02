@@ -11,6 +11,7 @@ import { createSpriteBatch, polygonStrip } from "./sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 import { wrap } from "./math";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
 const MAX_POINTS = 400;
@@ -32,6 +33,31 @@ const TAU = Math.PI * 2;
 export function linkFalloff(t: number): number {
   const u = 1 - t;
   return u > 0 ? u * u : 0;
+}
+
+/**
+ * Moves point `i` by (`dx`, `dy`) and wraps it into `[minX, minX + spanX) ×
+ * [minY, minY + spanY)`. Returns whether it wrapped: the domain shrinks with the
+ * link distance, so a wrap can land a point on-screen, and it must then fade in.
+ */
+export function driftPoint(
+  xs: Float32Array,
+  ys: Float32Array,
+  i: number,
+  dx: number,
+  dy: number,
+  minX: number,
+  minY: number,
+  spanX: number,
+  spanY: number,
+): boolean {
+  const x = xs[i] + dx;
+  const y = ys[i] + dy;
+  const wx = wrap(x, minX, spanX);
+  const wy = wrap(y, minY, spanY);
+  xs[i] = wx;
+  ys[i] = wy;
+  return wx !== x || wy !== y;
 }
 
 /**
@@ -299,7 +325,8 @@ export const constellation = defineEffect({
       let refWidth = 1920;
       // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
-      let prevCount = 0;
+      /** Points simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
 
       const rng = createRng(0x51a7);
       for (let i = 0; i < MAX_POINTS; i++) {
@@ -323,9 +350,8 @@ export const constellation = defineEffect({
         frame(dt, p) {
           beginFrame(gl, width, height);
           time += dt;
-          const n = Math.min(Math.floor(p.count), MAX_POINTS);
-          for (let i = prevCount; i < n; i++) life[i] = 0;
-          prevCount = n;
+          const target = Math.min(Math.floor(p.count), MAX_POINTS);
+          const n = (live = growLive(life, live, target));
 
           // Off-screen margin of one link distance, so links fade out before a wrap.
           const dist = p.linkDistance * 1080;
@@ -335,6 +361,7 @@ export const constellation = defineEffect({
           const spanY = 1080 + 2 * dist;
           const drift = p.speed * DRIFT_PX * dt;
           const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
           const depth = p.depth;
 
           for (let i = 0; i < n; i++) {
@@ -342,10 +369,13 @@ export const constellation = defineEffect({
             near[i] = k;
             heading[i] += Math.sin(time * turnRate[i] + turnPhase[i]) * dt * 0.25;
             const step = drift * (0.35 + 0.65 * k);
-            xs[i] = wrap(xs[i] + Math.cos(heading[i]) * step, minX, spanX);
-            ys[i] = wrap(ys[i] + Math.sin(heading[i]) * step, minY, spanY);
-            life[i] = Math.min(1, life[i] + fadeStep);
+            const dx = Math.cos(heading[i]) * step;
+            const dy = Math.sin(heading[i]) * step;
+            // A wrap moves the point, possibly on-screen: fade it in at its new place.
+            if (driftPoint(xs, ys, i, dx, dy, minX, minY, spanX, spanY)) life[i] = 0;
+            stepLife(life, i, target, fadeStep, outStep);
           }
+          live = trimLive(life, live, target);
 
           // Links.
           buildGrid(grid, xs, ys, n, minX, minY, spanX, spanY, dist);
@@ -383,6 +413,7 @@ export const constellation = defineEffect({
           const baseRadius = p.pointSize * scale;
           let dots = 0;
           for (let i = 0; i < n; i++) {
+            if (life[i] <= 0) continue;
             const k = near[i];
             const r = baseRadius * sizeVar[i] * (0.45 + 0.55 * k);
             const x = xs[i] * scale;

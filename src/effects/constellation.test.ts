@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGrid, createLinkGrid, findLinks, linkFalloff } from "./constellation";
+import { buildGrid, createLinkGrid, driftPoint, findLinks, linkFalloff } from "./constellation";
 import { createRng } from "./noise";
 import { wrap } from "./math";
 
@@ -53,6 +53,35 @@ function randomPoints(seed: number, n: number, minX: number, minY: number, w: nu
   }
   return { xs, ys };
 }
+
+describe("driftPoint", () => {
+  it("moves without wrapping inside the domain", () => {
+    const xs = new Float32Array([100]);
+    const ys = new Float32Array([200]);
+    expect(driftPoint(xs, ys, 0, 1.5, -2, -50, -50, 2020, 1180)).toBe(false);
+    expect(xs[0]).toBeCloseTo(101.5, 4);
+    expect(ys[0]).toBeCloseTo(198, 4);
+  });
+
+  it("flags a wrap on either axis", () => {
+    const xs = new Float32Array([1969, 10]);
+    const ys = new Float32Array([500, -49]);
+    expect(driftPoint(xs, ys, 0, 2, 0, -50, -50, 2020, 1180)).toBe(true);
+    expect(xs[0]).toBeCloseTo(-49, 3);
+    expect(driftPoint(xs, ys, 1, 0, -2, -50, -50, 2020, 1180)).toBe(true);
+    expect(ys[1]).toBeCloseTo(1129, 3);
+  });
+
+  it("flags the fold when the link distance shrinks the margin", () => {
+    // From 0.3 to 0.05 of the height: x = 2200 was in the old margin.
+    const dist = 0.05 * 1080;
+    const xs = new Float32Array([2200]);
+    const ys = new Float32Array([500]);
+    expect(driftPoint(xs, ys, 0, 0, 0, -dist, -dist, 1920 + 2 * dist, 1080 + 2 * dist)).toBe(true);
+    expect(xs[0]).toBeGreaterThan(0);
+    expect(xs[0]).toBeLessThan(1920);
+  });
+});
 
 describe("linkFalloff", () => {
   it("is (1 - t)² and zero beyond the link distance", () => {
