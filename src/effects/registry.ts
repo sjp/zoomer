@@ -40,6 +40,7 @@ import { beach } from "./beach";
 import { ridges } from "./ridges";
 import { startrails } from "./startrails";
 import { candlelight } from "./candlelight";
+import { daymap } from "./daymap";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -84,6 +85,7 @@ export const effects: readonly EffectDefinition[] = [
   ridges,
   startrails,
   candlelight,
+  daymap,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
