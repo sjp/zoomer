@@ -1,8 +1,8 @@
-import { mixRgb, unitRgbMemo } from "./color";
+import { unitRgbMemo } from "./color";
 import {
   beginFrame,
   createProgram,
-  getUniforms,
+  createUniforms,
   resetUnpackState,
   TO_CLIP_GLSL,
   withScope,
@@ -136,7 +136,7 @@ export const rain = defineEffect({
       const backgroundRgb = unitRgbMemo();
       const colorRgb = unitRgbMemo();
       const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         "uResolution",
         "uCell",
         "uCellPx",
@@ -307,18 +307,19 @@ export const rain = defineEffect({
           gl.useProgram(program);
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, atlas);
-          gl.uniform1i(loc.uAtlas, 0);
-          gl.uniform2f(loc.uResolution, width, height);
-          gl.uniform1f(loc.uCell, cell);
-          gl.uniform1i(loc.uCellPx, cell);
-          gl.uniform1i(loc.uCount, glyphCount);
-          gl.uniform1i(loc.uRows, rows);
-          gl.uniform1f(loc.uHeight, height);
-          gl.uniform1f(loc.uDecay, decay);
-          gl.uniform1i(loc.uBrightHead, p.brightHead ? 1 : 0);
-          gl.uniform3fv(loc.uBackground, bg);
-          gl.uniform3fv(loc.uBody, color);
-          gl.uniform3fv(loc.uHeadColor, mixRgb(color, [1, 1, 1], 0.8));
+          u.i1("uAtlas", 0);
+          u.f2("uResolution", width, height);
+          u.f1("uCell", cell);
+          u.i1("uCellPx", cell);
+          u.i1("uCount", glyphCount);
+          u.i1("uRows", rows);
+          u.f1("uHeight", height);
+          u.f1("uDecay", decay);
+          u.i1("uBrightHead", p.brightHead ? 1 : 0);
+          u.v3("uBackground", bg);
+          u.v3("uBody", color);
+          // mix(color, white, 0.8)
+          u.f3("uHeadColor", 0.2 * color[0] + 0.8, 0.2 * color[1] + 0.8, 0.2 * color[2] + 0.8);
           batch.draw(0, n);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
