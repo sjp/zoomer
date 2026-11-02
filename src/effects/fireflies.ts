@@ -11,7 +11,7 @@ import {
 import { createNoise, createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "./sprites";
 import { defineEffect } from "./types";
-import { smoothstep, wrap } from "./math";
+import { clamp, smoothstep, wrap } from "./math";
 import { unitRgbMemo } from "./color";
 
 const MAX_SPECKS = 300;
@@ -28,6 +28,8 @@ const DEFOCUS_SHARE = 0.25;
 /** Base beam brightness (fraction of the light colour at the beam's brightest point). */
 const BEAM_STRENGTH = 0.11;
 const TAU = Math.PI * 2;
+/** Slope at which the beam group's lean against the slant reaches its full 8% of the width. */
+const FULL_LEAN_SLOPE = Math.tan((24 * Math.PI) / 180);
 
 /**
  * Firefly blink curve: a smooth sin² pulse during the first `duty` of the cycle,
@@ -100,8 +102,9 @@ const BEAM_LAYOUT = [
 export function layoutBeams(n: number, angleDeg: number, refWidth: number, out: Beam[]): number {
   const count = Math.max(1, Math.min(MAX_BEAMS, Math.round(n), out.length));
   const slope = Math.tan((angleDeg * Math.PI) / 180);
-  // Lean the group against the slant so the beams stay central on screen.
-  const centre = refWidth * (0.42 - 0.08 * Math.sign(slope));
+  // Lean the group against the slant so the beams stay central on screen. The lean
+  // eases in with the slope, so dragging the angle through 0 doesn't jump the beams.
+  const centre = refWidth * (0.42 - 0.08 * clamp(slope / FULL_LEAN_SLOPE, -1, 1));
   for (let i = 0; i < count; i++) {
     const layout = BEAM_LAYOUT[i];
     const b = out[i];

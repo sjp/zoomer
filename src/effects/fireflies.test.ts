@@ -127,4 +127,19 @@ describe("layoutBeams", () => {
       }
     }
   });
+
+  it("leans continuously as the angle passes through 0", () => {
+    const at = (angle: number) => {
+      const beams = out();
+      layoutBeams(1, angle, 1920, beams);
+      return beams[0].x0 + beams[0].slope * 540;
+    };
+    expect(at(0)).toBeCloseTo(0.42 * 1920, 6);
+    expect(Math.abs(at(1) - at(-1))).toBeLessThan(15);
+    expect(Math.abs(at(0.5) - at(0))).toBeLessThan(5);
+    // Full lean from 24 degrees on, as before.
+    expect(at(24)).toBeCloseTo(0.34 * 1920, 6);
+    expect(at(45)).toBeCloseTo(0.34 * 1920, 6);
+    expect(at(-30)).toBeCloseTo(0.5 * 1920, 6);
+  });
 });
