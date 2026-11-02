@@ -7,6 +7,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   type RenderTarget,
+  TO_CLIP_GLSL,
   withScope,
 } from "./gl";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "./noise";
@@ -55,7 +56,7 @@ const vec2 CORNERS[6] = vec2[6](
   vec2(0.0, -1.0), vec2(1.0, -1.0), vec2(0.0, 1.0),
   vec2(0.0, 1.0), vec2(1.0, -1.0), vec2(1.0, 1.0)
 );
-
+${TO_CLIP_GLSL}
 void main() {
   vec2 c = CORNERS[gl_VertexID];
   vec2 p0 = aSeg.xy;
@@ -70,8 +71,7 @@ void main() {
   vSide = c.y * extent;
   vT = aStyle.x;
   vAlpha = aStyle.y;
-  vec2 clip = pos / uResolution * 2.0 - 1.0;
-  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+  gl_Position = pxToClip(pos, uResolution);
 }
 `;
 
