@@ -6,6 +6,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   resetUnpackState,
   withScope,
 } from "./gl";
@@ -98,9 +99,6 @@ const buildRidgeData = () => {
   return data;
 };
 
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
-
 /*
  * Everything is computed in canvas pixel coordinates with y down, matching the
  * old 2D renderer, and layered in the same order: sky, sun glow, sun, mountains,
@@ -158,7 +156,7 @@ uniform float uLines;
 out vec4 outColor;
 
 const int RIDGE_LAST = ${RIDGE_POINTS - 1};
-const float RIDGE_SEGMENTS = ${f(RIDGE_POINTS - 1)};
+const float RIDGE_SEGMENTS = ${glslFloat(RIDGE_POINTS - 1)};
 
 /** Box-filtered coverage of a line of width w at signed distance d from the pixel centre. */
 float lineCov(float d, float w) {

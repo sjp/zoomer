@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   resetUnpackState,
   withScope,
 } from "./gl";
@@ -55,8 +56,6 @@ const OCTAVES = [
   { scale: 4.11, drift: 0.02, rise: 1.8 },
 ] as const;
 
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
-
 /**
  * Flame field over the fire rectangle only (the low-res target is sized to it):
  * heat = taper(v, u) + fBm(warped, scrolling), mapped through the palette ramp to
@@ -79,24 +78,24 @@ out vec4 outColor;
 void main() {
   vec2 q = gl_FragCoord.xy * uPxScale + uPxOffset;
   float v = q.y;
-  float vc = clamp(v, 0.0, ${f(FIRE_V_MAX)});
+  float vc = clamp(v, 0.0, ${glslFloat(FIRE_V_MAX)});
   // Sideways lick: warp u with a slow noise, more strongly higher up.
-  float w = texture(uNoise, q * uNoiseScale * ${f(OCTAVES[0].scale)} + uOff[0]).g - 0.5;
+  float w = texture(uNoise, q * uNoiseScale * ${glslFloat(OCTAVES[0].scale)} + uOff[0]).g - 0.5;
   float u = q.x + w * (0.1 + 0.45 * vc);
   vec2 n = vec2(u, v) * uNoiseScale;
   float fb = texture(uNoise, n + uOff[1]).r * 0.5714
-    + texture(uNoise, n * ${f(OCTAVES[2].scale)} + uOff[2]).r * 0.2857
-    + texture(uNoise, n * ${f(OCTAVES[3].scale)} + uOff[3]).r * 0.1429;
+    + texture(uNoise, n * ${glslFloat(OCTAVES[2].scale)} + uOff[2]).r * 0.2857
+    + texture(uNoise, n * ${glslFloat(OCTAVES[3].scale)} + uOff[3]).r * 0.1429;
   // Taller in the middle, short at the sides.
   float env = 1.0 - u * u;
   float ec = clamp(env, 0.0, 1.0);
   float vv = v / (0.2 + 0.8 * ec * ec);
   float heat = (1.0 - vv) * 1.1 + (fb - 0.5) * (1.6 + 3.0 * clamp(vv, 0.0, 1.0)) - 0.05;
-  heat *= smoothstep(${f(FIRE_V_MIN)}, 0.05, v) * smoothstep(0.0, 0.35, env) * (1.0 - smoothstep(1.05, ${f(FIRE_V_MAX)}, v));
+  heat *= smoothstep(${glslFloat(FIRE_V_MIN)}, 0.05, v) * smoothstep(0.0, 0.35, env) * (1.0 - smoothstep(1.05, ${glslFloat(FIRE_V_MAX)}, v));
   // Keep warped licks inside the rectangle so nothing is clipped at its sides.
-  heat *= 1.0 - smoothstep(${f(FIRE_U - 0.125)}, ${f(FIRE_U)}, abs(q.x));
+  heat *= 1.0 - smoothstep(${glslFloat(FIRE_U - 0.125)}, ${glslFloat(FIRE_U)}, abs(q.x));
   heat = clamp(heat * uGain, 0.0, 1.0);
-  outColor = texture(uRamp, vec2(heat * ${f((RAMP_SIZE - 1) / RAMP_SIZE)} + ${f(0.5 / RAMP_SIZE)}, 0.5));
+  outColor = texture(uRamp, vec2(heat * ${glslFloat((RAMP_SIZE - 1) / RAMP_SIZE)} + ${glslFloat(0.5 / RAMP_SIZE)}, 0.5));
 }
 `;
 

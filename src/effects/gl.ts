@@ -17,6 +17,17 @@ void main() {
 `;
 
 /**
+ * Formats a number as a GLSL float literal, for constants interpolated into shader
+ * source: integers gain a ".0" (GLSL ES has no implicit int-to-float conversion),
+ * other values use JavaScript's shortest round-trip form (exponents are valid GLSL).
+ * Throws on NaN and infinities, which have no literal.
+ */
+export function glslFloat(n: number): string {
+  if (!Number.isFinite(n)) throw new Error(`glslFloat: ${n} has no GLSL literal`);
+  return Number.isInteger(n) ? n.toFixed(1) : String(n);
+}
+
+/**
  * Resets the shared per-frame GL state to known defaults. Effects share one context,
  * and an effect that crashed or forgot a call may have left anything set, so every
  * `frame` calls this first and then sets only what it changes from here:

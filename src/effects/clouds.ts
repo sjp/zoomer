@@ -13,6 +13,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
@@ -45,9 +46,6 @@ const LIGHT_STEP = 0.02;
 /** Per-layer opacity: the far layer is slightly thinner and hazier. */
 const OPACITY = [1, 0.85] as const;
 const HAZE = [0, 0.3] as const;
-
-/** GLSL float literal. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 /**
  * Cloud pass, rendered at reduced resolution. Per layer: two coarse fetches (the
@@ -107,12 +105,12 @@ vec4 cloudLayer(vec2 q, vec4 off, vec4 det, vec4 lp, float haze, vec3 sky) {
 }
 
 void main() {
-  vec2 q = vec2(vUv.x * uAspect * ${f(STRETCH_X)}, vUv.y);
+  vec2 q = vec2(vUv.x * uAspect * ${glslFloat(STRETCH_X)}, vUv.y);
   float h = vUv.y;
   vec3 sky = mix(uSkyBottom, uSkyTop, h * (2.0 - h));
-  vec4 acc = cloudLayer(q, uOffA[0], uDetail[0], uLayerP[0], ${f(HAZE[0])}, sky);
+  vec4 acc = cloudLayer(q, uOffA[0], uDetail[0], uLayerP[0], ${glslFloat(HAZE[0])}, sky);
   if (uLayers > 1) {
-    vec4 far = cloudLayer(q, uOffA[1], uDetail[1], uLayerP[1], ${f(HAZE[1])}, sky);
+    vec4 far = cloudLayer(q, uOffA[1], uDetail[1], uLayerP[1], ${glslFloat(HAZE[1])}, sky);
     acc += far * (1.0 - acc.a);
   }
   outColor = acc;

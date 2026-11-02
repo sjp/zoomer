@@ -1,4 +1,4 @@
-import { beginFrame, createProgram, getUniforms, withScope } from "./gl";
+import { beginFrame, createProgram, getUniforms, glslFloat, withScope } from "./gl";
 import { createNoise } from "./noise";
 import {
   createGradientBackground,
@@ -23,9 +23,6 @@ const DEFOCUS_SHARE = 0.25;
 /** Base beam brightness (fraction of the light colour at the beam's brightest point). */
 const BEAM_STRENGTH = 0.11;
 const TAU = Math.PI * 2;
-
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -192,9 +189,9 @@ flat in float vIntensity;
 uniform vec3 uColor;
 out vec4 outColor;
 void main() {
-  float across = 1.0 - smoothstep(${f(BEAM_CORE)}, 1.0, abs(vBeam.x));
+  float across = 1.0 - smoothstep(${glslFloat(BEAM_CORE)}, 1.0, abs(vBeam.x));
   float v = clamp(vBeam.y, 0.0, 1.0);
-  float along = (1.0 - ${f(1 - BEAM_TAIL)} * v) * (1.0 - smoothstep(${f(BEAM_END)}, 1.0, v));
+  float along = (1.0 - ${glslFloat(1 - BEAM_TAIL)} * v) * (1.0 - smoothstep(${glslFloat(BEAM_END)}, 1.0, v));
   vec3 c = uColor * (across * along * vIntensity);
   // Sub-LSB dither hides banding in the wide, shallow beam. Clamped at zero, since
   // a negative additive output would be clamped anyway and bias the edges.

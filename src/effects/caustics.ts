@@ -18,6 +18,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   resetUnpackState,
   withScope,
 } from "./gl";
@@ -48,8 +49,6 @@ const RAY_COLUMNS = 256;
 const RAY_COUNT = 7;
 const RAY_STRENGTH = 0.22;
 const MAX_BUBBLES = 40;
-
-const glslFloat = (v: number) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 
 /**
  * One period of the iterated sine-warp caustic (after Dave Hoskins' tileable water

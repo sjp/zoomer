@@ -6,6 +6,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createNoise, fbmPeriodic2 } from "./noise";
@@ -36,9 +37,6 @@ const MIN_DIST = 0.004;
 
 /** Wraps a texel offset into [0, TEX). */
 const wrap = (x: number) => ((x % TEX) + TEX) % TEX;
-
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -71,12 +69,12 @@ uniform vec3 uGlow;
 out vec4 outColor;
 
 const float TAU = 6.283185307179586;
-const float TEX = ${f(TEX)};
-const float U_REPS = ${f(U_REPS)};
-const float V_SCALE = ${f(V_SCALE)};
-const float RINGS = ${f(RINGS)};
-const float BEND_REACH = ${f(BEND_REACH)};
-const float MIN_DIST = ${f(MIN_DIST)};
+const float TEX = ${glslFloat(TEX)};
+const float U_REPS = ${glslFloat(U_REPS)};
+const float V_SCALE = ${glslFloat(V_SCALE)};
+const float RINGS = ${glslFloat(RINGS)};
+const float BEND_REACH = ${glslFloat(BEND_REACH)};
+const float MIN_DIST = ${glslFloat(MIN_DIST)};
 /** exp(-(dn / 0.3)^2) as exp2(dn^2 * FOG_K). */
 const float FOG_K = -1.4426950408889634 / 0.09;
 

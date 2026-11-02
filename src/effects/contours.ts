@@ -4,6 +4,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize } from "./lowres";
@@ -24,9 +25,6 @@ const LINE_ALPHA = 0.7;
 const INDEX_ALPHA = 1;
 /** Scale of the residual channel in the RGBA16F encoding (see `NOISE_FRAGMENT`). */
 const RESIDUAL_SCALE = 1024;
-
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 /** Canvas-to-field divisor that gives `FIELD_ROWS` rows; never below 1. */
 export function fieldDivisor(height: number): number {
@@ -205,7 +203,7 @@ void main() {
   vec2 enc;
   if (uFloat > 0.5) {
     float hr = unpackHalf2x16(packHalf2x16(vec2(h, 0.0))).x;
-    enc = vec2(hr, (h - hr) * ${f(RESIDUAL_SCALE)});
+    enc = vec2(hr, (h - hr) * ${glslFloat(RESIDUAL_SCALE)});
   } else {
     float s = h * 255.0;
     float hi = floor(s);

@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
@@ -46,9 +47,6 @@ const REFOG_SECONDS = 30;
 const FOG_DIFFUSE = 0.6;
 /** Wipe disc radius relative to the drop radius. */
 const WIPE_GROW = 1.25;
-
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 /** Background light: soft additive disc, colour mixed between the two light colours. */
 const LIGHT_VERTEX = /* glsl */ `#version 300 es
@@ -135,8 +133,8 @@ void main() {
   if (cov <= 0.0) discard;
   float h = sqrt(max(1.0 - d * d, 0.0));
   // Sample the background at centre - LENS * rel: inverted and minified.
-  vec2 off = vRel * (${f(-(1 + LENS) / OFFSET_RANGE)} * vFade);
-  vec2 enc = clamp(${f(ENC_MID)} + off * ${f(ENC_SCALE)}, ${f(1 / 255)}, 1.0);
+  vec2 off = vRel * (${glslFloat(-(1 + LENS) / OFFSET_RANGE)} * vFade);
+  vec2 enc = clamp(${glslFloat(ENC_MID)} + off * ${glslFloat(ENC_SCALE)}, ${glslFloat(1 / 255)}, 1.0);
   outColor = vec4(enc, h, cov * vFade);
 }
 `;
@@ -202,10 +200,10 @@ uniform sampler2D uFog;
 uniform vec2 uOffsetScale;
 uniform float uFogOn;
 uniform vec3 uFogTint;
-const vec3 LIGHT_DIR = vec3(${f(-0.45)}, ${f(0.55)}, ${f(0.7)});
+const vec3 LIGHT_DIR = vec3(${glslFloat(-0.45)}, ${glslFloat(0.55)}, ${glslFloat(0.7)});
 vec4 composite(vec2 uv) {
   vec4 d = texture(uDrops, uv);
-  vec2 dir = (d.xy - ${f(ENC_MID)}) * ${f(1 / ENC_SCALE)};
+  vec2 dir = (d.xy - ${glslFloat(ENC_MID)}) * ${glslFloat(1 / ENC_SCALE)};
   float cov = d.a;
   vec3 col = texture(uLowRes, uv + dir * uOffsetScale).rgb;
   // Through the drop, the view is a little brighter and clearer.

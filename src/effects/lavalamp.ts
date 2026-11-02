@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   resetUnpackState,
   withScope,
 } from "./gl";
@@ -40,9 +41,6 @@ const TILE = 1 << TILE_SHIFT;
 const MASK_BG = 1;
 const MASK_CORE = 0.5;
 
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
-
 /** Uniforms shared by both passes: the field in lamp units. */
 const FIELD_UNIFORMS = /* glsl */ `
 uniform vec2 uResolution;
@@ -59,9 +57,9 @@ uniform int uCount;
 uniform float uPoolR2;
 
 const int MAX_BLOBS = ${MAX_BLOBS};
-const float REF_H = ${f(REF_H)};
-const float THRESHOLD = ${f(THRESHOLD)};
-const float EPS = ${f(EPS)};
+const float REF_H = ${glslFloat(REF_H)};
+const float THRESHOLD = ${glslFloat(THRESHOLD)};
+const float EPS = ${glslFloat(EPS)};
 `;
 
 /**
@@ -83,9 +81,9 @@ uniform float uCoreLimit;
 
 out vec4 outColor;
 
-const float TILE = ${f(TILE)};
-const float POOL_Y_MIN = REF_H * (1.025 - 0.009 * ${f(POOL_WOB)});
-const float POOL_Y_MAX = REF_H * (1.025 + 0.009 * ${f(POOL_WOB)});
+const float TILE = ${glslFloat(TILE)};
+const float POOL_Y_MIN = REF_H * (1.025 - 0.009 * ${glslFloat(POOL_WOB)});
+const float POOL_Y_MAX = REF_H * (1.025 + 0.009 * ${glslFloat(POOL_WOB)});
 
 void main() {
   // The tile's pixel rectangle (slightly generous: whole pixel edges), in lamp units.
@@ -112,7 +110,7 @@ void main() {
   fieldMax += uPoolR2 / (pdNear * pdNear + EPS);
   fieldMin += uPoolR2 / (pdFar * pdFar + EPS);
 
-  float m = fieldMax < uBgLimit ? ${f(MASK_BG)} : (fieldMin > uCoreLimit ? ${f(MASK_CORE)} : 0.0);
+  float m = fieldMax < uBgLimit ? ${glslFloat(MASK_BG)} : (fieldMin > uCoreLimit ? ${glslFloat(MASK_CORE)} : 0.0);
   outColor = vec4(m, 0.0, 0.0, 1.0);
 }
 `;
@@ -147,12 +145,12 @@ void main() {
 
   // Whole tiles of background or saturated core don't need the field (see MASK_FRAGMENT).
   float tile = texelFetch(uMask, ivec2(gl_FragCoord.xy) >> TILE_SHIFT, 0).r;
-  if (tile > ${f((1 + MASK_CORE) / 2)}) {
+  if (tile > ${glslFloat((1 + MASK_CORE) / 2)}) {
     outColor = vec4(clamp(bg, 0.0, 1.0), 1.0);
     return;
   }
   vec3 wax = mix(uWaxTop, uWaxBottom, t);
-  if (tile > ${f(MASK_CORE / 2)}) {
+  if (tile > ${glslFloat(MASK_CORE / 2)}) {
     outColor = vec4(clamp(wax + (1.0 - wax) * (uGlow * 0.4), 0.0, 1.0), 1.0);
     return;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { beginFrame, createScope, withScope } from "./gl";
+import { beginFrame, createScope, glslFloat, withScope } from "./gl";
 
 const ENUMS = {
   FRAMEBUFFER: 0x8d40,
@@ -98,7 +98,7 @@ describe("createScope", () => {
     scope.defer(() => order.push("d"));
     expect(() => scope.dispose()).toThrow("second");
     expect(order).toEqual(["d", "a"]);
-    expect(() => scope.dispose()).not.toThrow();
+    expect(() => scope.dispose()).not.toThrow("has no GLSL literal");
   });
 });
 
@@ -140,5 +140,25 @@ describe("withScope", () => {
     ).toThrow(err);
     expect(spy).toHaveBeenCalledOnce();
     spy.mockRestore();
+  });
+});
+
+describe("glslFloat", () => {
+  it("gives integers a decimal point", () => {
+    expect(glslFloat(1)).toBe("1.0");
+    expect(glslFloat(-3)).toBe("-3.0");
+    expect(glslFloat(0)).toBe("0.0");
+    expect(glslFloat(-0)).toBe("0.0");
+  });
+
+  it("keeps fractions at full precision", () => {
+    expect(glslFloat(0.25)).toBe("0.25");
+    expect(glslFloat(1 / 3)).toBe(String(1 / 3));
+    expect(glslFloat(1e-7)).toBe("1e-7");
+  });
+
+  it("rejects values with no literal", () => {
+    expect(() => glslFloat(Number.NaN)).toThrow("has no GLSL literal");
+    expect(() => glslFloat(Number.POSITIVE_INFINITY)).toThrow("has no GLSL literal");
   });
 });

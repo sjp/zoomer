@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, withScope } from "./gl";
+import { beginFrame, createProgram, getUniforms, glslFloat, withScope } from "./gl";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
@@ -13,9 +13,6 @@ const DRIFT_PX = 18;
 /** Seconds a light takes to fade in after (re)appearing. */
 const FADE_IN = 2;
 const TAU = Math.PI * 2;
-
-/** GLSL float literal, so shader constants come from the TS ones above. */
-const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
 /**
  * Each light is drawn as a polygon (apothem 1 in `aCorner` units) fitted to its
@@ -67,7 +64,7 @@ ${
     ? `  // Distance along the nearest edge normal (flat top and bottom), normalised so
   // edges sit at 1. Normals are at ±90°, ±30° and ±150°; fold into one quadrant.
   vec2 q = abs(vLocal);
-  float d = max(q.y, dot(q, vec2(${f(Math.cos(Math.PI / 6))}, 0.5))) * ${f(1 / HEX_APOTHEM)};`
+  float d = max(q.y, dot(q, vec2(${glslFloat(Math.cos(Math.PI / 6))}, 0.5))) * ${glslFloat(1 / HEX_APOTHEM)};`
     : `  float d = length(vLocal);`
 }
   // At least about a pixel of anti-aliasing, as the old bilinear-scaled sprite had.
