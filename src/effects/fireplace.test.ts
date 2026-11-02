@@ -69,18 +69,29 @@ describe("buildRamp", () => {
 });
 
 describe("fire noise texture", () => {
-  it("tiles seamlessly", () => {
-    const size = 32;
-    const tex = buildPeriodicNoiseTexture(size, fireNoiseChannels(4));
+  it("tiles seamlessly in x and y, in both channels", () => {
+    const size = NOISE_SIZE;
+    const tex = buildPeriodicNoiseTexture(size, fireNoiseChannels());
     expect(tex.length).toBe(size * size * 2);
-    // Neighbours across the wrap differ as little as neighbours inside.
-    let wrapDiff = 0;
-    let innerDiff = 0;
-    for (let y = 0; y < size; y++) {
-      wrapDiff += Math.abs(tex[(y * size + size - 1) * 2] - tex[y * size * 2]);
-      innerDiff += Math.abs(tex[(y * size + 1) * 2] - tex[y * size * 2]);
+    const at = (x: number, y: number, c: number) => tex[(y * size + x) * 2 + c];
+    /** Mean |difference| between the texel pairs `pick` names, over one edge. */
+    const meanStep = (c: number, pick: (i: number) => [number, number, number, number]) => {
+      let sum = 0;
+      for (let i = 0; i < size; i++) {
+        const [x0, y0, x1, y1] = pick(i);
+        sum += Math.abs(at(x0, y0, c) - at(x1, y1, c));
+      }
+      return sum / size;
+    };
+    for (let c = 0; c < 2; c++) {
+      // Steps across the seam are no larger than steps just inside it.
+      const seamX = meanStep(c, (y) => [size - 1, y, 0, y]);
+      const innerX = meanStep(c, (y) => [size - 2, y, size - 1, y]);
+      const seamY = meanStep(c, (x) => [x, size - 1, x, 0]);
+      const innerY = meanStep(c, (x) => [x, size - 2, x, size - 1]);
+      expect(seamX).toBeLessThan(innerX * 1.6 + 2);
+      expect(seamY).toBeLessThan(innerY * 1.6 + 2);
     }
-    expect(wrapDiff).toBeLessThan(innerDiff * 2 + size * 2);
   });
 
   it("uses the value range", () => {
@@ -92,6 +103,26 @@ describe("fire noise texture", () => {
       hi = Math.max(hi, v);
     }
     expect(hi - lo).toBeGreaterThan(120);
+  });
+});
+
+describe("fireLayout", () => {
+  it("centres the fire and scales its base with the width, within limits", () => {
+    const l = fireLayout(1600, 0.4);
+    expect(l.cx).toBe(800);
+    expect(l.halfW).toBeCloseTo(1600 * 0.36, 9);
+    expect(l.flameH).toBeCloseTo(432, 9);
+    expect(l.floorH).toBe(FLOOR_H);
+    expect(l.baseY).toBeCloseTo(FLOOR_H + l.halfW * 0.07, 9);
+  });
+
+  it("clamps the base half-width to 60..680 and the flame to at least 40px", () => {
+    expect(fireLayout(100, 0.4).halfW).toBe(60);
+    expect(fireLayout(0, 0.4).halfW).toBe(60);
+    expect(fireLayout(10_000, 0.4).halfW).toBe(680);
+    expect(fireLayout(1920, 0).flameH).toBe(40);
+    expect(fireLayout(1920, -1).flameH).toBe(40);
+    expect(fireLayout(1920, 0.02).flameH).toBe(40);
   });
 });
 
@@ -171,6 +202,46 @@ describe("stepEmbers", () => {
     expect(s.count).toBe(0);
   });
 
+  it("does nothing for a zero or negative step", () => {
+    const s = createEmberState(20);
+    const rng = createRng(5);
+    for (let i = 0; i < 30; i++) stepEmbers(s, 1 / 60, env(30), rng, noCurl);
+    const snapshot = JSON.stringify(s);
+    for (const dt of [0, -1, -1e-9]) stepEmbers(s, dt, env(1000), rng, () => 1);
+    expect(JSON.stringify(s)).toBe(snapshot);
+  });
+
+  it("removes embers that rise past the top of the frame", () => {
+    const s = createEmberState(10);
+    const rng = createRng(6);
+    stepEmbers(s, 0.1, env(10), rng, noCurl);
+    expect(s.count).toBe(1);
+    // Long-lived and below the top...
+    s.life[0] = 100;
+    s.y[0] = 1099;
+    stepEmbers(s, 1e-3, env(0), rng, noCurl);
+    expect(s.count).toBe(1);
+    // ...until it rises past it.
+    s.y[0] = 1100.5;
+    stepEmbers(s, 1e-3, env(0), rng, noCurl);
+    expect(s.count).toBe(0);
+  });
+
+  it("caps the spawn debt, so a long hitch can't queue a burst", () => {
+    const s = createEmberState(8);
+    const rng = createRng(7);
+    // A 100s step at 50/s owes 5000 embers; at most `max` are ever owed.
+    stepEmbers(s, 100, env(50), rng, noCurl);
+    expect(s.spawnDebt).toBeLessThan(1);
+    expect(s.count).toBeLessThanOrEqual(8);
+    // Once they have died, a normal step spawns at the normal rate.
+    for (let i = 0; i < 400; i++) stepEmbers(s, 1 / 60, env(0), rng, noCurl);
+    expect(s.count).toBe(0);
+    stepEmbers(s, 1 / 60, env(50), rng, noCurl);
+    expect(s.count).toBeLessThanOrEqual(1);
+    expect(s.spawnDebt).toBeLessThan(1);
+  });
+
   it("keeps live embers packed after removals", () => {
     const s = createEmberState(100);
     const rng = createRng(4);
@@ -188,5 +259,20 @@ describe("emberAlpha", () => {
     expect(emberAlpha(2, 2, 0, 0)).toBe(0);
     expect(emberAlpha(0.3, 2, 0, 0)).toBeGreaterThan(0.4);
     expect(emberAlpha(1.8, 2, 0, 0)).toBeLessThan(0.02);
+  });
+
+  it("stays within [0, 1] for any age, seed and time", () => {
+    const rng = createRng(8);
+    let hi = 0;
+    for (let i = 0; i < 20_000; i++) {
+      const life = 0.1 + rng() * 5;
+      const a = emberAlpha(rng() * 1.2 * life, life, rng() * 7, rng() * 1000);
+      expect(a).toBeGreaterThanOrEqual(0);
+      hi = Math.max(hi, a);
+    }
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(hi).toBeGreaterThan(0.5);
+    expect(emberAlpha(1, 0, 0, 0)).toBe(0);
+    expect(emberAlpha(1, -1, 0, 0)).toBe(0);
   });
 });
