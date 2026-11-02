@@ -209,19 +209,27 @@ describe("layerUniforms", () => {
   const params = new Float32Array(8);
 
   it("keeps offsets wrapped and cross-fade weights in range", () => {
-    for (let t = 0; t < 200; t += 0.37) {
-      layerUniforms(offA, detail, params, 4, 1, t * 0.01, t, 1.2, 0.8);
-      for (let i = 4; i < 8; i++) {
-        expect(offA[i]).toBeGreaterThanOrEqual(0);
-        expect(offA[i]).toBeLessThanOrEqual(1);
+    const bad: string[] = [];
+    for (let t = 0; t < 2000; t += 0.37) {
+      for (const [o, layer] of [
+        [0, 0],
+        [4, 1],
+      ]) {
+        layerUniforms(offA, detail, params, o, layer, t * 0.01, t, 1.2, 0.8);
+        // Texture offsets, wrapped to [0, 1): the base pair and the detail layer's.
+        for (const v of [...offA.subarray(o, o + 4), detail[o], detail[o + 1]]) {
+          if (!(v >= 0 && v < 1)) bad.push(`offset ${v} at t = ${t}, layer ${layer}`);
+        }
+        expect(detail[o + 2]).toBeGreaterThan(params[o]);
+        expect(params[o]).toBeCloseTo(1.2, 6);
+        expect(params[o + 1]).toBeGreaterThanOrEqual(0);
+        expect(params[o + 1]).toBeLessThanOrEqual(1);
+        expect(params[o + 2]).toBeGreaterThanOrEqual(1);
+        expect(params[o + 2]).toBeLessThanOrEqual(Math.SQRT2 + 1e-6);
+        expect(params[o + 3]).toBeCloseTo(0.8, 6);
       }
-      expect(params[4]).toBeCloseTo(1.2, 6);
-      expect(params[5]).toBeGreaterThanOrEqual(0);
-      expect(params[5]).toBeLessThanOrEqual(1);
-      expect(params[6]).toBeGreaterThanOrEqual(1);
-      expect(params[6]).toBeLessThanOrEqual(Math.SQRT2 + 1e-6);
-      expect(params[7]).toBeCloseTo(0.8, 6);
     }
+    expect(bad).toEqual([]);
   });
 
   it("only re-randomises a sample while its weight is zero", () => {
