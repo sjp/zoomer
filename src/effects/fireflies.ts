@@ -90,6 +90,25 @@ export function beamMembership(x: number, y: number, b: Beam): number {
   return beamAcross(a) * beamAlong(v) * b.intensity;
 }
 
+/**
+ * Writes beam `b` as a BEAM_VERTEX instance at `out[o]`: x0, slope and half-width,
+ * then y0, y1 and intensity times `gain`, in device px (`scale` per reference px).
+ */
+export function writeBeamInstance(
+  out: Float32Array,
+  o: number,
+  b: Beam,
+  scale: number,
+  gain: number,
+): void {
+  out[o] = b.x0 * scale;
+  out[o + 1] = b.slope;
+  out[o + 2] = b.halfWidth * scale;
+  out[o + 3] = b.y0 * scale;
+  out[o + 4] = b.y1 * scale;
+  out[o + 5] = b.intensity * gain;
+}
+
 /** Relative mid-height x (fraction of width), half-width (px at 1080p) and intensity per beam. */
 const BEAM_LAYOUT = [
   [0, 95, 1],
@@ -163,7 +182,7 @@ void main() {
  * (±1 = the soft edges), `aCorner.y` along (-1 top, 1 bottom). The profiles match
  * `beamAcross` and `beamAlong`.
  */
-const BEAM_VERTEX = /* glsl */ `#version 300 es
+export const BEAM_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 aCorner;
 /** x0, slope, half-width (device px; slope is unitless). */
 layout(location = 1) in vec3 aShape;
@@ -183,7 +202,7 @@ void main() {
 }
 `;
 
-const BEAM_FRAGMENT = /* glsl */ `#version 300 es
+export const BEAM_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vBeam;
 flat in float vIntensity;
@@ -419,16 +438,10 @@ export const fireflies = defineEffect({
             const bd = beamBatch.data;
             const bs = beamBatch.stride;
             for (let b = 0; b < nBeams; b++) {
-              const s = beamShapes[b];
-              const o = b * bs;
               // Slow, slight breathing, as if thin cloud passes the window.
               const breathe = 0.85 + 0.15 * Math.sin(time * 0.21 + b * 2.1);
-              bd[o] = s.x0 * scale;
-              bd[o + 1] = s.slope;
-              bd[o + 2] = s.halfWidth * scale;
-              bd[o + 3] = s.y0 * scale;
-              bd[o + 4] = s.y1 * scale;
-              bd[o + 5] = s.intensity * breathe * BEAM_STRENGTH * p.brightness * beamLife[b];
+              const gain = breathe * BEAM_STRENGTH * p.brightness * beamLife[b];
+              writeBeamInstance(bd, b * bs, beamShapes[b], scale, gain);
             }
             beamBatch.upload(nBeams);
             gl.useProgram(beamProgram);

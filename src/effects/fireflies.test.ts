@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   type Beam,
+  BEAM_FRAGMENT,
+  BEAM_VERTEX,
   beamAcross,
   beamAlong,
   beamMembership,
   blink,
   layoutBeams,
   MAX_BEAMS,
+  writeBeamInstance,
 } from "./fireflies";
+import { createRng } from "./noise";
 
 const beam = (over: Partial<Beam> = {}): Beam => ({
   x0: 500,
@@ -141,5 +145,92 @@ describe("layoutBeams", () => {
     expect(at(24)).toBeCloseTo(0.34 * 1920, 6);
     expect(at(45)).toBeCloseTo(0.34 * 1920, 6);
     expect(at(-30)).toBeCloseTo(0.5 * 1920, 6);
+  });
+});
+
+/**
+ * The beam quad as the GPU draws it: BEAM_VERTEX places the QUAD strip's corners
+ * from the instance, the rasteriser interpolates `vBeam` linearly over each of its
+ * two triangles, and BEAM_FRAGMENT shades `across * along * intensity`. Returns 0
+ * outside the quad, where nothing is drawn.
+ */
+function gpuBeam(inst: Float32Array, px: number, py: number): number {
+  const [x0, slope, hw, y0, y1, intensity] = inst;
+  // BEAM_VERTEX for each corner of QUAD: position and vBeam.
+  const corners = [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ].map(([cx, cy]) => {
+    const v = cy * 0.5 + 0.5;
+    const y = y0 + (y1 - y0) * v;
+    return { x: x0 + slope * y + cx * hw, y, beam: [cx, v] };
+  });
+  // The strip's triangles: 0-1-2 and 1-2-3.
+  for (const [a, b, c] of [
+    [0, 1, 2],
+    [1, 2, 3],
+  ]) {
+    const A = corners[a];
+    const B = corners[b];
+    const C = corners[c];
+    const det = (B.y - C.y) * (A.x - C.x) + (C.x - B.x) * (A.y - C.y);
+    const wa = ((B.y - C.y) * (px - C.x) + (C.x - B.x) * (py - C.y)) / det;
+    const wb = ((C.y - A.y) * (px - C.x) + (A.x - C.x) * (py - C.y)) / det;
+    const wc = 1 - wa - wb;
+    if (wa < -1e-9 || wb < -1e-9 || wc < -1e-9) continue;
+    const across = wa * A.beam[0] + wb * B.beam[0] + wc * C.beam[0];
+    const along = wa * A.beam[1] + wb * B.beam[1] + wc * C.beam[1];
+    // BEAM_FRAGMENT's profile, which beamAcross and beamAlong mirror.
+    return beamAcross(across) * beamAlong(Math.min(1, Math.max(0, along))) * intensity;
+  }
+  return 0;
+}
+
+describe("beam quad on the GPU", () => {
+  it("lights exactly where beamMembership says, for slanted beams at any scale", () => {
+    const beams = Array.from({ length: MAX_BEAMS }, () => beam());
+    const inst = new Float32Array(6);
+    const rng = createRng(12);
+    let lit = 0;
+    for (const angle of [-45, -24, -5, 0, 10, 24, 45]) {
+      for (const scale of [1, 2, 0.5]) {
+        const n = layoutBeams(MAX_BEAMS, angle, 1920, beams);
+        for (let b = 0; b < n; b++) {
+          writeBeamInstance(inst, 0, beams[b], scale, 1);
+          for (let k = 0; k < 400; k++) {
+            // Device px over the frame and a little beyond it.
+            const px = (rng() * 2200 - 140) * scale;
+            const py = (rng() * 1200 - 60) * scale;
+            const want = beamMembership(px / scale, py / scale, beams[b]);
+            const got = gpuBeam(inst, px, py);
+            expect(Math.abs(got - want)).toBeLessThan(1e-4);
+            if (want > 0) lit++;
+          }
+        }
+      }
+    }
+    expect(lit).toBeGreaterThan(1000);
+  });
+
+  it("mirrors the shaders gpuBeam stands in for", () => {
+    // If these lines change, update gpuBeam to match.
+    for (const line of [
+      "float v = aCorner.y * 0.5 + 0.5;",
+      "float y = mix(aSpan.x, aSpan.y, v);",
+      "float x = aShape.x + aShape.y * y + aCorner.x * aShape.z;",
+      "vBeam = vec2(aCorner.x, v);",
+    ]) {
+      expect(BEAM_VERTEX).toContain(line);
+    }
+    expect(BEAM_FRAGMENT).toContain("float v = clamp(vBeam.y, 0.0, 1.0);");
+    expect(BEAM_FRAGMENT).toContain("vec3 c = uColor * (across * along * vIntensity);");
+  });
+
+  it("writes the instance in device px, with the slope unscaled", () => {
+    const out = new Float32Array(6);
+    writeBeamInstance(out, 0, beam({ slope: 0.5, intensity: 0.8 }), 2, 0.5);
+    expect(Array.from(out)).toEqual([1000, 0.5, 200, 0, 2000, 0.4000000059604645]);
   });
 });
