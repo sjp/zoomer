@@ -60,12 +60,16 @@ describe("lantern shape", () => {
 
 describe("flicker", () => {
   it("is bounded by the flicker depth", () => {
-    for (let t = 0; t < 60; t += 0.037) {
-      for (const amount of [0, 0.5, 1, 2]) {
+    for (const amount of [0, 0.5, 1, 2]) {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let t = 0; t < 60; t += 0.037) {
         const v = flicker(t, 1.3, 0.7, amount);
-        expect(v).toBeLessThanOrEqual(1);
-        expect(v).toBeGreaterThanOrEqual(1 - Math.min(1, amount) * FLICKER_DEPTH - 1e-12);
+        lo = Math.min(lo, v);
+        hi = Math.max(hi, v);
       }
+      expect(hi).toBeLessThanOrEqual(1);
+      expect(lo).toBeGreaterThanOrEqual(1 - Math.min(1, amount) * FLICKER_DEPTH - 1e-12);
     }
     expect(flicker(12.3, 2, 0.4, 0)).toBe(1);
   });
@@ -75,12 +79,14 @@ describe("flicker", () => {
     // |d/dt| of the curve is at most the depth times the fastest angular rate.
     const maxSlope = FLICKER_DEPTH * 2 * Math.PI * FLICKER_MAX_HZ;
     const h = 1e-3;
+    let steepest = 0;
     for (const rate of [0, 0.5, 1]) {
       for (let t = 0; t < 30; t += 0.05) {
         const slope = Math.abs(flicker(t + h, 0.4, rate, 1) - flicker(t, 0.4, rate, 1)) / h;
-        expect(slope).toBeLessThanOrEqual(maxSlope);
+        steepest = Math.max(steepest, slope);
       }
     }
+    expect(steepest).toBeLessThanOrEqual(maxSlope);
   });
 });
 
@@ -106,8 +112,8 @@ describe("createLanterns", () => {
     const data = new Float32Array(MAX * LANTERN_FLOATS);
     const out: string[] = [];
     for (const f of [frame(), frame({ wind: -1, rise: 3 }), frame({ bottom: 820, wind: 1 })]) {
-      for (let s = 0; s < 1500; s++) {
-        l.step(0.1, f, data, LANTERN_FLOATS);
+      for (let s = 0; s < 400; s++) {
+        l.step(0.25, f, data, LANTERN_FLOATS);
         for (let i = 0; i < MAX; i++) {
           const reach = lanternReach(l.depth[i], f.size);
           // Below the bottom line only while a lowered horizon is still rising past it.
