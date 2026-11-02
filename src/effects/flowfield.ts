@@ -140,6 +140,19 @@ void main() {
 `;
 
 /**
+ * The fade pass's `uFade` for a frame of `dt` seconds into a target with `levels`
+ * steps (255 or 1023), written to `out`: the trail decays with a time constant from
+ * 0.1s (`trail` 0) to 3s (`trail` 1), plus the CLEAN_RATE pull towards empty.
+ */
+export function fadeTerms(dt: number, trail: number, levels: number, out: Float64Array): void {
+  const tau = 0.1 * Math.pow(30, trail);
+  const keep = Math.exp(-dt / tau);
+  const clean = Math.min(1, dt * CLEAN_RATE);
+  out[0] = (keep + clean) * levels;
+  out[1] = -clean * levels;
+}
+
+/**
  * Screens (dark) or multiplies (light, from the inverted layer) the trails over the
  * background. Both are bg + k * l: k = 1 - bg for screen, -bg for multiply.
  */
@@ -234,6 +247,8 @@ export const flowfield = defineEffect({
       const countFade = new Float32Array(MAX_PARTICLES).fill(1);
       const rands = new Float32Array(MAX_PARTICLES);
       const instances = new Float32Array(MAX_PARTICLES * STRIDE);
+      /** `uFade` for this frame, from `fadeTerms`. */
+      const fadeOut = new Float64Array(2);
 
       const segProgram = scope.add(createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT), (p) =>
         gl.deleteProgram(p),
@@ -407,16 +422,14 @@ export const flowfield = defineEffect({
           const src = targets[current];
           current ^= 1;
           const dst = targets[current];
-          const tau = 0.1 * Math.pow(30, p.trail);
           gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
           // Every pixel is overwritten below, so the old contents need not be loaded.
           gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
           gl.useProgram(fadeProgram);
           gl.bindTexture(gl.TEXTURE_2D, src.texture);
-          const keep = Math.exp(-dt / tau);
-          const clean = Math.min(1, dt * CLEAN_RATE);
           const levels = use10 ? 1023 : 255;
-          fade.f2("uFade", (keep + clean) * levels, -clean * levels);
+          fadeTerms(dt, p.trail, levels, fadeOut);
+          fade.f2("uFade", fadeOut[0], fadeOut[1]);
           fade.f1("uInvLevels", 1 / levels);
           frameNo = (frameNo + 1) >>> 0;
           fade.u1("uSeed", hash32(frameNo));
