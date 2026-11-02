@@ -6,7 +6,8 @@
  *
  * - **Static droplets** live in a fixed pool (slots `[0, maxStatic)`). Each has a
  *   lifetime: it fades in, sits, fades out and respawns somewhere else. Only the
- *   first `staticCount` slots are active, set from the `rain` amount.
+ *   first `staticCount` slots are active, set from the `rain` amount. When the
+ *   rain drops, the slots beyond it fade out (`staticFade`) before they die.
  * - **Trail droplets** live in a ring of `maxTrails` slots after the static ones.
  *   Runners emit them behind themselves; they fade out over a few seconds. When
  *   the slot under the ring cursor is still alive the ring is full and the
@@ -20,6 +21,8 @@
  * Wiping uses a coarse uniform grid of singly linked lists (`head`/`next`),
  * rebuilt each step in O(droplets), so each runner only tests nearby droplets.
  */
+
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 
 export const DEAD = 0;
 export const STATIC = 1;
@@ -104,7 +107,12 @@ export interface RainSim {
   readonly dAge: Float32Array;
   readonly dLife: Float32Array;
   readonly dKind: Uint8Array;
-  /** Active static slots, `[0, staticCount)`. */
+  /**
+   * Count fade of each static slot (see `fade.ts`): slots removed by less rain
+   * fade out before they die. 1 while wanted, so it is invisible otherwise.
+   */
+  readonly staticFade: Float32Array;
+  /** Active static slots, `[0, staticCount)`, including any still fading out. */
   staticCount: number;
   /** Next trail slot, `0 .. maxTrails - 1` (offset by `maxStatic` in the arrays). */
   trailCursor: number;
@@ -122,7 +130,9 @@ export interface RainSim {
   readonly rTravel: Float32Array;
   readonly rAge: Float32Array;
   readonly rState: Uint8Array;
-  /** Active runner slots, `[0, runnerCount)`. */
+  /** Count fade of each runner slot, like `staticFade`. */
+  readonly runnerFade: Float32Array;
+  /** Active runner slots, `[0, runnerCount)`, including any still fading out. */
   runnerCount: number;
 
   /** Grid: `cols * rows` list heads (-1 = empty) and per-droplet next links. */
@@ -167,6 +177,7 @@ export function createRainSim(
     dAge: new Float32Array(nd),
     dLife: new Float32Array(nd),
     dKind: new Uint8Array(nd),
+    staticFade: new Float32Array(config.maxStatic).fill(1),
     staticCount: 0,
     trailCursor: 0,
     rx: new Float32Array(nr),
@@ -179,6 +190,7 @@ export function createRainSim(
     rTravel: new Float32Array(nr),
     rAge: new Float32Array(nr),
     rState: new Uint8Array(nr),
+    runnerFade: new Float32Array(nr).fill(1),
     runnerCount: 0,
     cols: 0,
     rows: 0,
@@ -370,11 +382,18 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
   const rain = Math.min(1, Math.max(0, p.rain));
 
   // Active static droplets follow the rain amount. The very first fill starts
-  // mid-life so the window is not empty, nor all fading in together.
+  // mid-life so the window is not empty, nor all fading in together. Slots the
+  // rain no longer wants fade out first (and back in if it rises again).
+  const fadeStep = dt / FADE_OUT;
   const targetStatic = Math.round(rain * config.maxStatic);
   for (let i = sim.staticCount; i < targetStatic; i++) spawnStatic(sim, i, !sim.primed);
-  for (let i = targetStatic; i < sim.staticCount; i++) sim.dKind[i] = DEAD;
-  sim.staticCount = targetStatic;
+  sim.staticCount = growLive(sim.staticFade, sim.staticCount, targetStatic);
+  for (let i = 0; i < sim.staticCount; i++) {
+    stepLife(sim.staticFade, i, targetStatic, fadeStep, fadeStep);
+  }
+  const staticLive = trimLive(sim.staticFade, sim.staticCount, targetStatic);
+  for (let i = staticLive; i < sim.staticCount; i++) sim.dKind[i] = DEAD;
+  sim.staticCount = staticLive;
 
   const targetRunners = Math.round(rain * config.maxRunners);
   for (let i = sim.runnerCount; i < targetRunners; i++) {
@@ -385,7 +404,11 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
       sim.rAge[i] = RUNNER_FADE_IN;
     }
   }
-  sim.runnerCount = targetRunners;
+  sim.runnerCount = growLive(sim.runnerFade, sim.runnerCount, targetRunners);
+  for (let i = 0; i < sim.runnerCount; i++) {
+    stepLife(sim.runnerFade, i, targetRunners, fadeStep, fadeStep);
+  }
+  sim.runnerCount = trimLive(sim.runnerFade, sim.runnerCount, targetRunners);
   // Only once there was something to place: a start at rain 0 must not use up the
   // mid-life first fill, or raising the rain later fades every droplet in together.
   if (targetStatic > 0 || targetRunners > 0) sim.primed = true;
@@ -481,11 +504,12 @@ function writeDroplets(
   from: number,
   to: number,
 ): number {
-  const { dKind, dx, dy, dr, dAge, dLife } = sim;
+  const { dKind, dx, dy, dr, dAge, dLife, staticFade } = sim;
+  const statics = staticFade.length;
   for (let i = from; i < to; i++) {
     const kind = dKind[i];
     if (kind === DEAD) continue;
-    const f = dropletFade(kind, dAge[i], dLife[i]);
+    const f = dropletFade(kind, dAge[i], dLife[i]) * (i < statics ? staticFade[i] : 1);
     if (f <= 0.01) continue;
     out[o] = dx[i] * scale;
     out[o + 1] = dy[i] * scale;
@@ -514,7 +538,7 @@ export function writeDropInstances(sim: RainSim, out: Float32Array, scale: numbe
     out[o + 1] = sim.ry[i] * scale;
     out[o + 2] = sim.rr[i] * scale;
     out[o + 3] = runnerStretch(sim.rState[i], sim.rv[i]);
-    out[o + 4] = Math.min(1, sim.rAge[i] / RUNNER_FADE_IN);
+    out[o + 4] = Math.min(1, sim.rAge[i] / RUNNER_FADE_IN) * sim.runnerFade[i];
     o += INSTANCE_STRIDE;
   }
   sim.runnerFirst = runnerFirst;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FADE_OUT } from "./fade";
 import { createRng } from "./noise";
 import {
   buildGrid,
@@ -199,9 +200,41 @@ describe("spawning", () => {
     stepRainSim(sim, 1 / 60, { rain: 1, speed: 1 });
     expect(sim.staticCount).toBe(200);
     expect(sim.runnerCount).toBe(8);
-    stepRainSim(sim, 1 / 60, { rain: 0.25, speed: 1 });
+    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 1 });
+    expect(sim.staticFade[199]).toBe(1);
+    // Less rain fades the extra slots out before they die.
+    stepRainSim(sim, 0.1, { rain: 0.25, speed: 1 });
+    expect(sim.staticCount).toBe(200);
+    expect(sim.staticFade[49]).toBe(1);
+    expect(sim.staticFade[50]).toBeCloseTo(1 - 0.1 / FADE_OUT, 5);
+    expect(sim.runnerFade[2]).toBeCloseTo(1 - 0.1 / FADE_OUT, 5);
+    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: 0.25, speed: 1 });
     expect(sim.staticCount).toBe(50);
+    expect(sim.runnerCount).toBe(2);
     expect(countKind(sim, STATIC)).toBe(50);
+  });
+
+  it("fades slots back in when the rain rises again mid fade-out", () => {
+    const sim = make();
+    stepRainSim(sim, 0.1, { rain: 1, speed: 1 });
+    stepRainSim(sim, 0.1, { rain: 0.5, speed: 1 });
+    const x = sim.dx[150];
+    const faded = sim.staticFade[150];
+    expect(faded).toBeLessThan(1);
+    stepRainSim(sim, 0.1, { rain: 1, speed: 1 });
+    // The same droplet, not a respawn, brightening again.
+    expect(sim.dx[150]).toBe(x);
+    expect(sim.staticFade[150]).toBeGreaterThan(faded);
+  });
+
+  it("dims fading-out drops in the written instances", () => {
+    const sim = empty();
+    sim.staticCount = 1;
+    place(sim, 0, 10, 10);
+    sim.staticFade[0] = 0.5;
+    const out = new Float32Array(instanceCapacity(SMALL) * INSTANCE_STRIDE);
+    expect(writeDropInstances(sim, out, 1)).toBe(1);
+    expect(out[4]).toBeCloseTo(0.5, 5);
   });
 
   it("clamps the rain amount to capacity", () => {
@@ -209,9 +242,10 @@ describe("spawning", () => {
     stepRainSim(sim, 1 / 60, { rain: 5, speed: 1 });
     expect(sim.staticCount).toBe(SMALL.maxStatic);
     expect(sim.runnerCount).toBe(SMALL.maxRunners);
-    stepRainSim(sim, 1 / 60, { rain: -1, speed: 1 });
+    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: -1, speed: 1 });
     expect(sim.staticCount).toBe(0);
     expect(sim.runnerCount).toBe(0);
+    expect(countKind(sim, STATIC)).toBe(0);
   });
 
   it("starts the first fill mid-life, later additions fade in", () => {
