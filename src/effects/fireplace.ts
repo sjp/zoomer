@@ -294,7 +294,7 @@ export const fireplace = defineEffect({
     let refWidth = 1920;
     let time = 0;
     let layout: FireLayout = fireLayout(refWidth, 0.42);
-    const env: EmberEnv = { rate: 0, layout, rise: RISE_PX, time: 0, top: 1080 };
+    const env: EmberEnv = { rate: 0, layout, rise: RISE_PX * 0.9, time: 0, top: 1080 };
 
     /** Inputs the static uniforms and textures were last built from. */
     const built = { width: 0, height: 0, flame: Number.NaN, quality: "", palette: "", logs: false };
@@ -425,7 +425,6 @@ export const fireplace = defineEffect({
 
         // Embers.
         env.rate = p.embers * EMBER_RATE;
-        env.rise = RISE_PX * 0.9;
         env.time = time;
         stepEmbers(embers, step, env, rng, curl);
         const data = batch.data;
