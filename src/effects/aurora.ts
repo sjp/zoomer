@@ -418,6 +418,9 @@ export const aurora = defineEffect({
       let driftFine = 0;
       let driftCoarse = 0;
       let twinkleTime = 0;
+      /** The time and aspect the path table was last built for (NaN: never). */
+      let builtPathTime = Number.NaN;
+      let builtAspect = Number.NaN;
 
       const rebuildHorizon = (kind: HorizonKind) => {
         const cols = kind === "none" ? 1 : Math.min(2048, Math.max(16, Math.ceil(width / 2)));
@@ -479,14 +482,22 @@ export const aurora = defineEffect({
           u.f2("uResolution", width, height);
           u.f2("uRayDrift", driftFine, driftCoarse);
 
-          buildPathTable(path.data, PATH_COLS, width / height, pathTime, noise);
+          // The table only moves with time, so a paused aurora skips the rebuild and upload.
+          const aspect = width / height;
+          const pathDirty = pathTime !== builtPathTime || aspect !== builtAspect;
+          if (pathDirty) {
+            builtPathTime = pathTime;
+            builtAspect = aspect;
+            buildPathTable(path.data, PATH_COLS, aspect, pathTime, noise);
+          }
 
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, horizon?.texture ?? null);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, rays.texture);
           gl.activeTexture(gl.TEXTURE0);
-          path.upload();
+          if (pathDirty) path.upload();
+          else gl.bindTexture(gl.TEXTURE_2D, path.texture);
           triangle.draw();
 
           if (starCount > 0) {
