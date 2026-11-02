@@ -1,11 +1,11 @@
-import { hexToUnitRgb } from "./color";
+import { unitRgbMemo } from "./color";
 import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   createRenderTarget,
   FULLSCREEN_VERTEX,
-  getUniforms,
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
@@ -235,7 +235,7 @@ export const flowfield = defineEffect({
       const compProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const segLoc = getUniforms(gl, segProgram, [
+      const seg = createUniforms(gl, segProgram, [
         "uResolution",
         "uHalfWidth",
         "uColor1",
@@ -244,19 +244,19 @@ export const flowfield = defineEffect({
         "uThree",
         "uLight",
       ]);
-      const fadeLoc = getUniforms(gl, fadeProgram, [
+      const fade = createUniforms(gl, fadeProgram, [
         "uPrev",
         "uFade",
         "uInvLevels",
         "uSeed",
         "uStride",
       ]);
-      const compLoc = getUniforms(gl, compProgram, ["uLayer", "uBackground", "uLayerScale"]);
+      const comp = createUniforms(gl, compProgram, ["uLayer", "uBackground", "uLayerScale"]);
       // Uniforms live in their programs, so the samplers only need setting once.
       gl.useProgram(fadeProgram);
-      gl.uniform1i(fadeLoc.uPrev, 0);
+      fade.i1("uPrev", 0);
       gl.useProgram(compProgram);
-      gl.uniform1i(compLoc.uLayer, 0);
+      comp.i1("uLayer", 0);
       gl.useProgram(null);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
@@ -295,17 +295,7 @@ export const flowfield = defineEffect({
       let lightMode: boolean | undefined;
       const EMPTY = new Float32Array([0, 0, 0, 1]);
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
-      /** Parsed colour uniforms, cached by hex string. */
-      const colorCache = new Map<string, Float32Array>();
-      const unitColor = (hex: string) => {
-        let c = colorCache.get(hex);
-        if (!c) {
-          if (colorCache.size > 64) colorCache.clear();
-          c = new Float32Array(hexToUnitRgb(hex));
-          colorCache.set(hex, c);
-        }
-        return c;
-      };
+      const background = unitRgbMemo();
 
       const deleteTargets = () => {
         for (const t of targets) t.dispose();
@@ -375,7 +365,7 @@ export const flowfield = defineEffect({
 
           gl.activeTexture(gl.TEXTURE0);
 
-          const bg = unitColor(p.background);
+          const bg = background(p.background);
           const light = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] > 140 / 255;
           if (light !== lightMode) {
             lightMode = light;
@@ -398,11 +388,11 @@ export const flowfield = defineEffect({
           const keep = Math.exp(-dt / tau);
           const clean = Math.min(1, dt * CLEAN_RATE);
           const levels = use10 ? 1023 : 255;
-          gl.uniform2f(fadeLoc.uFade, (keep + clean) * levels, -clean * levels);
-          gl.uniform1f(fadeLoc.uInvLevels, 1 / levels);
+          fade.f2("uFade", (keep + clean) * levels, -clean * levels);
+          fade.f1("uInvLevels", 1 / levels);
           frameNo = (frameNo + 1) >>> 0;
-          gl.uniform1ui(fadeLoc.uSeed, hash32(frameNo));
-          gl.uniform1ui(fadeLoc.uStride, width);
+          fade.u1("uSeed", hash32(frameNo));
+          fade.u1("uStride", width);
           triangle.draw();
 
           // Newly enabled particles start fresh so they fade in where they appear.
@@ -459,13 +449,13 @@ export const flowfield = defineEffect({
             gl.blendEquation(gl.FUNC_ADD);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
             gl.useProgram(segProgram);
-            gl.uniform2f(segLoc.uResolution, width, height);
-            gl.uniform1f(segLoc.uHalfWidth, Math.max(0.5, p.lineWidth * scale) / 2);
-            gl.uniform3fv(segLoc.uColor1, unitColor(p.color1));
-            gl.uniform3fv(segLoc.uColor2, unitColor(p.color2));
-            gl.uniform3fv(segLoc.uColor3, unitColor(p.color3));
-            gl.uniform1f(segLoc.uThree, p.useColor3 ? 1 : 0);
-            gl.uniform1f(segLoc.uLight, light ? 1 : 0);
+            seg.f2("uResolution", width, height);
+            seg.f1("uHalfWidth", Math.max(0.5, p.lineWidth * scale) / 2);
+            seg.rgb("uColor1", p.color1);
+            seg.rgb("uColor2", p.color2);
+            seg.rgb("uColor3", p.color3);
+            seg.f1("uThree", p.useColor3 ? 1 : 0);
+            seg.f1("uLight", light ? 1 : 0);
             gl.bindVertexArray(vao);
             gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances, 0, count * STRIDE);
@@ -479,9 +469,9 @@ export const flowfield = defineEffect({
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.useProgram(compProgram);
           gl.bindTexture(gl.TEXTURE_2D, dst.texture);
-          gl.uniform3fv(compLoc.uBackground, bg);
-          if (light) gl.uniform3f(compLoc.uLayerScale, -bg[0], -bg[1], -bg[2]);
-          else gl.uniform3f(compLoc.uLayerScale, 1 - bg[0], 1 - bg[1], 1 - bg[2]);
+          comp.v3("uBackground", bg);
+          if (light) comp.f3("uLayerScale", -bg[0], -bg[1], -bg[2]);
+          else comp.f3("uLayerScale", 1 - bg[0], 1 - bg[1], 1 - bg[2]);
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
