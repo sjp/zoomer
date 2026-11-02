@@ -2,8 +2,8 @@ import {
   beginFrame,
   createGradientBackground,
   createProgram,
+  createUniforms,
   DITHER_GLSL,
-  getUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
@@ -246,11 +246,11 @@ export const fireflies = defineEffect({
       const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const speckLoc = getUniforms(gl, speckProgram, ["uResolution"]);
+      const speckU = createUniforms(gl, speckProgram, ["uResolution"]);
       const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const beamLoc = getUniforms(gl, beamProgram, ["uResolution", "uColor"]);
+      const beamU = createUniforms(gl, beamProgram, ["uResolution", "uColor"]);
       // Per speck: x, y, extent radius; premultiplied colour.
       const specks = scope.own(
         createSpriteBatch(gl, MAX_SPECKS, [3, 3], [polygonStrip(8, Math.PI / 8)]),
@@ -291,12 +291,6 @@ export const fireflies = defineEffect({
       let scale = 1;
       let refWidth = 1920;
       let time = 0;
-      /** Inputs the uniforms were last set from. */
-      let speckW = 0;
-      let speckH = 0;
-      let beamW = 0;
-      let beamH = 0;
-      let beamColorSet: unknown = null;
 
       const rng = createRng(Math.random() * 0xffffffff);
       const newBlink = (i: number) => {
@@ -409,26 +403,15 @@ export const fireflies = defineEffect({
             }
             beamBatch.upload(nBeams);
             gl.useProgram(beamProgram);
-            if (beamW !== width || beamH !== height) {
-              beamW = width;
-              beamH = height;
-              gl.uniform2f(beamLoc.uResolution, width, height);
-            }
-            if (beamColorSet !== color) {
-              beamColorSet = color;
-              gl.uniform3fv(beamLoc.uColor, color);
-            }
+            beamU.f2("uResolution", width, height);
+            beamU.v3("uColor", color);
             beamBatch.draw(0, nBeams);
           }
 
           if (visible > 0) {
             specks.upload(visible);
             gl.useProgram(speckProgram);
-            if (speckW !== width || speckH !== height) {
-              speckW = width;
-              speckH = height;
-              gl.uniform2f(speckLoc.uResolution, width, height);
-            }
+            speckU.f2("uResolution", width, height);
             specks.draw(0, visible);
           }
           gl.disable(gl.BLEND);
