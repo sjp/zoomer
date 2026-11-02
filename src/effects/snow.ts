@@ -6,6 +6,7 @@ import {
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
@@ -38,8 +39,13 @@ const LAYERS = [
 const layerSoftness = (layer: number, blur: number) =>
   layer === 0 ? 0.2 + blur * 0.3 : layer === 1 ? 0.12 + blur * 0.1 : 0.25 + blur * 0.75;
 
-/** Sprite half-size relative to the flake radius, leaving room for the soft edge. */
-const spritePad = (softness: number) => 1 + softness + 0.05;
+/** Sprite half-size beyond the flake radius and its soft edge, in radii. */
+const PAD_MARGIN = 0.05;
+/**
+ * Sprite half-size relative to the flake radius, leaving room for the soft edge.
+ * The flake vertex shader computes the same from `PAD_MARGIN`.
+ */
+const spritePad = (softness: number) => 1 + softness + PAD_MARGIN;
 
 /**
  * Vertex shader for flakes. Per flake: centre and quad half-size (device px,
@@ -58,7 +64,8 @@ void main() {
   // Grow the quad by a pixel so the anti-aliased edge of tiny flakes is never clipped.
   vec2 ext = aRect.zw + 1.0;
   vec2 px = aRect.xy + aCorner * ext;
-  float pad = 1.0 + aLook.y + 0.05;
+  // spritePad(softness), as in TS.
+  float pad = 1.0 + aLook.y + ${glslFloat(PAD_MARGIN)};
   vLocal = aCorner * pad * ext / aRect.zw;
   vAlpha = aLook.x;
   vSoftness = aLook.y;
