@@ -28,6 +28,7 @@ import { terrain } from "./terrain";
 import { leaves } from "./leaves";
 import { horizon } from "./horizon";
 import { silk } from "./silk";
+import { film } from "./film";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -60,6 +61,7 @@ export const effects: readonly EffectDefinition[] = [
   leaves,
   horizon,
   silk,
+  film,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
