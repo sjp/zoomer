@@ -102,6 +102,12 @@ void main() {
  * Full-res composite (the low-res target's blit with a custom body): background
  * plus analytic glow, the upscaled flames over it (premultiplied), and the hearth
  * silhouette from a 1D column-height table with a fire-lit rim.
+ *
+ * Deviation from the spec (issue 008), which asked for additive flames: the ramp
+ * carries alpha, so the flames use premultiplied "over" (`bg * (1 - a) + rgb`).
+ * The deep-red outer flame then partly replaces the glow behind it instead of
+ * stacking on it, which gives the flames defined edges, and the cores can't
+ * clip past the ramp colour where they overlap the glow or a light background.
  */
 const COMPOSITE = /* glsl */ `
 uniform sampler2D uProfile;
