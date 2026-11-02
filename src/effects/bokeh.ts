@@ -22,6 +22,33 @@ const DRIFT_PX = 18;
 /** Seconds a light takes to fade in after (re)appearing. */
 const FADE_IN = 2;
 const TAU = Math.PI * 2;
+/**
+ * Fill budget: the lights' polygons may cover at most this many screens in
+ * total, so large sizes draw fewer lights rather than missing 4K/120 (additive
+ * blending at 4K is fill-bound).
+ */
+const FILL_SCREENS = 4;
+/** Area of the bounding octagon per radius², at a typical soft-edge reach of 1.1. */
+const OCTAGON_AREA = 8 * Math.tan(Math.PI / 8) * 1.1 * 1.1;
+
+/**
+ * How many of `count` lights to draw so their expected total area stays within
+ * `FILL_SCREENS` screens. Sizes are in 1080p reference px, `refWidth` is the
+ * screen width in the same units. Radii are `size * exp(e)` with `e` uniform in
+ * ±`variation * 1.1`, so the mean radius² is `size² * sinh(2s) / 2s`.
+ */
+export function bokehLightCount(
+  count: number,
+  size: number,
+  variation: number,
+  refWidth: number,
+): number {
+  const s = Math.max(0, variation) * 1.1;
+  const meanR2 = size * size * (s > 1e-6 ? Math.sinh(2 * s) / (2 * s) : 1);
+  const perLight = OCTAGON_AREA * meanR2;
+  const fit = perLight > 0 ? Math.floor((FILL_SCREENS * refWidth * 1080) / perLight) : count;
+  return Math.max(1, Math.min(MAX_LIGHTS, Math.floor(count), fit));
+}
 
 /**
  * Each light is drawn as a polygon (apothem 1 in `aCorner` units) fitted to its
@@ -224,7 +251,8 @@ export const bokeh = defineEffect({
           beginFrame(gl, width, height);
           time = (time + dt) % 10000;
 
-          const n = Math.min(p.count, MAX_LIGHTS);
+          // Bigger lights draw fewer of them, keeping the blended area within budget.
+          const n = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
           for (let i = prevCount; i < n; i++) life[i] = 0;
           prevCount = n;
 
