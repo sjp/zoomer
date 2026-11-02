@@ -426,8 +426,9 @@ export const synthwave = defineEffect({
       /*
        * Per-row values (sky gradient, sun stripes, horizontal grid lines, haze,
        * scanlines) are the same across each row, so they are computed once per row
-       * here rather than once per pixel, and uploaded as a tiny float texture.
-       * They are rebuilt only when an input changes, so a static scene
+       * here rather than once per pixel, and uploaded as a tiny half-float texture
+       * (texelFetch needs no float filtering, and 16 bits are plenty for colours and
+       * coverages). They are rebuilt only when an input changes, so a static scene
        * (speed 0, sway 0) does no CPU work or uploads for them.
        */
       const rowTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
@@ -639,7 +640,7 @@ export const synthwave = defineEffect({
             rowCount = n;
             gl.bindTexture(gl.TEXTURE_2D, rowTex);
             resetUnpackState(gl);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
           } else if (rebuildRows) {
             updateDataTexture(gl, rowTex, 3, n, gl.RGBA, gl.FLOAT, rows);
           } else {
