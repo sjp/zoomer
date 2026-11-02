@@ -1,9 +1,8 @@
-import type { Rgb } from "./color";
 import {
   beginFrame,
   createGradientBackground,
   createProgram,
-  getUniforms,
+  createUniforms,
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
@@ -266,7 +265,7 @@ export const constellation = defineEffect({
       const pointProgram = scope.add(createProgram(gl, POINT_VERTEX, POINT_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const pointLoc = getUniforms(gl, pointProgram, ["uResolution", "uColor"]);
+      const pointU = createUniforms(gl, pointProgram, ["uResolution", "uColor"]);
       const points = scope.own(
         createSpriteBatch(gl, MAX_POINTS, [4], [polygonStrip(8, Math.PI / 8)]),
       );
@@ -274,12 +273,7 @@ export const constellation = defineEffect({
 
       const bgTop = unitRgbMemo();
       const bgBottom = unitRgbMemo();
-      const pointRgb = unitRgbMemo();
       const lineRgb = unitRgbMemo();
-      // Last uploaded uniform inputs (colours are memoised references).
-      let pointSetColor: Rgb | null = null;
-      let pointSetW = 0;
-      let pointSetH = 0;
 
       // Positions in reference px (1080 per frame height), y down.
       const xs = new Float32Array(MAX_POINTS);
@@ -417,16 +411,8 @@ export const constellation = defineEffect({
             gl.blendEquation(gl.FUNC_ADD);
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
             gl.useProgram(pointProgram);
-            const pc = pointRgb(p.pointColor);
-            if (pc !== pointSetColor) {
-              gl.uniform3fv(pointLoc.uColor, pc);
-              pointSetColor = pc;
-            }
-            if (pointSetW !== width || pointSetH !== height) {
-              gl.uniform2f(pointLoc.uResolution, width, height);
-              pointSetW = width;
-              pointSetH = height;
-            }
+            pointU.rgb("uColor", p.pointColor);
+            pointU.f2("uResolution", width, height);
             points.draw(0, dots);
           }
           gl.disable(gl.BLEND);
