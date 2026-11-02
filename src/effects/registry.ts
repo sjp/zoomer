@@ -37,6 +37,7 @@ import { smoke } from "./smoke";
 import { sea } from "./sea";
 import { bubbles } from "./bubbles";
 import { beach } from "./beach";
+import { ridges } from "./ridges";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -78,6 +79,7 @@ export const effects: readonly EffectDefinition[] = [
   sea,
   bubbles,
   beach,
+  ridges,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
