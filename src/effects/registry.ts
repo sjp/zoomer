@@ -41,6 +41,7 @@ import { ridges } from "./ridges";
 import { startrails } from "./startrails";
 import { candlelight } from "./candlelight";
 import { daymap } from "./daymap";
+import { harmonograph } from "./harmonograph";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -86,6 +87,7 @@ export const effects: readonly EffectDefinition[] = [
   startrails,
   candlelight,
   daymap,
+  harmonograph,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
