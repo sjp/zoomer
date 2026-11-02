@@ -81,8 +81,12 @@ export interface LowResTarget {
    * full-size viewport, with blending disabled and sub-LSB dither. Binds the
    * low-res texture to texture unit 0 and leaves the active unit at 0.
    * Callers must unbind the FBO from `bind()` before calling this.
+   *
+   * The viewport defaults to the full size passed to `resize`. Pass an explicit
+   * output size when the target covers only part of the canvas but the
+   * `composite` shader must shade all of it.
    */
-  blit(): void;
+  blit(outWidth?: number, outHeight?: number): void;
   /** Low-res size in pixels. */
   readonly width: number;
   readonly height: number;
@@ -211,8 +215,8 @@ export function createLowResTarget(
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.viewport(0, 0, width, height);
     },
-    blit() {
-      gl.viewport(0, 0, fullWidth, fullHeight);
+    blit(outWidth = fullWidth, outHeight = fullHeight) {
+      gl.viewport(0, 0, outWidth, outHeight);
       gl.disable(gl.BLEND);
       gl.useProgram(program);
       gl.activeTexture(gl.TEXTURE0);

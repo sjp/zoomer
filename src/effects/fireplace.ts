@@ -455,8 +455,8 @@ export const fireplace = defineEffect({
         triangle.draw();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        // 2. Full-res composite: background, glow, flames, silhouette.
-        gl.viewport(0, 0, width, height);
+        // 2. Full-res composite: background, glow, flames, silhouette. The target
+        // covers only the fire rectangle, so blit to the whole canvas explicitly.
         gl.useProgram(target.program);
         const bg = bgColor(p.background);
         if (bg !== lastBg) {
@@ -468,9 +468,7 @@ export const fireplace = defineEffect({
         gl.uniform3f(co.uGlow, glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, profileTex);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, target.texture);
-        triangle.draw();
+        target.blit(width, height);
 
         // 3. Embers, additive.
         if (visible > 0) {
