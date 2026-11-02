@@ -34,6 +34,9 @@ export function App() {
   const [panelHidden, setPanelHidden] = useState(false);
   const [hoveringPanel, setHoveringPanel] = useState(false);
   const [recordingLeft, setRecordingLeft] = useState<number>();
+  // A recording captures one canvas at one size, so switching effect (which can replace
+  // the canvas) or resolution is locked until it finishes.
+  const recording = recordingLeft !== undefined;
   // Why the current effect failed to start or stopped; the canvas clears it on switch.
   const [effectError, setEffectError] = useState<string>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,10 +69,11 @@ export function App() {
 
   const step = useCallback(
     (dir: number) => {
+      if (recording) return;
       const i = effects.findIndex((e) => e.id === effect.id);
       setEffectId(effects[(i + dir + effects.length) % effects.length].id);
     },
-    [effect],
+    [effect, recording],
   );
 
   const toggleFullscreen = useCallback(() => {
@@ -91,7 +95,7 @@ export function App() {
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || recording) return;
     setRecordingLeft(seconds);
     const countdown = setInterval(
       () => setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1))),
@@ -112,7 +116,7 @@ export function App() {
     }
   };
 
-  const showPanel = !panelHidden && (!idle || hoveringPanel || recordingLeft !== undefined);
+  const showPanel = !panelHidden && (!idle || hoveringPanel || recording);
 
   return (
     <main className="app" data-idle={idle && !hoveringPanel}>

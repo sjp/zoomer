@@ -30,6 +30,7 @@ const DURATIONS = [10, 20, 30, 60];
 
 export function ControlPanel(props: Props) {
   const { effect, values, recordingLeft } = props;
+  const recording = recordingLeft !== undefined;
   const [duration, setDuration] = useState(20);
 
   return (
@@ -39,6 +40,8 @@ export function ControlPanel(props: Props) {
           className="effect-select"
           aria-label="Effect"
           value={effect.id}
+          disabled={recording}
+          title={recording ? "Locked while recording" : undefined}
           onChange={(e) => props.onEffectChange(e.target.value)}
         >
           {props.effects.map((e) => (
@@ -76,6 +79,8 @@ export function ControlPanel(props: Props) {
           <select
             id="resolution"
             value={props.resolution}
+            disabled={recording}
+            title={recording ? "Locked while recording" : undefined}
             onChange={(e) => props.onResolutionChange(e.target.value as Resolution)}
           >
             {Object.entries(RESOLUTIONS).map(([key, r]) => (
@@ -104,7 +109,7 @@ export function ControlPanel(props: Props) {
           <select
             aria-label="Clip length"
             value={duration}
-            disabled={recordingLeft !== undefined}
+            disabled={recording}
             onChange={(e) => setDuration(Number(e.target.value))}
           >
             {DURATIONS.map((d) => (
@@ -116,12 +121,18 @@ export function ControlPanel(props: Props) {
           <button
             type="button"
             className="primary"
-            disabled={recordingLeft !== undefined}
+            disabled={recording}
+            title="Keep this tab visible while recording"
             onClick={() => props.onRecord(duration)}
           >
-            {recordingLeft === undefined ? "Record clip" : `Recording… ${recordingLeft}s`}
+            {recording ? `Recording… ${recordingLeft}s` : "Record clip"}
           </button>
         </div>
+        {recording && (
+          <p className="hint" role="status">
+            Keep this tab visible until the recording finishes; hidden tabs make clips run long.
+          </p>
+        )}
       </section>
 
       <footer className="row">
