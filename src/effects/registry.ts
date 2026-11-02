@@ -43,6 +43,7 @@ import { candlelight } from "./candlelight";
 import { daymap } from "./daymap";
 import { harmonograph } from "./harmonograph";
 import { jellyfish } from "./jellyfish";
+import { koi } from "./koi";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -90,6 +91,7 @@ export const effects: readonly EffectDefinition[] = [
   daymap,
   harmonograph,
   jellyfish,
+  koi,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
