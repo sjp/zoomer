@@ -68,7 +68,10 @@ uniform vec4 uDetail[2];
 uniform vec4 uLayerP[2];
 /** Density threshold (from coverage). */
 uniform float uThreshold;
-/** Direction towards the light times LIGHT_STEP, in texture units. */
+/**
+ * Direction towards the light times LIGHT_STEP, in texture units (x squashed by
+ * STRETCH_X, like the texture coordinates).
+ */
 uniform vec2 uSunStep;
 uniform vec3 uCloudLight;
 uniform vec3 uCloudShadow;
@@ -265,7 +268,10 @@ export const clouds = defineEffect({
             u.f3("uCloudLight", v[P.cloudLight], v[P.cloudLight + 1], v[P.cloudLight + 2]);
             u.f3("uCloudShadow", v[P.cloudShadow], v[P.cloudShadow + 1], v[P.cloudShadow + 2]);
             // The blended light direction may be shorter than 1; that only softens shading.
-            u.f2("uSunStep", v[P.lightX] * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
+            // The step is in texture space, where x is squashed by STRETCH_X: squash it
+            // too, so the shading follows the preset's on-screen direction rather than
+            // leaning towards the horizontal.
+            u.f2("uSunStep", v[P.lightX] * STRETCH_X * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
             gl.useProgram(target.program);
             cu.f3("uSkyTop", v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
             cu.f3("uSkyBottom", v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
