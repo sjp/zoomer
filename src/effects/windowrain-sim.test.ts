@@ -15,6 +15,7 @@ import {
   MAX_WIPE_STAMPS,
   RESTING,
   RUNNING,
+  WIGGLE_WAVELENGTH,
   resizeRainSim,
   runnerStretch,
   spawnRunner,
@@ -430,6 +431,39 @@ describe("runners", () => {
     expect(Math.max(...trailYs)).toBeLessThan(sim.ry[0]);
   });
 
+  it("sways slowly from side to side rather than zigzagging", () => {
+    const { sim } = oneRunner(960, 0, 40, RUNNING);
+    sim.rPhase[0] = 0;
+    const reversals: number[] = [];
+    let lastStep = 0;
+    let xMin = sim.rx[0];
+    let xMax = sim.rx[0];
+    let fallen = 0;
+    for (let t = 0; t < 4000; t++) {
+      sim.rr[0] = 40; // Keep it running: trail losses would otherwise stop it.
+      // Lift it back up before it leaves the bottom (and respawns elsewhere), so
+      // it falls several wavelengths.
+      if (sim.ry[0] > 800) sim.ry[0] -= 700;
+      stepRainSim(sim, 0.02, { rain: 0.125, speed: 1 });
+      expect(sim.rState[0]).toBe(RUNNING);
+      fallen += sim.rStepY[0];
+      const step = sim.rStepX[0];
+      if (step !== 0 && lastStep !== 0 && Math.sign(step) !== Math.sign(lastStep)) {
+        reversals.push(fallen);
+      }
+      if (step !== 0) lastStep = step;
+      xMin = Math.min(xMin, sim.rx[0]);
+      xMax = Math.max(xMax, sim.rx[0]);
+    }
+    expect(reversals.length).toBeGreaterThanOrEqual(4);
+    const gaps = reversals.slice(1).map((y, i) => y - reversals[i]);
+    const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    // Reversals come every half wavelength of fall.
+    expect(meanGap).toBeGreaterThan(WIGGLE_WAVELENGTH / 4);
+    // Peak excursion is about WIGGLE * wavelength / 2pi (~4 px) either side.
+    expect(xMax - xMin).toBeLessThan(15);
+  });
+
   it("wipes static droplets in its path", () => {
     const { sim } = oneRunner(500, 100, 16, RUNNING);
     sim.rx[0] = 500;
@@ -608,9 +642,11 @@ describe("capacity", () => {
     expect(out[r0]).toBeCloseTo(sim.rx[0] * 2, 3);
     expect(out[r0 + 1]).toBeCloseTo(sim.ry[0] * 2, 3);
     expect(out[r0 + 2]).toBeCloseTo(sim.rr[0] * 2, 3);
+    // Invisible droplets are skipped; runners are always written, and one that
+    // respawned this step (left the bottom) is still at fade 0.
     for (let i = 0; i < n; i++) {
       const f = out[i * INSTANCE_STRIDE + 4];
-      expect(f).toBeGreaterThan(0);
+      expect(f).toBeGreaterThanOrEqual(i < sim.runnerFirst ? Number.EPSILON : 0);
       expect(f).toBeLessThanOrEqual(1);
     }
   });

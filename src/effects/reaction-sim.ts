@@ -138,7 +138,8 @@ export function unpack16(hi: number, lo: number): number {
 /**
  * One Gray–Scott step on a `w` x `h` grid, the CPU twin of STEP_FRAGMENT. Grids
  * hold (u, b) with u = 1 - A. Edges are clamped (zero-flux), like the shader's
- * clamped `texelFetch`. With a = 1 - u:
+ * clamped `texelFetch`. `front` is the retreat front (see `cycleFront`); cells
+ * behind it get extra kill (`retreatKill`). With a = 1 - u:
  *
  *   da = DA * lap(a) - a b^2 + F (1 - a)  ->  du = DA * lap(u) + a b^2 - F u
  *   db = DB * lap(b) + a b^2 - (F + k) b
@@ -152,6 +153,7 @@ export function grayScottStep(
   kill: number,
   outU: Float32Array,
   outB: Float32Array,
+  front = -1,
 ): void {
   for (let y = 0; y < h; y++) {
     const ym = Math.max(0, y - 1) * w;
@@ -172,8 +174,262 @@ export function grayScottStep(
       const uu = u[i];
       const bb = b[i];
       const react = (1 - uu) * bb * bb;
+      const k = kill + retreatKill((x + 0.5) / w, front);
       outU[i] = Math.min(1, Math.max(0, uu + DT * (DA * lapU + react - feed * uu)));
-      outB[i] = Math.min(1, Math.max(0, bb + DT * (DB * lapB + react - (feed + kill) * bb)));
+      outB[i] = Math.min(1, Math.max(0, bb + DT * (DB * lapB + react - (feed + k) * bb)));
     }
   }
+}
+
+/**
+ * The grow / retreat life cycle. A pattern grows in from the seed spots until it
+ * stops spreading, holds for a while, then retreats: a "front" sweeps out from
+ * the centre line to the side edges, raising the kill rate behind it (by
+ * RETREAT_KILL) so the pattern dies back toward the sides it grew in from. Once
+ * nothing is left the grid is reseeded with new spots and it all starts again.
+ *
+ * Progress is counted in simulation steps, so the pace follows the speed param,
+ * and coverage comes from occasional GPU readbacks (see `readStats`).
+ */
+export type CyclePhase = "grow" | "hold" | "retreat" | "clear";
+
+/** Extra kill rate behind the retreat front: enough to end every preset's pattern. */
+export const RETREAT_KILL = 0.02;
+/** Width of the front's ramp from no extra kill to RETREAT_KILL, in half-widths of the grid. */
+export const FRONT_BAND = 0.15;
+/** Front speed: simulation steps per grid cell of the half-width it sweeps. */
+export const RETREAT_STEPS_PER_CELL = 20;
+/** B above this counts a cell as part of the pattern (the colour ramp starts at 0.06). */
+export const COVER_B = 0.1;
+/** The grid counts as empty when no cell's B is above this. */
+export const EMPTY_B = 0.03;
+/** Simulation steps between coverage readbacks. */
+export const SAMPLE_STEPS = 250;
+/**
+ * Growth has stopped when, over the last SETTLE_SAMPLES samples, no stats tile's
+ * coverage moved by more than SETTLE_TILE_DELTA. Per tile, so a few growing
+ * clusters on a big grid still count as growing, while the slow, even shimmer of
+ * the drift doesn't.
+ */
+export const SETTLE_SAMPLES = 4;
+export const SETTLE_TILE_DELTA = 0.07;
+/** Consecutive still checks needed, so one quiet moment mid-growth doesn't count. */
+export const SETTLE_CHECKS = 2;
+/**
+ * Smallest stats tile side, in cells. Settled patterns keep reorganising a
+ * little, which on small tiles looks just like growth; tiles several features
+ * wide average that out (measured with the CPU twin: growing tiles change by
+ * 0.09 to 0.7 per 1000 steps, settled ones by 0.06 at most).
+ */
+export const STATS_TILE_CELLS = 40;
+/** Less coverage than this is not a finished pattern, however still. */
+export const MIN_COVERAGE = 0.03;
+/**
+ * Tiles allowed to still be changing in a settled pattern, as a fraction of the
+ * tiles (at least one): a lone noisy tile, or the last corner filling in, doesn't
+ * hold the whole cycle up. Early growth moves many more (one per seed cluster).
+ */
+export const SETTLE_MOVING_FRACTION = 0.02;
+/**
+ * Fallbacks for when readback is unavailable or a pattern never settles: the
+ * longest growth (seconds of running simulation, so the wait doesn't depend on
+ * the grid size or speed) and the clear-out after the sweep (steps).
+ */
+export const GROW_FALLBACK_SECONDS = 150;
+export const CLEAR_FALLBACK_STEPS = 3000;
+
+/** Side of the square stats target: each texel summarises one tile of the grid. */
+export const STATS_SIZE = 32;
+const STATS_TILES = STATS_SIZE * STATS_SIZE;
+
+export interface Cycle {
+  phase: CyclePhase;
+  /** Steps run in this phase. */
+  steps: number;
+  /** Seconds spent in this phase while the simulation was running. */
+  seconds: number;
+  /** Steps since the last coverage sample was taken. */
+  sinceSample: number;
+  /** Per-tile coverage of the last SETTLE_SAMPLES + 1 samples, a ring. */
+  readonly history: Float32Array[];
+  /** Samples in `history` this growth phase, and the slot the next one goes in. */
+  samples: number;
+  next: number;
+  /** Consecutive samples that found every tile still. */
+  still: number;
+}
+
+export const createCycle = (): Cycle => ({
+  phase: "grow",
+  steps: 0,
+  seconds: 0,
+  sinceSample: 0,
+  history: Array.from({ length: SETTLE_SAMPLES + 1 }, () => new Float32Array(STATS_TILES)),
+  samples: 0,
+  next: 0,
+  still: 0,
+});
+
+const enter = (c: Cycle, phase: CyclePhase) => {
+  c.phase = phase;
+  c.steps = 0;
+  c.seconds = 0;
+  c.samples = 0;
+  c.still = 0;
+};
+
+/** Back to growing from fresh seed spots. */
+export function restartCycle(c: Cycle): void {
+  enter(c, "grow");
+  c.sinceSample = 0;
+}
+
+/**
+ * Extra kill rate at `x` (0..1 across the grid) for a retreat front at `front`
+ * half-widths from the centre line: RETREAT_KILL behind it, ramping to 0 over
+ * FRONT_BAND ahead. The shader computes the same.
+ */
+export function retreatKill(x: number, front: number): number {
+  const d = Math.abs(x - 0.5) * 2;
+  return RETREAT_KILL * Math.min(1, Math.max(0, (front - d) / FRONT_BAND));
+}
+
+/** Steps the front takes to sweep from the centre past the side edges. */
+export const retreatSteps = (gridW: number) =>
+  Math.max(1, Math.ceil(RETREAT_STEPS_PER_CELL * (gridW / 2) * (1 + FRONT_BAND)));
+
+/**
+ * Front position for the shader, in half-widths from the centre line: cells
+ * closer than `front` get the full extra kill, fading out over FRONT_BAND. Far
+ * negative (no effect) while growing or holding.
+ */
+export function cycleFront(c: Cycle, gridW: number): number {
+  if (c.phase === "retreat") return (c.steps / retreatSteps(gridW)) * (1 + FRONT_BAND);
+  if (c.phase === "clear") return 1 + FRONT_BAND;
+  return -1;
+}
+
+/**
+ * Advances the cycle by `steps` simulation steps and `dt` seconds. Returns true
+ * when the grid should be reseeded (the caller reseeds and calls `restartCycle`).
+ * With `enabled` false the pattern just grows and stays.
+ */
+export function advanceCycle(
+  c: Cycle,
+  steps: number,
+  dt: number,
+  gridW: number,
+  holdSeconds: number,
+  enabled: boolean,
+): boolean {
+  if (!enabled) {
+    if (c.phase !== "grow") enter(c, "grow");
+    c.steps += steps;
+    c.sinceSample += steps;
+    return false;
+  }
+  c.steps += steps;
+  c.sinceSample += steps;
+  // Paused (speed 0) means paused: phase time only counts while stepping.
+  if (steps > 0) c.seconds += dt;
+  switch (c.phase) {
+    case "grow":
+      if (c.seconds >= GROW_FALLBACK_SECONDS) enter(c, "hold");
+      break;
+    case "hold":
+      if (c.seconds >= holdSeconds) enter(c, "retreat");
+      break;
+    case "retreat":
+      if (c.steps >= retreatSteps(gridW)) enter(c, "clear");
+      break;
+    case "clear":
+      if (c.steps >= CLEAR_FALLBACK_STEPS) return true;
+      break;
+  }
+  return false;
+}
+
+/** Whether a coverage sample is due: growing or clearing, every SAMPLE_STEPS. */
+export const wantsSample = (c: Cycle) =>
+  (c.phase === "grow" || c.phase === "clear") && c.sinceSample >= SAMPLE_STEPS;
+
+/** One coverage readback, from `readStats`. */
+export interface Stats {
+  /** Fraction of the grid's cells above COVER_B. */
+  coverage: number;
+  /** Largest B anywhere. */
+  maxB: number;
+  /** Covered fraction of each stats tile (-1 for tiles past the grid's edge). */
+  readonly tiles: Float32Array;
+}
+
+export const createStats = (): Stats => ({
+  coverage: 0,
+  maxB: 0,
+  tiles: new Float32Array(STATS_TILES),
+});
+
+/**
+ * Feeds a coverage sample to the cycle. Returns true when the grid should be
+ * reseeded: it has cleared after a retreat, or the pattern died out by itself
+ * while growing.
+ */
+export function sampleCycle(c: Cycle, stats: Stats, enabled: boolean): boolean {
+  c.sinceSample = 0;
+  if (!enabled) return false;
+  if (c.phase === "clear") return stats.maxB < EMPTY_B;
+  if (c.phase !== "grow") return false;
+  if (stats.maxB < EMPTY_B && c.steps > SAMPLE_STEPS) return true;
+  // The oldest kept sample, then this one over it.
+  const oldest = c.history[c.next];
+  const full = c.samples > SETTLE_SAMPLES;
+  let moving = 0;
+  let tiles = 0;
+  if (full) {
+    for (let i = 0; i < STATS_TILES; i++) {
+      if (stats.tiles[i] < 0) continue;
+      tiles++;
+      if (Math.abs(stats.tiles[i] - oldest[i]) > SETTLE_TILE_DELTA) moving++;
+    }
+  }
+  const still = full && moving <= Math.max(1, Math.floor(tiles * SETTLE_MOVING_FRACTION));
+  oldest.set(stats.tiles);
+  c.next = (c.next + 1) % c.history.length;
+  c.samples++;
+  c.still = still && stats.coverage >= MIN_COVERAGE ? c.still + 1 : 0;
+  if (c.still >= SETTLE_CHECKS) enter(c, "hold");
+  return false;
+}
+
+/** Grid cells per stats texel along each axis, for a `w` x `h` grid. */
+export const statsTile = (w: number, h: number): [number, number] => [
+  Math.max(STATS_TILE_CELLS, Math.ceil(w / STATS_SIZE)),
+  Math.max(STATS_TILE_CELLS, Math.ceil(h / STATS_SIZE)),
+];
+
+/**
+ * Reads the stats texels (RGBA8 bytes, STATS_SIZE^2 of them: R = covered
+ * fraction of the tile, G = its largest B, B = 255 if the tile holds any cells)
+ * into `out`. Partial tiles at the far edges count as whole ones in the
+ * coverage, which is close enough.
+ */
+export function readStats(bytes: Uint8Array, out: Stats): Stats {
+  let sum = 0;
+  let tiles = 0;
+  let max = 0;
+  for (let t = 0; t < STATS_TILES; t++) {
+    const i = t * 4;
+    if (bytes[i + 2] < 128) {
+      out.tiles[t] = -1;
+      continue;
+    }
+    const v = bytes[i] / 255;
+    out.tiles[t] = v;
+    sum += v;
+    tiles++;
+    if (bytes[i + 1] > max) max = bytes[i + 1];
+  }
+  out.coverage = tiles > 0 ? sum / tiles : 0;
+  out.maxB = max / 255;
+  return out;
 }

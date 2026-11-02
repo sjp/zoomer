@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  advanceCamera,
   buildMesh,
   buildOctaves,
   buildRamp,
   cameraAt,
+  cameraMeshZ,
   CAM_BACK,
+  createOctaveRows,
   CAM_HEIGHT,
   createPose,
   HORIZON_NDC,
@@ -15,8 +16,10 @@ import {
   PALETTES,
   PERIOD,
   RAMP_SIZE,
+  ringRow,
   rowHalfWidth,
   ROWS,
+  rowsNeeded,
   SWAY_HORIZON,
   SWAY_X,
   SWAY_Y,
@@ -160,22 +163,46 @@ describe("cameraAt", () => {
   });
 });
 
-describe("advanceCamera", () => {
-  it("wraps at the terrain period and is continuous mod it", () => {
-    let z = 0;
-    let total = 0;
-    for (let i = 0; i < 10000; i++) {
-      const dz = 0.05 + (i % 7) * 0.01;
-      const next = advanceCamera(z, dz);
-      total += dz;
-      expect(next).toBeGreaterThanOrEqual(0);
-      expect(next).toBeLessThan(PERIOD);
-      const step = (((next - z) % PERIOD) + PERIOD) % PERIOD;
-      expect(step).toBeCloseTo(dz, 9);
-      z = next;
+describe("cameraMeshZ", () => {
+  it("stays behind the mesh and moves forward smoothly across row changes", () => {
+    let prevWorld = Math.floor(0) + cameraMeshZ(0) - 0.037;
+    for (let d = 0; d < 600; d += 0.037) {
+      const z = cameraMeshZ(d);
+      // Behind row 0 and within the distance rowHalfWidth allows for.
+      expect(z).toBeLessThanOrEqual(-CAM_BACK + 1e-9);
+      expect(z).toBeGreaterThan(-CAM_BACK - 1 - 1e-9);
+      const world = Math.floor(d) + z;
+      expect(world - prevWorld).toBeCloseTo(0.037, 9);
+      prevWorld = world;
     }
-    expect(total).toBeGreaterThan(PERIOD * 2);
-    expect(z).toBeCloseTo(total % PERIOD, 6);
+  });
+});
+
+describe("octave ring buffer", () => {
+  it("streams rows that match a full rebuild and never repeat along z", () => {
+    const write = createOctaveRows(5);
+    const start = 1000;
+    const ring = buildOctaves(5, start);
+    // Fly 300 rows on, streaming each needed row over the oldest one.
+    let filledTo = start + PERIOD;
+    for (let row = start; row < start + 300; row++) {
+      for (; filledTo < rowsNeeded(row); filledTo++) {
+        write(filledTo, ring, ringRow(filledTo) * PERIOD * 4);
+      }
+      // Every row the mesh reads is in place.
+      expect(filledTo - PERIOD).toBeLessThanOrEqual(row);
+    }
+    expect(ring).toEqual(buildOctaves(5, filledTo - PERIOD));
+    // Row r and r + PERIOD differ: no tiling along the flight.
+    const a = new Uint8Array(PERIOD * 4);
+    const b = new Uint8Array(PERIOD * 4);
+    for (const r of [0, 17, 4000]) {
+      write(r, a);
+      write(r + PERIOD, b);
+      expect(b).not.toEqual(a);
+    }
+    expect(ringRow(-1)).toBe(PERIOD - 1);
+    expect(ringRow(PERIOD + 3)).toBe(3);
   });
 });
 

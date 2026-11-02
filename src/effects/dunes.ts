@@ -18,6 +18,7 @@ import {
   goldenness,
   HORIZON,
   LAYOUT_FLOATS,
+  MAX_CREST_SOFTNESS,
   MAX_RIDGES,
   MIN_RIDGES,
   startPhase,
@@ -34,8 +35,15 @@ import { defineEffect } from "./types";
 const SUN_FOCAL = 0.9;
 /** Sun disc radius, height units. */
 const SUN_RADIUS = 0.032;
-/** Half-width of the shadow penumbra, radians of sun elevation. */
-const PENUMBRA = 0.05;
+/**
+ * Half-width of the shadow penumbra, radians of sun elevation: PENUMBRA_MIN at
+ * shadow softness 0, plus PENUMBRA_PER_SOFTNESS per unit (0.45 at the default
+ * of 2, 0.87 at the top of the slider). Wider means a longer, gentler fade from
+ * light into shadow.
+ */
+const PENUMBRA_MIN = 0.03;
+const PENUMBRA_PER_SOFTNESS = 0.21;
+const MAX_SHADOW_SOFTNESS = 4;
 /**
  * The cached dune image is re-rendered when the sun has moved this far (radians).
  * Small next to the penumbra, so shadow edges creep rather than step; the sun disc
@@ -108,7 +116,9 @@ vec3 shade(vec4 T, vec4 R, vec2 p, float dPx) {
   // faces seen are partly backlit, and plain Lambert would leave them black.
   float diffuse = clamp(dot(n, uSunDir) * 0.75 + 0.25, 0.0, 1.0);
   float hz = dot(T.zw, uHzSelect);
-  float lit = smoothstep(-uShadow.y, uShadow.y, uShadow.x - hz);
+  // Smoothstep of a smoothstep: a softer start and end to the penumbra than a
+  // single one, so shadow edges blend in without a visible line.
+  float lit = smoothstep(0.0, 1.0, smoothstep(-uShadow.y, uShadow.y, uShadow.x - hz));
   float light = diffuse * lit;
   float albedo = 1.0;
   // Wind ripples: stripes parallel to the crest, crowding with distance (1 / depth),
@@ -245,6 +255,22 @@ export const dunes = defineEffect({
       step: 1,
       default: 4,
     },
+    crestSoftness: {
+      kind: "number",
+      label: "Crest softness",
+      min: 0,
+      max: MAX_CREST_SOFTNESS,
+      step: 0.01,
+      default: 2,
+    },
+    shadowSoftness: {
+      kind: "number",
+      label: "Shadow softness",
+      min: 0,
+      max: MAX_SHADOW_SOFTNESS,
+      step: 0.01,
+      default: 2,
+    },
     ripples: { kind: "number", label: "Ripples", min: 0, max: 1, step: 0.01, default: 0.5 },
     seed: { kind: "number", label: "Seed", min: 1, max: 100, step: 1, default: 1 },
   },
@@ -290,7 +316,7 @@ export const dunes = defineEffect({
       const toRgb = unitRgbMemo();
       const scratch = createTableScratch();
       const layout = new Float32Array(MAX_RIDGES * LAYOUT_FLOATS);
-      const tableKey = createChangeKey(3);
+      const tableKey = createChangeKey(4);
       const layoutKey = createChangeKey(2);
       const sun: SunPosition = { elevation: 0, azimuth: 0 };
       const skyHorizon: Rgb = [0, 0, 0];
@@ -349,8 +375,9 @@ export const dunes = defineEffect({
           tableKey.set(0, count);
           tableKey.set(1, aspect);
           tableKey.set(2, p.seed);
+          tableKey.set(3, p.crestSoftness);
           if (tableKey.take()) {
-            fillRidgeTable(table.data, count, aspect, p.seed, scratch);
+            fillRidgeTable(table.data, count, aspect, p.seed, scratch, p.crestSoftness);
             table.upload();
             changed = true;
           } else {
@@ -385,7 +412,9 @@ export const dunes = defineEffect({
           const sx = Math.sin(shownAzimuth) * cosE;
           track(u.f3("uSunDir", sx, sinE, -Math.cos(shownAzimuth) * cosE));
           track(u.f2("uHzSelect", sx < 0 ? 1 : 0, sx < 0 ? 0 : 1));
-          track(u.f2("uShadow", Math.atan2(sinE, Math.abs(sx)), PENUMBRA));
+          const penumbra =
+            PENUMBRA_MIN + PENUMBRA_PER_SOFTNESS * clamp(p.shadowSoftness, 0, MAX_SHADOW_SOFTNESS);
+          track(u.f2("uShadow", Math.atan2(sinE, Math.abs(sx)), penumbra));
           track(u.f2("uRim", 0.5 * g, 1 / (6 * scale)));
 
           if (changed) {

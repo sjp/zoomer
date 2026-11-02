@@ -4,10 +4,9 @@
  * vertex shader builds heights from.
  */
 import { hexToUnitRgb } from "./color";
-import { wrap } from "./math";
-import { createNoise } from "./noise";
+import { createNoise, MAX_PERIOD } from "./noise";
 
-/** Terrain texels (grid vertices) along each side of the octave texture; the terrain tiles at this. */
+/** Terrain texels (grid vertices) along each side of the octave texture; the terrain tiles across x at this. */
 export const PERIOD = 256;
 /** Rows of cells in the mesh, from just ahead of the camera to where the fog is total. */
 export const ROWS = 112;
@@ -134,31 +133,68 @@ export function cameraAt(t: number, out: CameraPose): CameraPose {
   return out;
 }
 
-/** Forward distance flown, in cells, kept wrapped to the terrain's period (exact: it tiles). */
-export function advanceCamera(z: number, dz: number): number {
-  return wrap(z + dz, 0, PERIOD);
+/**
+ * Mesh-space z of the camera after flying `distance` cells (float64, unwrapped).
+ * Mesh row j shows terrain row floor(distance) + j, and the camera sits behind
+ * mesh row 0 by CAM_BACK plus the part of the current cell still to fly, so its
+ * terrain z, floor(distance) + this, is distance - 1 - CAM_BACK: it moves
+ * forward smoothly, with no jump when the whole row count ticks over.
+ */
+export function cameraMeshZ(distance: number): number {
+  return distance - Math.floor(distance) - 1 - CAM_BACK;
 }
 
 /**
- * Builds the octave texture: `PERIOD` x `PERIOD` RGBA8, texel (x, z) for grid
- * vertex (x, z) mod PERIOD, each channel one octave of tiling gradient noise
- * (`OCTAVE_PERIODS`) mapped from [-1, 1] to 0..255. The shader weights the
- * octaves by roughness, so only a seed change rebuilds it. The samples are offset
- * off the lattice, where gradient noise is always zero.
+ * Each octave's noise lattice along z is stretched by a slightly different
+ * factor, so the octaves never line up the same way twice: the terrain doesn't
+ * repeat along the flight. (The broadest octave alone comes round again after
+ * about 3300 cells, roughly an hour at speed 1, under different detail.)
  */
-export function buildOctaves(seed: number): Uint8Array {
-  const data = new Uint8Array(PERIOD * PERIOD * 4);
-  OCTAVE_PERIODS.forEach((period, c) => {
-    const noise = createNoise(seed * 4 + c + 1);
-    const k = period / PERIOD;
-    for (let z = 0; z < PERIOD; z++) {
+const Z_STRETCH = [1, 1.0731, 0.9417, 1.1129] as const;
+
+/**
+ * Writes one row of the octave texture, `PERIOD` RGBA8 texels: texel x of
+ * terrain row `row` (any whole number; it doesn't wrap), each channel one octave
+ * of gradient noise (`OCTAVE_PERIODS`) mapped from [-1, 1] to 0..255. Rows tile
+ * across x at PERIOD but never repeat along z, so the texture is filled as a ring
+ * buffer (terrain row r in texture row r mod PERIOD) a row at a time as the
+ * camera flies. The shader weights the octaves by roughness, so only the seed
+ * and the flight change the contents. Samples are offset off the lattice, where
+ * gradient noise is always zero.
+ */
+export type OctaveRowWriter = (row: number, out: Uint8Array, offset?: number) => void;
+
+export function createOctaveRows(seed: number): OctaveRowWriter {
+  const noises = OCTAVE_PERIODS.map((_, c) => createNoise(seed * 4 + c + 1));
+  return (row, out, offset = 0) => {
+    for (let c = 0; c < OCTAVE_PERIODS.length; c++) {
+      const period = OCTAVE_PERIODS[c];
+      const noise = noises[c];
+      const k = period / PERIOD;
+      const z = row * k * Z_STRETCH[c] + 0.61;
       for (let x = 0; x < PERIOD; x++) {
-        const v = noise.periodic2(x * k + 0.37, z * k + 0.61, period, period);
+        const v = noise.periodic2(x * k + 0.37, z, period, MAX_PERIOD);
         const b = Math.round((v * 0.5 + 0.5) * 255);
-        data[(z * PERIOD + x) * 4 + c] = b < 0 ? 0 : b > 255 ? 255 : b;
+        out[offset + x * 4 + c] = b < 0 ? 0 : b > 255 ? 255 : b;
       }
     }
-  });
+  };
+}
+
+/** Texture row (0..PERIOD-1) holding terrain row `row`. */
+export const ringRow = (row: number) => ((row % PERIOD) + PERIOD) % PERIOD;
+
+/** One past the last terrain row the mesh reads when the camera is over row `row`. */
+export const rowsNeeded = (row: number) => row + ROWS + 1;
+
+/**
+ * Fills a whole PERIOD x PERIOD octave texture as the ring buffer holds it with
+ * terrain rows [first, first + PERIOD) in place.
+ */
+export function buildOctaves(seed: number, first = 0): Uint8Array {
+  const data = new Uint8Array(PERIOD * PERIOD * 4);
+  const write = createOctaveRows(seed);
+  for (let r = first; r < first + PERIOD; r++) write(r, data, ringRow(r) * PERIOD * 4);
   return data;
 }
 

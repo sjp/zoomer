@@ -13,21 +13,34 @@ import {
 } from "./gl";
 import { clamp } from "./math";
 import {
+  advanceCycle,
   advanceDrift,
+  createCycle,
+  createStats,
+  cycleFront,
   DA,
   DB,
   driftedFeedKill,
   DT,
+  FRONT_BAND,
   LAP_CORNER,
   LAP_EDGE,
   makeSpots,
+  COVER_B,
   PATTERN_OPTIONS,
   presetFor,
+  readStats,
+  restartCycle,
+  RETREAT_KILL,
+  sampleCycle,
   SPOT_B,
   SPOT_COUNT,
   SPOT_U,
+  STATS_SIZE,
+  statsTile,
   type StepClock,
   takeSteps,
+  wantsSample,
 } from "./reaction-sim";
 import { defineEffect } from "./types";
 
@@ -95,6 +108,8 @@ ${codec}
  */
 const stepFragment = (codec: string) => /* glsl */ `${header(codec)}
 uniform vec2 uFeedKill;
+/** Retreat front, in half-widths from the centre line (see cycleFront); negative: none. */
+uniform float uFront;
 vec2 at(ivec2 p, ivec2 m) { return fetchState(clamp(p, ivec2(0), m)); }
 void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
@@ -107,7 +122,9 @@ void main() {
   vec2 lap = ${glslFloat(LAP_EDGE)} * edges + ${glslFloat(LAP_CORNER)} * corners - c;
   float react = (1.0 - c.x) * c.y * c.y;
   float feed = uFeedKill.x;
-  float kill = uFeedKill.y;
+  // Extra kill behind the retreat front (retreatKill in reaction-sim.ts).
+  float d = abs(gl_FragCoord.x / uSize.x - 0.5) * 2.0;
+  float kill = uFeedKill.y + ${glslFloat(RETREAT_KILL)} * clamp((uFront - d) * ${glslFloat(1 / FRONT_BAND)}, 0.0, 1.0);
   vec2 rate = vec2(
     ${glslFloat(DA)} * lap.x + react - feed * c.x,
     ${glslFloat(DB)} * lap.y + react - (feed + kill) * c.y
@@ -128,6 +145,33 @@ void main() {
     inside = max(inside, step(dot(d, d), r * r));
   }
   outColor = encodeState(inside * vec2(${glslFloat(SPOT_U)}, ${glslFloat(SPOT_B)}));
+}
+`;
+
+/**
+ * Coverage stats for the life cycle: each texel summarises a uTile-sized tile of
+ * the grid as (covered fraction, largest B, 1 if the tile has cells). Run only
+ * every SAMPLE_STEPS steps into a ${STATS_SIZE}x${STATS_SIZE} target and read back asynchronously.
+ */
+const statsFragment = (codec: string) => /* glsl */ `${header(codec)}
+uniform ivec2 uTile;
+void main() {
+  ivec2 o = ivec2(gl_FragCoord.xy) * uTile;
+  ivec2 m = ivec2(uSize) - 1;
+  float lit = 0.0;
+  float cells = 0.0;
+  float top = 0.0;
+  for (int y = 0; y < uTile.y; y++) {
+    for (int x = 0; x < uTile.x; x++) {
+      ivec2 p = o + ivec2(x, y);
+      if (p.x > m.x || p.y > m.y) continue;
+      float b = fetchState(p).y;
+      lit += step(${glslFloat(COVER_B)}, b);
+      cells += 1.0;
+      top = max(top, b);
+    }
+  }
+  outColor = cells > 0.0 ? vec4(lit / cells, top, 1.0, 1.0) : vec4(0.0);
 }
 `;
 
@@ -182,6 +226,11 @@ void main() {
  * State survives resizes and grid-size changes by resampling into the new grid;
  * a pattern change just moves (F, k), which morphs the pattern in place. The state
  * is seeded on create (so also after a context loss) and when `reseed` toggles.
+ *
+ * With `regrow` on, a finished pattern holds for `hold` seconds, then retreats
+ * from the centre back to the sides it grew in from and, once the grid is empty,
+ * reseeds with new spots (see the life cycle in reaction-sim.ts). Finished and
+ * empty are judged from a coverage readback every SAMPLE_STEPS steps.
  */
 export const reaction = defineEffect({
   id: "reaction",
@@ -196,6 +245,15 @@ export const reaction = defineEffect({
     speed: { kind: "number", label: "Speed (steps/s)", min: 0, max: 960, step: 10, default: 240 },
     drift: { kind: "number", label: "Drift", min: 0, max: 1, step: 0.01, default: 0.5 },
     emboss: { kind: "number", label: "Emboss", min: 0, max: 1, step: 0.01, default: 0.5 },
+    regrow: { kind: "boolean", label: "Retreat and regrow when complete", default: true },
+    hold: {
+      kind: "number",
+      label: "Hold before retreating (s)",
+      min: 0,
+      max: 120,
+      step: 1,
+      default: 10,
+    },
     reseed: { kind: "boolean", label: "Reseed (toggle)", default: false },
   },
   context: "webgl2",
@@ -223,7 +281,9 @@ export const reaction = defineEffect({
       const seedProgram = program(seedFragment(codec));
       const resampleProgram = program(resampleFragment(codec));
       const displayProgram = program(displayFragment(codec));
-      const step = createUniforms(gl, stepProgram, ["uState", "uSize", "uFeedKill"]);
+      const statsProgram = program(statsFragment(codec));
+      const step = createUniforms(gl, stepProgram, ["uState", "uSize", "uFeedKill", "uFront"]);
+      const statsU = createUniforms(gl, statsProgram, ["uState", "uSize", "uTile"]);
       const seed = createUniforms(gl, seedProgram, ["uSize", "uSpots"]);
       const resample = createUniforms(gl, resampleProgram, ["uState", "uSize"]);
       const display = createUniforms(gl, displayProgram, [
@@ -241,7 +301,34 @@ export const reaction = defineEffect({
       resample.i1("uState", 0);
       gl.useProgram(displayProgram);
       display.i1("uState", 0);
+      gl.useProgram(statsProgram);
+      statsU.i1("uState", 0);
       gl.useProgram(null);
+
+      // Coverage readback: a small RGBA8 target, read into a pixel-pack buffer and
+      // fetched a frame or more later once its fence has signalled, so the CPU
+      // never waits on the GPU.
+      const statsTarget = createRenderTarget(gl, STATS_SIZE, STATS_SIZE, gl.RGBA8, {
+        filter: gl.NEAREST,
+      });
+      if (statsTarget) scope.add(statsTarget, (t) => t.dispose());
+      const statsBytes = new Uint8Array(STATS_SIZE * STATS_SIZE * 4);
+      const pbo = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, statsBytes.byteLength, gl.STREAM_READ);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      /** False once a fence couldn't be made: the cycle then runs on its step fallbacks. */
+      let readback = statsTarget !== null;
+      let fence: WebGLSync | null = null;
+      /** Reseeds so far when the pending readback was taken; stale results are dropped. */
+      let fenceGeneration = 0;
+      let generation = 0;
+      scope.defer(() => {
+        if (fence) gl.deleteSync(fence);
+        fence = null;
+      });
+      const stats = createStats();
+      const cycle = createCycle();
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       /** The ping-pong pair; empty until the first frame, or if allocation failed. */
@@ -267,8 +354,10 @@ export const reaction = defineEffect({
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
       const color1 = unitRgbMemo();
 
-      /** Writes fresh seed spots into the current target. */
+      /** Writes fresh seed spots into the current target and restarts the cycle. */
       const reseed = () => {
+        restartCycle(cycle);
+        generation++;
         const dst = targets[current];
         makeSpots(++seedNo, spots);
         dst.bind();
@@ -311,6 +400,54 @@ export const reaction = defineEffect({
         if (!old) reseed();
       };
 
+      /** Renders the coverage stats and starts reading them back. */
+      const requestStats = (grid: RenderTarget) => {
+        if (!statsTarget) return;
+        const [tx, ty] = statsTile(grid.width, grid.height);
+        statsTarget.bind();
+        // Texels past the grid read back as empty tiles.
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.viewport(
+          0,
+          0,
+          Math.min(STATS_SIZE, Math.ceil(grid.width / tx)),
+          Math.min(STATS_SIZE, Math.ceil(grid.height / ty)),
+        );
+        gl.useProgram(statsProgram);
+        statsU.f2("uSize", grid.width, grid.height);
+        gl.uniform2i(statsU.loc.uTile, tx, ty);
+        gl.bindTexture(gl.TEXTURE_2D, grid.texture);
+        triangle.draw();
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.readPixels(0, 0, STATS_SIZE, STATS_SIZE, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0) ?? null;
+        if (!fence) {
+          readback = false;
+          if (import.meta.env.DEV) console.info("reaction: no fence; cycle runs on its fallbacks");
+        }
+        fenceGeneration = generation;
+      };
+
+      /** Collects a finished readback, if any; true if the cycle asks for a reseed. */
+      const collectStats = (regrow: boolean): boolean => {
+        if (!fence || gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
+        gl.deleteSync(fence);
+        fence = null;
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, statsBytes);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        if (fenceGeneration !== generation) return false;
+        const reseedNow = sampleCycle(cycle, readStats(statsBytes, stats), regrow);
+        if (import.meta.env.DEV) {
+          console.debug(
+            `reaction: ${cycle.phase}, coverage ${stats.coverage.toFixed(3)}, max B ${stats.maxB.toFixed(2)}, still ${cycle.still}`,
+          );
+        }
+        return reseedNow;
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -337,6 +474,7 @@ export const reaction = defineEffect({
             if (reseedKey !== undefined) reseed();
             reseedKey = p.reseed;
           }
+          const regrow = p.regrow;
 
           phase = advanceDrift(phase, dt);
           driftedFeedKill(presetFor(p.pattern), p.drift, phase, feedKill);
@@ -346,6 +484,7 @@ export const reaction = defineEffect({
             gl.useProgram(stepProgram);
             step.f2("uSize", targets[0].width, targets[0].height);
             step.f2("uFeedKill", feedKill[0], feedKill[1]);
+            step.f1("uFront", regrow ? cycleFront(cycle, targets[0].width) : -1);
             for (let i = 0; i < n; i++) {
               const src = targets[current];
               current ^= 1;
@@ -356,6 +495,18 @@ export const reaction = defineEffect({
               gl.bindTexture(gl.TEXTURE_2D, src.texture);
               triangle.draw();
             }
+          }
+
+          // Life cycle: grow, hold, retreat, clear, then reseed.
+          const before = cycle.phase;
+          let again = advanceCycle(cycle, n, dt, targets[0].width, p.hold, regrow);
+          again = collectStats(regrow) || again;
+          if (import.meta.env.DEV && (again || cycle.phase !== before)) {
+            console.info(`reaction: ${before} -> ${again ? "reseed" : cycle.phase}`);
+          }
+          if (again) reseed();
+          else if (regrow && readback && !fence && wantsSample(cycle)) {
+            requestStats(targets[current]);
           }
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);

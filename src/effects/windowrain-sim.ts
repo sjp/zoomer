@@ -86,8 +86,14 @@ export const MAX_TRAIL_R = TRAIL_SHARE_MAX * MAX_RUNNER_R;
 export const STOP_R = 7;
 /** Fall speed in reference px/s for a drop of radius `BREAK_MIN` at speed 1. */
 const BASE_SPEED = 90;
-/** Horizontal wiggle as a fraction of the fall speed. */
-const WIGGLE = 0.3;
+/** Peak horizontal wiggle as a fraction of the fall speed. */
+const WIGGLE = 0.025;
+/**
+ * Mean wiggle wavelength in reference px of fall: a slow sway rather than a
+ * tight zigzag. The peak sideways excursion is about WIGGLE * wavelength / 2pi.
+ */
+export const WIGGLE_WAVELENGTH = 960;
+const WIGGLE_RATE = (Math.PI * 2) / WIGGLE_WAVELENGTH;
 /** Fraction of a wiped droplet's volume the runner gains. */
 const ABSORB = 0.5;
 /** Fraction of a trail droplet's volume the runner loses. */
@@ -469,7 +475,7 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     rv[i] += (target - rv[i]) * Math.min(1, dt * 4);
     const v = rv[i];
     // Wiggle phase advances with distance, so slow drops wiggle slowly.
-    sim.rPhase[i] += dt * v * 0.04 * (0.5 + rng());
+    sim.rPhase[i] += dt * v * WIGGLE_RATE * (0.5 + rng());
     const x0 = rx[i];
     const y0 = ry[i];
     const x1 = Math.min(sim.width, Math.max(0, x0 + Math.sin(sim.rPhase[i]) * v * WIGGLE * dt));

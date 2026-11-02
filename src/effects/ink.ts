@@ -32,8 +32,6 @@ const NOISE_CHANNELS = [
   { period: 8, seed: 304 },
 ] as const;
 
-const WATER_LIGHT = "#f2f1ec";
-const WATER_DARK = "#06080c";
 /** Corner darkening: a soft studio falloff on light water, moodier on dark. */
 const VIGNETTE_LIGHT = 0.05;
 const VIGNETTE_DARK = 0.3;
@@ -216,6 +214,8 @@ export const ink = defineEffect({
       ],
       default: "light",
     },
+    lightWater: { kind: "color", label: "Light water colour", default: "#f2f1ec" },
+    darkWater: { kind: "color", label: "Dark water colour", default: "#06080c" },
     color1: { kind: "color", label: "Ink 1", default: "#1b3b8c" },
     color2: { kind: "color", label: "Ink 2", default: "#b3204d" },
     color3: { kind: "color", label: "Ink 3", default: "#127a6c" },
@@ -334,6 +334,7 @@ export const ink = defineEffect({
           const sdt = Math.max(0, dt) * Math.max(0, p.speed);
           const aspect = width / height;
           const dark = p.water === "dark";
+          const waterColor = dark ? p.darkWater : p.lightWater;
           const inks = p.inks >= 2.5 ? 3 : 2;
           const turb = Math.max(0, p.turbulence);
           const detail = Math.min(1, Math.max(0, p.detail));
@@ -354,7 +355,7 @@ export const ink = defineEffect({
             const angle = MARBLE_ANGLE + MARBLE_SWAY * Math.sin(marbleClock * MARBLE_SWAY_RATE);
             gl.useProgram(marbleProgram);
             mu.f1("uAspect", aspect);
-            mu.rgb("uWater", dark ? WATER_DARK : WATER_LIGHT);
+            mu.rgb("uWater", waterColor);
             mu.f1("uVignette", dark ? VIGNETTE_DARK : VIGNETTE_LIGHT);
             mu.i1("uDark", dark ? 1 : 0);
             mu.f4("uOff", marbleOff[0], marbleOff[1], marbleOff[2], marbleOff[3]);
@@ -382,7 +383,7 @@ export const ink = defineEffect({
             const count = packPlumes(drops, aspect, turb, plumeU);
             gl.useProgram(dropsProgram);
             du.f1("uAspect", aspect);
-            du.rgb("uWater", dark ? WATER_DARK : WATER_LIGHT);
+            du.rgb("uWater", waterColor);
             du.f1("uVignette", dark ? VIGNETTE_DARK : VIGNETTE_LIGHT);
             du.i1("uDark", dark ? 1 : 0);
             du.i1("uCount", count);

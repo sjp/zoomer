@@ -9,6 +9,7 @@ import {
   generateCity,
   LAYERS,
   MAX_QUADS,
+  MAX_TOGGLE_RATE,
   MAX_WINDOWS,
   QUAD_STRIDE,
   REF_HEIGHT,
@@ -128,6 +129,17 @@ describe("createWindowState", () => {
     }
     expect(toggles).toBeGreaterThan(250);
     expect(toggles).toBeLessThan(350);
+    // The top of the slider keeps up too: the fade slots never run out.
+    s.reset(1000, 3, 0.4);
+    toggles = 0;
+    for (let t = 0; t < 60; t += 1 / 60) {
+      s.step(1 / 60, MAX_TOGGLE_RATE);
+      for (let n = 0; n < s.dirtyCount; n++) {
+        if (s.data[s.dirty[n] * 4 + 3] !== 0) toggles++;
+      }
+    }
+    expect(toggles).toBeGreaterThan(MAX_TOGGLE_RATE * 60 * 0.85);
+    expect(toggles).toBeLessThan(MAX_TOGGLE_RATE * 60 * 1.15);
     s.reset(1000, 3, 0.4);
     for (let t = 0; t < 60; t += 1 / 60) {
       s.step(1 / 60, 0);

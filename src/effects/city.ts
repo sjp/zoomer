@@ -5,6 +5,7 @@ import {
   createAircraft,
   createWindowState,
   FADE_SLOTS,
+  MAX_TOGGLE_RATE,
   generateCity,
   MAX_BEACONS,
   MAX_QUADS,
@@ -89,7 +90,8 @@ flat in vec4 vGrid;
 flat in vec4 vWin;
 flat in vec3 vMisc;
 uniform sampler2D uWindows;
-uniform float uFade[${FADE_SLOTS}];
+/** Fade progress of each slot, four slots per vec4 (a vec4 array uses a quarter of the uniform vectors). */
+uniform vec4 uFade[${FADE_SLOTS / 4}];
 uniform vec3 uBuilding;
 uniform vec3 uHaze;
 uniform float uWarmth;
@@ -114,7 +116,7 @@ void main() {
     int idx = int(vMisc.x + 0.5) + int(cell.y) * int(vGrid.z + 0.5) + int(cell.x);
     vec4 w = texelFetch(uWindows, ivec2(idx & ${WINDOW_TEX_WIDTH - 1}, idx >> 8), 0);
     int slot = min(int(w.a * 255.0 + 0.5), ${FADE_SLOTS});
-    float level = slot > 0 ? mix(w.r, w.g, uFade[slot - 1]) : w.g;
+    float level = slot > 0 ? mix(w.r, w.g, uFade[(slot - 1) >> 2][(slot - 1) & 3]) : w.g;
     vec3 tint = w.b > ${TV_PICK} ? TV : (w.b < uWarmth * ${TV_PICK} ? WARM : COOL);
     // Unlit glass is a touch lighter than the wall; lit glass is tinted by layer.
     vec3 glass = wall * 1.25 + 0.006 + tint * (level * vMisc.z);
@@ -185,9 +187,9 @@ export const city = defineEffect({
       kind: "number",
       label: "Activity (toggles per second)",
       min: 0,
-      max: 2,
-      step: 0.05,
-      default: 0.4,
+      max: MAX_TOGGLE_RATE,
+      step: 1,
+      default: 4,
     },
     beacons: { kind: "boolean", label: "Roof beacons", default: true },
     aircraft: { kind: "boolean", label: "Aircraft", default: true },
@@ -370,7 +372,7 @@ export const city = defineEffect({
             bu.rgb("uBuilding", p.buildings);
             bu.rgb("uHaze", p.skyHorizon);
             bu.f1("uWarmth", p.warmth);
-            if (windows.fading) gl.uniform1fv(bu.loc.uFade, windows.fade);
+            if (windows.fading) gl.uniform4fv(bu.loc.uFade, windows.fade);
             quads.draw(0, l.quadCount);
           }
 

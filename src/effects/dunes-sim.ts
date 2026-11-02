@@ -69,14 +69,62 @@ export function fillLayout(out: Float32Array, count: number, ripples: number): v
   }
 }
 
-/** One dune: 0 at the troughs, 1 at the crest, smooth troughs and a sharp crest. */
-export function duneShape(u: number): number {
-  if (u < WINDWARD) {
-    const a = u / WINDWARD;
-    return a * a;
-  }
+/** Largest crest softness (see `duneShape` and `fillRidgeTable`). */
+export const MAX_CREST_SOFTNESS = 4;
+/**
+ * Softness up to this rounds the crest with the smooth minimum in `duneShape`
+ * (rounding = softness times the dune's height). Any wider and the blend would
+ * reach the lee trough, where the two parabolas are only about 2.2 apart, and
+ * pull it below the base, so softness beyond it blurs the profile instead.
+ */
+export const SMOOTH_MIN_SOFTNESS = 2;
+/** Profile blur (Gaussian sigma, in dune wavelengths) per unit of softness above SMOOTH_MIN_SOFTNESS. */
+export const BLUR_PER_SOFTNESS = 0.03;
+
+/**
+ * One dune: 0 at the troughs, 1 at the crest, with smooth troughs. The crest is
+ * where the windward parabola meets the steeper lee one; `softness` (0..SMOOTH_MIN_SOFTNESS; more is clamped)
+ * rounds it off with a polynomial smooth minimum of the two, so the slope turns
+ * over gradually instead of flipping at a sharp ridge line. 0 keeps the sharp
+ * crest. The result is rescaled so the rounded crest still peaks at exactly 1.
+ */
+export function duneShape(u: number, softness = 0): number {
+  const k = clamp(softness, 0, SMOOTH_MIN_SOFTNESS);
+  if (k <= 0) return roundedDune(u, 0);
+  return roundedDune(u, k) / crestPeak(k);
+}
+
+/** Smooth min (rounding `k`, 0 = plain min) of a dune's windward and lee parabolas. */
+function roundedDune(u: number, k: number): number {
+  const a = u / WINDWARD;
   const b = (1 - u) / (1 - WINDWARD);
-  return b * b;
+  const wind = a * a;
+  const lee = b * b;
+  if (k <= 0) return Math.min(wind, lee);
+  // Polynomial smooth min: equal to min() where the curves are more than k apart.
+  const h = Math.max(k - Math.abs(wind - lee), 0) / k;
+  return Math.min(wind, lee) - h * h * k * 0.25;
+}
+
+let peakK = Number.NaN;
+let peakValue = 1;
+/**
+ * Highest value of `roundedDune(·, k)`, by ternary search (it is unimodal),
+ * cached for the last `k`: the table rebuild calls `duneShape` with one softness.
+ */
+function crestPeak(k: number): number {
+  if (k === peakK) return peakValue;
+  let lo = 0.3;
+  let hi = 0.95;
+  for (let i = 0; i < 80; i++) {
+    const m1 = lo + (hi - lo) / 3;
+    const m2 = hi - (hi - lo) / 3;
+    if (roundedDune(m1, k) < roundedDune(m2, k)) lo = m1;
+    else hi = m2;
+  }
+  peakK = k;
+  peakValue = roundedDune((lo + hi) / 2, k);
+  return peakValue;
 }
 
 /** Per-ridge random constants for `profile`, from the seed. */
@@ -90,9 +138,11 @@ export interface ProfileParams {
   detailOffset: number;
   /** Hash salt for each dune's own height. */
   salt: number;
+  /** Crest rounding, 0..MAX_CREST_SOFTNESS (see `duneShape`). */
+  softness: number;
 }
 
-export function profileParams(seed: number, i: number, count: number): ProfileParams {
+export function profileParams(seed: number, i: number, count: number, softness = 0): ProfileParams {
   const rand = createRng(hash32(seed * 7919 + i * 104729 + 17));
   const { wavelength } = ridgeShape(i, count);
   return {
@@ -104,6 +154,7 @@ export function profileParams(seed: number, i: number, count: number): ProfilePa
     swellPhase: rand() * 2 * Math.PI,
     detailOffset: rand() * 10,
     salt: hash32(seed * 31 + i * 977 + 5),
+    softness,
   };
 }
 
@@ -116,8 +167,8 @@ export function profile(x: number, p: ProfileParams): number {
   const phase = x / p.wavelength + p.offset + 0.25 * Math.sin(x * p.warpFreq + p.warpPhase);
   const n = Math.floor(phase);
   const height = 0.55 + 0.45 * (hash32(p.salt ^ (n | 0)) / 4294967296);
-  const main = duneShape(phase - n) * height;
-  const detail = duneShape(fract(phase * 2.7 + p.detailOffset));
+  const main = duneShape(phase - n, p.softness) * height;
+  const detail = duneShape(fract(phase * 2.7 + p.detailOffset), p.softness);
   const swell = 0.5 + 0.5 * Math.sin(x * p.swellFreq + p.swellPhase);
   return 0.75 * main + 0.1 * detail + 0.15 * swell;
 }
@@ -161,6 +212,30 @@ export function horizonAngles(
   }
 }
 
+/**
+ * Blurs `h` in place with an approximate Gaussian of `sigma` samples: three box
+ * passes with running sums (linear time whatever the width), edges clamped.
+ * Averaging keeps every value within the original range. `tmp` is scratch, at
+ * least as long as `h`.
+ */
+export function blurProfile(h: Float64Array, tmp: Float64Array, sigma: number): void {
+  // Three box passes of radius r have variance r (r + 1).
+  const r = Math.round((Math.sqrt(1 + 4 * sigma * sigma) - 1) / 2);
+  if (!(r >= 1)) return;
+  const n = h.length;
+  const last = n - 1;
+  const inv = 1 / (2 * r + 1);
+  for (let pass = 0; pass < 3; pass++) {
+    let sum = 0;
+    for (let k = -r; k <= r; k++) sum += h[Math.min(last, Math.max(0, k))];
+    for (let j = 0; j < n; j++) {
+      tmp[j] = sum * inv;
+      sum += h[Math.min(last, j + r + 1)] - h[Math.max(0, j - r)];
+    }
+    h.set(tmp.subarray(0, n));
+  }
+}
+
 /** Reusable buffers for `fillRidgeTable`, so rebuilding allocates only when they grow. */
 export interface TableScratch {
   h: Float64Array;
@@ -181,6 +256,8 @@ export const createTableScratch = (): TableScratch => ({
  * = ridge i, nearest first) for a canvas `aspect` wide: column j sits at
  * x = j / (TABLE_COLUMNS - 1) * aspect. Each texel holds the height above the
  * ridge's base, the slope dh/dx, and the left and right horizon angles.
+ * `softness` rounds the crests: up to SMOOTH_MIN_SOFTNESS through `duneShape`,
+ * and beyond that also by blurring each sampled profile (`blurProfile`).
  */
 export function fillRidgeTable(
   out: Float32Array,
@@ -188,6 +265,7 @@ export function fillRidgeTable(
   aspect: number,
   seed: number,
   scratch: TableScratch = createTableScratch(),
+  softness = 0,
 ): void {
   out.fill(0);
   const cols = TABLE_COLUMNS;
@@ -203,10 +281,15 @@ export function fillRidgeTable(
   const { h, left, right, stack } = scratch;
   for (let i = 0; i < count; i++) {
     const shape = ridgeShape(i, count);
-    const params = profileParams(seed, i, count);
+    const params = profileParams(seed, i, count, softness);
     for (let k = 0; k < n; k++) {
       const x = (k - margin) * dx - aspect / 2;
       h[k] = shape.base + shape.amp * profile(x, params);
+    }
+    const extra = clamp(softness, 0, MAX_CREST_SOFTNESS) - SMOOTH_MIN_SOFTNESS;
+    if (extra > 0) {
+      // `left` is free until horizonAngles fills it.
+      blurProfile(h, left, (extra * BLUR_PER_SOFTNESS * shape.wavelength) / dx);
     }
     horizonAngles(h, dx, left, right, stack);
     const row = i * cols * TABLE_CHANNELS;

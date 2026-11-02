@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blurProfile,
   createTableScratch,
   duneShape,
   fillLayout,
@@ -7,6 +8,7 @@ import {
   HORIZON,
   horizonAngles,
   LAYOUT_FLOATS,
+  MAX_CREST_SOFTNESS,
   MAX_RIDGES,
   MIN_RIDGES,
   ridgeShape,
@@ -38,6 +40,31 @@ describe("duneShape", () => {
     expect(duneShape(0.68)).toBeCloseTo(1, 12);
     expect(duneShape(0.01)).toBeLessThan(0.001);
     expect(duneShape(0.99)).toBeLessThan(0.01);
+  });
+
+  it.each([0.3, 1, 1.5, 2, 4])("rounds the crest at softness %f", (s) => {
+    const d = 1e-4;
+    let max = 0;
+    let maxJump = 0;
+    let sharpJump = 0;
+    for (let u = d; u < 1 - d; u += d) {
+      const v = duneShape(u, s);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1 + 1e-12);
+      max = Math.max(max, v);
+      // Change in slope across one step: the sharp crest flips it at once.
+      const jump = Math.abs(duneShape(u + d, s) - 2 * v + duneShape(u - d, s)) / d;
+      if (u > 0.4 && u < 0.9) maxJump = Math.max(maxJump, jump);
+      const sharp = Math.abs(duneShape(u + d) - 2 * duneShape(u) + duneShape(u - d)) / d;
+      if (u > 0.4 && u < 0.9) sharpJump = Math.max(sharpJump, sharp);
+    }
+    expect(max).toBeCloseTo(1, 6);
+    expect(maxJump).toBeLessThan(0.05);
+    expect(sharpJump).toBeGreaterThan(1);
+    // Troughs are untouched.
+    expect(duneShape(0, s)).toBe(0);
+    expect(duneShape(1, s)).toBe(0);
+    expect(duneShape(0.01, s)).toBeLessThan(0.002);
   });
 });
 
@@ -98,6 +125,52 @@ describe("fillRidgeTable", () => {
       const central = (heightAt(t, 0, j + 1, 4) - heightAt(t, 0, j - 1, 4)) / (2 * dx);
       expect(slope).toBeCloseTo(central, 2);
     }
+  });
+});
+
+describe("crest softness beyond the smooth min", () => {
+  it("blurs a profile within its range, keeping straight lines straight", () => {
+    const n = 400;
+    const h = new Float64Array(n);
+    const tmp = new Float64Array(n);
+    for (let i = 0; i < n; i++) h[i] = i % 50 < 25 ? 0 : 1;
+    blurProfile(h, tmp, 6);
+    expect(Math.min(...h)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...h)).toBeLessThanOrEqual(1);
+    // A step becomes a ramp several samples wide.
+    expect(h[25]).toBeGreaterThan(0.2);
+    expect(h[25]).toBeLessThan(0.8);
+    for (let i = 0; i < n; i++) h[i] = 0.01 * i;
+    blurProfile(h, tmp, 6);
+    for (let i = 30; i < n - 30; i++) expect(h[i]).toBeCloseTo(0.01 * i, 9);
+  });
+
+  it("keeps the ridges in range and turns the crests more gradually at the top of the slider", () => {
+    const aspect = 16 / 9;
+    /** Largest change in slope between neighbouring columns of the nearest ridge. */
+    const kink = (softness: number) => {
+      const t = new Float32Array(tableSize);
+      fillRidgeTable(t, 4, aspect, 7, createTableScratch(), softness);
+      let max = 0;
+      for (let j = 1; j < TABLE_COLUMNS; j++) {
+        const a = t[(j - 1) * TABLE_CHANNELS + 1];
+        const b = t[j * TABLE_CHANNELS + 1];
+        max = Math.max(max, Math.abs(b - a));
+      }
+      for (let i = 0; i < 4; i++) {
+        const shape = ridgeShape(i, 4);
+        for (let j = 0; j < TABLE_COLUMNS; j += 5) {
+          const h = heightAt(t, i, j, 4);
+          expect(h).toBeGreaterThanOrEqual(shape.base - 1e-6);
+          expect(h).toBeLessThanOrEqual(shape.base + shape.amp + 1e-6);
+        }
+      }
+      return max;
+    };
+    const two = kink(2);
+    const top = kink(MAX_CREST_SOFTNESS);
+    expect(top).toBeLessThan(two * 0.8);
+    expect(kink(0)).toBeGreaterThan(two);
   });
 });
 

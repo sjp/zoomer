@@ -8,25 +8,29 @@ import {
   createUniforms,
   DITHER_GLSL,
   glslFloat,
+  resetUnpackState,
   updateDataTexture,
   withScope,
 } from "./gl";
 import {
-  advanceCamera,
   buildMesh,
   buildOctaves,
   buildRamp,
   cameraAt,
-  CAM_BACK,
+  cameraMeshZ,
   CELLS_PER_SECOND,
+  createOctaveRows,
   createPose,
   MAX_TAN_H,
   octaveWeights,
   PALETTES,
   type PaletteId,
+  type OctaveRowWriter,
   PERIOD,
   RAMP_SIZE,
+  ringRow,
   ROWS,
+  rowsNeeded,
   TAN_V,
   VERTEX_SHORTS,
 } from "./terrain-sim";
@@ -75,7 +79,7 @@ layout(location = 0) in ivec4 aVert;
 uniform sampler2D uOctaves;
 /** Height colour ramp: rgb and rockiness. */
 uniform sampler2D uRamp;
-/** Whole cells flown, mod ${PERIOD}: mesh row j shows terrain row j + uRow. */
+/** Whole cells flown, mod ${PERIOD}: mesh row j shows terrain row j + uRow (the texture is a ring buffer). */
 uniform int uRow;
 /** Octave weights (amplitude included) and base height. */
 uniform vec4 uWeights;
@@ -229,6 +233,10 @@ export const terrain = defineEffect({
 
       /** Seed the octaves were built from; NaN builds them on the first frame. */
       let seed = Number.NaN;
+      let writeRow: OctaveRowWriter | null = null;
+      /** One past the last terrain row written into the ring buffer. */
+      let filledTo = 0;
+      const rowData = new Uint8Array(PERIOD * 4);
       const octaves = scope.add(
         createDataTexture(gl, {
           width: PERIOD,
@@ -251,8 +259,8 @@ export const terrain = defineEffect({
       let height = 1;
       /** Seconds, float64 and unwrapped: only sines of it reach the GPU. */
       let time = 0;
-      /** Cells flown, wrapped to the terrain period. */
-      let camZ = 0;
+      /** Cells flown, float64 and unwrapped: the terrain never repeats. */
+      let distance = 0;
 
       return {
         resize(v) {
@@ -261,7 +269,8 @@ export const terrain = defineEffect({
         frame(dt, p) {
           beginFrame(gl, width, height);
           time += dt;
-          camZ = advanceCamera(camZ, dt * p.speed * CELLS_PER_SECOND);
+          distance += Math.max(0, dt * p.speed * CELLS_PER_SECOND);
+          const row = Math.floor(distance);
           cameraAt(time, pose);
 
           // Sky: fog colour everywhere, then the gradient down to the horizon.
@@ -291,19 +300,34 @@ export const terrain = defineEffect({
           }
           gl.activeTexture(gl.TEXTURE0);
           const s = Math.round(p.seed);
-          if (s !== seed) {
+          const need = rowsNeeded(row);
+          if (s !== seed || need - filledTo > PERIOD / 2) {
+            // New terrain (or a jump too far to stream): rebuild the whole ring.
             seed = s;
-            updateDataTexture(
-              gl,
-              octaves,
-              PERIOD,
-              PERIOD,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              buildOctaves(seed),
-            );
+            writeRow = createOctaveRows(seed);
+            const data = buildOctaves(seed, row);
+            updateDataTexture(gl, octaves, PERIOD, PERIOD, gl.RGBA, gl.UNSIGNED_BYTE, data);
+            filledTo = row + PERIOD;
           } else {
             gl.bindTexture(gl.TEXTURE_2D, octaves);
+            if (filledTo < need && writeRow) {
+              // Stream the rows coming into view over the ones already flown past.
+              resetUnpackState(gl);
+              for (; filledTo < need; filledTo++) {
+                writeRow(filledTo, rowData);
+                gl.texSubImage2D(
+                  gl.TEXTURE_2D,
+                  0,
+                  0,
+                  ringRow(filledTo),
+                  PERIOD,
+                  1,
+                  gl.RGBA,
+                  gl.UNSIGNED_BYTE,
+                  rowData,
+                );
+              }
+            }
           }
 
           const amp = octaveWeights(p.roughness, weights);
@@ -316,9 +340,8 @@ export const terrain = defineEffect({
           const rampA = (RAMP_SIZE - 1) / (RAMP_SIZE * amp * RAMP_SPAN);
           u.f2("uRampMap", rampA, 0.5 / RAMP_SIZE - shore * rampA);
 
-          const row = Math.floor(camZ);
-          u.i1("uRow", row);
-          u.f3("uCam", pose.x, pose.y, -(CAM_BACK + camZ - row));
+          u.i1("uRow", ringRow(row));
+          u.f3("uCam", pose.x, pose.y, cameraMeshZ(distance));
           const pitch = Math.atan(pose.horizon * tanV);
           u.f4("uRot", Math.cos(pose.yaw), Math.sin(pose.yaw), Math.cos(pitch), Math.sin(pitch));
           u.f2("uFocal", 1 / (tanV * aspect), 1 / tanV);

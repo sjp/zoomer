@@ -16,10 +16,23 @@ export const MAX_WINDOWS = WINDOW_TEX_WIDTH * WINDOW_TEX_ROWS;
 export const MAX_QUADS = 1024;
 export const MAX_BEACONS = 96;
 export const MAX_STARS = 120;
-/** Concurrent window fades; the shader reads their progress from `uFade[FADE_SLOTS]`. */
-export const FADE_SLOTS = 16;
+/**
+ * Fade slots; the shader reads their progress from `uFade[FADE_SLOTS / 4]`
+ * (vec4s), so a multiple of 4. Windows that start fading within JOIN_SECONDS of
+ * each other share a slot, so the slots cover a full fade at up to
+ * (FADE_SLOTS - 4) / FADE_SECONDS new slots a second, however many windows toggle.
+ */
+export const FADE_SLOTS = 64;
 /** Seconds a toggled window takes to fade on or off. */
 export const FADE_SECONDS = 0.5;
+/** Fades starting this close together share a slot: well under a frame's worth of difference. */
+const JOIN_SECONDS = FADE_SECONDS / (FADE_SLOTS - 4);
+/** Top of the activity slider, in toggles per second. */
+export const MAX_TOGGLE_RATE = 1000;
+/** Most toggles started in one frame, so a long hitch doesn't start a burst. */
+const MAX_TOGGLES_PER_FRAME = 48;
+/** Windows one slot can carry: a frame's worth of toggles. */
+const SLOT_CAPACITY = MAX_TOGGLES_PER_FRAME;
 
 /**
  * Floats per building quad instance, as four vec4 attributes:
@@ -318,10 +331,14 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
   const rank = new Float32Array(maxWindows);
   const lit = new Uint8Array(maxWindows);
   const fade = new Float32Array(FADE_SLOTS);
-  const slotWindow = new Int32Array(FADE_SLOTS).fill(-1);
+  /** Windows fading in each slot: SLOT_CAPACITY entries per slot, the first `slotCount` used. */
+  const slotWindows = new Int32Array(FADE_SLOTS * SLOT_CAPACITY);
+  const slotCount = new Int32Array(FADE_SLOTS);
   const slotAge = new Float32Array(FADE_SLOTS);
-  /** Each fade dirties a texel when it starts and when it settles. */
-  const dirty = new Int32Array(FADE_SLOTS * 4);
+  /** Slot most recently opened, which new fades join while it is young; -1 for none. */
+  let latest = -1;
+  /** Each fade dirties a texel when it starts and when it settles: at most every window in flight settling plus a frame's new starts. */
+  const dirty = new Int32Array(FADE_SLOTS * SLOT_CAPACITY + MAX_TOGGLES_PER_FRAME);
   let dirtyCount = 0;
   let count = 0;
   let litCount = 0;
@@ -336,8 +353,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
   };
 
   const clearFades = () => {
-    slotWindow.fill(-1);
+    slotCount.fill(0);
     fade.fill(1);
+    latest = -1;
     active = 0;
   };
 
@@ -360,13 +378,26 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
   /** Starts fading window `i` to the opposite state; false if no slot is free. */
   const toggle = (i: number): boolean => {
     let slot = -1;
-    for (let s = 0; s < FADE_SLOTS; s++) {
-      if (slotWindow[s] < 0) {
-        slot = s;
-        break;
+    if (
+      latest >= 0 &&
+      slotCount[latest] > 0 &&
+      slotCount[latest] < SLOT_CAPACITY &&
+      slotAge[latest] < JOIN_SECONDS
+    ) {
+      slot = latest;
+    } else {
+      for (let s = 0; s < FADE_SLOTS; s++) {
+        if (slotCount[s] === 0) {
+          slot = s;
+          break;
+        }
       }
+      if (slot < 0) return false;
+      slotAge[slot] = 0;
+      fade[slot] = 0;
+      latest = slot;
+      active++;
     }
-    if (slot < 0) return false;
     const on = lit[i] ? 0 : 1;
     lit[i] = on;
     litCount += on ? 1 : -1;
@@ -374,10 +405,7 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
     data[o] = data[o + 1];
     data[o + 1] = on ? level[i] : 0;
     data[o + 3] = slot + 1;
-    slotWindow[slot] = i;
-    slotAge[slot] = 0;
-    fade[slot] = 0;
-    active++;
+    slotWindows[slot * SLOT_CAPACITY + slotCount[slot]++] = i;
     markDirty(i);
     return true;
   };
@@ -439,24 +467,27 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       dirtyCount = 0;
       fading = active > 0;
       for (let s = 0; s < FADE_SLOTS; s++) {
-        const i = slotWindow[s];
-        if (i < 0) continue;
+        const n = slotCount[s];
+        if (n === 0) continue;
         slotAge[s] += dt;
         fade[s] = smoothstep(0, FADE_SECONDS, slotAge[s]);
         if (slotAge[s] >= FADE_SECONDS) {
-          // Settle: the texel shows its target without a slot, freeing the slot.
-          const o = i * 4;
-          data[o] = data[o + 1];
-          data[o + 3] = 0;
-          slotWindow[s] = -1;
+          // Settle: the texels show their targets without a slot, freeing the slot.
+          for (let k = 0; k < n; k++) {
+            const i = slotWindows[s * SLOT_CAPACITY + k];
+            const o = i * 4;
+            data[o] = data[o + 1];
+            data[o + 3] = 0;
+            markDirty(i);
+          }
+          slotCount[s] = 0;
           active--;
-          markDirty(i);
         }
       }
       if (!(rate > 0) || count === 0) return;
       untilToggle -= dt * rate;
-      // At most a couple of toggles per frame, even after a long hitch.
-      for (let n = 0; untilToggle <= 0 && n < 2; n++) {
+      // A bounded number of toggles per frame, even after a long hitch.
+      for (let n = 0; untilToggle <= 0 && n < MAX_TOGGLES_PER_FRAME; n++) {
         untilToggle += 0.4 + 1.2 * rng();
         if (litCount > target) toggleOne(true);
         else if (litCount < target) toggleOne(false);
