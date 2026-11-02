@@ -319,9 +319,13 @@ export const flowfield = defineEffect({
           filter: gl.NEAREST,
         });
 
-      /** (Re)creates both layer targets at the canvas size; the next frame clears them. */
+      /**
+       * (Re)creates both layer targets at the canvas size; the next frame clears them.
+       * A failed allocation isn't retried until the size changes, so a size past
+       * MAX_TEXTURE_SIZE or out of memory doesn't reallocate every frame.
+       */
       const ensureTargets = () => {
-        if (targets.length === 2 && targetW === width && targetH === height) return;
+        if (targetW === width && targetH === height) return;
         deleteTargets();
         for (let i = 0; i < 2; i++) {
           let t = makeTarget(use10);
@@ -335,6 +339,12 @@ export const flowfield = defineEffect({
           if (!t) t = makeTarget(false);
           if (!t) break;
           targets.push(t);
+        }
+        if (targets.length < 2) {
+          deleteTargets();
+          console.warn(
+            `flowfield: can't allocate ${width}x${height} trail layers; drawing nothing`,
+          );
         }
         targetW = width;
         targetH = height;
