@@ -10,11 +10,12 @@ export interface SpriteBatch {
   readonly data: Float32Array;
   /** Floats per instance. */
   readonly stride: number;
-  /** Uploads the first `count` instances from `data` to the GPU. */
+  /** Uploads the first `count` instances (at most `maxInstances`) from `data` to the GPU. */
   upload(count: number): void;
   /**
    * Draws instances `first .. first + count - 1`, each as one triangle strip of
-   * `shapes[shape]` (see `createSpriteBatch`).
+   * `shapes[shape]` (see `createSpriteBatch`). The range is clipped to the
+   * batch's `maxInstances`.
    */
   draw(first: number, count: number, shape?: number): void;
   dispose(): void;
@@ -105,13 +106,18 @@ export function createSpriteBatch(
     data,
     stride,
     upload(count) {
-      if (count <= 0) return;
+      // Past the buffer's end, bufferSubData raises INVALID_VALUE and uploads nothing.
+      const n = Math.floor(Math.min(count, maxInstances));
+      if (!(n > 0)) return;
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, count * stride);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * stride);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
     },
     draw(first, count, shape = 0) {
-      if (count <= 0) return;
+      first = Math.max(0, Math.floor(first));
+      // Instances past the buffer's end would make the draw fail outright.
+      count = Math.floor(Math.min(count, maxInstances - first));
+      if (!(count > 0)) return;
       gl.bindVertexArray(vao);
       if (first !== pointedAt) {
         // WebGL2 has no base-instance draw, so offset the instance pointers instead.
