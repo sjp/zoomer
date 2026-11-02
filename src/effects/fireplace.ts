@@ -2,6 +2,7 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
 } from "./gl";
@@ -214,14 +215,8 @@ export const fireplace = defineEffect({
     const triangle = createFullscreenTriangle(gl);
     const target = createLowResTarget(gl, { composite: COMPOSITE });
 
-    const flameProgram = createProgram(
-      gl,
-      `#version 300 es
-layout(location = 0) in vec2 aPosition;
-void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
-`,
-      FLAME_FRAGMENT,
-    );
+    // The flame shader ignores vUv; an unused vertex output is fine in GLSL ES 3.00.
+    const flameProgram = createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT);
     const fl = getUniforms(gl, flameProgram, [
       "uNoise",
       "uRamp",
