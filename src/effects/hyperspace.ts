@@ -2,9 +2,9 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  getUniforms,
   withScope,
 } from "./gl";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
@@ -105,7 +105,7 @@ export const hyperspace = defineEffect({
       const bgProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const bgLoc = getUniforms(gl, bgProgram, [
+      const bgU = createUniforms(gl, bgProgram, [
         "uResolution",
         "uBackground",
         "uGlow",
@@ -218,12 +218,12 @@ export const hyperspace = defineEffect({
             gl.clear(gl.COLOR_BUFFER_BIT);
           } else {
             gl.useProgram(bgProgram);
-            gl.uniform2f(bgLoc.uResolution, width, height);
-            gl.uniform3f(bgLoc.uBackground, br, bg, bb);
-            gl.uniform3f(bgLoc.uGlow, gr, gg, gb);
-            gl.uniform1f(bgLoc.uGlowAlpha, glowAlpha);
-            gl.uniform1f(bgLoc.uGlowRadius, Math.max(1, radius * 0.8));
-            gl.uniform1f(bgLoc.uFlash, flashAmount);
+            bgU.f2("uResolution", width, height);
+            bgU.f3("uBackground", br, bg, bb);
+            bgU.f3("uGlow", gr, gg, gb);
+            bgU.f1("uGlowAlpha", glowAlpha);
+            bgU.f1("uGlowRadius", Math.max(1, radius * 0.8));
+            bgU.f1("uFlash", flashAmount);
             triangle.draw();
           }
 
