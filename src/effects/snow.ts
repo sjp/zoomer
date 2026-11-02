@@ -4,9 +4,9 @@ import {
   createFullscreenTriangle,
   createGradientBackground,
   createProgram,
+  createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
@@ -173,11 +173,11 @@ export const snow = defineEffect({
       const flakeProgram = scope.add(createProgram(gl, FLAKE_VERTEX, FLAKE_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const flakeLoc = getUniforms(gl, flakeProgram, ["uResolution", "uColor"]);
+      const flakeU = createUniforms(gl, flakeProgram, ["uResolution", "uColor"]);
       const mistProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MIST_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const mistLoc = getUniforms(gl, mistProgram, ["uHeight", "uMist", "uAmount"]);
+      const mistU = createUniforms(gl, mistProgram, ["uHeight", "uMist", "uAmount"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       // Per flake: centre x, centre y, half-width, half-height, then opacity and softness.
       const batch = scope.own(createSpriteBatch(gl, MAX_FLAKES, [4, 2]));
@@ -189,8 +189,8 @@ export const snow = defineEffect({
        * Inputs the uniforms were last set from (they are per-program state, and these
        * programs are ours alone). Colours are memoised references.
        */
-      const flakeSet = { width: 0, height: 0, color: null as Rgb | null };
-      const mistSet = { height: 0, bottom: "", color: "", amount: Number.NaN };
+      /** Mist colour inputs last derived from. */
+      const mistSet = { bottom: "", color: "" };
 
       const rng = createRng(0x5e0f);
       const noise = createNoise(0x5e0f);
@@ -241,15 +241,8 @@ export const snow = defineEffect({
 
       const bindFlakeProgram = (color: Rgb) => {
         gl.useProgram(flakeProgram);
-        if (flakeSet.width !== width || flakeSet.height !== height) {
-          gl.uniform2f(flakeLoc.uResolution, width, height);
-          flakeSet.width = width;
-          flakeSet.height = height;
-        }
-        if (flakeSet.color !== color) {
-          gl.uniform3fv(flakeLoc.uColor, color);
-          flakeSet.color = color;
-        }
+        flakeU.f2("uResolution", width, height);
+        flakeU.v3("uColor", color);
       };
 
       return {
@@ -351,27 +344,15 @@ export const snow = defineEffect({
           }
           if (p.mist > 0) {
             gl.useProgram(mistProgram);
-            if (mistSet.height !== height) {
-              gl.uniform1f(mistLoc.uHeight, height);
-              mistSet.height = height;
-            }
+            mistU.f1("uHeight", height);
             if (mistSet.bottom !== p.backgroundBottom || mistSet.color !== p.color) {
               // Mist is a lighter, slightly snow-tinted horizon colour.
               const mist = mixRgb(hexToRgb(p.backgroundBottom), hexToRgb(p.color), 0.45);
-              gl.uniform3f(
-                mistLoc.uMist,
-                (mist[0] | 0) / 255,
-                (mist[1] | 0) / 255,
-                (mist[2] | 0) / 255,
-              );
+              mistU.f3("uMist", (mist[0] | 0) / 255, (mist[1] | 0) / 255, (mist[2] | 0) / 255);
               mistSet.bottom = p.backgroundBottom;
               mistSet.color = p.color;
             }
-            const amount = Math.min(1, p.mist);
-            if (mistSet.amount !== amount) {
-              gl.uniform1f(mistLoc.uAmount, amount);
-              mistSet.amount = amount;
-            }
+            mistU.f1("uAmount", Math.min(1, p.mist));
             gl.enable(gl.SCISSOR_TEST);
             gl.scissor(0, 0, width, Math.ceil(height * 0.4) + 1);
             triangle.draw();
