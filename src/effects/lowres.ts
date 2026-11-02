@@ -118,7 +118,7 @@ export interface LowResOptions {
    * Optional GLSL that replaces the default blit body, so an effect can composite
    * while upscaling. It must define `vec4 composite(vec2 uv)`, and may declare its
    * own uniforms (bind extra textures to units 1+). Available: `uniform sampler2D
-   * uLowRes` (unit 0), `uniform vec2 uLowResSize`, `in vec2 vUv` (0..1). Dither is
+   * uLowRes` (unit 0, highp), `uniform vec2 uLowResSize`, `in vec2 vUv` (0..1). Dither is
    * added to the returned colour afterwards. Default:
    * `vec4 composite(vec2 uv) { return texture(uLowRes, uv); }`.
    * Set custom uniforms with `gl.useProgram(target.program)` first.

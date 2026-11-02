@@ -7,7 +7,7 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, lowResSize } from "./lowres";
+import { createLowResTarget } from "./lowres";
 import { hexToUnitRgb } from "./color";
 import { defineEffect } from "./types";
 
@@ -219,9 +219,6 @@ void main() {
  * from the screen-space gradient of h * levels, over the fill.
  */
 const COMPOSITE = /* glsl */ `
-// Own sampler with explicit precision: the blit's uLowRes has the default lowp
-// sampler precision, which some mobile GPUs honour and would wreck the encoding.
-uniform highp sampler2D uHeight;
 uniform float uDecode;
 uniform float uBSpline;
 uniform float uLevels;
@@ -257,10 +254,10 @@ float sampleBSpline(vec2 uv) {
   vec2 inv = 1.0 / uLowResSize;
   vec2 c0 = (i - 0.5 + w1 / g0) * inv;
   vec2 c1 = (i + 1.5 + w3 / g1) * inv;
-  vec2 a = texture(uHeight, c0).rg;
-  vec2 b = texture(uHeight, vec2(c1.x, c0.y)).rg;
-  vec2 c = texture(uHeight, vec2(c0.x, c1.y)).rg;
-  vec2 d = texture(uHeight, c1).rg;
+  vec2 a = texture(uLowRes, c0).rg;
+  vec2 b = texture(uLowRes, vec2(c1.x, c0.y)).rg;
+  vec2 c = texture(uLowRes, vec2(c0.x, c1.y)).rg;
+  vec2 d = texture(uLowRes, c1).rg;
   return decode(g0.y * (g0.x * a + g1.x * b) + g1.y * (g0.x * c + g1.x * d));
 }
 
@@ -269,7 +266,7 @@ vec4 composite(vec2 uv) {
   if (uBSpline > 0.5) {
     h = sampleBSpline(uv);
   } else {
-    h = decode(texture(uHeight, uv).rg);
+    h = decode(texture(uLowRes, uv).rg);
   }
   float x = h * uLevels;
   // Level units per pixel; length() rather than fwidth() so width is isotropic.
@@ -357,7 +354,6 @@ export const contours = defineEffect({
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE }));
       const nLoc = getUniforms(gl, noiseProgram, ["uPixToWorld", "uWorldOffset", "uZ", "uFloat"]);
       const cLoc = getUniforms(gl, target.program, [
-        "uHeight",
         "uDecode",
         "uBSpline",
         "uLevels",
@@ -372,8 +368,6 @@ export const contours = defineEffect({
         "uLowColor",
         "uHighColor",
       ]);
-      gl.useProgram(target.program);
-      gl.uniform1i(cLoc.uHeight, 0);
 
       let width = 1;
       let height = 1;
@@ -422,8 +416,8 @@ export const contours = defineEffect({
             lastTerrain = p.scale;
             // Field units per frame height; the field is centred on the canvas.
             const freq = 1 / Math.max(0.01, p.scale);
-            const lw = lowResSize(width, fieldDivisor(height));
-            const lh = lowResSize(height, fieldDivisor(height));
+            const lw = target.width;
+            const lh = target.height;
             const aspect = width / height;
             gl.useProgram(noiseProgram);
             gl.uniform2f(nLoc.uPixToWorld, (aspect * freq) / lw, freq / lh);
