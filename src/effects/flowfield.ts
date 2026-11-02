@@ -10,6 +10,7 @@ import {
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
+import { createFlowField } from "./flowfield-field";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "./noise";
 import { defineEffect } from "./types";
 import { smoothstep } from "./math";
@@ -159,8 +160,10 @@ void main() {
  * Generative-art streams: thousands of particles drift along a slowly evolving
  * noise vector field and leave silky fading trails.
  *
- * Particles are simulated on the CPU; each frame's movement is uploaded as one
- * instanced batch of anti-aliased segments. Trails live on a ping-ponged offscreen
+ * Particles are simulated on the CPU, steering by a bilinear lookup into the noise
+ * field baked on a small lattice that scrolls through time (see flowfield-field.ts)
+ * rather than by evaluating 3D noise per particle; each frame's movement is
+ * uploaded as one instanced batch of anti-aliased segments. Trails live on a ping-ponged offscreen
  * layer (RGB10_A2, else RGBA8) whose empty value is zero. Each
  * frame a pass fades the previous layer into the other one, the new segments are
  * blended on top, and the layer is screened over the background (dark backgrounds)
@@ -290,6 +293,7 @@ export const flowfield = defineEffect({
       let active = 0;
       let seedKey = NaN;
       let noise3 = createNoise(1).noise3;
+      const field = createFlowField();
       let rng = createRng(1);
       /** Whether the trail layer is in light mode, or undefined to clear it. */
       let lightMode: boolean | undefined;
@@ -407,6 +411,15 @@ export const flowfield = defineEffect({
           const margin = 10 * scale;
           const byAngle = p.colorBy === "angle";
           let count = 0;
+          // The particles stay within the margin wherever the field is read.
+          field.update(
+            noise3,
+            -margin * freq,
+            -margin * freq,
+            (width + margin) * freq,
+            (height + margin) * freq,
+            time,
+          );
 
           for (let i = 0; i < n; i++) {
             const age = ages[i] + dt;
@@ -423,7 +436,7 @@ export const flowfield = defineEffect({
               continue;
             }
             ages[i] = age;
-            const angle = noise3(x * freq, y * freq, time) * swirl;
+            const angle = field.sample(x * freq, y * freq) * swirl;
             const cos = Math.cos(angle);
             const nx = x + cos * step;
             const ny = y + Math.sin(angle) * step;
