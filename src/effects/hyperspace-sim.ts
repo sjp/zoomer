@@ -3,6 +3,7 @@
  * from normal space (0) to full hyperspace (1), driven by the mode or an auto
  * cycle, with a flash as each jump in reaches full speed.
  */
+import { approach } from "./math";
 
 /** Seconds the flash takes to fade out. */
 export const FLASH_SECONDS = 0.35;
@@ -47,9 +48,7 @@ export function createJump(): Jump {
       // The first frame starts in its target state rather than jumping into it.
       if (progress < 0) progress = target;
       const before = progress;
-      const stepSize = dt / jumpSeconds;
-      progress =
-        target > progress ? Math.min(1, progress + stepSize) : Math.max(0, progress - stepSize);
+      progress = approach(progress, target, dt / jumpSeconds);
       if (before < FLASH_AT && progress >= FLASH_AT) flash = 1;
       flash = Math.max(0, flash - dt / FLASH_SECONDS);
     },
