@@ -16,6 +16,32 @@ void main() {
 }
 `;
 
+/**
+ * Resets the shared per-frame GL state to known defaults. Effects share one context,
+ * and an effect that crashed or forgot a call may have left anything set, so every
+ * `frame` calls this first and then sets only what it changes from here:
+ *
+ * - the default framebuffer bound, with a full-canvas viewport;
+ * - depth, stencil, cull, scissor and blend tests all disabled;
+ * - `blendEquation(FUNC_ADD)` and every colour channel writable;
+ * - no vertex array bound.
+ *
+ * It leaves the program, textures, blend function and clear colour alone: effects
+ * set those wherever they use them. Ten cheap state calls; negligible per frame.
+ */
+export function beginFrame(gl: WebGL2RenderingContext, width: number, height: number): void {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, width, height);
+  gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.STENCIL_TEST);
+  gl.disable(gl.CULL_FACE);
+  gl.disable(gl.SCISSOR_TEST);
+  gl.disable(gl.BLEND);
+  gl.blendEquation(gl.FUNC_ADD);
+  gl.colorMask(true, true, true, true);
+  gl.bindVertexArray(null);
+}
+
 /** Prefixes each source line with its number, so log line references are easy to find. */
 const numbered = (source: string) =>
   source

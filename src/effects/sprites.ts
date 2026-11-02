@@ -4,7 +4,13 @@
  * two-colour gradient background pass.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 
 export interface SpriteBatch {
   /** CPU-side instance data, `stride` floats per instance. Fill, then `upload`. */
@@ -135,18 +141,8 @@ export function createSpriteBatch(
   };
 }
 
-/**
- * Sets the viewport and disables the fixed-function state these effects never use,
- * since another effect sharing the context may have left it enabled.
- */
-export function resetState(gl: WebGL2RenderingContext, width: number, height: number) {
-  gl.viewport(0, 0, width, height);
-  gl.disable(gl.DEPTH_TEST);
-  gl.disable(gl.STENCIL_TEST);
-  gl.disable(gl.CULL_FACE);
-  gl.disable(gl.SCISSOR_TEST);
-  gl.colorMask(true, true, true, true);
-}
+/** @deprecated Use `beginFrame` from `./gl`, which resets more state. */
+export const resetState = beginFrame;
 
 const GRADIENT_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
