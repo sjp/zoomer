@@ -7,7 +7,7 @@ import {
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
-import { createNoise } from "./noise";
+import { createNoise, createRng } from "./noise";
 import {
   createGradientBackground,
   createSpriteBatch,
@@ -302,22 +302,23 @@ export const fireflies = defineEffect({
       let beamH = 0;
       let beamColorSet: unknown = null;
 
+      const rng = createRng(Math.random() * 0xffffffff);
       const newBlink = (i: number) => {
-        blinkPeriod[i] = 3 + Math.random() * 6;
-        blinkDuty[i] = (0.5 + Math.random() * 0.7) / blinkPeriod[i];
+        blinkPeriod[i] = 3 + rng() * 6;
+        blinkDuty[i] = (0.5 + rng() * 0.7) / blinkPeriod[i];
       };
 
       for (let i = 0; i < MAX_SPECKS; i++) {
-        xs[i] = Math.random() * refWidth;
-        ys[i] = Math.random() * 1080;
-        heading[i] = Math.random() * TAU;
-        pace[i] = 0.6 + Math.random() * 0.8;
-        const defocused = Math.random() < DEFOCUS_SHARE;
-        radiusK[i] = defocused ? 1.8 + Math.random() * 1.2 : 0.75 + Math.random() * 0.5;
-        brightK[i] = defocused ? 0.3 + Math.random() * 0.15 : 0.8 + Math.random() * 0.2;
+        xs[i] = rng() * refWidth;
+        ys[i] = rng() * 1080;
+        heading[i] = rng() * TAU;
+        pace[i] = 0.6 + rng() * 0.8;
+        const defocused = rng() < DEFOCUS_SHARE;
+        radiusK[i] = defocused ? 1.8 + rng() * 1.2 : 0.75 + rng() * 0.5;
+        brightK[i] = defocused ? 0.3 + rng() * 0.15 : 0.8 + rng() * 0.2;
         newBlink(i);
-        blinkPhase[i] = Math.random();
-        seed[i] = Math.random() * 100;
+        blinkPhase[i] = rng();
+        seed[i] = rng() * 100;
       }
 
       return {
