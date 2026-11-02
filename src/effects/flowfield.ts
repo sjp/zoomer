@@ -7,7 +7,7 @@ import {
   getUniforms,
   withScope,
 } from "./gl";
-import { createRng, hash32, HASH32_GLSL } from "./noise";
+import { createNoise, createRng, hash32, HASH32_GLSL } from "./noise";
 import { defineEffect } from "./types";
 import { smoothstep } from "./math";
 
@@ -31,117 +31,6 @@ const CLEAN_RATE = 20 / 255;
 /** Floats per particle segment instance: x0, y0, x1, y1, colour t, alpha. */
 const STRIDE = 6;
 const TAU = Math.PI * 2;
-
-const F3 = 1 / 3;
-const G3 = 1 / 6;
-/** The 12 edge-midpoint gradients of a cube, flattened as x,y,z triples. */
-const GRAD3 = new Float64Array([
-  1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1,
-  0, 1, -1, 0, -1, -1,
-]);
-
-/**
- * 3D simplex noise, the same field as `createNoise(seed).noise3` in ./noise (same
- * permutation, same arithmetic), without the per-call array allocations of its
- * simplex ordering, as it runs once per particle per frame.
- */
-const createNoise3 = (seed: number) => {
-  const rng = createRng(seed);
-  const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = i;
-  for (let i = 255; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const t = p[i];
-    p[i] = p[j];
-    p[j] = t;
-  }
-  const perm = new Uint8Array(512);
-  const permMod12 = new Uint8Array(512);
-  for (let i = 0; i < 512; i++) {
-    perm[i] = p[i & 255];
-    permMod12[i] = perm[i] % 12;
-  }
-
-  return (x: number, y: number, z: number): number => {
-    const s = (x + y + z) * F3;
-    const i = Math.floor(x + s);
-    const j = Math.floor(y + s);
-    const k = Math.floor(z + s);
-    const t = (i + j + k) * G3;
-    const x0 = x - (i - t);
-    const y0 = y - (j - t);
-    const z0 = z - (k - t);
-    let i1 = 0;
-    let j1 = 0;
-    let k1 = 0;
-    let i2 = 0;
-    let j2 = 0;
-    let k2 = 0;
-    if (x0 >= y0) {
-      i2 = 1;
-      if (y0 >= z0) {
-        i1 = 1;
-        j2 = 1;
-      } else if (x0 >= z0) {
-        i1 = 1;
-        k2 = 1;
-      } else {
-        k1 = 1;
-        k2 = 1;
-      }
-    } else {
-      j2 = 1;
-      if (y0 < z0) {
-        k1 = 1;
-        k2 = 1;
-      } else if (x0 < z0) {
-        j1 = 1;
-        k2 = 1;
-      } else {
-        j1 = 1;
-        i2 = 1;
-      }
-    }
-    const x1 = x0 - i1 + G3;
-    const y1 = y0 - j1 + G3;
-    const z1 = z0 - k1 + G3;
-    const x2 = x0 - i2 + 2 * G3;
-    const y2 = y0 - j2 + 2 * G3;
-    const z2 = z0 - k2 + 2 * G3;
-    const x3 = x0 - 1 + 3 * G3;
-    const y3 = y0 - 1 + 3 * G3;
-    const z3 = z0 - 1 + 3 * G3;
-    const ii = i & 255;
-    const jj = j & 255;
-    const kk = k & 255;
-    let n = 0;
-    let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
-    if (t0 > 0) {
-      const g = permMod12[ii + perm[jj + perm[kk]]] * 3;
-      t0 *= t0;
-      n += t0 * t0 * (GRAD3[g] * x0 + GRAD3[g + 1] * y0 + GRAD3[g + 2] * z0);
-    }
-    let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
-    if (t1 > 0) {
-      const g = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]] * 3;
-      t1 *= t1;
-      n += t1 * t1 * (GRAD3[g] * x1 + GRAD3[g + 1] * y1 + GRAD3[g + 2] * z1);
-    }
-    let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
-    if (t2 > 0) {
-      const g = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]] * 3;
-      t2 *= t2;
-      n += t2 * t2 * (GRAD3[g] * x2 + GRAD3[g + 1] * y2 + GRAD3[g + 2] * z2);
-    }
-    let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
-    if (t3 > 0) {
-      const g = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]] * 3;
-      t3 *= t3;
-      n += t3 * t3 * (GRAD3[g] * x3 + GRAD3[g + 1] * y3 + GRAD3[g + 2] * z3);
-    }
-    return 32 * n;
-  };
-};
 
 /**
  * One anti-aliased line segment per instance, expanded from gl_VertexID into a
@@ -403,7 +292,7 @@ export const flowfield = defineEffect({
       let frameNo = 0;
       let active = 0;
       let seedKey = NaN;
-      let noise3 = createNoise3(1);
+      let noise3 = createNoise(1).noise3;
       let rng = createRng(1);
       /** Whether the trail layer is in light mode, or undefined to clear it. */
       let lightMode: boolean | undefined;
@@ -481,7 +370,7 @@ export const flowfield = defineEffect({
       };
 
       const reseed = (seed: number) => {
-        noise3 = createNoise3(seed * 131 + 17);
+        noise3 = createNoise(seed * 131 + 17).noise3;
         rng = createRng(seed * 7907 + 3);
         for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
         lightMode = undefined;

@@ -145,14 +145,39 @@ export function createNoise(seed: number): Noise {
     const x0 = x - (i - t);
     const y0 = y - (j - t);
     const z0 = z - (k - t);
-    let i1: number, j1: number, k1: number, i2: number, j2: number, k2: number;
+    // Simplex ordering, set field by field: no per-call array allocation, as
+    // effects call this per particle per frame.
+    let i1 = 0;
+    let j1 = 0;
+    let k1 = 0;
+    let i2 = 0;
+    let j2 = 0;
+    let k2 = 0;
     if (x0 >= y0) {
-      if (y0 >= z0) [i1, j1, k1, i2, j2, k2] = [1, 0, 0, 1, 1, 0];
-      else if (x0 >= z0) [i1, j1, k1, i2, j2, k2] = [1, 0, 0, 1, 0, 1];
-      else [i1, j1, k1, i2, j2, k2] = [0, 0, 1, 1, 0, 1];
-    } else if (y0 < z0) [i1, j1, k1, i2, j2, k2] = [0, 0, 1, 0, 1, 1];
-    else if (x0 < z0) [i1, j1, k1, i2, j2, k2] = [0, 1, 0, 0, 1, 1];
-    else [i1, j1, k1, i2, j2, k2] = [0, 1, 0, 1, 1, 0];
+      i2 = 1;
+      if (y0 >= z0) {
+        i1 = 1;
+        j2 = 1;
+      } else if (x0 >= z0) {
+        i1 = 1;
+        k2 = 1;
+      } else {
+        k1 = 1;
+        k2 = 1;
+      }
+    } else {
+      j2 = 1;
+      if (y0 < z0) {
+        k1 = 1;
+        k2 = 1;
+      } else if (x0 < z0) {
+        j1 = 1;
+        k2 = 1;
+      } else {
+        j1 = 1;
+        i2 = 1;
+      }
+    }
     const x1 = x0 - i1 + G3;
     const y1 = y0 - j1 + G3;
     const z1 = z0 - k1 + G3;
