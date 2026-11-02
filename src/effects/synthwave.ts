@@ -4,8 +4,8 @@ import {
   createColumnTable,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   resetUnpackState,
   updateDataTexture,
@@ -101,8 +101,8 @@ precision highp int;
 precision highp sampler2D;
 
 uniform vec2 uResolution;
-/** Horizon y, vanishing point x, projection constant (ground at depth z is at hy + k / z). */
-uniform vec3 uHorizon;
+/** Horizon y and vanishing point x. */
+uniform vec2 uHorizon;
 uniform float uCamX;
 /**
  * Everything that depends only on the row, computed on the CPU each frame. Row r
@@ -381,7 +381,7 @@ export const synthwave = defineEffect({
       const ridge = scope.own(
         createColumnTable(gl, RIDGE_POINTS, 1, { rows: 2, data: getRidgeData() }),
       );
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         "uResolution",
         "uHorizon",
         "uCamX",
@@ -411,8 +411,8 @@ export const synthwave = defineEffect({
       ]);
       // Uniforms live in the program, so constant ones are set once (or on change).
       gl.useProgram(program);
-      gl.uniform1i(loc.uRidge, 0);
-      gl.uniform1i(loc.uRows, 1);
+      u.i1("uRidge", 0);
+      u.i1("uRows", 1);
       gl.useProgram(null);
 
       /*
@@ -463,13 +463,13 @@ export const synthwave = defineEffect({
           if (palette?.key !== key) {
             palette = buildPalette(key, p.skyTop, p.skyBottom, p.gridColor, p.sunTop, p.sunBottom);
             const pc = palette;
-            gl.uniform3fv(loc.uSunTop, pc.sunTop);
-            gl.uniform3fv(loc.uSunBottom, pc.sunBottom);
-            gl.uniform3fv(loc.uSunGlowColor, pc.sunGlow);
-            gl.uniform3fv(loc.uBackColor, pc.backColor);
-            gl.uniform3fv(loc.uGround, pc.ground);
-            gl.uniform3fv(loc.uGrid, pc.grid);
-            gl.uniform3f(loc.uVCore, pc.core[0] * 0.9, pc.core[1] * 0.9, pc.core[2] * 0.9);
+            u.v3("uSunTop", pc.sunTop);
+            u.v3("uSunBottom", pc.sunBottom);
+            u.v3("uSunGlowColor", pc.sunGlow);
+            u.v3("uBackColor", pc.backColor);
+            u.v3("uGround", pc.ground);
+            u.v3("uGrid", pc.grid);
+            u.f3("uVCore", pc.core[0] * 0.9, pc.core[1] * 0.9, pc.core[2] * 0.9);
           }
           const c = palette;
 
@@ -613,23 +613,23 @@ export const synthwave = defineEffect({
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, ridge.texture);
 
-          gl.uniform2f(loc.uResolution, width, height);
-          gl.uniform3f(loc.uHorizon, hy, vpx, k);
-          gl.uniform1f(loc.uCamX, camX);
-          gl.uniform3f(loc.uSun, vpx, sunY, r);
-          gl.uniform1f(loc.uSunClip, sunClip);
-          gl.uniform1f(loc.uSunGlow, p.sunGlow);
-          gl.uniform2f(loc.uRidgeSpan, -0.08 * width, ridgeSpan);
-          gl.uniform2f(loc.uRidgeShift, -camX * k * 0.01, -camX * k * 0.025);
-          gl.uniform2f(loc.uRidgeHeight, backH, frontH);
-          gl.uniform1f(loc.uMountains, p.mountains ? 1 : 0);
-          gl.uniform1f(loc.uMountainTop, mountainTop);
-          gl.uniform3f(loc.uVGlow, c.grid[0] * glowA, c.grid[1] * glowA, c.grid[2] * glowA);
-          gl.uniform1f(loc.uEdgeWidth, edgeWidth);
-          gl.uniform2f(loc.uLine, glowW, coreW);
-          gl.uniform1f(loc.uCell, cell);
-          gl.uniform1f(loc.uInvCell, 1 / cell);
-          gl.uniform1f(loc.uLines, lines);
+          u.f2("uResolution", width, height);
+          u.f2("uHorizon", hy, vpx);
+          u.f1("uCamX", camX);
+          u.f3("uSun", vpx, sunY, r);
+          u.f1("uSunClip", sunClip);
+          u.f1("uSunGlow", p.sunGlow);
+          u.f2("uRidgeSpan", -0.08 * width, ridgeSpan);
+          u.f2("uRidgeShift", -camX * k * 0.01, -camX * k * 0.025);
+          u.f2("uRidgeHeight", backH, frontH);
+          u.f1("uMountains", p.mountains ? 1 : 0);
+          u.f1("uMountainTop", mountainTop);
+          u.f3("uVGlow", c.grid[0] * glowA, c.grid[1] * glowA, c.grid[2] * glowA);
+          u.f1("uEdgeWidth", edgeWidth);
+          u.f2("uLine", glowW, coreW);
+          u.f1("uCell", cell);
+          u.f1("uInvCell", 1 / cell);
+          u.f1("uLines", lines);
           triangle.draw();
         },
         dispose: () => scope.dispose(),
