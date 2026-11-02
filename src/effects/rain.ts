@@ -10,6 +10,7 @@ import {
 import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 import { HASH32_GLSL } from "./noise";
+import { createRainSim } from "./rain-sim";
 
 const CHARSETS: Record<string, string> = {
   katakana: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:.=*+-<>",
@@ -26,17 +27,6 @@ const ATLAS_COLS = 16;
  * half an 8-bit step, so the cut is invisible.
  */
 const CUTOFF = 1 / 512;
-
-/**
- * `a` if it already holds `n` elements, else a new array of the same type and
- * length `n` whose first `keep` elements are copied from `a` (the rest zero).
- */
-export function growArray<T extends Float32Array | Uint8Array>(a: T, n: number, keep: number): T {
-  if (a.length >= n) return a;
-  const b = new (a.constructor as new (length: number) => T)(n);
-  b.set(a.subarray(0, Math.min(keep, a.length)));
-  return b;
-}
 
 /**
  * One instance per falling drop, covering the rows of its column that are still
@@ -168,83 +158,26 @@ export const rain = defineEffect({
       let batch: SpriteBatch | undefined;
       scope.defer(() => batch?.dispose());
       let capacity = 0;
-      /** The batch's instance data and stride, and how many instances this frame. */
-      let data: Float32Array = new Float32Array(0);
-      let stride = 0;
-      let emitted = 0;
-      /** This frame's head length (rows) and trail length (seconds), read by `emit`. */
-      let lead = 0;
-      let trailAge = 0;
+      const sim = createRainSim();
 
       let width = 1;
       let height = 1;
       let scale = 1;
       let sizeDirty = true;
       let cell = 0;
-      let rows = 0;
-      let cols = 0;
-      // The current drop of each column, and the previous one, whose trail can still
-      // be fading below the current drop's head.
-      let heads = new Float32Array(0);
-      let pace = new Float32Array(0);
-      let seed = new Float32Array(0);
-      let active = new Uint8Array(0);
-      let prevHeads = new Float32Array(0);
-      let prevPace = new Float32Array(0);
-      let prevSeed = new Float32Array(0);
-      let prevActive = new Uint8Array(0);
-
-      const resetColumn = (c: number, density: number, scatter: boolean) => {
-        heads[c] = -Math.random() * rows * (scatter ? 1.5 : 0.5);
-        pace[c] = 0.6 + Math.random() * 0.8;
-        seed[c] = Math.floor(Math.random() * 65536);
-        active[c] = Math.random() < density ? 1 : 0;
-      };
-
       /**
-       * Fits the column grid to the canvas. With `restart` (a new cell size) every
-       * column is re-scattered; otherwise (a resize) the columns already on screen
-       * keep falling and only newly exposed ones are scattered, so dragging the
-       * window edge doesn't restart the rain.
+       * Fits the column grid to the canvas, re-scattering every column on a new cell
+       * size (`restart`) but keeping those on screen across a resize.
        */
       const layout = (density: number, restart: boolean) => {
-        const keep = restart ? 0 : cols;
-        cols = Math.ceil(width / cell);
-        rows = Math.ceil(height / cell);
-        heads = growArray(heads, cols, keep);
-        pace = growArray(pace, cols, keep);
-        seed = growArray(seed, cols, keep);
-        active = growArray(active, cols, keep);
-        prevHeads = growArray(prevHeads, cols, keep);
-        prevPace = growArray(prevPace, cols, keep);
-        prevSeed = growArray(prevSeed, cols, keep);
-        prevActive = growArray(prevActive, cols, keep);
-        for (let c = Math.min(keep, cols); c < cols; c++) {
-          resetColumn(c, density, true);
-          prevActive[c] = 0;
-        }
+        const cols = Math.ceil(width / cell);
+        sim.layout(cols, Math.ceil(height / cell), density, restart);
         if (capacity < cols * 2) {
           batch?.dispose();
           batch = undefined;
           capacity = cols * 2;
           batch = createSpriteBatch(gl, capacity, [4, 2]);
-          data = batch.data;
-          stride = batch.stride;
         }
-      };
-
-      /** Appends one drop instance covering its still-visible rows from `minRow` down. */
-      const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
-        const r0 = Math.max(minRow, Math.floor(head - lead - trailAge * rate));
-        const r1 = Math.min(rows, Math.floor(head) + 1);
-        if (r0 >= r1) return;
-        const o = emitted++ * stride;
-        data[o] = c;
-        data[o + 1] = head;
-        data[o + 2] = rate;
-        data[o + 3] = s;
-        data[o + 4] = r0;
-        data[o + 5] = r1;
       };
 
       /** Renders each glyph, white on black, into its own cell-sized tile (red = coverage). */
@@ -308,37 +241,17 @@ export const rain = defineEffect({
 
           // The old renderer faded the canvas by `fade` per 60th of a second.
           const decay = 60 * Math.log(1 - p.fade);
-          trailAge = Math.log(CUTOFF) / decay;
-          lead = p.brightHead ? 1 : 0;
+          const trailAge = Math.log(CUTOFF) / decay;
+          const lead = p.brightHead ? 1 : 0;
 
           if (!batch) return;
-          emitted = 0;
-
-          for (let c = 0; c < cols; c++) {
-            heads[c] += dt * p.speed * pace[c];
-            prevHeads[c] += dt * p.speed * prevPace[c];
-            if (Math.floor(heads[c]) > rows + rows * 0.3 * pace[c]) {
-              prevHeads[c] = heads[c];
-              prevPace[c] = pace[c];
-              prevSeed[c] = seed[c];
-              prevActive[c] = active[c];
-              resetColumn(c, p.density, false);
-            }
-            const head = heads[c];
-            if (active[c]) emit(c, head, p.speed * pace[c], seed[c], 0);
-            if (prevActive[c]) {
-              // The current drop repaints the cells it has passed.
-              const minRow = active[c] ? Math.max(0, Math.floor(head) + 1) : 0;
-              emit(c, prevHeads[c], p.speed * prevPace[c], prevSeed[c], minRow);
-            }
-          }
+          const n = sim.step(dt, p.speed, p.density, lead, trailAge, batch.data, batch.stride);
 
           const bg = backgroundRgb(p.background);
           const color = colorRgb(p.color);
 
           gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
-          const n = emitted;
           if (n === 0) return;
 
           batch.upload(n);
@@ -350,7 +263,7 @@ export const rain = defineEffect({
           u.f1("uCell", cell);
           u.i1("uCellPx", cell);
           u.i1("uCount", glyphCount);
-          u.i1("uRows", rows);
+          u.i1("uRows", sim.rows);
           u.f1("uHeight", height);
           u.f1("uDecay", decay);
           u.i1("uBrightHead", p.brightHead ? 1 : 0);
