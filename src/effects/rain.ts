@@ -28,6 +28,17 @@ const ATLAS_COLS = 16;
 const CUTOFF = 1 / 512;
 
 /**
+ * `a` if it already holds `n` elements, else a new array of the same type and
+ * length `n` whose first `keep` elements are copied from `a` (the rest zero).
+ */
+export function growArray<T extends Float32Array | Uint8Array>(a: T, n: number, keep: number): T {
+  if (a.length >= n) return a;
+  const b = new (a.constructor as new (length: number) => T)(n);
+  b.set(a.subarray(0, Math.min(keep, a.length)));
+  return b;
+}
+
+/**
  * One instance per falling drop, covering the rows of its column that are still
  * visibly lit. Pixel coordinates are y-down.
  */
@@ -168,6 +179,7 @@ export const rain = defineEffect({
       let width = 1;
       let height = 1;
       let scale = 1;
+      let sizeDirty = true;
       let cell = 0;
       let rows = 0;
       let cols = 0;
@@ -189,18 +201,28 @@ export const rain = defineEffect({
         active[c] = Math.random() < density ? 1 : 0;
       };
 
-      const layout = (density: number) => {
+      /**
+       * Fits the column grid to the canvas. With `restart` (a new cell size) every
+       * column is re-scattered; otherwise (a resize) the columns already on screen
+       * keep falling and only newly exposed ones are scattered, so dragging the
+       * window edge doesn't restart the rain.
+       */
+      const layout = (density: number, restart: boolean) => {
+        const keep = restart ? 0 : cols;
         cols = Math.ceil(width / cell);
         rows = Math.ceil(height / cell);
-        heads = new Float32Array(cols);
-        pace = new Float32Array(cols);
-        seed = new Float32Array(cols);
-        active = new Uint8Array(cols);
-        prevHeads = new Float32Array(cols);
-        prevPace = new Float32Array(cols);
-        prevSeed = new Float32Array(cols);
-        prevActive = new Uint8Array(cols);
-        for (let c = 0; c < cols; c++) resetColumn(c, density, true);
+        heads = growArray(heads, cols, keep);
+        pace = growArray(pace, cols, keep);
+        seed = growArray(seed, cols, keep);
+        active = growArray(active, cols, keep);
+        prevHeads = growArray(prevHeads, cols, keep);
+        prevPace = growArray(prevPace, cols, keep);
+        prevSeed = growArray(prevSeed, cols, keep);
+        prevActive = growArray(prevActive, cols, keep);
+        for (let c = Math.min(keep, cols); c < cols; c++) {
+          resetColumn(c, density, true);
+          prevActive[c] = 0;
+        }
         if (capacity < cols * 2) {
           batch?.dispose();
           batch = undefined;
@@ -263,15 +285,19 @@ export const rain = defineEffect({
 
       return {
         resize(v) {
+          if (v.width !== width || v.height !== height) sizeDirty = true;
           ({ width, height, scale } = v);
-          cell = 0; // force layout on next frame
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
           const newCell = Math.max(4, Math.round(p.fontSize * scale));
           if (cell !== newCell) {
             cell = newCell;
-            layout(p.density);
+            sizeDirty = false;
+            layout(p.density, true);
+          } else if (sizeDirty) {
+            sizeDirty = false;
+            layout(p.density, false);
           }
           const charset = CHARSETS[p.charset] ? p.charset : "katakana";
           if (atlasCell !== cell || atlasCharset !== charset) {
