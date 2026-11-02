@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { createProgram, getUniforms, type Scope, TO_CLIP_GLSL, withScope } from "./gl";
+import { createProgram, createUniforms, type Scope, TO_CLIP_GLSL, withScope } from "./gl";
 
 /**
  * Instanced WebGL2 renderer for round-capped line segments ("streaks"), shared by
@@ -173,13 +173,11 @@ function buildStreakRenderer(
 ): StreakRenderer {
   const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
   const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), deleteProgram);
-  const loc = getUniforms(gl, program, ["uResolution"]);
+  const u = createUniforms(gl, program, ["uResolution"]);
   const chromatic = options.chromatic
     ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
     : null;
-  const chromaticLoc = chromatic
-    ? getUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"])
-    : null;
+  const cu = chromatic ? createUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"]) : null;
   const data = new Float32Array(max * STREAK_FLOATS);
 
   const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
@@ -222,15 +220,15 @@ function buildStreakRenderer(
       gl.blendEquation(gl.FUNC_ADD);
       gl.blendFunc(gl.ONE, gl.ONE);
       const split = zoom && (zoom[0] !== 1 || zoom[1] !== 1 || zoom[2] !== 1);
-      if (split && chromatic && chromaticLoc) {
-        gl.useProgram(chromatic);
-        gl.uniform2f(chromaticLoc.uResolution, width, height);
-        gl.uniform2f(chromaticLoc.uCenter, width / 2, height / 2);
-        gl.uniform3f(chromaticLoc.uZoom, zoom[0], zoom[1], zoom[2]);
+      if (split && cu) {
+        gl.useProgram(cu.program);
+        cu.f2("uResolution", width, height);
+        cu.f2("uCenter", width / 2, height / 2);
+        cu.v3("uZoom", zoom);
       } else {
         if (split) throw new Error("Streaks: per-channel zoom needs the chromatic option");
         gl.useProgram(program);
-        gl.uniform2f(loc.uResolution, width, height);
+        u.f2("uResolution", width, height);
       }
       gl.bindVertexArray(vao);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
