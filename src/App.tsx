@@ -18,6 +18,8 @@ function initialState() {
 
 /** How long the URL waits for params to settle before updating, in ms. */
 const HASH_DEBOUNCE = 250;
+/** How long a toast stays up, in ms. */
+const TOAST_MS = 2500;
 
 const isFormField = (target: EventTarget | null) =>
   target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
@@ -38,6 +40,8 @@ export function App() {
   const recording = recordingLeft !== undefined;
   // Why the current effect failed to start or stopped; the canvas clears it on switch.
   const [effectError, setEffectError] = useState<string>();
+  // A brief message over the canvas; `id` restarts its timer when it repeats.
+  const [toast, setToast] = useState<{ message: string; id: number }>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const idle = useIdle(3000);
 
@@ -81,6 +85,12 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(undefined), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const setParam = useCallback(
     (key: string, value: ParamValue) =>
       setValuesById((prev) => ({
@@ -114,9 +124,19 @@ export function App() {
     setHoveringPanel(false);
   }, []);
 
+  // Fullscreen can be refused (in an iframe, without a user gesture, or on iPhone,
+  // which lacks the API); say so briefly rather than failing silently.
   const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen();
+    const fail = () =>
+      setToast((t) => ({ message: "Fullscreen unavailable", id: (t?.id ?? 0) + 1 }));
+    try {
+      const change = document.fullscreenElement
+        ? document.exitFullscreen()
+        : document.documentElement.requestFullscreen();
+      Promise.resolve(change).catch(fail);
+    } catch {
+      fail();
+    }
   }, []);
 
   useEffect(() => {
@@ -196,6 +216,11 @@ export function App() {
           />
         </PanelErrorBoundary>
       </div>
+      {toast && (
+        <div key={toast.id} className="toast" role="status">
+          {toast.message}
+        </div>
+      )}
       {/* The way back to a hidden panel without a keyboard: it fades in on any pointer or
           touch activity and out again with the idle cursor. */}
       <button
