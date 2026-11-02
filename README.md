@@ -83,3 +83,9 @@ versions up to date.
 The built `index.html` carries a Content-Security-Policy `<meta>` tag, since Pages can't send
 headers. It is added at build time only (see `vite.config.ts`), because the dev server needs
 an inline script and a websocket that the policy forbids.
+
+## Data
+
+`public/land-mask.png`, the land mask for the Daylight World Map, is built from
+[Natural Earth](https://www.naturalearthdata.com/)'s 1:50m land polygons, which are in the
+public domain. `scripts/build-land-mask.mjs` regenerates it from `ne_50m_land.geojson`.
