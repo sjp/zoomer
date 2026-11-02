@@ -108,8 +108,8 @@ vec4 cloudLayer(vec2 q, vec4 off, vec4 det, vec4 lp, float haze, vec3 sky) {
   // Denser towards the light means this point is in the cloud's own shadow.
   float lit = clamp(0.62 - g * (NORM * LIGHT_GAIN) - 0.15 * dens, 0.0, 1.0);
   vec3 col = mix(mix(uCloudShadow, uCloudLight, lit), sky, haze);
-  float a = dens * lp.w;
-  return vec4(col * a, a);
+  float alpha = dens * lp.w;
+  return vec4(col * alpha, alpha);
 }
 
 void main() {
