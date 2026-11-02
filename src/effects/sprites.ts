@@ -10,6 +10,14 @@ export interface SpriteBatch {
   readonly data: Float32Array;
   /** Floats per instance. */
   readonly stride: number;
+  /**
+   * With `{ rotation: true }`: the float offset within each instance of its spin
+   * pair (angle in radians, then flip scale), always the last two floats. -1 for
+   * a batch without rotation.
+   */
+  readonly spinOffset: number;
+  /** With `{ rotation: true }`: the spin attribute's location (`attributeSizes.length + 1`), else -1. */
+  readonly spinLocation: number;
   /** Uploads the first `count` instances (at most `maxInstances`) from `data` to the GPU. */
   upload(count: number): void;
   /**
@@ -20,6 +28,33 @@ export interface SpriteBatch {
   draw(first: number, count: number, shape?: number): void;
   dispose(): void;
 }
+
+/** Options for `createSpriteBatch`. */
+export interface SpriteBatchOptions {
+  /**
+   * Appends a per-instance `vec2` spin attribute after the caller's ones: in-plane
+   * rotation in radians, then a flip scale applied to the corner's x before the
+   * rotation (the cosine of a tumble angle fakes a piece turning over in 3D). Read
+   * it in the vertex shader with `SPRITE_SPIN_GLSL`. Off by default, so other
+   * batches keep their layout and cost.
+   */
+  rotation?: boolean;
+}
+
+/**
+ * GLSL for `vec2 spinCorner(vec2 corner, vec2 spin)`: scales the corner's x by
+ * `spin.y` (flip), then rotates by `spin.x` radians. For batches created with
+ * `{ rotation: true }`; declare the attribute as
+ * `layout(location = <batch.spinLocation>) in vec2 aSpin;`.
+ */
+export const SPRITE_SPIN_GLSL = /* glsl */ `
+vec2 spinCorner(vec2 corner, vec2 spin) {
+  vec2 c = vec2(corner.x * spin.y, corner.y);
+  float s = sin(spin.x);
+  float k = cos(spin.x);
+  return vec2(c.x * k - c.y * s, c.x * s + c.y * k);
+}
+`;
 
 /** A unit quad, corners at ±1, as a triangle strip. */
 export const QUAD: readonly number[] = [-1, -1, 1, -1, -1, 1, 1, 1];
@@ -49,14 +84,18 @@ export function polygonStrip(sides: number, angle = 0): number[] {
  * `vec2` corners in unit space, attribute location 0; a unit quad by default).
  * `attributeSizes` lists the per-instance attributes, bound to locations 1, 2, ...
  * in order, each with that many float components, interleaved in one buffer.
+ * `options.rotation` appends a two-float spin attribute (see `SpriteBatchOptions`).
  */
 export function createSpriteBatch(
   gl: WebGL2RenderingContext,
   maxInstances: number,
   attributeSizes: readonly number[],
   shapes: readonly (readonly number[])[] = [QUAD],
+  options: SpriteBatchOptions = {},
 ): SpriteBatch {
-  const stride = attributeSizes.reduce((a, b) => a + b, 0);
+  // The spin pair is just one more attribute, so a batch without it is unchanged.
+  const sizes = options.rotation ? [...attributeSizes, 2] : attributeSizes;
+  const stride = sizes.reduce((a, b) => a + b, 0);
   const strideBytes = stride * 4;
   const data = new Float32Array(maxInstances * stride);
   // All shapes share one buffer; a draw picks its range by first vertex.
@@ -86,7 +125,7 @@ export function createSpriteBatch(
   gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
   const offsets: number[] = [];
   let offset = 0;
-  attributeSizes.forEach((size, i) => {
+  sizes.forEach((size, i) => {
     const location = i + 1;
     offsets.push(offset);
     gl.enableVertexAttribArray(location);
@@ -105,6 +144,8 @@ export function createSpriteBatch(
   return {
     data,
     stride,
+    spinOffset: options.rotation ? stride - 2 : -1,
+    spinLocation: options.rotation ? sizes.length : -1,
     upload(count) {
       // Past the buffer's end, bufferSubData raises INVALID_VALUE and uploads nothing.
       const n = Math.floor(Math.min(count, maxInstances));
@@ -123,8 +164,8 @@ export function createSpriteBatch(
         // WebGL2 has no base-instance draw, so offset the instance pointers instead.
         gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
         const base = first * strideBytes;
-        for (let i = 0; i < attributeSizes.length; i++) {
-          const size = attributeSizes[i];
+        for (let i = 0; i < sizes.length; i++) {
+          const size = sizes[i];
           gl.vertexAttribPointer(i + 1, size, gl.FLOAT, false, strideBytes, base + offsets[i]);
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, null);

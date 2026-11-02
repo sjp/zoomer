@@ -17,6 +17,16 @@ import { fireflies } from "./fireflies";
 import { constellation } from "./constellation";
 import { fireplace } from "./fireplace";
 import { clouds } from "./clouds";
+import { blinds } from "./blinds";
+import { frosted } from "./frosted";
+import { city } from "./city";
+import { dunes } from "./dunes";
+import { nebula } from "./nebula";
+import { ink } from "./ink";
+import { reaction } from "./reaction";
+import { terrain } from "./terrain";
+import { leaves } from "./leaves";
+import { horizon } from "./horizon";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -38,6 +48,16 @@ export const effects: readonly EffectDefinition[] = [
   constellation,
   fireplace,
   clouds,
+  blinds,
+  frosted,
+  city,
+  dunes,
+  nebula,
+  ink,
+  reaction,
+  terrain,
+  leaves,
+  horizon,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {

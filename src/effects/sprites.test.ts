@@ -36,6 +36,51 @@ describe("createSpriteBatch", () => {
     const draws = named(calls, "drawArraysInstanced").map((c) => c[3]);
     expect(draws).toEqual([10, 4, 4]);
   });
+
+  it("keeps a batch without rotation exactly as before", () => {
+    const plain = createFakeGl({ record: true });
+    const a = createSpriteBatch(plain.gl, 10, [4, 2]);
+    a.draw(3, 2);
+    const opted = createFakeGl({ record: true });
+    const b = createSpriteBatch(opted.gl, 10, [4, 2], undefined, { rotation: false });
+    b.draw(3, 2);
+    expect(opted.calls).toEqual(plain.calls);
+    expect(a.stride).toBe(6);
+    expect(a.data).toHaveLength(60);
+    expect([a.spinOffset, a.spinLocation]).toEqual([-1, -1]);
+  });
+
+  it("appends a two-float spin attribute with rotation", () => {
+    const { gl, calls } = createFakeGl({ record: true });
+    const batch = createSpriteBatch(gl, 10, [4, 4], undefined, { rotation: true });
+    expect(batch.stride).toBe(10);
+    expect(batch.data).toHaveLength(100);
+    expect(batch.spinOffset).toBe(8);
+    expect(batch.spinLocation).toBe(3);
+    // Location 3: two floats per instance, at byte 32 of a 40-byte stride.
+    const pointers = named(calls, "vertexAttribPointer");
+    expect(pointers.map((p) => [p[0], p[1], p[4], p[5]])).toEqual([
+      [0, 2, 0, 0],
+      [1, 4, 40, 0],
+      [2, 4, 40, 16],
+      [3, 2, 40, 32],
+    ]);
+    expect(named(calls, "vertexAttribDivisor")).toContainEqual([3, 1]);
+
+    // A draw from a later instance re-points the spin attribute with the others.
+    calls.length = 0;
+    batch.draw(5, 2);
+    const moved = named(calls, "vertexAttribPointer");
+    expect(moved.map((p) => [p[0], p[5]])).toEqual([
+      [1, 200],
+      [2, 216],
+      [3, 232],
+    ]);
+
+    calls.length = 0;
+    batch.upload(3);
+    expect(named(calls, "bufferSubData")[0][4]).toBe(30);
+  });
 });
 
 describe("polygonStrip", () => {
