@@ -180,6 +180,13 @@ const LOGS: readonly (readonly [number, number, number, number, number])[] = [
 ];
 
 /**
+ * Hearth profile columns across the frame. The shader interpolates linearly
+ * between them, so 1024 keeps the log end-caps smooth at 4K (3.75 device px per
+ * column at 3840 wide; 512 looked faceted).
+ */
+export const HEARTH_PROFILE_COLUMNS = 1024;
+
+/**
  * Fills `out` with the top of the hearth silhouette (floor plus side-on logs with
  * rounded ends), in reference px above the frame bottom, sampled at the centres of
  * `out.length` columns spanning `refWidth`.

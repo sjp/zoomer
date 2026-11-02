@@ -19,6 +19,7 @@ import {
   type FireLayout,
   fireLayout,
   getPalette,
+  HEARTH_PROFILE_COLUMNS,
   hearthMaxHeight,
   NOISE_PERIOD,
   NOISE_SIZE,
@@ -41,8 +42,6 @@ const RISE_PX = 160;
 /** Noise lattice cells per unit of flame u (half-width) and v (height). */
 const CELLS_U = 4;
 const CELLS_V = 1.8;
-/** Hearth profile columns across the frame. */
-const PROFILE_COLUMNS = 512;
 /** Width of the fire-lit rim on the logs' top edges, in reference px. */
 const RIM_PX = 6;
 
@@ -269,9 +268,9 @@ export const fireplace = defineEffect({
       type: gl.UNSIGNED_BYTE,
       data: rampData,
     });
-    const profileData = new Float32Array(PROFILE_COLUMNS);
+    const profileData = new Float32Array(HEARTH_PROFILE_COLUMNS);
     const profileTex = createDataTexture(gl, {
-      width: PROFILE_COLUMNS,
+      width: HEARTH_PROFILE_COLUMNS,
       height: 1,
       // R16F is filterable in core WebGL2 and accepts FLOAT data.
       internalFormat: gl.R16F,
@@ -348,7 +347,17 @@ export const fireplace = defineEffect({
         buildHearthProfile(profileData, refWidth, layout);
         gl.bindTexture(gl.TEXTURE_2D, profileTex);
         resetUnpackState(gl);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PROFILE_COLUMNS, 1, gl.RED, gl.FLOAT, profileData);
+        gl.texSubImage2D(
+          gl.TEXTURE_2D,
+          0,
+          0,
+          0,
+          HEARTH_PROFILE_COLUMNS,
+          1,
+          gl.RED,
+          gl.FLOAT,
+          profileData,
+        );
         gl.bindTexture(gl.TEXTURE_2D, null);
       }
     };

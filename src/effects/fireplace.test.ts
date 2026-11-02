@@ -9,6 +9,7 @@ import {
   fireLayout,
   FLOOR_H,
   getPalette,
+  HEARTH_PROFILE_COLUMNS,
   hearthMaxHeight,
   PALETTES,
   RAMP_SIZE,
@@ -109,6 +110,26 @@ describe("hearth profile", () => {
 
   it("stays below the flame base so flames show above the logs", () => {
     expect(hearthMaxHeight(layout)).toBeLessThan(layout.baseY + layout.flameH * 0.4);
+  });
+
+  it("has enough columns that the interpolated silhouette stays close at 4K", () => {
+    // 4K at 16:9 is 1920 reference px across 3840 device px.
+    expect(3840 / HEARTH_PROFILE_COLUMNS).toBeLessThanOrEqual(4);
+    // Sample the profile the way the shader does (linear, texel centres) and compare
+    // with a dense build. Error is unavoidable only next to the log ends' vertical
+    // steps, so the total width where it exceeds half a reference px stays small.
+    const n = HEARTH_PROFILE_COLUMNS;
+    const p = buildHearthProfile(new Float32Array(n), 1920, layout);
+    const dense = buildHearthProfile(new Float32Array(16384), 1920, layout);
+    let off = 0;
+    for (let i = 0; i < dense.length; i++) {
+      const c = Math.min(n - 1, Math.max(0, ((i + 0.5) / dense.length) * n - 0.5));
+      const i0 = Math.floor(c);
+      const i1 = Math.min(n - 1, i0 + 1);
+      const v = p[i0] + (p[i1] - p[i0]) * (c - i0);
+      if (Math.abs(v - dense[i]) > 0.5) off++;
+    }
+    expect((off / dense.length) * 1920).toBeLessThan(12);
   });
 });
 
