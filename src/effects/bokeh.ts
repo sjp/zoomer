@@ -10,19 +10,12 @@ import {
 } from "./gl";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
-import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
+import { createLights, type LightFrame } from "./bokeh-sim";
 
 const MAX_LIGHTS = 200;
-/** Off-screen margin before a light wraps, relative to its radius. */
-const SPRITE_PAD = 1.25;
 /** Hexagon apothem relative to the light radius, as the old pre-rendered sprite had. */
 const HEX_APOTHEM = Math.cos(Math.PI / 6) * 1.04;
-/** Reference drift speed in px/s at 1080p for a speed of 1. */
-const DRIFT_PX = 18;
-/** Seconds a light takes to fade in after (re)appearing. */
-const FADE_IN = 2;
-const TAU = Math.PI * 2;
 /**
  * Fill budget: the lights' polygons may cover at most this many screens in
  * total, so large sizes draw fewer lights rather than missing 4K/120 (additive
@@ -208,106 +201,43 @@ export const bokeh = defineEffect({
       const bgBottom = unitRgbMemo();
       const lightColors = [unitRgbMemo(), unitRgbMemo(), unitRgbMemo()];
 
-      // Positions are in reference units (1 = 1080 device-independent pixels).
-      const xs = new Float32Array(MAX_LIGHTS);
-      const ys = new Float32Array(MAX_LIGHTS);
-      /** 0 = far/small, 1 = near/large. */
-      const depth = new Float32Array(MAX_LIGHTS);
-      const hue = new Uint8Array(MAX_LIGHTS);
-      const heading = new Float32Array(MAX_LIGHTS);
-      const turnRate = new Float32Array(MAX_LIGHTS);
-      const turnPhase = new Float32Array(MAX_LIGHTS);
-      const twinkleRate = new Float32Array(MAX_LIGHTS);
-      const twinklePhase = new Float32Array(MAX_LIGHTS);
-      const life = new Float32Array(MAX_LIGHTS);
-
       let width = 1;
       let height = 1;
-      let scale = 1;
       let refWidth = 1920;
-      // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
-      let time = 0;
-      /** Items simulated: the count plus any still fading out after it dropped. */
-      let live = 0;
-
-      for (let i = 0; i < MAX_LIGHTS; i++) {
-        xs[i] = Math.random() * refWidth;
-        ys[i] = Math.random() * 1080;
-        depth[i] = Math.random();
-        hue[i] = i % 3;
-        heading[i] = Math.random() * TAU;
-        turnRate[i] = 0.05 + Math.random() * 0.15;
-        turnPhase[i] = Math.random() * TAU;
-        twinkleRate[i] = 0.3 + Math.random() * 0.9;
-        twinklePhase[i] = Math.random() * TAU;
-      }
+      const lights = createLights(MAX_LIGHTS, refWidth);
+      const f: LightFrame = {
+        refWidth,
+        scale: 1,
+        target: 0,
+        size: 0,
+        sizeVariation: 0,
+        direction: 0,
+        speed: 0,
+        wander: 0,
+        twinkle: 0,
+        brightness: 0,
+      };
 
       return {
         resize(v) {
           const newRefWidth = v.width / v.scale;
-          const k = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_LIGHTS; i++) xs[i] *= k;
-          ({ width, height, scale } = v);
-          refWidth = newRefWidth;
+          lights.rescaleX(newRefWidth / refWidth);
+          ({ width, height } = v);
+          refWidth = f.refWidth = newRefWidth;
+          f.scale = v.scale;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          time += dt;
-
           // Bigger lights draw fewer of them, keeping the blended area within budget.
-          const target = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
-          const n = (live = growLive(life, live, target));
-
-          const dir = (p.direction * Math.PI) / 180;
-          const driftX = Math.cos(dir) * p.speed * DRIFT_PX;
-          const driftY = -Math.sin(dir) * p.speed * DRIFT_PX;
-          const wanderPx = p.wander * DRIFT_PX * 0.9;
-          const spread = p.sizeVariation * 1.1;
-          const fadeStep = dt / FADE_IN;
-          const outStep = dt / FADE_OUT;
-
-          const data = batch.data;
-          const stride = batch.stride;
-          let visible = 0;
-          for (let i = 0; i < n; i++) {
-            const z = depth[i];
-            const e = spread * (z * 2 - 1);
-            const sizeFactor = Math.exp(e);
-            const radius = p.size * sizeFactor;
-            const pace = 0.45 + z * 0.9;
-
-            heading[i] += Math.sin(time * turnRate[i] + turnPhase[i]) * dt * 0.6;
-            let x = xs[i] + (driftX * pace + Math.cos(heading[i]) * wanderPx * pace) * dt;
-            let y = ys[i] + (driftY * pace + Math.sin(heading[i]) * wanderPx * pace) * dt;
-
-            // Wrap once fully off-screen, so the jump is never visible.
-            const margin = radius * SPRITE_PAD;
-            const spanX = refWidth + margin * 2;
-            const spanY = 1080 + margin * 2;
-            if (x < -margin) x += spanX;
-            else if (x > refWidth + margin) x -= spanX;
-            if (y < -margin) y += spanY;
-            else if (y > 1080 + margin) y -= spanY;
-            xs[i] = x;
-            ys[i] = y;
-
-            const l = stepLife(life, i, target, fadeStep, outStep);
-
-            const tw = 0.5 + 0.5 * Math.sin(time * twinkleRate[i] + twinklePhase[i]);
-            const pulse = 1 - p.twinkle * 0.6 * tw;
-            // Nearer, larger discs spread their light wider and look fainter.
-            const alpha = 0.75 * Math.exp(-0.6 * e) * pulse * p.brightness * l * l;
-            if (alpha <= 0.002) continue;
-            const o = visible * stride;
-            data[o] = x * scale;
-            data[o + 1] = y * scale;
-            data[o + 2] = radius * scale;
-            data[o + 3] = Math.min(1, alpha);
-            data[o + 4] = hue[i];
-            visible++;
-          }
-
-          live = trimLive(life, live, target);
+          f.target = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
+          f.size = p.size;
+          f.sizeVariation = p.sizeVariation;
+          f.direction = p.direction;
+          f.speed = p.speed;
+          f.wander = p.wander;
+          f.twinkle = p.twinkle;
+          f.brightness = p.brightness;
+          const visible = lights.step(dt, f, batch.data, batch.stride);
 
           background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
           if (visible === 0) return;
