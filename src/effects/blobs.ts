@@ -8,7 +8,7 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor, type LowResTarget } from "./lowres";
+import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createRng } from "./noise";
 import { defineEffect } from "./types";
 import { growLive, stepLife, trimLive } from "./fade";
@@ -213,6 +213,66 @@ export function keyframeMix(clock: KeyframeClock, interval: number): number {
   return interval > 0 ? Math.min(1, Math.max(0, clock.elapsed / interval)) : 0;
 }
 
+/**
+ * The two cached keyframe targets: which sim time each holds, and which one is
+ * keyframe A (the older one, shown at mix 0).
+ */
+export interface KeyframeTargets {
+  /** Sim time target 0 ("main") and target 1 ("aux") hold; NaN when stale. */
+  readonly held: Float64Array;
+  /** True when target 0 holds keyframe A. */
+  mainIsA: boolean;
+}
+
+export const createKeyframeTargets = (): KeyframeTargets => ({
+  held: new Float64Array([Number.NaN, Number.NaN]),
+  mainIsA: true,
+});
+
+/** Calls `render(target, t)` unless `target` already holds sim time `t`. */
+function renderKeyframe(
+  k: KeyframeTargets,
+  target: 0 | 1,
+  t: number,
+  render: (target: 0 | 1, t: number) => void,
+): void {
+  if (k.held[target] === t) return;
+  render(target, t);
+  k.held[target] = t;
+}
+
+/**
+ * Renders the keyframes this frame needs, after `advanceKeyframes` returned
+ * `due`, with sim time `time` now and `clock.elapsed` wall seconds since A:
+ * - `invalid` (the image changed) marks both targets stale first;
+ * - 2 renders A at `time` into target 0 and B one interval of sim time ahead;
+ * - 1 makes the old B the new A and renders the next B into the old A's target,
+ *   at the sim time it will be shown at (one interval after the old B);
+ * - a speed change moves that time, so B is re-rendered for it (A is shown already).
+ */
+export function updateKeyframes(
+  k: KeyframeTargets,
+  due: 0 | 1 | 2,
+  invalid: boolean,
+  time: number,
+  speed: number,
+  speedChanged: boolean,
+  clock: KeyframeClock,
+  interval: number,
+  render: (target: 0 | 1, t: number) => void,
+): void {
+  if (invalid) k.held.fill(Number.NaN);
+  if (due === 2) {
+    k.mainIsA = true;
+    renderKeyframe(k, 0, time, render);
+    renderKeyframe(k, 1, time + speed * interval, render);
+  } else if (due === 1 || speedChanged) {
+    if (due === 1) k.mainIsA = !k.mainIsA;
+    const lead = speed * (interval - clock.elapsed);
+    renderKeyframe(k, k.mainIsA ? 1 : 0, time + lead, render);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shaders
 
@@ -324,11 +384,7 @@ export const blobs = defineEffect({
       let aspect = 1;
       /** Sim seconds (speed-scaled), float64. */
       let time = 0;
-      /** Sim time each target currently holds; NaN when stale. */
-      let simMain = Number.NaN;
-      let simAux = Number.NaN;
-      /** True when `main` holds keyframe A (the older one). */
-      let mainIsA = true;
+      const keys = createKeyframeTargets();
       let lastAspect = 0;
       let lastPalette = "";
       let lastC1 = "";
@@ -341,16 +397,13 @@ export const blobs = defineEffect({
       let count = 3;
       let softness = 1;
 
-      /** Renders the blob field at sim time `t` into `target`, unless it already holds it. */
-      const renderKey = (target: LowResTarget, t: number): void => {
-        if ((target === mainT ? simMain : simAux) === t) return;
+      /** Renders the blob field at sim time `t` into target 0 (main) or 1 (aux). */
+      const renderKey = (target: 0 | 1, t: number): void => {
         writeBlobUniforms(blobData, count, t, aspect, softness, blobWeight);
         gl.useProgram(program);
         gl.uniform4fv(u.loc.uBlobs, blobData);
-        target.bind();
+        (target === 0 ? mainT : auxT).bind();
         triangle.draw();
-        if (target === mainT) simMain = t;
-        else simAux = t;
       };
 
       return {
@@ -416,31 +469,26 @@ export const blobs = defineEffect({
             u.v3("uBase", hexToLinear(p.background));
             invalid = true;
           }
-          if (invalid) {
-            simMain = Number.NaN;
-            simAux = Number.NaN;
-          }
-
           const due = advanceKeyframes(clock, dt, KEYFRAME_INTERVAL, invalid);
-          if (due === 2) {
-            mainIsA = true;
-            renderKey(mainT, time);
-            renderKey(auxT, time + p.speed * KEYFRAME_INTERVAL);
-          } else if (due === 1 || p.speed !== lastSpeed) {
-            // Old B becomes A; the old A's texture is reused for the next B, rendered at
-            // the sim time it will be shown at (one interval after the old B). A speed
-            // change moves that time, so B is re-rendered for it (A is already shown).
-            if (due === 1) mainIsA = !mainIsA;
-            const lead = p.speed * (KEYFRAME_INTERVAL - clock.elapsed);
-            renderKey(mainIsA ? auxT : mainT, time + lead);
-          }
+          const speedChanged = p.speed !== lastSpeed;
+          updateKeyframes(
+            keys,
+            due,
+            invalid,
+            time,
+            p.speed,
+            speedChanged,
+            clock,
+            KEYFRAME_INTERVAL,
+            renderKey,
+          );
           lastSpeed = p.speed;
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
           // Blit: main on unit 0 (bound by blit), aux on unit 1.
           gl.useProgram(mainT.program);
           const b = keyframeMix(clock, KEYFRAME_INTERVAL);
-          const mix = mainIsA ? b : 1 - b;
+          const mix = keys.mainIsA ? b : 1 - b;
           cu.f1("uMix", mix);
           cu.f1("uGrain", Math.max(0, p.grain) * GRAIN_AMP);
           gl.activeTexture(gl.TEXTURE1);

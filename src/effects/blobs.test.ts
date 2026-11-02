@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createRng } from "./noise";
 import {
   advanceKeyframes,
+  createKeyframeTargets,
+  updateKeyframes,
   BLOB_PATHS,
   blobAt,
   hexToLinear,
@@ -178,5 +181,107 @@ describe("advanceKeyframes", () => {
     expect(c.elapsed).toBe(0.01);
     expect(advanceKeyframes(c, 0.001, 0, false)).toBe(2);
     expect(keyframeMix(c, 0)).toBe(0);
+  });
+});
+
+describe("updateKeyframes", () => {
+  const T = KEYFRAME_INTERVAL;
+
+  /** Runs the clock and targets like `frame`, recording each render. */
+  function harness() {
+    const clock: KeyframeClock = { elapsed: 0 };
+    const keys = createKeyframeTargets();
+    const renders: [0 | 1, number][] = [];
+    let time = 0;
+    let lastSpeed = Number.NaN;
+    return {
+      keys,
+      clock,
+      renders,
+      get time() {
+        return time;
+      },
+      frame(dt: number, speed: number, invalid = false) {
+        time += dt * speed;
+        const due = advanceKeyframes(clock, dt, T, invalid);
+        updateKeyframes(keys, due, invalid, time, speed, speed !== lastSpeed, clock, T, (k, t) =>
+          renders.push([k, t]),
+        );
+        lastSpeed = speed;
+      },
+      /** The sim time the blit shows: A cross-faded towards B. */
+      shown() {
+        const a = keys.held[keys.mainIsA ? 0 : 1];
+        const b = keys.held[keys.mainIsA ? 1 : 0];
+        return a + keyframeMix(clock, T) * (b - a);
+      },
+    };
+  }
+
+  it("renders both keyframes on the first frame, A now and B one interval ahead", () => {
+    const h = harness();
+    h.frame(1 / 60, 0.5, true);
+    expect(h.renders).toEqual([
+      [0, 0.5 / 60],
+      [1, 0.5 / 60 + 0.5 * T],
+    ]);
+    expect(h.keys.mainIsA).toBe(true);
+  });
+
+  it("shows the current sim time at a steady speed, whatever the frame rate", () => {
+    const h = harness();
+    const rng = createRng(9);
+    h.frame(1 / 60, 0.3, true);
+    let worst = 0;
+    for (let i = 0; i < 2000; i++) {
+      // 20 to 240 Hz, with the odd hitch and the odd invalidation.
+      const dt = rng() < 0.01 ? 0.1 : 1 / (20 + 220 * rng());
+      h.frame(dt, 0.3, rng() < 0.01);
+      worst = Math.max(worst, Math.abs(h.shown() - h.time));
+    }
+    expect(worst).toBeLessThan(1e-9);
+  });
+
+  it("renders one keyframe per interval at 120 Hz, alternating targets", () => {
+    const h = harness();
+    h.frame(1 / 120, 1, true);
+    h.renders.length = 0;
+    for (let i = 0; i < 120; i++) h.frame(1 / 120, 1);
+    expect(h.renders.length).toBeGreaterThanOrEqual(29);
+    expect(h.renders.length).toBeLessThanOrEqual(31);
+    for (let i = 1; i < h.renders.length; i++) {
+      expect(h.renders[i][0]).not.toBe(h.renders[i - 1][0]);
+      expect(h.renders[i][1]).toBeCloseTo(h.renders[i - 1][1] + T, 9);
+    }
+  });
+
+  it("re-renders only B for a speed change, and the shown time catches up", () => {
+    const h = harness();
+    h.frame(1 / 120, 1, true);
+    h.frame(1 / 120, 1);
+    h.renders.length = 0;
+    const b = h.keys.mainIsA ? 1 : 0;
+    h.frame(1 / 120, 2);
+    expect(h.renders).toHaveLength(1);
+    expect(h.renders[0][0]).toBe(b);
+    // B now lands where the new speed will have taken the sim at its show time.
+    expect(h.keys.held[b]).toBeCloseTo(h.time + 2 * (T - h.clock.elapsed), 12);
+    // A was rendered at the old speed: the cross-fade lags by at most (2 - 1) * T / 4...
+    expect(Math.abs(h.shown() - h.time)).toBeLessThanOrEqual(T / 4 + 1e-12);
+    // ...until A is replaced, one interval later.
+    for (let i = 0; i < 6; i++) h.frame(1 / 120, 2);
+    expect(Math.abs(h.shown() - h.time)).toBeLessThan(1e-9);
+  });
+
+  it("re-renders both targets after an invalidation, but nothing it already holds", () => {
+    const h = harness();
+    h.frame(1 / 120, 0, true);
+    h.renders.length = 0;
+    // Paused: both keyframes hold the same time, so nothing new is rendered...
+    for (let i = 0; i < 10; i++) h.frame(1 / 120, 0);
+    expect(h.renders).toEqual([]);
+    // ...until the image changes.
+    h.frame(1 / 120, 0, true);
+    expect(h.renders.map((r) => r[0])).toEqual([0, 1]);
   });
 });
