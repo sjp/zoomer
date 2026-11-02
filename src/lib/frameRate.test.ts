@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFrameLimiter } from "./frameRate";
+import { createFrameLimiter, frameDelta, MAX_FRAME_DT } from "./frameRate";
 
 /** Simulates `seconds` of a display at `hz` and counts frames the limiter draws. */
 function countFrames(hz: number, fps: number | undefined, seconds = 10) {
@@ -28,5 +28,23 @@ describe("createFrameLimiter", () => {
     [60, 30],
   ])("caps a %d Hz display to %d fps", (hz, fps) => {
     expect(Math.abs(countFrames(hz, fps) - fps)).toBeLessThan(1);
+  });
+});
+
+describe("frameDelta", () => {
+  it("converts milliseconds to seconds", () => {
+    expect(frameDelta(1016, 1000)).toBeCloseTo(0.016);
+  });
+
+  it("never goes negative when the timestamp precedes the last one", () => {
+    expect(frameDelta(990, 1000)).toBe(0);
+  });
+
+  it("caps long pauses", () => {
+    expect(frameDelta(60_000, 1000)).toBe(MAX_FRAME_DT);
+  });
+
+  it("treats NaN as no time passing", () => {
+    expect(frameDelta(Number.NaN, 1000)).toBe(0);
   });
 });

@@ -452,8 +452,7 @@ export const aurora = defineEffect({
         if (v.width !== width || v.height !== height) sizeDirty = true;
         ({ width, height, scale } = v);
       },
-      frame(rawDt, p) {
-        const dt = rawDt > 0 ? Math.min(rawDt, 0.1) : 0;
+      frame(dt, p) {
         const speed = p.speed;
         pathTime += dt * speed * 0.05;
         driftFine = (driftFine + dt * speed * 0.004) % 1;

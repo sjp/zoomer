@@ -22,3 +22,16 @@ export function createFrameLimiter() {
     return true;
   };
 }
+
+/** Longest step an effect is ever asked to simulate, in seconds. */
+export const MAX_FRAME_DT = 0.1;
+
+/**
+ * Seconds between two frame timestamps (ms), clamped to `[0, MAX_FRAME_DT]`.
+ * The first rAF timestamp can precede the `performance.now()` taken during setup,
+ * and a backgrounded tab can return after a long pause; neither should reach effects.
+ */
+export function frameDelta(now: number, last: number): number {
+  const dt = (now - last) / 1000;
+  return dt > 0 ? Math.min(dt, MAX_FRAME_DT) : 0;
+}

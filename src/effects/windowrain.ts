@@ -474,11 +474,10 @@ export const windowRain = defineEffect({
           gl.useProgram(target.program);
           gl.uniform3fv(compLoc.uFogTint, fogTint);
         }
-        const step = Math.min(dt, 0.1);
-        bgTimer += step;
+        bgTimer += dt;
         const nLights = Math.min(MAX_LIGHTS, p.lights);
         for (let i = 0; i < nLights; i++) {
-          let x = lx[i] + lDrift[i] * DRIFT_PX * step;
+          let x = lx[i] + lDrift[i] * DRIFT_PX * dt;
           if (x < -200) x += refWidth + 400;
           else if (x > refWidth + 200) x -= refWidth + 400;
           lx[i] = x;
@@ -538,8 +537,8 @@ export const windowRain = defineEffect({
           gl.useProgram(fogProgram);
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, src.tex);
-          gl.uniform1f(fogLoc.uAdd, (255 * step) / REFOG_SECONDS);
-          gl.uniform1f(fogLoc.uDiffuse, Math.min(1, step * FOG_DIFFUSE));
+          gl.uniform1f(fogLoc.uAdd, (255 * dt) / REFOG_SECONDS);
+          gl.uniform1f(fogLoc.uDiffuse, Math.min(1, dt * FOG_DIFFUSE));
           gl.uniform1ui(fogLoc.uSeed, hash32(frameNo));
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);

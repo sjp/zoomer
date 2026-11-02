@@ -58,7 +58,7 @@ export interface Viewport {
 
 export interface EffectInstance<V> {
   resize(viewport: Viewport): void;
-  /** Draws one frame. `dt` is seconds since the previous frame. */
+  /** Draws one frame. `dt` is seconds since the previous frame, clamped by the host to [0, 0.1]. */
   frame(dt: number, params: V): void;
   /**
    * Releases resources such as GPU buffers, textures and programs. Called when the

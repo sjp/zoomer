@@ -6,7 +6,7 @@ import {
   type EffectInstance,
   type Viewport,
 } from "../effects/types";
-import { createFrameLimiter, FRAME_RATES, type FrameRate } from "../lib/frameRate";
+import { createFrameLimiter, frameDelta, FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 
 export interface FrameStats {
@@ -139,7 +139,7 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       if (!instance || !shouldDraw(now, FRAME_RATES[frameRateRef.current].fps)) return;
-      const dt = Math.min((now - last) / 1000, 0.1);
+      const dt = frameDelta(now, last);
       last = now;
       const start = performance.now();
       instance.frame(dt, paramsRef.current);

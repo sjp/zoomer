@@ -461,9 +461,7 @@ export const synthwave = defineEffect({
       resize(v) {
         ({ width, height, scale } = v);
       },
-      frame(rawDt, p) {
-        // The loop already clamps dt, but guard against long pauses regardless.
-        const dt = rawDt > 0 ? Math.min(rawDt, 0.1) : 0;
+      frame(dt, p) {
         const cell = p.gridSize;
         scroll = (scroll + dt * p.speed * 1.2) % cell;
         stripePhase = (stripePhase + dt * p.speed * 0.06) % 1;

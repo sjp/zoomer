@@ -376,7 +376,7 @@ export const fireplace = defineEffect({
         built.width = 0;
       },
       frame(dt, p) {
-        const step = Math.min(dt, 0.1) * p.speed;
+        const step = dt * p.speed;
         time += step;
 
         if (
