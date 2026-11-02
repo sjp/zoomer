@@ -6,7 +6,7 @@ import { defaults, encodeHash, stateFromHash } from "./effects/params";
 import { effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
-import { download, recordCanvas } from "./lib/recorder";
+import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
 import { FRAME_RATES, type FrameRate } from "./lib/frameRate";
 import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
@@ -43,6 +43,21 @@ export function App() {
   // A brief message over the canvas; `id` restarts its timer when it repeats.
   const [toast, setToast] = useState<{ message: string; id: number }>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Told about each drawn frame; the WebCodecs recorder captures frames this way.
+  const [frameListeners] = useState(() => new Set<(now: number) => void>());
+  const onFrame = useCallback(
+    (now: number) => {
+      for (const listener of frameListeners) listener(now);
+    },
+    [frameListeners],
+  );
+  const subscribeFrames = useCallback<FrameSubscriber>(
+    (listener) => {
+      frameListeners.add(listener);
+      return () => frameListeners.delete(listener);
+    },
+    [frameListeners],
+  );
   const idle = useIdle(3000);
 
   const effect = getEffect(effectId) ?? effects[0];
@@ -164,6 +179,7 @@ export function App() {
         canvas,
         seconds,
         FRAME_RATES[frameRate].fps ?? 60,
+        subscribeFrames,
       );
       download(blob, `zoomer-${effect.id}-${canvas.width}x${canvas.height}.${extension}`);
     } catch (err) {
@@ -186,6 +202,7 @@ export function App() {
         frameRate={frameRate}
         onStats={statsStore.set}
         onError={setEffectError}
+        onFrame={onFrame}
       />
       <div
         className="panel-wrap"

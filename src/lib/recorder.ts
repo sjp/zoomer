@@ -1,3 +1,7 @@
+import type { FrameSubscriber } from "./mp4-recorder";
+
+export type { FrameSubscriber };
+
 /**
  * H.264 levels from Table A-1 of the spec: the largest frame (in 16×16 macroblocks)
  * and macroblock rate each allows, with its `avc1` level byte. Levels below 4.0 are
@@ -61,19 +65,53 @@ export interface Recording {
 }
 
 /**
- * Records the canvas for `seconds` using MediaRecorder. The stop deadline is a
- * `setTimeout`, which browsers throttle in background tabs, so a clip recorded while
- * the tab is hidden can run long; the UI asks the user to keep the tab visible.
+ * Records the canvas for `seconds`, as MP4 where possible. Uses MediaRecorder when it
+ * can write MP4 (Chrome, Edge, Safari); otherwise, given `frames` (which reports each
+ * drawn frame), encodes MP4 through WebCodecs (Firefox); otherwise MediaRecorder WebM.
  */
 export function recordCanvas(
   canvas: HTMLCanvasElement,
   seconds: number,
   fps = 30,
+  frames?: FrameSubscriber,
 ): Promise<Recording> {
   const { width, height } = canvas;
-  const mimeType = candidateTypes(width, height, fps).find((t) => MediaRecorder.isTypeSupported(t));
-  if (!mimeType) return Promise.reject(new Error("This browser cannot record video."));
+  const supported = candidateTypes(width, height, fps).filter(
+    (t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t),
+  );
+  const mediaRecorderType = supported[0];
+  if (
+    mediaRecorderType?.startsWith("video/mp4") ||
+    !frames ||
+    typeof VideoEncoder === "undefined"
+  ) {
+    return mediaRecorderType
+      ? recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType)
+      : Promise.reject(new Error("This browser cannot record video."));
+  }
+  return (async () => {
+    const { canRecordMp4, recordMp4 } = await import("./mp4-recorder");
+    const opts = { seconds, fps, bitrate: videoBitrate(width, height) };
+    if (await canRecordMp4(width, height, opts)) {
+      return { blob: await recordMp4(canvas, opts, frames), extension: "mp4" as const };
+    }
+    if (!mediaRecorderType) throw new Error("This browser cannot record video.");
+    return recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType);
+  })();
+}
 
+/**
+ * Records the canvas for `seconds` using MediaRecorder. The stop deadline is a
+ * `setTimeout`, which browsers throttle in background tabs, so a clip recorded while
+ * the tab is hidden can run long; the UI asks the user to keep the tab visible.
+ */
+function recordWithMediaRecorder(
+  canvas: HTMLCanvasElement,
+  seconds: number,
+  fps: number,
+  mimeType: string,
+): Promise<Recording> {
+  const { width, height } = canvas;
   return new Promise((resolve, reject) => {
     let stream: MediaStream | undefined;
     let recorder: MediaRecorder | undefined;

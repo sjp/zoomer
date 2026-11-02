@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { avcLevel, candidateTypes, recordCanvas, videoBitrate } from "./recorder";
 
+const mp4 = vi.hoisted(() => ({
+  canRecordMp4: vi.fn<() => Promise<boolean>>(),
+  recordMp4: vi.fn<(...args: unknown[]) => Promise<Blob>>(),
+}));
+vi.mock("./mp4-recorder", () => mp4);
+
 describe("avcLevel", () => {
   it.each([
     [1280, 720, 60, "28"],
@@ -157,6 +163,52 @@ describe("recordCanvas", () => {
     );
     await expect(recordCanvas(canvas, 5)).rejects.toThrow("NotSupportedError");
     expect(track.stop).toHaveBeenCalled();
+  });
+
+  describe("with a frame source", () => {
+    const frames = () => () => {};
+
+    beforeEach(() => {
+      vi.stubGlobal("VideoEncoder", class {});
+      mp4.canRecordMp4.mockResolvedValue(true);
+      mp4.recordMp4.mockResolvedValue(new Blob(["mp4"]));
+    });
+
+    it("prefers MediaRecorder when it can write MP4", async () => {
+      const { canvas } = fakeCanvas();
+      vi.stubGlobal(
+        "MediaRecorder",
+        class extends FakeRecorder {
+          static isTypeSupported = () => true;
+        },
+      );
+      const result = recordCanvas(canvas, 5, 30, frames);
+      expect(FakeRecorder.last.options.mimeType).toMatch(/^video\/mp4/);
+      vi.advanceTimersByTime(5000);
+      expect((await result).extension).toBe("mp4");
+      expect(mp4.recordMp4).not.toHaveBeenCalled();
+    });
+
+    it("encodes MP4 with WebCodecs when MediaRecorder only writes WebM", async () => {
+      const { canvas } = fakeCanvas();
+      const { blob, extension } = await recordCanvas(canvas, 5, 30, frames);
+      expect(extension).toBe("mp4");
+      expect(blob.size).toBe(3);
+      expect(mp4.recordMp4).toHaveBeenCalledWith(
+        canvas,
+        { seconds: 5, fps: 30, bitrate: 12_000_000 },
+        frames,
+      );
+    });
+
+    it("falls back to WebM when WebCodecs cannot encode H.264", async () => {
+      mp4.canRecordMp4.mockResolvedValue(false);
+      const { canvas } = fakeCanvas();
+      const result = recordCanvas(canvas, 5, 30, frames);
+      await vi.waitFor(() => expect(vi.getTimerCount()).toBe(1));
+      vi.advanceTimersByTime(5000);
+      expect((await result).extension).toBe("webm");
+    });
   });
 
   it("rejects when no format is supported", async () => {

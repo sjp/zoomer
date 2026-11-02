@@ -40,6 +40,11 @@ interface Props {
    * `undefined` when a new effect starts.
    */
   onError?: (message: string | undefined) => void;
+  /**
+   * Called with the rAF time right after each frame is drawn, while the drawing buffer
+   * still holds it (the clip recorder copies it from here).
+   */
+  onFrame?: (now: number) => void;
   ref?: Ref<HTMLCanvasElement>;
 }
 
@@ -102,6 +107,7 @@ export function EffectCanvas({
   frameRate,
   onStats,
   onError,
+  onFrame,
   ref,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -122,6 +128,10 @@ export function EffectCanvas({
   useEffect(() => {
     onErrorRef.current = onError;
   }, [onError]);
+  const onFrameRef = useRef(onFrame);
+  useEffect(() => {
+    onFrameRef.current = onFrame;
+  }, [onFrame]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -264,6 +274,7 @@ export function EffectCanvas({
       }
       gpuTimer?.end();
       statsWork += performance.now() - start;
+      onFrameRef.current?.(now);
       statsFrames++;
       const elapsed = now - statsStart;
       if (elapsed >= STATS_INTERVAL) {

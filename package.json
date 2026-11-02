@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "mediabunny": "^1.61.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

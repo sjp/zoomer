@@ -34,8 +34,9 @@ without input. It has:
 - **Resolution**: fit the window (capped at 1080p), or a fixed 720p, 1080p or 4K canvas;
 - **Frame rate**: match the display, or cap at 60 or 30 fps, with a live fps and frame-time
   meter;
-- **Record clip**: records 10–60 s of the canvas and downloads it as MP4 (H.264) where the
-  browser supports it, otherwise WebM. Keep the tab visible while recording; the effect and
+- **Record clip**: records 10–60 s of the canvas and downloads it as MP4 (H.264): through
+  MediaRecorder where it supports MP4, otherwise through WebCodecs (e.g. Firefox), and as
+  WebM only if neither can encode H.264. Keep the tab visible while recording; the effect and
   resolution are locked until it finishes;
 - **Fullscreen** and **Hide**.
 
