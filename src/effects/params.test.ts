@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { coerce, decodeHash, encodeHash, parseValues, snap } from "./params";
 import { effects } from "./registry";
-import type { ParamSchema } from "./types";
+import type { ParamDef, ParamSchema } from "./types";
 
 const schema = {
   speed: { kind: "number", label: "Speed", min: 0, max: 10, step: 0.1, default: 3 },
@@ -76,17 +76,56 @@ describe("hash round trip", () => {
 });
 
 describe("registry", () => {
-  it("has unique ids and valid defaults", () => {
+  it("has unique ids", () => {
     const ids = effects.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
-    const numbers = effects.flatMap((e) =>
-      Object.values(e.params).filter((def) => def.kind === "number"),
+  });
+
+  it.each(effects.map((e) => [e.id, e] as const))(
+    "%s has a name, description and params",
+    (_, e) => {
+      expect(e.id).toMatch(/^[a-z][a-z0-9-]*$/);
+      expect(e.name.trim()).not.toBe("");
+      expect(e.description.trim()).not.toBe("");
+      expect(Object.keys(e.params).length).toBeGreaterThan(0);
+    },
+  );
+
+  const params = effects.flatMap((e) =>
+    Object.entries(e.params).map(([key, def]): [string, ParamDef] => [`${e.id}.${key}`, def]),
+  );
+  const ofKind = <K extends ParamDef["kind"]>(kind: K) =>
+    params.flatMap(([where, def]): [string, Extract<ParamDef, { kind: K }>][] =>
+      def.kind === kind ? [[where, def as Extract<ParamDef, { kind: K }>]] : [],
     );
-    for (const def of numbers) {
-      expect(def.default).toBeGreaterThanOrEqual(def.min);
-      expect(def.default).toBeLessThanOrEqual(def.max);
-      // On the step grid, so a default survives a URL round trip unchanged.
-      expect(coerce(def, String(def.default))).toBe(def.default);
-    }
+
+  it.each(params)("%s has a label", (_, def) => {
+    expect(def.label.trim()).not.toBe("");
+  });
+
+  it.each(ofKind("number"))("%s has a valid range with the default on its grid", (_, def) => {
+    expect(def.min).toBeLessThan(def.max);
+    expect(def.step).toBeGreaterThan(0);
+    expect(def.default).toBeGreaterThanOrEqual(def.min);
+    expect(def.default).toBeLessThanOrEqual(def.max);
+    // On the step grid, so a default survives a URL round trip unchanged.
+    expect(snap(def, def.default)).toBe(def.default);
+    expect(coerce(def, String(def.default))).toBe(def.default);
+  });
+
+  it.each(ofKind("color"))("%s defaults to a lower-case six-digit hex colour", (_, def) => {
+    expect(def.default).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it.each(ofKind("select"))("%s defaults to one of its distinct, labelled options", (_, def) => {
+    const values = def.options.map((o) => o.value);
+    expect(values.length).toBeGreaterThan(0);
+    expect(new Set(values).size).toBe(values.length);
+    expect(values).toContain(def.default);
+    expect(def.options.every((o) => o.label.trim() !== "")).toBe(true);
+  });
+
+  it.each(ofKind("boolean"))("%s defaults to a boolean", (_, def) => {
+    expect(typeof def.default).toBe("boolean");
   });
 });
