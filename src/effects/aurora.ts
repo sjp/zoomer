@@ -22,7 +22,9 @@ import { defineEffect } from "./types";
  * along x lives in 1D tables.
  *
  * - Path table (PATH_COLS x 2, RGBA16F, rebuilt on the CPU each frame): row 0
- *   holds each band's base height, row 1 its brightness along x.
+ *   holds each band's wave offset from its base height (the bases are a uniform,
+ *   so the small offsets keep half-float precision and the edges move sub-pixel),
+ *   row 1 its brightness along x.
  * - Ray table (RAY_COLS x 1, RGBA16F, static, REPEAT): ridged periodic noise, one
  *   pattern per channel. Sampled twice at different scales and drift speeds.
  * - Horizon table (about width / 2 x 1, RG16F, rebuilt on resize): silhouette
@@ -42,10 +44,10 @@ export const TWINKLE_PERIOD = 600;
 const TAU = Math.PI * 2;
 
 /** Base height (fraction of canvas height from the bottom) and gain of each band. */
-const BAND_BASE = [0.44, 0.6, 0.3] as const;
+export const BAND_BASE = [0.44, 0.6, 0.3] as const;
 const BAND_GAIN = [1.6, 1.2, 1] as const;
 /** How far each band's path wanders up and down, in canvas heights. */
-const PATH_AMPLITUDE = 0.09;
+export const PATH_AMPLITUDE = 0.09;
 /** Distances (canvas heights) over which a curtain halves in brightness, up and down. */
 const HALF_UP = 0.09;
 const HALF_DOWN = 0.012;
@@ -64,10 +66,12 @@ const smooth01 = (x: number) => {
 
 /**
  * Fills `out` (cols * 2 * 4 floats, i.e. two RGBA rows) with the per-column curtain
- * table at `time`. Row 0: base height of bands 0..2 as a fraction of canvas height
- * from the bottom. Row 1: brightness of bands 0..2 along x, in 0.25..1. Column i
- * covers x = (i + 0.5) / cols of the canvas width; `aspect` is width / height so
- * that the noise is not stretched on wide screens. Alpha channels are 0.
+ * table at `time`. Row 0: offset of bands 0..2 from their `BAND_BASE` heights, as
+ * a fraction of canvas height (within +-PATH_AMPLITUDE); absolute heights near 0.6
+ * would only get half-float steps of about 1 px at 2160p. Row 1: brightness of
+ * bands 0..2 along x, in 0.25..1. Column i covers x = (i + 0.5) / cols of the
+ * canvas width; `aspect` is width / height so that the noise is not stretched on
+ * wide screens. Alpha channels are 0.
  */
 export function buildPathTable(
   out: Float32Array,
@@ -85,7 +89,7 @@ export function buildPathTable(
       const wave =
         0.72 * noise.noise2(x * 0.85 + s, time + s) +
         0.28 * noise.noise2(x * 2.4 - s, time * 1.7 + 40 + s);
-      out[o + b] = BAND_BASE[b] + PATH_AMPLITUDE * wave;
+      out[o + b] = PATH_AMPLITUDE * wave;
       out[row1 + o + b] =
         0.25 + 0.75 * smooth01(0.55 + 0.9 * noise.noise2(x * 0.6 + 90 + s, time * 0.4));
     }
@@ -230,8 +234,10 @@ precision highp float;
 precision highp sampler2D;
 
 uniform vec2 uResolution;
-/** Row 0: band base heights; row 1: band brightness. Linear, clamped. */
+/** Row 0: band height offsets from uBandBase; row 1: band brightness. Linear, clamped. */
 uniform sampler2D uPath;
+/** Base height of each band, as a fraction of canvas height from the bottom. */
+uniform vec3 uBandBase;
 /** Ridged ray noise, one pattern per channel. Linear, repeating. */
 uniform sampler2D uRays;
 /** Silhouette height (fraction of canvas height) and slope (px/px). */
@@ -274,7 +280,7 @@ void main() {
 
   vec3 col = mix(uSkyBottom, uSkyTop, y);
 
-  vec3 base = textureLod(uPath, vec2(u, 0.25), 0.0).rgb;
+  vec3 base = uBandBase + textureLod(uPath, vec2(u, 0.25), 0.0).rgb;
   vec3 amp = textureLod(uPath, vec2(u, 0.75), 0.0).rgb * uGain;
   float xh = frag.x / uResolution.y;
   vec3 fine = textureLod(uRays, vec2(xh * ${glslFloat(RAY_SCALE_FINE)} + uRayDrift.x, 0.5), 0.0).rgb;
@@ -366,6 +372,7 @@ export const aurora = defineEffect({
       const u = createUniforms(gl, program, [
         "uResolution",
         "uPath",
+        "uBandBase",
         "uRays",
         "uHorizon",
         "uRayDrift",
@@ -381,6 +388,7 @@ export const aurora = defineEffect({
       ]);
       gl.useProgram(program);
       u.i1("uPath", 0);
+      u.f3("uBandBase", BAND_BASE[0], BAND_BASE[1], BAND_BASE[2]);
       u.i1("uRays", 1);
       u.i1("uHorizon", 2);
       u.f2("uFalloff", 1 / HALF_UP, 1 / HALF_DOWN);

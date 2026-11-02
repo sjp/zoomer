@@ -3,9 +3,11 @@ import {
   buildHorizonTable,
   buildPathTable,
   buildRayTable,
+  BAND_BASE,
   buildStars,
   horizonMax,
   MAX_STARS,
+  PATH_AMPLITUDE,
   PATH_COLS,
   STAR_STRIDE,
   TWINKLE_PERIOD,
@@ -20,8 +22,10 @@ describe("buildPathTable", () => {
   it("keeps band bases on screen and brightness in 0.25..1", () => {
     for (let i = 0; i < PATH_COLS; i++) {
       for (let b = 0; b < 3; b++) {
-        const y = out[i * 4 + b];
+        const offset = out[i * 4 + b];
+        const y = BAND_BASE[b] + offset;
         const a = out[PATH_COLS * 4 + i * 4 + b];
+        expect(Math.abs(offset)).toBeLessThanOrEqual(PATH_AMPLITUDE);
         expect(y).toBeGreaterThan(0.15);
         expect(y).toBeLessThan(0.8);
         expect(a).toBeGreaterThanOrEqual(0.25);
