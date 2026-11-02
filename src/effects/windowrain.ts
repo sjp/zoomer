@@ -25,6 +25,7 @@ import {
   writeDropInstances,
 } from "./windowrain-sim";
 import { wrap } from "./math";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
 const MAX_LIGHTS = 150;
@@ -323,6 +324,10 @@ export const windowRain = defineEffect({
       const lMix = new Float32Array(MAX_LIGHTS);
       const lBright = new Float32Array(MAX_LIGHTS);
       const lDrift = new Float32Array(MAX_LIGHTS);
+      /** Count fade (see `fade.ts`): lights added or removed by the count fade in or out. */
+      const lLife = new Float32Array(MAX_LIGHTS);
+      /** Lights drawn: the count plus any still fading out; NaN before the first frame. */
+      let liveLights = Number.NaN;
       let refWidth = 1920;
       for (let i = 0; i < MAX_LIGHTS; i++) {
         lx[i] = rng() * refWidth;
@@ -420,10 +425,9 @@ export const windowRain = defineEffect({
         return !keep;
       };
 
-      const drawBackground = (lights: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
+      const drawBackground = (n: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
         target.bind();
         gradient.draw(top, back);
-        const n = Math.min(MAX_LIGHTS, Math.max(0, Math.round(lights)));
         if (n === 0) return;
         const data = lightBatch.data;
         const stride = lightBatch.stride;
@@ -435,7 +439,7 @@ export const windowRain = defineEffect({
           data[o] = lx[i] * scale;
           data[o + 1] = ly[i] * scale;
           data[o + 2] = baseR * lSize[i];
-          data[o + 3] = lBright[i] * dim;
+          data[o + 3] = lBright[i] * dim * lLife[i];
           data[o + 4] = lMix[i];
         }
         lightBatch.upload(n);
@@ -486,27 +490,41 @@ export const windowRain = defineEffect({
             compU.v3("uFogTint", fogTint);
           }
           bgTimer += dt;
-          const nLights = Math.min(MAX_LIGHTS, p.lights);
+          const lightTarget = Math.min(MAX_LIGHTS, Math.max(0, Math.round(p.lights)));
+          if (Number.isNaN(liveLights)) {
+            // The first frame shows the lights rather than fading them all in.
+            lLife.fill(1);
+            liveLights = lightTarget;
+          }
+          const nLights = (liveLights = growLive(lLife, liveLights, lightTarget));
+          const lightStep = dt / FADE_OUT;
+          let lightsFading = false;
           for (let i = 0; i < nLights; i++) {
             lx[i] = wrap(lx[i] + lDrift[i] * DRIFT_PX * dt, -200, refWidth + 400);
+            const before = lLife[i];
+            if (stepLife(lLife, i, lightTarget, lightStep, lightStep) !== before) {
+              lightsFading = true;
+            }
           }
+          liveLights = trimLive(lLife, liveLights, lightTarget);
           if (
             bgTimer >= 1 / BG_RATE ||
             prevW !== target.width ||
             prevH !== target.height ||
-            bgLights !== p.lights ||
+            lightsFading ||
+            bgLights !== nLights ||
             bgBlur !== p.blur ||
             bgC1 !== c1 ||
             bgC2 !== c2 ||
             bgBack !== back
           ) {
             bgTimer = 0;
-            bgLights = p.lights;
+            bgLights = nLights;
             bgBlur = p.blur;
             bgC1 = c1;
             bgC2 = c2;
             bgBack = back;
-            drawBackground(p.lights, p.blur, c1, c2, back);
+            drawBackground(nLights, p.blur, c1, c2, back);
           }
 
           // 2. Drop map.
