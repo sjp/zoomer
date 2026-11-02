@@ -1,4 +1,4 @@
-import { hexToUnitRgb, unitRgbMemo } from "./color";
+import { hexToUnitRgb, type Rgb, unitRgbMemo } from "./color";
 import {
   advancePhases,
   bubbleX,
@@ -283,7 +283,11 @@ export const caustics = defineEffect({
       const batch = scope.own(createSpriteBatch(gl, MAX_BUBBLES, [3, 1], [polygonStrip(8)]));
       const bubbles = createBubbleState(MAX_BUBBLES);
       const bubbleColor = unitRgbMemo();
-      const bubbleSet = { width: 0, height: 0, color: null as unknown };
+      const bubbleSet: { width: number; height: number; color: Rgb | undefined } = {
+        width: 0,
+        height: 0,
+        color: undefined,
+      };
       let prevBubbles = 0;
 
       let width = 1;
