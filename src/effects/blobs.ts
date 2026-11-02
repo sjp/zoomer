@@ -140,8 +140,9 @@ export function blobAt(
 }
 
 /**
- * Fills the `uBlobs` uniform array (MAX_BLOBS vec4s): centre x, y; k = log2(e) / r², so
- * the shader's `exp2(-d² k)` is the Gaussian `exp(-d²/r²)`; and weight (0 for unused).
+ * Fills the first `count` entries of the `uBlobs` uniform array (MAX_BLOBS vec3s):
+ * centre x, y and k = log2(e) / r², so the shader's `exp2(-d² k)` is the Gaussian
+ * `exp(-d²/r²)`. Later entries are left as they are: the shader stops at `uCount`.
  */
 export function writeBlobUniforms(
   out: Float32Array,
@@ -150,16 +151,12 @@ export function writeBlobUniforms(
   aspect: number,
   softness: number,
 ): void {
-  for (let i = 0; i < MAX_BLOBS; i++) {
-    const o = i * 4;
-    if (i >= count) {
-      out[o] = out[o + 1] = out[o + 2] = out[o + 3] = 0;
-      continue;
-    }
+  const n = Math.min(count, MAX_BLOBS);
+  for (let i = 0; i < n; i++) {
+    const o = i * 3;
     blobAt(BLOB_PATHS[i], t, aspect, softness, out, o);
     const r = Math.max(1e-3, out[o + 2]);
     out[o + 2] = Math.LOG2E / (r * r);
-    out[o + 3] = 1;
   }
 }
 
@@ -216,8 +213,8 @@ precision highp float;
 precision highp int;
 /** Low-res pixel to frame-height units: (aspect / width, 1 / height). */
 uniform vec2 uToUnits;
-/** x, y, k = log2(e) / r^2, weight. */
-uniform vec4 uBlobs[${MAX_BLOBS}];
+/** x, y, k = log2(e) / r^2; only the first uCount are set. */
+uniform vec3 uBlobs[${MAX_BLOBS}];
 /** Linear-light blob colours. */
 uniform vec3 uColors[${MAX_BLOBS}];
 uniform vec3 uBase;
@@ -234,9 +231,9 @@ void main() {
   float wsum = BASE_WEIGHT;
   for (int i = 0; i < MAX_BLOBS; i++) {
     if (i >= uCount) break;
-    vec4 b = uBlobs[i];
+    vec3 b = uBlobs[i];
     vec2 d = p - b.xy;
-    float w = b.w * exp2(-dot(d, d) * b.z);
+    float w = exp2(-dot(d, d) * b.z);
     sum += uColors[i] * w;
     wsum += w;
   }
@@ -303,7 +300,7 @@ export const blobs = defineEffect({
       gl.useProgram(mainT.program);
       gl.uniform1i(cLoc.uAux, 1);
 
-      const blobData = new Float32Array(MAX_BLOBS * 4);
+      const blobData = new Float32Array(MAX_BLOBS * 3);
       const colorData = new Float32Array(MAX_BLOBS * 3);
       const custom = ["", "", "", ""];
       const clock: KeyframeClock = { elapsed: 0 };
@@ -339,7 +336,7 @@ export const blobs = defineEffect({
         if ((target === mainT ? simMain : simAux) === t) return;
         writeBlobUniforms(blobData, count, t, aspect, softness);
         gl.useProgram(program);
-        gl.uniform4fv(loc.uBlobs, blobData);
+        gl.uniform3fv(loc.uBlobs, blobData);
         target.bind();
         triangle.draw();
         if (target === mainT) simMain = t;
