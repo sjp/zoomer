@@ -16,33 +16,33 @@ import { createChangeKey } from "./change-key";
 import { growLive, stepLife, trimLive } from "./fade";
 import { defineEffect } from "./types";
 
-const MAX_BLOBS = 20;
+export const MAX_BLOBS = 20;
 const TAU = Math.PI * 2;
 /** Seconds a blob takes to grow in or shrink away when the count changes. */
 const BLOB_FADE = 1.2;
 /** Base blob radius as a fraction of the frame height, for a size of 1. */
-const BASE_RADIUS = 0.085;
+export const BASE_RADIUS = 0.085;
 /**
  * The field is evaluated in "lamp units": the frame is REF_H units tall, matching the
  * old CPU renderer's default (medium) buffer, so EPS and the look carry over unchanged.
  */
-const REF_H = 360;
+export const REF_H = 360;
 /** Widest aspect ratio the lamp stretches to; wider frames stretch it horizontally. */
-const MAX_ASPECT = 4;
+export const MAX_ASPECT = 4;
 /** Field value of the blob surface. */
 const THRESHOLD = 1;
 /** Softens the 1/d² singularity at blob centres, in lamp units squared. */
-const EPS = 0.5;
+export const EPS = 0.5;
 
 /** Bound on the pool ripple: |sin a + 0.6 sin b| <= 1.6. */
-const POOL_WOB = 1.6;
+export const POOL_WOB = 1.6;
 /**
  * Side of the square pixel tiles the field is bounded over, as a power of two.
  * 16 px tiles are whole GPU warps/wavefronts (8x4 or 8x8), so the per-tile
  * shortcut in the main pass never diverges within one.
  */
-const TILE_SHIFT = 4;
-const TILE = 1 << TILE_SHIFT;
+export const TILE_SHIFT = 4;
+export const TILE = 1 << TILE_SHIFT;
 /** Mask texel values (R8): the tile is all background, or all saturated wax core. */
 const MASK_BG = 1;
 const MASK_CORE = 0.5;
@@ -200,7 +200,7 @@ void main() {
 const wrapPhase = (a: number) => ((a % TAU) + TAU) % TAU;
 
 /** Per-blob constants, drawn once per seed. Angular rates are in radians per lamp second. */
-interface Blob {
+export interface Blob {
   /** Resting horizontal position, 0..1 across the usable width. */
   baseX: number;
   /** Size multiplier. */
@@ -219,7 +219,7 @@ interface Blob {
   pr: number;
 }
 
-const makeBlobs = (seed: number): Blob[] => {
+export const makeBlobs = (seed: number): Blob[] => {
   const rng = createRng(seed * 7717 + 29);
   const start = rng();
   const blobs: Blob[] = [];
@@ -244,12 +244,51 @@ const makeBlobs = (seed: number): Blob[] => {
 };
 
 /** Vertical position (0 top, 1 bottom) of a blob at lamp time t. */
-const blobY = (b: Blob, t: number) => {
+export const blobY = (b: Blob, t: number) => {
   // Odd cubic of a sine: quicker through the middle, lingering at the hot
   // bottom and the cool top like wax waiting to heat or cool.
   const s = Math.sin(t * b.rise + b.risePhase);
   return 0.5 + b.riseAmp * s * (1.25 - 0.25 * s * s);
 };
+
+/**
+ * Packs the first `n` blobs at lamp time `t` into the shader's uniforms (see
+ * `uBlobs` and `uBlobR2`): per blob, `(q, c)` with the offset from its centre
+ * `d = p * q + c`, and its radius squared scaled by `life` (its count fade).
+ * `baseR` and `lampW` are in lamp units.
+ */
+export function fillBlobs(
+  data: Float32Array,
+  r2: Float32Array,
+  blobs: readonly Blob[],
+  n: number,
+  t: number,
+  baseR: number,
+  lampW: number,
+  life: Float32Array,
+): void {
+  for (let i = 0; i < n; i++) {
+    const b = blobs[i];
+    const r = baseR * b.size * (1 + 0.12 * Math.sin(t * b.wr + b.pr));
+    // Stay inside the frame horizontally; vertical travel may poke past the edges.
+    const wander = 0.09 * Math.sin(t * b.w1 + b.p1) + 0.04 * Math.sin(t * b.w2 + b.p2);
+    const margin = Math.min(r, lampW / 2);
+    const vel = Math.abs(blobY(b, t + 0.25) - blobY(b, t - 0.25)) * 2;
+    const cx = margin + (b.baseX + wander) * (lampW - 2 * margin);
+    const cy = blobY(b, t) * REF_H;
+    // Moving wax stretches along its travel, keeping its area: the term is
+    // r² / (dx² s + dy² / s + EPS), i.e. offsets pre-scaled by (√s, 1/√s).
+    const qx = Math.sqrt(1 + Math.min(0.35, vel * 4));
+    const qy = 1 / qx;
+    const o = i * 4;
+    data[o] = qx;
+    data[o + 1] = qy;
+    data[o + 2] = -cx * qx;
+    data[o + 3] = -cy * qy;
+    // Shrinking r² with the fade grows or shrinks the blob from or to nothing.
+    r2[i] = r * r * life[i];
+  }
+}
 
 /**
  * A lava lamp, drawn by a WebGL2 fragment shader: a metaball field (sum of r²/d²)
@@ -404,28 +443,7 @@ export const lavalamp = defineEffect({
           blobInputs.set(4, p.seed);
           const blobsChanged = blobInputs.take();
           if (blobsChanged) blobVersion++;
-          for (let i = 0; blobsChanged && i < n; i++) {
-            const b = blobs[i];
-            const r = baseR * b.size * (1 + 0.12 * Math.sin(time * b.wr + b.pr));
-            // Stay inside the frame horizontally; vertical travel may poke past the edges.
-            const wander =
-              0.09 * Math.sin(time * b.w1 + b.p1) + 0.04 * Math.sin(time * b.w2 + b.p2);
-            const margin = Math.min(r, lampW / 2);
-            const vel = Math.abs(blobY(b, time + 0.25) - blobY(b, time - 0.25)) * 2;
-            const cx = margin + (b.baseX + wander) * (lampW - 2 * margin);
-            const cy = blobY(b, time) * REF_H;
-            // Moving wax stretches along its travel, keeping its area: the term is
-            // r² / (dx² s + dy² / s + EPS), i.e. offsets pre-scaled by (√s, 1/√s).
-            const qx = Math.sqrt(1 + Math.min(0.35, vel * 4));
-            const qy = 1 / qx;
-            const o = i * 4;
-            blobData[o] = qx;
-            blobData[o + 1] = qy;
-            blobData[o + 2] = -cx * qx;
-            blobData[o + 3] = -cy * qy;
-            // Shrinking r² with the fade grows or shrinks the blob from or to nothing.
-            blobR2[i] = r * r * blobLife[i];
-          }
+          if (blobsChanged) fillBlobs(blobData, blobR2, blobs, n, time, baseR, lampW, blobLife);
 
           // Tile classification pass, into the mask texture.
           const tw = (width + TILE - 1) >> TILE_SHIFT;
