@@ -1,4 +1,12 @@
-import { beginFrame, createProgram, DITHER_GLSL, getUniforms, glslFloat, withScope } from "./gl";
+import {
+  beginFrame,
+  createProgram,
+  DITHER_GLSL,
+  getUniforms,
+  glslFloat,
+  TO_CLIP_GLSL,
+  withScope,
+} from "./gl";
 import { createNoise } from "./noise";
 import {
   createGradientBackground,
@@ -135,11 +143,12 @@ layout(location = 2) in vec3 aColor;
 uniform vec2 uResolution;
 out vec2 vLocal;
 flat out vec3 vColor;
+${TO_CLIP_GLSL}
 void main() {
   vec2 px = aSpeck.xy + aCorner * aSpeck.z;
   vLocal = aCorner;
   vColor = aColor;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 
@@ -172,13 +181,14 @@ layout(location = 2) in vec3 aSpan;
 uniform vec2 uResolution;
 out vec2 vBeam;
 flat out float vIntensity;
+${TO_CLIP_GLSL}
 void main() {
   float v = aCorner.y * 0.5 + 0.5;
   float y = mix(aSpan.x, aSpan.y, v);
   float x = aShape.x + aShape.y * y + aCorner.x * aShape.z;
   vBeam = vec2(aCorner.x, v);
   vIntensity = aSpan.z;
-  gl_Position = vec4(x / uResolution.x * 2.0 - 1.0, 1.0 - y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(vec2(x, y), uResolution);
 }
 `;
 

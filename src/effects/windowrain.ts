@@ -6,6 +6,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
+  TO_CLIP_GLSL,
   withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
@@ -59,12 +60,13 @@ uniform vec2 uResolution;
 out vec2 vLocal;
 flat out float vAlpha;
 flat out float vMix;
+${TO_CLIP_GLSL}
 void main() {
   vec2 px = aLight.xy + aCorner * aLight.z;
   vLocal = aCorner;
   vAlpha = aLight.w;
   vMix = aMix;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 
@@ -102,6 +104,7 @@ out vec2 vLocal;
 /** Offset from the centre in reference px, y up. */
 out vec2 vRel;
 flat out float vFade;
+${TO_CLIP_GLSL}
 void main() {
   float s = aDrop.w;
   vec2 radii = aDrop.z * uGrow * vec2(inversesqrt(s), s);
@@ -112,7 +115,7 @@ void main() {
   vLocal = offset / radii * vec2(1.0, -1.0);
   vRel = offset * uInvScale * vec2(1.0, -1.0);
   vFade = aFade;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

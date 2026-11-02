@@ -17,6 +17,17 @@ void main() {
 `;
 
 /**
+ * GLSL for `vec4 pxToClip(vec2 px, vec2 resolution)`: a position in device pixels
+ * (origin at the top-left, y down, as on a 2D canvas) to clip space, for vertex
+ * shaders that place geometry in canvas pixels.
+ */
+export const TO_CLIP_GLSL = /* glsl */ `
+vec4 pxToClip(vec2 px, vec2 resolution) {
+  return vec4(px.x / resolution.x * 2.0 - 1.0, 1.0 - px.y / resolution.y * 2.0, 0.0, 1.0);
+}
+`;
+
+/**
  * GLSL for `float dither8(vec2 fragCoord)`: a static, per-pixel offset of up to
  * +-0.5 LSB of an 8-bit channel (interleaved gradient noise, Jimenez 2014). Add it
  * to a colour just before the write, so wide, shallow gradients don't band into

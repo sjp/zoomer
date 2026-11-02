@@ -6,6 +6,7 @@ import {
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
+  TO_CLIP_GLSL,
   withScope,
 } from "./gl";
 import { createNoise, createRng } from "./noise";
@@ -52,6 +53,7 @@ uniform vec2 uResolution;
 out vec2 vLocal;
 flat out float vAlpha;
 flat out float vSoftness;
+${TO_CLIP_GLSL}
 void main() {
   // Grow the quad by a pixel so the anti-aliased edge of tiny flakes is never clipped.
   vec2 ext = aRect.zw + 1.0;
@@ -60,7 +62,7 @@ void main() {
   vLocal = aCorner * pad * ext / aRect.zw;
   vAlpha = aLook.x;
   vSoftness = aLook.y;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

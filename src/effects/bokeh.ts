@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, glslFloat, withScope } from "./gl";
+import { beginFrame, createProgram, getUniforms, glslFloat, TO_CLIP_GLSL, withScope } from "./gl";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
@@ -32,6 +32,7 @@ uniform float uExtent;
 out vec2 vLocal;
 flat out vec3 vColor;
 flat out float vAlpha;
+${TO_CLIP_GLSL}
 void main() {
   // Grow by a pixel so the anti-aliased edge of tiny lights is never clipped.
   float ext = aLight.z * uExtent + 1.0;
@@ -40,7 +41,7 @@ void main() {
   vLocal = aCorner * (ext / aLight.z);
   vColor = uColors[int(aHue + 0.5)];
   vAlpha = aLight.w;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

@@ -21,6 +21,7 @@ import {
   getUniforms,
   glslFloat,
   resetUnpackState,
+  TO_CLIP_GLSL,
   withScope,
 } from "./gl";
 import { createRng } from "./noise";
@@ -148,13 +149,14 @@ layout(location = 2) in float aAlpha;
 uniform vec2 uResolution;
 out vec2 vLocal;
 flat out float vAlpha;
+${TO_CLIP_GLSL}
 void main() {
   // One extra pixel so the anti-aliased rim is never clipped.
   float ext = aCircle.z + 1.0;
   vec2 px = aCircle.xy + aCorner * ext;
   vLocal = aCorner * ext / aCircle.z;
   vAlpha = aAlpha;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

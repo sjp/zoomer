@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, withScope } from "./gl";
+import { beginFrame, createProgram, getUniforms, TO_CLIP_GLSL, withScope } from "./gl";
 import { createRng } from "./noise";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
@@ -191,6 +191,7 @@ uniform vec2 uResolution;
 out vec2 vLocal;
 flat out float vRadius;
 flat out float vAlpha;
+${TO_CLIP_GLSL}
 void main() {
   // Dots under a pixel are drawn a pixel wide at proportionally lower opacity.
   float r = max(aPoint.z, 0.6);
@@ -199,7 +200,7 @@ void main() {
   vRadius = r;
   vAlpha = aPoint.w * (aPoint.z * aPoint.z) / (r * r);
   vec2 px = aPoint.xy + vLocal;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

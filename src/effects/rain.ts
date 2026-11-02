@@ -1,5 +1,12 @@
 import { hexToRgb, mixRgb, type Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, resetUnpackState, withScope } from "./gl";
+import {
+  beginFrame,
+  createProgram,
+  getUniforms,
+  resetUnpackState,
+  TO_CLIP_GLSL,
+  withScope,
+} from "./gl";
 import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 
@@ -35,6 +42,7 @@ flat out float vCol;
 flat out float vHead;
 flat out float vRate;
 flat out float vSeed;
+${TO_CLIP_GLSL}
 void main() {
   vec2 c = aCorner * 0.5 + 0.5;
   vec2 px = vec2((aDrop.x + c.x) * uCell, mix(aRows.x, aRows.y, c.y) * uCell);
@@ -42,7 +50,7 @@ void main() {
   vHead = aDrop.y;
   vRate = aDrop.z;
   vSeed = aDrop.w;
-  gl_Position = vec4(px.x / uResolution.x * 2.0 - 1.0, 1.0 - px.y / uResolution.y * 2.0, 0.0, 1.0);
+  gl_Position = pxToClip(px, uResolution);
 }
 `;
 

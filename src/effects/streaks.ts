@@ -1,5 +1,5 @@
 import { hexToUnitRgb, type Rgb } from "./color";
-import { createProgram, getUniforms, type Scope, withScope } from "./gl";
+import { createProgram, getUniforms, type Scope, TO_CLIP_GLSL, withScope } from "./gl";
 
 /**
  * Instanced WebGL2 renderer for round-capped line segments ("streaks"), shared by
@@ -25,10 +25,7 @@ out vec2 vLocal;
 flat out float vRadius;
 flat out vec3 vColor;
 
-vec4 toClip(vec2 p) {
-  return vec4(p.x / uResolution.x * 2.0 - 1.0, 1.0 - p.y / uResolution.y * 2.0, 0.0, 1.0);
-}
-`;
+${TO_CLIP_GLSL}`;
 
 /** Single capsule per instance. */
 const VERTEX = /* glsl */ `${VERTEX_HEADER}
@@ -50,7 +47,7 @@ void main() {
   vLength = len;
   vRadius = r;
   vColor = aStyle.rgb * (aStyle.w / r);
-  gl_Position = toClip(a + dir * u + nrm * v);
+  gl_Position = pxToClip(a + dir * u + nrm * v, uResolution);
 }
 `;
 
@@ -114,7 +111,7 @@ void main() {
   vOffset = offset;
   vRadius = r;
   vColor = aStyle.rgb * (aStyle.w / r);
-  gl_Position = toClip(a + dir * u + nrm * v);
+  gl_Position = pxToClip(a + dir * u + nrm * v, uResolution);
 }
 `;
 
