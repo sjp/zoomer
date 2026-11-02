@@ -546,6 +546,10 @@ export const windowRain = defineEffect({
               gl.disable(gl.BLEND);
             }
             fogTex = dst.texture;
+          } else if (fogTargets.length > 0) {
+            // Free the fog targets while fog is off: they are re-created fully fogged anyway.
+            for (const t of fogTargets) t.dispose();
+            fogTargets = [];
           }
           fogWasOn = p.fog;
 
