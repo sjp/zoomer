@@ -99,6 +99,17 @@ export function App() {
     [effect, recording],
   );
 
+  // A panel hidden under the pointer gets pointer-events: none, so pointerleave may never
+  // fire; clear the hover flag here or the cursor would never idle out.
+  const togglePanel = useCallback(() => {
+    setPanelHidden((h) => !h);
+    setHoveringPanel(false);
+  }, []);
+  const hidePanel = useCallback(() => {
+    setPanelHidden(true);
+    setHoveringPanel(false);
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void document.documentElement.requestFullscreen();
@@ -107,14 +118,14 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) return;
-      if (e.key === "h" || e.key === "H") setPanelHidden((h) => !h);
+      if (e.key === "h" || e.key === "H") togglePanel();
       else if (e.key === "f" || e.key === "F") toggleFullscreen();
       else if (e.key === "ArrowRight") step(1);
       else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, toggleFullscreen]);
+  }, [step, togglePanel, toggleFullscreen]);
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
@@ -177,7 +188,7 @@ export function App() {
             onFrameRateChange={setFrameRate}
             onRecord={(s) => void record(s)}
             onFullscreen={toggleFullscreen}
-            onHide={() => setPanelHidden(true)}
+            onHide={hidePanel}
           />
         </PanelErrorBoundary>
       </div>
