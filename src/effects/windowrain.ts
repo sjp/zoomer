@@ -189,6 +189,10 @@ void main() {
 }
 `;
 
+const LIGHT_LEN = Math.hypot(-0.45, 0.55, 0.7);
+/** Direction towards the specular highlight's light (unit length). */
+const LIGHT_DIR = [-0.45 / LIGHT_LEN, 0.55 / LIGHT_LEN, 0.7 / LIGHT_LEN] as const;
+
 /**
  * Full-res composite (the low-res target's blit): one drop-map fetch, one
  * background fetch at the refracted position, plus one fog fetch when enabled.
@@ -200,7 +204,8 @@ uniform sampler2D uFog;
 uniform vec2 uOffsetScale;
 uniform float uFogOn;
 uniform vec3 uFogTint;
-const vec3 LIGHT_DIR = vec3(${glslFloat(-0.45)}, ${glslFloat(0.55)}, ${glslFloat(0.7)});
+/** Unit vector towards the specular light, normalised in JS. */
+const vec3 LIGHT_DIR = vec3(${glslFloat(LIGHT_DIR[0])}, ${glslFloat(LIGHT_DIR[1])}, ${glslFloat(LIGHT_DIR[2])});
 vec4 composite(vec2 uv) {
   vec4 d = texture(uDrops, uv);
   vec2 dir = (d.xy - ${glslFloat(ENC_MID)}) * ${glslFloat(1 / ENC_SCALE)};
@@ -216,7 +221,7 @@ vec4 composite(vec2 uv) {
   // Normal from the dome: the offset points away from the surface direction.
   float len2 = dot(dir, dir);
   vec2 nxy = len2 > 1e-6 ? -dir * inversesqrt(len2) * sqrt(max(1.0 - h * h, 0.0)) : vec2(0.0);
-  float spec = pow(max(dot(vec3(nxy, h), normalize(LIGHT_DIR)), 0.0), 40.0) * cov;
+  float spec = pow(max(dot(vec3(nxy, h), LIGHT_DIR), 0.0), 40.0) * cov;
   float rim = cov * (1.0 - smoothstep(0.0, 0.45, h));
   col = col * (1.0 - 0.55 * rim) + spec * 0.7;
   return vec4(col, 1.0);
