@@ -1,4 +1,4 @@
-import { hexToUnitRgb } from "./color";
+import { hexToUnitRgb, unitRgbMemo } from "./color";
 import {
   advancePhases,
   bubbleX,
@@ -24,7 +24,7 @@ import {
   withScope,
 } from "./gl";
 import { createRng } from "./noise";
-import { createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
+import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect, type ParamSchema, type ParamValues } from "./types";
 import { wrap } from "./math";
 

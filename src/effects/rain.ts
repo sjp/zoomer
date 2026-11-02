@@ -1,4 +1,4 @@
-import { hexToRgb, mixRgb, type Rgb } from "./color";
+import { mixRgb, unitRgbMemo } from "./color";
 import {
   beginFrame,
   createProgram,
@@ -105,8 +105,6 @@ void main() {
 }
 `;
 
-const unit = (c: Rgb): Rgb => [c[0] / 255, c[1] / 255, c[2] / 255];
-
 /** Falling columns of glyphs that fade behind a bright leading character. */
 export const rain = defineEffect({
   id: "rain",
@@ -135,6 +133,8 @@ export const rain = defineEffect({
   context: "webgl2",
   create(gl) {
     return withScope((scope) => {
+      const backgroundRgb = unitRgbMemo();
+      const colorRgb = unitRgbMemo();
       const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
       const loc = getUniforms(gl, program, [
         "uResolution",
@@ -296,10 +296,10 @@ export const rain = defineEffect({
             }
           }
 
-          const bg = hexToRgb(p.background);
-          const color = hexToRgb(p.color);
+          const bg = backgroundRgb(p.background);
+          const color = colorRgb(p.color);
 
-          gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
+          gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
           if (n === 0) return;
 
@@ -316,9 +316,9 @@ export const rain = defineEffect({
           gl.uniform1f(loc.uHeight, height);
           gl.uniform1f(loc.uDecay, decay);
           gl.uniform1i(loc.uBrightHead, p.brightHead ? 1 : 0);
-          gl.uniform3fv(loc.uBackground, unit(bg));
-          gl.uniform3fv(loc.uBody, unit(color));
-          gl.uniform3fv(loc.uHeadColor, unit(mixRgb(color, [255, 255, 255], 0.8)));
+          gl.uniform3fv(loc.uBackground, bg);
+          gl.uniform3fv(loc.uBody, color);
+          gl.uniform3fv(loc.uHeadColor, mixRgb(color, [1, 1, 1], 0.8));
           batch.draw(0, n);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },

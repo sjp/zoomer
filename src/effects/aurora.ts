@@ -1,4 +1,4 @@
-import { hexToUnitRgb, type Rgb } from "./color";
+import { hexToUnitRgb, type Rgb, unitRgbMemo } from "./color";
 import {
   beginFrame,
   createDataTexture,
@@ -11,7 +11,7 @@ import {
   withScope,
 } from "./gl";
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
-import { createSpriteBatch, unitRgbMemo } from "./sprites";
+import { createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 
 /*

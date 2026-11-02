@@ -1,10 +1,11 @@
 import type { Rgb } from "./color";
 import { beginFrame, createProgram, getUniforms, TO_CLIP_GLSL, withScope } from "./gl";
 import { createRng } from "./noise";
-import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
-import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
+import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
+import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 import { wrap } from "./math";
+import { unitRgbMemo } from "./color";
 
 const MAX_POINTS = 400;
 /** Most links drawn per frame; beyond this, the rest are dropped. */
@@ -267,7 +268,7 @@ export const constellation = defineEffect({
       const bgTop = unitRgbMemo();
       const bgBottom = unitRgbMemo();
       const pointRgb = unitRgbMemo();
-      const lineRgb = createRgbCache();
+      const lineRgb = unitRgbMemo();
       // Last uploaded uniform inputs (colours are memoised references).
       let pointSetColor: Rgb | null = null;
       let pointSetW = 0;

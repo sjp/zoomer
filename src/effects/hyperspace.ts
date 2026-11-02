@@ -7,9 +7,10 @@ import {
   getUniforms,
   withScope,
 } from "./gl";
-import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
+import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 import { smoothstep } from "./math";
+import { unitRgbMemo } from "./color";
 
 const MAX_STREAKS = 3000;
 
@@ -112,9 +113,9 @@ export const hyperspace = defineEffect({
         "uGlowRadius",
         "uFlash",
       ]);
-      const streakRgb = createRgbCache();
-      const glowRgb = createRgbCache();
-      const backgroundRgb = createRgbCache();
+      const streakRgb = unitRgbMemo();
+      const glowRgb = unitRgbMemo();
+      const backgroundRgb = unitRgbMemo();
 
       /** Unit direction of each streak; fixed for its lifetime. */
       const dirX = new Float32Array(MAX_STREAKS);

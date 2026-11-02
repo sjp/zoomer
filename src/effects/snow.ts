@@ -1,4 +1,4 @@
-import { hexToRgb, mixRgb, type Rgb } from "./color";
+import { hexToRgb, mixRgb, type Rgb, unitRgbMemo } from "./color";
 import {
   beginFrame,
   createFullscreenTriangle,
@@ -10,7 +10,7 @@ import {
   withScope,
 } from "./gl";
 import { createNoise, createRng } from "./noise";
-import { createGradientBackground, createSpriteBatch, unitRgbMemo } from "./sprites";
+import { createGradientBackground, createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 
 const MAX_FLAKES = 1500;

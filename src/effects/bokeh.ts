@@ -1,7 +1,8 @@
 import type { Rgb } from "./color";
 import { beginFrame, createProgram, getUniforms, glslFloat, TO_CLIP_GLSL, withScope } from "./gl";
-import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
+import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
+import { unitRgbMemo } from "./color";
 
 const MAX_LIGHTS = 200;
 /** Off-screen margin before a light wraps, relative to its radius. */

@@ -32,8 +32,9 @@ import {
 } from "./fireplace-model";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createNoise, createRng } from "./noise";
-import { createSpriteBatch, unitRgbMemo } from "./sprites";
+import { createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
+import { unitRgbMemo } from "./color";
 
 /** Low-res divisors: fire is soft, so even "high" renders below full resolution. */
 const DIVISORS = { high: 1.5, balanced: 2, low: 3 } as const;

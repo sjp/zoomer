@@ -1,7 +1,8 @@
 import type { Rgb } from "./color";
 import { beginFrame, withScope } from "./gl";
-import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
+import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
+import { unitRgbMemo } from "./color";
 
 const MAX_STARS = 4000;
 
@@ -42,9 +43,9 @@ export const warp = defineEffect({
   create(gl) {
     return withScope((scope) => {
       const streaks = scope.own(createStreakRenderer(gl, MAX_STARS, { chromatic: true }));
-      const starRgb = createRgbCache();
-      const tintRgb = createRgbCache();
-      const backgroundRgb = createRgbCache();
+      const starRgb = unitRgbMemo();
+      const tintRgb = unitRgbMemo();
+      const backgroundRgb = unitRgbMemo();
       const zoom: Rgb = [1, 1, 1];
       const data = streaks.data;
       const xs = new Float32Array(MAX_STARS);

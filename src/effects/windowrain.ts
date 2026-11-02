@@ -11,7 +11,7 @@ import {
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createRng, hash32, HASH32_GLSL } from "./noise";
-import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
+import { createGradientBackground, createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
 import {
   createRainSim,
@@ -22,6 +22,7 @@ import {
   writeDropInstances,
 } from "./windowrain-sim";
 import { wrap } from "./math";
+import { unitRgbMemo } from "./color";
 
 const MAX_LIGHTS = 150;
 /** Background divisors: the background is heavily defocused, so it can be very low-res. */

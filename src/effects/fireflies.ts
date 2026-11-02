@@ -8,15 +8,10 @@ import {
   withScope,
 } from "./gl";
 import { createNoise, createRng } from "./noise";
-import {
-  createGradientBackground,
-  createSpriteBatch,
-  polygonStrip,
-  QUAD,
-  unitRgbMemo,
-} from "./sprites";
+import { createGradientBackground, createSpriteBatch, polygonStrip, QUAD } from "./sprites";
 import { defineEffect } from "./types";
 import { smoothstep, wrap } from "./math";
+import { unitRgbMemo } from "./color";
 
 const MAX_SPECKS = 300;
 export const MAX_BEAMS = 3;

@@ -1,4 +1,4 @@
-import { hexToUnitRgb, type Rgb } from "./color";
+import type { Rgb } from "./color";
 import { createProgram, getUniforms, type Scope, TO_CLIP_GLSL, withScope } from "./gl";
 
 /**
@@ -237,18 +237,5 @@ function buildStreakRenderer(
       gl.bindVertexArray(null);
     },
     dispose: () => scope.dispose(),
-  };
-}
-
-/** Memoised `hexToUnitRgb` for one colour param: re-parses only when the string changes. */
-export function createRgbCache(): (hex: string) => Rgb {
-  let last: string | undefined;
-  let rgb: Rgb = [0, 0, 0];
-  return (hex) => {
-    if (hex !== last) {
-      last = hex;
-      rgb = hexToUnitRgb(hex);
-    }
-    return rgb;
   };
 }

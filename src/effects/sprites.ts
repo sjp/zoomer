@@ -3,7 +3,7 @@
  * batch whose per-instance data is filled on the CPU each frame, and a vertical
  * two-colour gradient background pass.
  */
-import { hexToUnitRgb, type Rgb } from "./color";
+import type { Rgb } from "./color";
 import {
   createFullscreenTriangle,
   createProgram,
@@ -206,21 +206,5 @@ function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): Grad
       triangle.draw();
     },
     dispose: () => scope.dispose(),
-  };
-}
-
-/**
- * `hexToUnitRgb`, remembering the last colour so a steady parameter costs no
- * parsing or allocation per frame. The returned array must not be modified.
- */
-export function unitRgbMemo(): (hex: string) => Rgb {
-  let lastHex: string | undefined;
-  let lastRgb: Rgb = [0, 0, 0];
-  return (hex) => {
-    if (hex !== lastHex) {
-      lastHex = hex;
-      lastRgb = hexToUnitRgb(hex);
-    }
-    return lastRgb;
   };
 }

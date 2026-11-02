@@ -20,3 +20,20 @@ export function hexToUnitRgb(hex: string): Rgb {
   const [r, g, b] = hexToRgb(hex);
   return [r / 255, g / 255, b / 255];
 }
+
+/**
+ * `hexToUnitRgb` for one colour param, remembering the last colour so a steady
+ * value costs no parsing or allocation per frame: re-parses only when the string
+ * changes. The returned array must not be modified.
+ */
+export function unitRgbMemo(): (hex: string) => Rgb {
+  let lastHex: string | undefined;
+  let lastRgb: Rgb = [0, 0, 0];
+  return (hex) => {
+    if (hex !== lastHex) {
+      lastHex = hex;
+      lastRgb = hexToUnitRgb(hex);
+    }
+    return lastRgb;
+  };
+}
