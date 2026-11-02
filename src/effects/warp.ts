@@ -1,13 +1,11 @@
 import type { Rgb } from "./color";
 import { beginFrame, withScope } from "./gl";
-import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
+import { createStreakRenderer } from "./streaks";
 import { defineEffect } from "./types";
-import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
+import { createStarfield, type StarFrame } from "./warp-sim";
 
 const MAX_STARS = 4000;
-/** Seconds a star added by a higher count takes to fade in. */
-const FADE_IN = 0.8;
 
 /**
  * Classic 3D starfield: stars stream past the camera and stretch into streaks.
@@ -50,89 +48,39 @@ export const warp = defineEffect({
       const tintRgb = unitRgbMemo();
       const backgroundRgb = unitRgbMemo();
       const zoom: Rgb = [1, 1, 1];
-      const data = streaks.data;
-      const xs = new Float32Array(MAX_STARS);
-      const ys = new Float32Array(MAX_STARS);
-      const zs = new Float32Array(MAX_STARS);
-      const mix = new Float32Array(MAX_STARS);
-      const life = new Float32Array(MAX_STARS);
-      /** Stars simulated: the count plus any still fading out after it dropped. */
-      let live = 0;
+      const stars = createStarfield(MAX_STARS);
+      const f: StarFrame = {
+        width: 1,
+        height: 1,
+        scale: 1,
+        speed: 0,
+        count: 0,
+        streak: 0,
+        size: 0,
+        tintAmount: 0,
+        star: [1, 1, 1],
+        tint: [1, 1, 1],
+      };
       let width = 1;
       let height = 1;
-      let scale = 1;
-
-      const spawn = (i: number, z: number) => {
-        xs[i] = Math.random() * 2 - 1;
-        ys[i] = Math.random() * 2 - 1;
-        zs[i] = z;
-        mix[i] = Math.random();
-      };
-      for (let i = 0; i < MAX_STARS; i++) spawn(i, Math.random());
 
       return {
         resize(v) {
-          ({ width, height, scale } = v);
+          ({ width, height } = v);
+          f.width = v.width;
+          f.height = v.height;
+          f.scale = v.scale;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          const cx = width / 2;
-          const cy = height / 2;
-          const focal = Math.max(width, height) / 2;
-          const dz = p.speed * dt * 0.25;
-          const tail = p.streak * p.speed * 0.03;
-          const star = starRgb(p.starColor);
-          const tint = tintRgb(p.tint);
-          const sr = star[0];
-          const sg = star[1];
-          const sb = star[2];
-          const tr = tint[0];
-          const tg = tint[1];
-          const tb = tint[2];
-          const margin = 50 * scale;
-          const sizePx = p.size * scale;
-
-          const target = Math.min(Math.floor(p.count), MAX_STARS);
-          const n = (live = growLive(life, live, target));
-          const fadeStep = dt / FADE_IN;
-          const outStep = dt / FADE_OUT;
-          let count = 0;
-          for (let i = 0; i < n; i++) {
-            let z = zs[i] - dz;
-            if (z <= 0.01) {
-              spawn(i, 1);
-              z = 1;
-            }
-            zs[i] = z;
-            // Added stars appear mid-flight, so they fade in rather than pop.
-            const l = stepLife(life, i, target, fadeStep, outStep);
-
-            const x = xs[i];
-            const y = ys[i];
-            const fz = focal / z;
-            const hx = cx + x * fz;
-            const hy = cy + y * fz;
-            if (hx < -margin || hx > width + margin || hy < -margin || hy > height + margin) {
-              spawn(i, 1);
-              continue;
-            }
-            const fzt = focal / (z + tail);
-            const depth = 1 - z;
-            const alpha = Math.min(1, depth * 1.6) * l;
-            if (alpha <= 0) continue;
-            const t = mix[i] * p.tintAmount;
-            const o = count * STREAK_FLOATS;
-            data[o] = cx + x * fzt;
-            data[o + 1] = cy + y * fzt;
-            data[o + 2] = hx;
-            data[o + 3] = hy;
-            data[o + 4] = (sr + (tr - sr) * t) * alpha;
-            data[o + 5] = (sg + (tg - sg) * t) * alpha;
-            data[o + 6] = (sb + (tb - sb) * t) * alpha;
-            data[o + 7] = Math.max(0.5, sizePx * (0.2 + depth)) / 2;
-            count++;
-          }
-          live = trimLive(life, live, target);
+          f.speed = p.speed;
+          f.count = p.count;
+          f.streak = p.streak;
+          f.size = p.size;
+          f.tintAmount = p.tintAmount;
+          f.star = starRgb(p.starColor);
+          f.tint = tintRgb(p.tint);
+          const count = stars.step(dt, f, streaks.data);
 
           const bg = backgroundRgb(p.background);
           gl.clearColor(bg[0], bg[1], bg[2], 1);
