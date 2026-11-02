@@ -9,10 +9,13 @@ import {
 } from "./gl";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { smoothstep } from "./math";
 import { unitRgbMemo } from "./color";
 
 const MAX_STREAKS = 3000;
+/** Seconds a streak added by a higher count takes to fade in. */
+const FADE_IN = 0.8;
 /**
  * Fill budget: the streaks' quads may cover at most this many screens in total
  * at full jump, so wide streaks draw fewer of them rather than missing 4K/120.
@@ -152,6 +155,9 @@ export const hyperspace = defineEffect({
       const dist = new Float32Array(MAX_STREAKS);
       const pace = new Float32Array(MAX_STREAKS);
       const mix = new Float32Array(MAX_STREAKS);
+      const life = new Float32Array(MAX_STREAKS);
+      /** Streaks simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
       let width = 1;
       let height = 1;
       let scale = 1;
@@ -220,7 +226,10 @@ export const hyperspace = defineEffect({
           const halfWidth = (scale * p.width) / 2;
           const velocity = p.speed * (0.04 + jump);
           // Wider, longer streaks draw fewer of them, keeping the blended area within budget.
-          const n = hyperspaceStreakCount(p.count, p.width, p.stretch, width / scale);
+          const wanted = hyperspaceStreakCount(p.count, p.width, p.stretch, width / scale);
+          const n = (live = growLive(life, live, wanted));
+          const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
           for (let i = 0; i < n; i++) {
             let d = dist[i] + dt * velocity * pace[i] * (0.1 + dist[i]);
             if (d > 1.1) {
@@ -232,7 +241,8 @@ export const hyperspace = defineEffect({
             const t = Math.max(0, d - len);
             const dx = dirX[i] * radius;
             const dy = dirY[i] * radius;
-            const alpha = Math.min(1, d * 3) * keep;
+            // Added streaks appear mid-flight, so they fade in rather than pop.
+            const alpha = Math.min(1, d * 3) * keep * stepLife(life, i, wanted, fadeStep, outStep);
             const m = mix[i] * 0.5;
             const o = i * STREAK_FLOATS;
             data[o] = cx + dx * t;
@@ -244,6 +254,7 @@ export const hyperspace = defineEffect({
             data[o + 6] = (sb + (gb - sb) * m) * alpha;
             data[o + 7] = halfWidth * (0.3 + d * 1.2);
           }
+          live = trimLive(life, live, wanted);
 
           const bg = backgroundRgb(p.background);
           const glowAlpha = Math.max(0, p.glow) * (0.15 + 0.5 * jump);
