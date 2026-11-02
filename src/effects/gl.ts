@@ -4,7 +4,7 @@
  * full-screen triangle and gradient background, shared GLSL snippets, and data
  * textures, lookup tables and render targets.
  */
-import type { Rgb } from "./color";
+import { hexToUnitRgb, type Rgb } from "./color";
 
 /**
  * Vertex shader for `createFullscreenTriangle`. Passes `vUv` (0..1 across the
@@ -223,6 +223,106 @@ export function getUniforms<const N extends string>(
   return out;
 }
 
+/**
+ * A program's uniforms, each remembering the last value sent, so a setter called
+ * every frame with an unchanged value costs a few comparisons and no GL call.
+ * Uniforms are per-program state, and each effect owns its programs, so the cache
+ * stays valid. Call the setters with the program bound: dev builds assert that
+ * it is whenever a value is actually uploaded.
+ *
+ * Use one kind of setter per uniform. `loc` is for arrays and matrices, which
+ * are uploaded directly (and so are not tracked).
+ */
+export interface Uniforms<N extends string> {
+  readonly program: WebGLProgram;
+  readonly loc: Readonly<Record<N, WebGLUniformLocation | null>>;
+  f1(name: N, x: number): void;
+  f2(name: N, x: number, y: number): void;
+  f3(name: N, x: number, y: number, z: number): void;
+  f4(name: N, x: number, y: number, z: number, w: number): void;
+  /** A `vec3` from the first three entries of `v`, e.g. an `Rgb`. */
+  v3(name: N, v: ArrayLike<number>): void;
+  /** A `vec3` colour (0..1) from a hex string, parsed once per distinct string. */
+  rgb(name: N, hex: string): void;
+  /** An `int`, `bool` or sampler unit. */
+  i1(name: N, x: number): void;
+  /** A `uint`. */
+  u1(name: N, x: number): void;
+}
+
+/**
+ * Looks up `names` in `program` and wraps them in change-tracked setters (see
+ * `Uniforms`). Values are compared as given, not rounded to float32. Allocates
+ * nothing per call, except when `rgb` parses a new colour string.
+ */
+export function createUniforms<const N extends string>(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  names: readonly N[],
+): Uniforms<N> {
+  const loc = getUniforms(gl, program, names);
+  const index = {} as Record<N, number>;
+  names.forEach((name, i) => (index[name] = i));
+  /** Four values per uniform; NaN never compares equal, so the first set always uploads. */
+  const last = new Float64Array(names.length * 4).fill(Number.NaN);
+  const lastHex: (string | undefined)[] = names.map(() => undefined);
+
+  /**
+   * Records the value and returns true if it changed (unused components are 0),
+   * meaning the caller should upload it.
+   */
+  function changed(name: N, x: number, y: number, z: number, w: number): boolean {
+    const i = index[name];
+    const o = i * 4;
+    if (last[o] === x && last[o + 1] === y && last[o + 2] === z && last[o + 3] === w) return false;
+    if (
+      import.meta.env.DEV &&
+      gl.getParameter(gl.CURRENT_PROGRAM) !== program &&
+      !gl.isContextLost()
+    ) {
+      throw new Error(`createUniforms: ${name} set while another program is bound`);
+    }
+    last[o] = x;
+    last[o + 1] = y;
+    last[o + 2] = z;
+    last[o + 3] = w;
+    lastHex[i] = undefined;
+    return true;
+  }
+
+  const f3 = (name: N, x: number, y: number, z: number) => {
+    if (changed(name, x, y, z, 0)) gl.uniform3f(loc[name], x, y, z);
+  };
+  return {
+    program,
+    loc,
+    f1(name, x) {
+      if (changed(name, x, 0, 0, 0)) gl.uniform1f(loc[name], x);
+    },
+    f2(name, x, y) {
+      if (changed(name, x, y, 0, 0)) gl.uniform2f(loc[name], x, y);
+    },
+    f3,
+    f4(name, x, y, z, w) {
+      if (changed(name, x, y, z, w)) gl.uniform4f(loc[name], x, y, z, w);
+    },
+    v3: (name, v) => f3(name, v[0], v[1], v[2]),
+    rgb(name, hex) {
+      const i = index[name];
+      if (lastHex[i] === hex) return;
+      const [r, g, b] = hexToUnitRgb(hex);
+      f3(name, r, g, b);
+      lastHex[i] = hex;
+    },
+    i1(name, x) {
+      if (changed(name, x, 0, 0, 0)) gl.uniform1i(loc[name], x);
+    },
+    u1(name, x) {
+      if (changed(name, x, 0, 0, 0)) gl.uniform1ui(loc[name], x);
+    },
+  };
+}
+
 export interface FullscreenTriangle {
   /** Binds the triangle's vertex array and draws it. */
   draw(): void;
@@ -292,10 +392,7 @@ function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): Grad
     gl.deleteProgram(p),
   );
   const triangle = scope.own(createFullscreenTriangle(gl));
-  const loc = getUniforms(gl, program, ["uTop", "uBottom"]);
-  // Uniforms are per-program state, and this program is ours alone: set on change only.
-  // A plain array: values are compared as given, not rounded to float32.
-  const last: number[] = Array.from({ length: 6 }, () => Number.NaN);
+  const u = createUniforms(gl, program, ["uTop", "uBottom"]);
   return {
     draw(top, bottom) {
       gl.disable(gl.BLEND);
@@ -306,18 +403,8 @@ function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): Grad
         return;
       }
       gl.useProgram(program);
-      if (last[0] !== top[0] || last[1] !== top[1] || last[2] !== top[2]) {
-        gl.uniform3fv(loc.uTop, top);
-        last[0] = top[0];
-        last[1] = top[1];
-        last[2] = top[2];
-      }
-      if (last[3] !== bottom[0] || last[4] !== bottom[1] || last[5] !== bottom[2]) {
-        gl.uniform3fv(loc.uBottom, bottom);
-        last[3] = bottom[0];
-        last[4] = bottom[1];
-        last[5] = bottom[2];
-      }
+      u.v3("uTop", top);
+      u.v3("uBottom", bottom);
       triangle.draw();
     },
     dispose: () => scope.dispose(),

@@ -5,6 +5,7 @@ import {
   createColumnTable,
   createRenderTarget,
   createScope,
+  createUniforms,
   glslFloat,
   withScope,
 } from "./gl";
@@ -296,5 +297,138 @@ describe("createRenderTarget", () => {
   it("doesn't blame the format for a lost context", () => {
     const { gl } = make(0, true);
     expect(createRenderTarget(gl, 4, 4, 7)).not.toBeNull();
+  });
+});
+
+describe("createUniforms", () => {
+  const CURRENT_PROGRAM = 0x8b8d;
+  const program = { id: "program" };
+  const other = { id: "other" };
+
+  /** A fake context that records uniform uploads and tracks the bound program. */
+  function uniformGl() {
+    const calls: unknown[][] = [];
+    let current: object | null = null;
+    let lost = false;
+    const record =
+      (name: string) =>
+      (...args: unknown[]) =>
+        calls.push([name, ...args]);
+    const gl = {
+      CURRENT_PROGRAM,
+      getUniformLocation: (_p: object, name: string) => (name === "uGone" ? null : { name }),
+      useProgram: (p: object | null) => (current = p),
+      getParameter: (pname: number) => (pname === CURRENT_PROGRAM && !lost ? current : null),
+      isContextLost: () => lost,
+      uniform1f: record("1f"),
+      uniform2f: record("2f"),
+      uniform3f: record("3f"),
+      uniform4f: record("4f"),
+      uniform1i: record("1i"),
+      uniform1ui: record("1ui"),
+    };
+    const loseContext = () => (lost = true);
+    return { gl: gl as unknown as WebGL2RenderingContext, calls, loseContext };
+  }
+
+  const NAMES = ["uA", "uB", "uC", "uD", "uI", "uU", "uGone"] as const;
+
+  it("uploads each value once, until it changes", () => {
+    const { gl, calls } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    for (let i = 0; i < 3; i++) {
+      u.f1("uA", 1);
+      u.f2("uB", 2, 3);
+      u.f3("uC", 4, 5, 6);
+      u.f4("uD", 7, 8, 9, 10);
+      u.i1("uI", 2);
+      u.u1("uU", 3);
+    }
+    expect(calls).toEqual([
+      ["1f", { name: "uA" }, 1],
+      ["2f", { name: "uB" }, 2, 3],
+      ["3f", { name: "uC" }, 4, 5, 6],
+      ["4f", { name: "uD" }, 7, 8, 9, 10],
+      ["1i", { name: "uI" }, 2],
+      ["1ui", { name: "uU" }, 3],
+    ]);
+
+    calls.length = 0;
+    u.f2("uB", 2, 4);
+    u.f4("uD", 7, 8, 9, 11);
+    u.f1("uA", 1);
+    expect(calls).toEqual([
+      ["2f", { name: "uB" }, 2, 4],
+      ["4f", { name: "uD" }, 7, 8, 9, 11],
+    ]);
+  });
+
+  it("compares values as given, not rounded to float32", () => {
+    const { gl, calls } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    u.f1("uA", 0.1);
+    u.f1("uA", 0.1 + 1e-12);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("sets vec3s from arrays and parses each distinct hex colour once", () => {
+    const { gl, calls } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    u.v3("uC", [0.5, 0.25, 1]);
+    u.v3("uC", new Float32Array([0.5, 0.25, 1]));
+    u.rgb("uB", "#ff0000");
+    u.rgb("uB", "#ff0000");
+    // The same colour spelled differently parses again but uploads nothing.
+    u.rgb("uB", "#FF0000");
+    expect(calls).toEqual([
+      ["3f", { name: "uC" }, 0.5, 0.25, 1],
+      ["3f", { name: "uB" }, 1, 0, 0],
+    ]);
+
+    // A numeric set in between invalidates the remembered hex.
+    calls.length = 0;
+    u.f3("uB", 0, 0, 0);
+    u.rgb("uB", "#FF0000");
+    expect(calls).toEqual([
+      ["3f", { name: "uB" }, 0, 0, 0],
+      ["3f", { name: "uB" }, 1, 0, 0],
+    ]);
+  });
+
+  it("passes null locations through for uniforms the compiler removed", () => {
+    const { gl, calls } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    expect(u.loc.uGone).toBeNull();
+    u.f1("uGone", 1);
+    expect(calls).toEqual([["1f", null, 1]]);
+  });
+
+  it("asserts in dev builds that its program is bound when uploading", () => {
+    expect(import.meta.env.DEV).toBe(true);
+    const { gl, calls } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    u.f1("uA", 1);
+    gl.useProgram(other);
+    // Unchanged: nothing is written, so nothing can go to the wrong program.
+    expect(() => u.f1("uA", 1)).not.toThrow();
+    expect(() => u.f1("uA", 2)).toThrow("uA set while another program is bound");
+    expect(calls).toHaveLength(1);
+    // The rejected value wasn't cached, so it uploads once the program is bound.
+    gl.useProgram(program);
+    u.f1("uA", 2);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("doesn't assert on a lost context, where the bound program reads as null", () => {
+    const { gl, loseContext } = uniformGl();
+    const u = createUniforms(gl, program, NAMES);
+    gl.useProgram(program);
+    loseContext();
+    expect(() => u.f1("uA", 1)).not.toThrow();
   });
 });
