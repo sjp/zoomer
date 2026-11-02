@@ -12,6 +12,7 @@ import { createNoise, createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "./sprites";
 import { defineEffect } from "./types";
 import { clamp, smoothstep, wrap } from "./math";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
 const MAX_SPECKS = 300;
@@ -28,6 +29,8 @@ const DEFOCUS_SHARE = 0.25;
 /** Base beam brightness (fraction of the light colour at the beam's brightest point). */
 const BEAM_STRENGTH = 0.11;
 const TAU = Math.PI * 2;
+/** Seconds a speck or beam takes to fade in after appearing. */
+const FADE_IN = 1;
 /** Slope at which the beam group's lean against the slant reaches its full 8% of the width. */
 const FULL_LEAN_SLOPE = Math.tan((24 * Math.PI) / 180);
 
@@ -289,6 +292,11 @@ export const fireflies = defineEffect({
       const blinkPeriod = new Float32Array(MAX_SPECKS);
       const blinkDuty = new Float32Array(MAX_SPECKS);
       const seed = new Float32Array(MAX_SPECKS);
+      const life = new Float32Array(MAX_SPECKS);
+      const beamLife = new Float32Array(MAX_BEAMS);
+      /** Specks and beams simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
+      let beamLive = 0;
 
       let width = 1;
       let height = 1;
@@ -330,8 +338,17 @@ export const fireflies = defineEffect({
           beginFrame(gl, width, height);
           time += dt;
           const dust = p.scene === "dust";
-          const n = Math.min(p.count, MAX_SPECKS);
-          const nBeams = dust ? layoutBeams(p.beams, p.beamAngle, refWidth, beamShapes) : 0;
+          const target = Math.min(Math.floor(p.count), MAX_SPECKS);
+          const n = (live = growLive(life, live, target));
+          const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
+          // Beams belong to the dust scene only; a scene change is a hard cut.
+          const beamTarget = dust ? clamp(Math.round(p.beams), 1, MAX_BEAMS) : 0;
+          if (!dust) beamLive = 0;
+          const nBeams = (beamLive = growLive(beamLife, beamLive, beamTarget));
+          if (dust) layoutBeams(MAX_BEAMS, p.beamAngle, refWidth, beamShapes);
+          for (let b = 0; b < nBeams; b++) stepLife(beamLife, b, beamTarget, fadeStep, outStep);
+          beamLive = trimLive(beamLife, beamLive, beamTarget);
           const color = dust ? lightRgb(p.lightColor) : glowRgb(p.glowColor);
           const cr = color[0];
           const cg = color[1];
@@ -351,20 +368,24 @@ export const fireflies = defineEffect({
             const radius = baseRadius * radiusK[i];
             const margin = radius;
             // Wrap within a margin of the edges, so the jump is off-screen.
-            const x = wrap(xs[i] + Math.cos(heading[i]) * sp * dt, -margin, refWidth + 2 * margin);
+            const mx = xs[i] + Math.cos(heading[i]) * sp * dt;
             // Dust also settles very slowly, as it does in still air.
-            const y = wrap(
-              ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt,
-              -margin,
-              1080 + 2 * margin,
-            );
+            const my = ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt;
+            const x = wrap(mx, -margin, refWidth + 2 * margin);
+            const y = wrap(my, -margin, 1080 + 2 * margin);
             xs[i] = x;
             ys[i] = y;
+            // The margin shrinks with the size, so a wrap can land a speck on-screen:
+            // fade it in at its new place.
+            if (x !== mx || y !== my) life[i] = 0;
+            const l = stepLife(life, i, target, fadeStep, outStep);
 
             let level: number;
             if (dust) {
               let m = 0;
-              for (let b = 0; b < nBeams; b++) m += beamMembership(x, y, beamShapes[b]);
+              for (let b = 0; b < nBeams; b++) {
+                m += beamMembership(x, y, beamShapes[b]) * beamLife[b];
+              }
               // A gentle glint as each mote tumbles.
               level = Math.min(1, m) * (0.75 + 0.25 * Math.sin(time * 1.3 + seed[i]));
             } else {
@@ -376,7 +397,7 @@ export const fireflies = defineEffect({
               blinkPhase[i] = ph;
               level = blink(ph, blinkDuty[i]);
             }
-            const a = level * brightK[i] * p.brightness;
+            const a = level * brightK[i] * p.brightness * l * l;
             if (a <= 0.003) continue;
             const o = visible * stride;
             data[o] = x * scale;
@@ -387,6 +408,7 @@ export const fireflies = defineEffect({
             data[o + 5] = cb * a;
             visible++;
           }
+          live = trimLive(life, live, target);
 
           background.draw(bgTop(p.topColor), bgBottom(p.bottomColor));
 
@@ -406,7 +428,7 @@ export const fireflies = defineEffect({
               bd[o + 2] = s.halfWidth * scale;
               bd[o + 3] = s.y0 * scale;
               bd[o + 4] = s.y1 * scale;
-              bd[o + 5] = s.intensity * breathe * BEAM_STRENGTH * p.brightness;
+              bd[o + 5] = s.intensity * breathe * BEAM_STRENGTH * p.brightness * beamLife[b];
             }
             beamBatch.upload(nBeams);
             gl.useProgram(beamProgram);
