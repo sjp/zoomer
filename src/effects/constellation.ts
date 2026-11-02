@@ -297,6 +297,7 @@ export const constellation = defineEffect({
       let height = 1;
       let scale = 1;
       let refWidth = 1920;
+      // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
       let prevCount = 0;
 
@@ -321,7 +322,7 @@ export const constellation = defineEffect({
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          time = (time + dt) % 10000;
+          time += dt;
           const n = Math.min(Math.floor(p.count), MAX_POINTS);
           for (let i = prevCount; i < n; i++) life[i] = 0;
           prevCount = n;

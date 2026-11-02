@@ -291,6 +291,7 @@ export const fireflies = defineEffect({
       let height = 1;
       let scale = 1;
       let refWidth = 1920;
+      // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
 
       const rng = createRng(Math.random() * 0xffffffff);
@@ -324,7 +325,7 @@ export const fireflies = defineEffect({
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          time = (time + dt) % 10000;
+          time += dt;
           const dust = p.scene === "dust";
           const n = Math.min(p.count, MAX_SPECKS);
           const nBeams = dust ? layoutBeams(p.beams, p.beamAngle, refWidth, beamShapes) : 0;

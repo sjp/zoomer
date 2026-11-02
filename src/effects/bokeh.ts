@@ -224,6 +224,7 @@ export const bokeh = defineEffect({
       let height = 1;
       let scale = 1;
       let refWidth = 1920;
+      // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
       let prevCount = 0;
 
@@ -249,7 +250,7 @@ export const bokeh = defineEffect({
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          time = (time + dt) % 10000;
+          time += dt;
 
           // Bigger lights draw fewer of them, keeping the blended area within budget.
           const n = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
