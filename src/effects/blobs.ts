@@ -11,6 +11,8 @@ import {
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor, type LowResTarget } from "./lowres";
 import { createRng } from "./noise";
 import { defineEffect } from "./types";
+import { growLive, stepLife, trimLive } from "./fade";
+import { smoothstep } from "./math";
 
 export const MAX_BLOBS = 6;
 const TAU = Math.PI * 2;
@@ -24,6 +26,8 @@ export const KEYFRAME_INTERVAL = 1 / 30;
 const DIVISORS = { high: 4, balanced: 6, low: 8 } as const;
 /** Grain amplitude (0..1 colour units, peak to peak) at `grain` = 1. */
 const GRAIN_AMP = 0.06;
+/** Seconds a blob takes to fade in or out when the count changes. */
+const BLOB_FADE = 1.2;
 
 // ---------------------------------------------------------------------------
 // Palettes
@@ -141,9 +145,10 @@ export function blobAt(
 }
 
 /**
- * Fills the first `count` entries of the `uBlobs` uniform array (MAX_BLOBS vec3s):
- * centre x, y and k = log2(e) / r², so the shader's `exp2(-d² k)` is the Gaussian
- * `exp(-d²/r²)`. Later entries are left as they are: the shader stops at `uCount`.
+ * Fills the first `count` entries of the `uBlobs` uniform array (MAX_BLOBS vec4s):
+ * centre x, y, k = log2(e) / r², so the shader's `exp2(-d² k)` is the Gaussian
+ * `exp(-d²/r²)`, and the blob's weight (from `weights`, default 1), which fades it
+ * in and out. Later entries are left as they are: the shader stops at `uCount`.
  */
 export function writeBlobUniforms(
   out: Float32Array,
@@ -151,13 +156,15 @@ export function writeBlobUniforms(
   t: number,
   aspect: number,
   softness: number,
+  weights?: ArrayLike<number>,
 ): void {
   const n = Math.min(count, MAX_BLOBS);
   for (let i = 0; i < n; i++) {
-    const o = i * 3;
+    const o = i * 4;
     blobAt(BLOB_PATHS[i], t, aspect, softness, out, o);
     const r = Math.max(1e-3, out[o + 2]);
     out[o + 2] = Math.LOG2E / (r * r);
+    out[o + 3] = weights ? weights[i] : 1;
   }
 }
 
@@ -215,7 +222,7 @@ precision highp int;
 /** Low-res pixel to frame-height units: (aspect / width, 1 / height). */
 uniform vec2 uToUnits;
 /** x, y, k = log2(e) / r^2; only the first uCount are set. */
-uniform vec3 uBlobs[${MAX_BLOBS}];
+uniform vec4 uBlobs[${MAX_BLOBS}];
 /** Linear-light blob colours. */
 uniform vec3 uColors[${MAX_BLOBS}];
 uniform vec3 uBase;
@@ -232,9 +239,9 @@ void main() {
   float wsum = BASE_WEIGHT;
   for (int i = 0; i < MAX_BLOBS; i++) {
     if (i >= uCount) break;
-    vec3 b = uBlobs[i];
+    vec4 b = uBlobs[i];
     vec2 d = p - b.xy;
-    float w = exp2(-dot(d, d) * b.z);
+    float w = b.w * exp2(-dot(d, d) * b.z);
     sum += uColors[i] * w;
     wsum += w;
   }
@@ -302,7 +309,12 @@ export const blobs = defineEffect({
       gl.useProgram(mainT.program);
       cu.i1("uAux", 1);
 
-      const blobData = new Float32Array(MAX_BLOBS * 3);
+      const blobData = new Float32Array(MAX_BLOBS * 4);
+      /** Count fade (see `fade.ts`), and its eased weight per blob. */
+      const blobLife = new Float32Array(MAX_BLOBS);
+      const blobWeight = new Float32Array(MAX_BLOBS);
+      /** Blobs drawn: the count plus any still fading out; NaN before the first frame. */
+      let live = Number.NaN;
       const colorData = new Float32Array(MAX_BLOBS * 3);
       const custom = ["", "", "", ""];
       const clock: KeyframeClock = { elapsed: 0 };
@@ -332,9 +344,9 @@ export const blobs = defineEffect({
       /** Renders the blob field at sim time `t` into `target`, unless it already holds it. */
       const renderKey = (target: LowResTarget, t: number): void => {
         if ((target === mainT ? simMain : simAux) === t) return;
-        writeBlobUniforms(blobData, count, t, aspect, softness);
+        writeBlobUniforms(blobData, count, t, aspect, softness, blobWeight);
         gl.useProgram(program);
-        gl.uniform3fv(u.loc.uBlobs, blobData);
+        gl.uniform4fv(u.loc.uBlobs, blobData);
         target.bind();
         triangle.draw();
         if (target === mainT) simMain = t;
@@ -361,7 +373,22 @@ export const blobs = defineEffect({
             lastAspect = aspect;
             invalid = true;
           }
-          count = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
+          const target = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
+          if (Number.isNaN(live)) {
+            // Start with the blobs shown rather than fading them all in.
+            blobLife.fill(1);
+            live = target;
+          }
+          count = live = growLive(blobLife, live, target);
+          const fadeStep = (Number.isFinite(dt) && dt > 0 ? dt : 0) / BLOB_FADE;
+          for (let i = 0; i < count; i++) {
+            const before = blobLife[i];
+            const l = stepLife(blobLife, i, target, fadeStep, fadeStep);
+            blobWeight[i] = smoothstep(0, 1, l);
+            // While a blob fades, both keyframes are re-rendered each frame (briefly).
+            if (l !== before) invalid = true;
+          }
+          live = trimLive(blobLife, live, target);
           if (u.i1("uCount", count)) invalid = true;
           if (p.softness !== lastSoftness) {
             lastSoftness = softness = p.softness;

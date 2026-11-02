@@ -100,16 +100,24 @@ describe("blob paths", () => {
 
 describe("writeBlobUniforms", () => {
   it("writes Gaussian exponents for the first count blobs only", () => {
-    const out = new Float32Array(MAX_BLOBS * 3).fill(9);
+    const out = new Float32Array(MAX_BLOBS * 4).fill(9);
     writeBlobUniforms(out, 3, 2, 1.5, 1);
     const xyr = [0, 0, 0];
     blobAt(BLOB_PATHS[1], 2, 1.5, 1, xyr);
-    expect(out[3]).toBeCloseTo(xyr[0], 5);
-    expect(out[4]).toBeCloseTo(xyr[1], 5);
+    expect(out[4]).toBeCloseTo(xyr[0], 5);
+    expect(out[5]).toBeCloseTo(xyr[1], 5);
     // exp2(-r² k) = 1/e at one radius.
-    expect(2 ** (-xyr[2] * xyr[2] * out[5])).toBeCloseTo(Math.exp(-1), 5);
+    expect(2 ** (-xyr[2] * xyr[2] * out[6])).toBeCloseTo(Math.exp(-1), 5);
+    expect(out[7]).toBe(1);
     // The shader stops at uCount, so later slots are left alone.
-    for (let i = 3 * 3; i < out.length; i++) expect(out[i]).toBe(9);
+    for (let i = 3 * 4; i < out.length; i++) expect(out[i]).toBe(9);
+  });
+
+  it("writes each blob's fade weight", () => {
+    const out = new Float32Array(MAX_BLOBS * 4);
+    writeBlobUniforms(out, 2, 0, 1, 1, [1, 0.25]);
+    expect(out[3]).toBe(1);
+    expect(out[7]).toBe(0.25);
   });
 });
 
