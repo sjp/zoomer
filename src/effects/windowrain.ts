@@ -347,7 +347,6 @@ export const windowRain = defineEffect({
       let fogCurrent = 0;
       let fogW = 0;
       let fogH = 0;
-      let fogWasOn = false;
       const FOG_CLEAR = new Float32Array([1, 0, 0, 1]);
       const DROP_CLEAR = new Float32Array([ENC_MID, ENC_MID, 0, 0]);
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
@@ -389,19 +388,36 @@ export const windowRain = defineEffect({
         dropH = h;
       };
 
-      /** Fog targets, `FOG_TEXEL` reference px per texel; (re)created fully fogged. */
+      /**
+       * Fog targets, `FOG_TEXEL` reference px per texel. On a resize the current fog
+       * is stretched into the new targets, so wiped areas survive; returns true when
+       * there was none, and the caller must fill them fully fogged.
+       */
       const ensureFogTargets = () => {
         const w = lowResSize(width, FOG_TEXEL * scale);
         const h = lowResSize(height, FOG_TEXEL * scale);
         if (fogTargets.length === 2 && w === fogW && h === fogH) return false;
-        for (const t of fogTargets) t.dispose();
+        const old = fogTargets;
+        const keep = old.length === 2 ? old[fogCurrent] : null;
         fogTargets = [];
-        // One at a time, so a throw on the second still leaves the first disposable.
-        fogTargets.push(makeTarget(w, h, gl.R8));
-        fogTargets.push(makeTarget(w, h, gl.R8));
+        try {
+          // One at a time, so a throw on the second still leaves the first disposable.
+          fogTargets.push(makeTarget(w, h, gl.R8));
+          fogTargets.push(makeTarget(w, h, gl.R8));
+          if (keep) {
+            // Only the current target is read next; the refog step overwrites the other.
+            // The fog maps to the whole screen, so whole-to-whole keeps it in place.
+            gl.bindFramebuffer(gl.READ_FRAMEBUFFER, keep.framebuffer);
+            gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, fogTargets[fogCurrent].framebuffer);
+            gl.blitFramebuffer(0, 0, fogW, fogH, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          }
+        } finally {
+          for (const t of old) t.dispose();
+        }
         fogW = w;
         fogH = h;
-        return true;
+        return !keep;
       };
 
       const drawBackground = (lights: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
@@ -513,8 +529,7 @@ export const windowRain = defineEffect({
           // 3. Fog: refog step into the other target, then runners wipe it.
           let fogTex: WebGLTexture | null = null;
           if (p.fog) {
-            const fresh = ensureFogTargets();
-            if (fresh || !fogWasOn) {
+            if (ensureFogTargets()) {
               for (const t of fogTargets) {
                 gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
                 gl.clearBufferfv(gl.COLOR, 0, FOG_CLEAR);
@@ -551,7 +566,6 @@ export const windowRain = defineEffect({
             for (const t of fogTargets) t.dispose();
             fogTargets = [];
           }
-          fogWasOn = p.fog;
 
           // 4. Composite to the canvas.
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
