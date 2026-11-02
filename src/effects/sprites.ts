@@ -4,7 +4,15 @@
  * two-colour gradient background pass.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  createFullscreenTriangle,
+  createProgram,
+  createScope,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+  type Scope,
+  withScope,
+} from "./gl";
 
 export interface SpriteBatch {
   /** CPU-side instance data, `stride` floats per instance. Fill, then `upload`. */
@@ -69,9 +77,11 @@ export function createSpriteBatch(
     corners.push(...shape);
   }
 
-  const vao = gl.createVertexArray();
-  const cornerBuffer = gl.createBuffer();
-  const instanceBuffer = gl.createBuffer();
+  // Nothing below can throw, so a plain scope (no `withScope`) is enough.
+  const scope = createScope();
+  const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+  const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+  const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
   gl.bindVertexArray(vao);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
@@ -127,11 +137,7 @@ export function createSpriteBatch(
       // Unbind so another effect's element-buffer binding can't land in this VAO.
       gl.bindVertexArray(null);
     },
-    dispose() {
-      gl.deleteVertexArray(vao);
-      gl.deleteBuffer(cornerBuffer);
-      gl.deleteBuffer(instanceBuffer);
-    },
+    dispose: () => scope.dispose(),
   };
 }
 
@@ -162,8 +168,14 @@ export interface GradientBackground {
 
 /** Full-screen vertical linear gradient, matching a 2D `createLinearGradient(0, 0, 0, h)`. */
 export function createGradientBackground(gl: WebGL2RenderingContext): GradientBackground {
-  const program = createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT);
-  const triangle = createFullscreenTriangle(gl);
+  return withScope((scope) => buildGradientBackground(gl, scope));
+}
+
+function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): GradientBackground {
+  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) =>
+    gl.deleteProgram(p),
+  );
+  const triangle = scope.own(createFullscreenTriangle(gl));
   const loc = getUniforms(gl, program, ["uTop", "uBottom"]);
   // Uniforms are per-program state, and this program is ours alone: set on change only.
   // A plain array: values are compared as given, not rounded to float32.
@@ -192,10 +204,7 @@ export function createGradientBackground(gl: WebGL2RenderingContext): GradientBa
       }
       triangle.draw();
     },
-    dispose() {
-      gl.deleteProgram(program);
-      triangle.dispose();
-    },
+    dispose: () => scope.dispose(),
   };
 }
 

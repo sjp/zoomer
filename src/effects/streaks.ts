@@ -1,5 +1,5 @@
 import { hexToUnitRgb, type Rgb } from "./color";
-import { createProgram, getUniforms } from "./gl";
+import { createProgram, getUniforms, type Scope, withScope } from "./gl";
 
 /**
  * Instanced WebGL2 renderer for round-capped line segments ("streaks"), shared by
@@ -165,19 +165,29 @@ export function createStreakRenderer(
   max: number,
   options: StreakRendererOptions = {},
 ): StreakRenderer {
-  const program = createProgram(gl, VERTEX, FRAGMENT);
+  return withScope((scope) => buildStreakRenderer(gl, max, options, scope));
+}
+
+function buildStreakRenderer(
+  gl: WebGL2RenderingContext,
+  max: number,
+  options: StreakRendererOptions,
+  scope: Scope,
+): StreakRenderer {
+  const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+  const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), deleteProgram);
   const loc = getUniforms(gl, program, ["uResolution"]);
   const chromatic = options.chromatic
-    ? createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT)
+    ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
     : null;
   const chromaticLoc = chromatic
     ? getUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"])
     : null;
   const data = new Float32Array(max * STREAK_FLOATS);
 
-  const vao = gl.createVertexArray();
-  const cornerBuffer = gl.createBuffer();
-  const instanceBuffer = gl.createBuffer();
+  const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+  const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+  const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
   // Triangle strip: (tail, -side), (head, -side), (tail, +side), (head, +side).
@@ -229,13 +239,7 @@ export function createStreakRenderer(
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
       gl.bindVertexArray(null);
     },
-    dispose() {
-      gl.deleteProgram(program);
-      if (chromatic) gl.deleteProgram(chromatic);
-      gl.deleteVertexArray(vao);
-      gl.deleteBuffer(cornerBuffer);
-      gl.deleteBuffer(instanceBuffer);
-    },
+    dispose: () => scope.dispose(),
   };
 }
 

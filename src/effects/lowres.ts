@@ -29,7 +29,13 @@
  * divisor table, e.g. `qualityDivisor(q, { high: 4, balanced: 6, low: 8 })`.
  */
 
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX } from "./gl";
+import {
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  type Scope,
+  withScope,
+} from "./gl";
 
 export type LowResQuality = "high" | "balanced" | "low";
 
@@ -147,20 +153,33 @@ export function createLowResTarget(
   gl: WebGL2RenderingContext,
   opts: LowResOptions = {},
 ): LowResTarget {
-  const program = createProgram(
-    gl,
-    FULLSCREEN_VERTEX,
-    blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
+  return withScope((scope) => buildLowResTarget(gl, opts, scope));
+}
+
+function buildLowResTarget(
+  gl: WebGL2RenderingContext,
+  opts: LowResOptions,
+  scope: Scope,
+): LowResTarget {
+  const program = scope.add(
+    createProgram(
+      gl,
+      FULLSCREEN_VERTEX,
+      blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
+    ),
+    (p) => gl.deleteProgram(p),
   );
   const uTex = gl.getUniformLocation(program, "uLowRes");
   const uSize = gl.getUniformLocation(program, "uLowResSize");
   gl.useProgram(program);
   gl.uniform1i(uTex, 0);
-  const triangle = createFullscreenTriangle(gl);
+  const triangle = scope.own(createFullscreenTriangle(gl));
 
   let wantFloat = opts.format === "rgba16f" && gl.getExtension("EXT_color_buffer_float") !== null;
   let texture: WebGLTexture = gl.createTexture();
-  const fbo = gl.createFramebuffer();
+  // `allocate` replaces the texture, so delete whichever one is current.
+  scope.defer(() => gl.deleteTexture(texture));
+  const fbo = scope.add(gl.createFramebuffer(), (f) => gl.deleteFramebuffer(f));
   let width = 0;
   let height = 0;
   let fullWidth = 1;
@@ -242,12 +261,7 @@ export function createLowResTarget(
       return isFloat;
     },
     program,
-    dispose() {
-      gl.deleteTexture(texture);
-      gl.deleteFramebuffer(fbo);
-      gl.deleteProgram(program);
-      triangle.dispose();
-    },
+    dispose: () => scope.dispose(),
   };
   return target;
 }
