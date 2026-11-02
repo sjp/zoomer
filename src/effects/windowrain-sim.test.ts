@@ -223,6 +223,16 @@ describe("spawning", () => {
     expect(Array.from(sim.dAge.subarray(100, 200)).every((a) => a === 0)).toBe(true);
   });
 
+  it("keeps the mid-life first fill for when rain first rises from 0", () => {
+    const sim = make();
+    for (let t = 0; t < 5; t++) stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
+    expect(sim.primed).toBe(false);
+    stepRainSim(sim, 0, { rain: 0.5, speed: 1 });
+    const ages = Array.from(sim.dAge.subarray(0, 100));
+    expect(ages.filter((a) => a > 0).length).toBeGreaterThan(90);
+    expect(sim.primed).toBe(true);
+  });
+
   it("keeps droplets inside the window", () => {
     const sim = make();
     for (let t = 0; t < 300; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 2 });

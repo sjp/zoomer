@@ -131,7 +131,7 @@ export interface RainSim {
   head: Int32Array;
   readonly next: Int32Array;
 
-  /** Whether the first step has run (initial droplets get random ages). */
+  /** Whether the first drops have been placed (that first fill gets random ages). */
   primed: boolean;
   /** Instance index of the first runner after `writeDropInstances`. */
   runnerFirst: number;
@@ -386,7 +386,9 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     }
   }
   sim.runnerCount = targetRunners;
-  sim.primed = true;
+  // Only once there was something to place: a start at rain 0 must not use up the
+  // mid-life first fill, or raising the rain later fades every droplet in together.
+  if (targetStatic > 0 || targetRunners > 0) sim.primed = true;
 
   // Age droplets.
   const { dKind, dAge, dLife } = sim;
