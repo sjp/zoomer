@@ -1,4 +1,4 @@
-import { hexToUnitRgb, type Rgb, unitRgbMemo } from "./color";
+import { hexToUnitRgb } from "./color";
 import {
   advancePhases,
   bubbleX,
@@ -15,10 +15,10 @@ import {
   createColumnTable,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   type RenderTarget,
   TO_CLIP_GLSL,
@@ -263,11 +263,12 @@ export const caustics = defineEffect({
             createProgram(gl, FULLSCREEN_VERTEX, mainFragment(deep, chroma)),
             (p) => gl.deleteProgram(p),
           );
-          const loc = getUniforms(gl, program, MAIN_UNIFORMS);
+          const u = createUniforms(gl, program, MAIN_UNIFORMS);
           gl.useProgram(program);
-          gl.uniform1i(loc.uTile, 0);
-          gl.uniform1i(loc.uRays, 1);
-          return { program, loc, version: -1 };
+          u.i1("uTile", 0);
+          u.i1("uRays", 1);
+          // Arrays and matrices aren't tracked by `u`: `version` marks them current.
+          return { u, version: -1 };
         }),
       );
 
@@ -278,16 +279,10 @@ export const caustics = defineEffect({
       const bubbleProgram = scope.add(createProgram(gl, BUBBLE_VERTEX, BUBBLE_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const bubbleLoc = getUniforms(gl, bubbleProgram, ["uResolution", "uColor"]);
+      const bubbleU = createUniforms(gl, bubbleProgram, ["uResolution", "uColor"]);
       // Per bubble: centre x, centre y, radius (device px, y down), then alpha.
       const batch = scope.own(createSpriteBatch(gl, MAX_BUBBLES, [3, 1], [polygonStrip(8)]));
       const bubbles = createBubbleState(MAX_BUBBLES);
-      const bubbleColor = unitRgbMemo();
-      const bubbleSet: { width: number; height: number; color: Rgb | undefined } = {
-        width: 0,
-        height: 0,
-        color: undefined,
-      };
       let prevBubbles = 0;
 
       let width = 1;
@@ -458,10 +453,10 @@ export const caustics = defineEffect({
 
           // 3. Full-screen composite.
           const main = mains[(deep ? 2 : 0) + (p.chromatic > 0 ? 1 : 0)];
-          gl.useProgram(main.program);
+          gl.useProgram(main.u.program);
           if (main.version !== version) {
             main.version = version;
-            const loc = main.loc;
+            const loc = main.u.loc;
             gl.uniformMatrix2fv(loc.uMatA, false, matA);
             gl.uniformMatrix2fv(loc.uMatB, false, matB);
             gl.uniform2fv(loc.uChroma, chroma);
@@ -471,8 +466,8 @@ export const caustics = defineEffect({
             gl.uniform3fv(loc.uGrid, grid);
             gl.uniform3fv(loc.uRayColor, rayColor);
           }
-          gl.uniform2f(main.loc.uOffA, offAx, offAy);
-          gl.uniform2f(main.loc.uOffB, offBx, offBy);
+          main.u.f2("uOffA", offAx, offAy);
+          main.u.f2("uOffB", offBx, offBy);
           triangle.draw();
 
           // 4. Bubbles (deep water only).
@@ -500,16 +495,8 @@ export const caustics = defineEffect({
             gl.blendEquation(gl.FUNC_ADD);
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
             gl.useProgram(bubbleProgram);
-            if (bubbleSet.width !== width || bubbleSet.height !== height) {
-              gl.uniform2f(bubbleLoc.uResolution, width, height);
-              bubbleSet.width = width;
-              bubbleSet.height = height;
-            }
-            const color = bubbleColor(p.lightColor);
-            if (bubbleSet.color !== color) {
-              gl.uniform3fv(bubbleLoc.uColor, color);
-              bubbleSet.color = color;
-            }
+            bubbleU.f2("uResolution", width, height);
+            bubbleU.rgb("uColor", p.lightColor);
             batch.draw(0, n);
             gl.disable(gl.BLEND);
           }
