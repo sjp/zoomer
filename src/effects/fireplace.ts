@@ -4,8 +4,8 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   updateDataTexture,
   withScope,
@@ -228,7 +228,7 @@ export const fireplace = defineEffect({
       const flameProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const fl = getUniforms(gl, flameProgram, [
+      const fl = createUniforms(gl, flameProgram, [
         "uNoise",
         "uRamp",
         "uPxScale",
@@ -238,11 +238,11 @@ export const fireplace = defineEffect({
         "uGain",
       ]);
       gl.useProgram(flameProgram);
-      gl.uniform1i(fl.uNoise, 0);
-      gl.uniform1i(fl.uRamp, 1);
-      gl.uniform2f(fl.uNoiseScale, CELLS_U / NOISE_PERIOD, CELLS_V / NOISE_PERIOD);
+      fl.i1("uNoise", 0);
+      fl.i1("uRamp", 1);
+      fl.f2("uNoiseScale", CELLS_U / NOISE_PERIOD, CELLS_V / NOISE_PERIOD);
 
-      const co = getUniforms(gl, target.program, [
+      const co = createUniforms(gl, target.program, [
         "uProfile",
         "uBg",
         "uGlow",
@@ -256,12 +256,12 @@ export const fireplace = defineEffect({
         "uRimInv",
       ]);
       gl.useProgram(target.program);
-      gl.uniform1i(co.uProfile, 1);
+      co.i1("uProfile", 1);
 
       const emberProgram = scope.add(createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const em = getUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
+      const em = createUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
       const batch = scope.own(createSpriteBatch(gl, MAX_EMBERS, [4]));
 
       const noiseTex = scope.add(
@@ -318,7 +318,6 @@ export const fireplace = defineEffect({
       let paletteId = "";
       let glowRgb: readonly number[] = [0, 0, 0];
       let emberRgb: readonly number[] = [0, 0, 0];
-      let lastBg: unknown = null;
 
       /** Recomputes the fire rectangle, low-res target and layout-dependent uniforms. */
       const rebuildLayout = (flameHeight: number, quality: string, logs: boolean) => {
@@ -336,9 +335,9 @@ export const fireplace = defineEffect({
         const coverH = target.height * d;
 
         gl.useProgram(flameProgram);
-        gl.uniform2f(fl.uPxScale, d / scale / layout.halfW, d / scale / layout.flameH);
-        gl.uniform2f(
-          fl.uPxOffset,
+        fl.f2("uPxScale", d / scale / layout.halfW, d / scale / layout.flameH);
+        fl.f2(
+          "uPxOffset",
           (x0 / scale - layout.cx) / layout.halfW,
           (y0 / scale - layout.baseY) / layout.flameH,
         );
@@ -346,24 +345,20 @@ export const fireplace = defineEffect({
         // Each program's uniforms in one block after its useProgram: a location is
         // only valid while its own program is current.
         gl.useProgram(target.program);
-        gl.uniform1f(co.uProfileMax, logs ? hearthMaxHeight(layout) + 1 : -1);
-        gl.uniform2f(co.uFireOrigin, x0, y0);
-        gl.uniform2f(co.uFireInvSize, 1 / coverW, 1 / coverH);
-        gl.uniform1f(co.uScale, scale);
-        gl.uniform2f(
-          co.uGlowCenter,
-          layout.cx * scale,
-          (layout.baseY + 0.3 * layout.flameH) * scale,
-        );
-        gl.uniform2f(
-          co.uGlowInvRadius,
+        co.f1("uProfileMax", logs ? hearthMaxHeight(layout) + 1 : -1);
+        co.f2("uFireOrigin", x0, y0);
+        co.f2("uFireInvSize", 1 / coverW, 1 / coverH);
+        co.f1("uScale", scale);
+        co.f2("uGlowCenter", layout.cx * scale, (layout.baseY + 0.3 * layout.flameH) * scale);
+        co.f2(
+          "uGlowInvRadius",
           1 / (layout.halfW * 1.3 * scale),
           1 / (layout.flameH * 1.1 * scale),
         );
-        gl.uniform1f(co.uRimInv, 1 / (RIM_PX * scale));
+        co.f1("uRimInv", 1 / (RIM_PX * scale));
 
         gl.useProgram(emberProgram);
-        gl.uniform2f(em.uInvResolution, 1 / width, 1 / height);
+        em.f2("uInvResolution", 1 / width, 1 / height);
 
         if (logs) {
           buildHearthProfile(profile.data, refWidth, layout);
@@ -412,7 +407,7 @@ export const fireplace = defineEffect({
             glowRgb = pal.glow;
             emberRgb = pal.ember;
             gl.useProgram(emberProgram);
-            gl.uniform3f(em.uColor, emberRgb[0], emberRgb[1], emberRgb[2]);
+            em.f3("uColor", emberRgb[0], emberRgb[1], emberRgb[2]);
           }
 
           // Scroll each octave upwards (flame-height relative) and wrap, so offsets
@@ -452,8 +447,8 @@ export const fireplace = defineEffect({
           // 1. Flames into the low-res target, covering only the fire rectangle.
           target.bind();
           gl.useProgram(flameProgram);
-          gl.uniform2fv(fl.uOff, offsets);
-          gl.uniform1f(fl.uGain, gain);
+          gl.uniform2fv(fl.loc.uOff, offsets);
+          fl.f1("uGain", gain);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, rampTex);
           gl.activeTexture(gl.TEXTURE0);
@@ -465,13 +460,10 @@ export const fireplace = defineEffect({
           // covers only the fire rectangle, so blit to the whole canvas explicitly.
           gl.useProgram(target.program);
           const bg = bgColor(p.background);
-          if (bg !== lastBg) {
-            gl.uniform3fv(co.uBg, bg);
-            // Logs: much darker than the background, slightly warm.
-            gl.uniform3f(co.uLog, bg[0] * 0.3 + 0.006, bg[1] * 0.3 + 0.004, bg[2] * 0.3 + 0.003);
-            lastBg = bg;
-          }
-          gl.uniform3f(co.uGlow, glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
+          co.v3("uBg", bg);
+          // Logs: much darker than the background, slightly warm.
+          co.f3("uLog", bg[0] * 0.3 + 0.006, bg[1] * 0.3 + 0.004, bg[2] * 0.3 + 0.003);
+          co.f3("uGlow", glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, profile.texture);
           target.blit(width, height);
