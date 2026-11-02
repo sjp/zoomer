@@ -3,7 +3,7 @@ import {
   beginFrame,
   createGradientBackground,
   createProgram,
-  getUniforms,
+  createUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
@@ -145,13 +145,13 @@ export const bokeh = defineEffect({
   context: "webgl2",
   create(gl) {
     return withScope((scope) => {
-      // One program per aperture shape; uniforms are set only when their inputs change
+      // One program per aperture shape; uniforms are set only when they change
       // (uniforms are per-program state, and these programs are ours alone).
       const variants = [false, true].map((hexagon) => {
         const program = scope.add(createProgram(gl, VERTEX, fragment(hexagon)), (p) =>
           gl.deleteProgram(p),
         );
-        const loc = getUniforms(gl, program, [
+        const u = createUniforms(gl, program, [
           "uResolution",
           "uColors",
           "uExtent",
@@ -160,9 +160,9 @@ export const bokeh = defineEffect({
           "uRimWidth",
           "uRimAmp",
         ]);
-        /** Inputs the uniforms were last set from; colours are memoised references. */
-        const set = { width: 0, height: 0, softness: Number.NaN, colors: [] as Rgb[] };
-        return { hexagon, program, loc, set };
+        /** Colours `uColors` was last set from (memoised references); arrays aren't tracked by `u`. */
+        const setColors: (Rgb | undefined)[] = [undefined, undefined, undefined];
+        return { hexagon, u, setColors };
       });
       // Per light: centre x, centre y, radius, opacity, then colour index.
       const batch = scope.own(
@@ -286,40 +286,31 @@ export const bokeh = defineEffect({
           gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE);
           const v = variants[p.shape === "hexagon" ? 1 : 0];
-          gl.useProgram(v.program);
+          gl.useProgram(v.u.program);
 
           const c1 = lightColors[0](p.color1);
           const c2 = lightColors[1](p.color2);
           const c3 = lightColors[2](p.color3);
-          const set = v.set;
-          if (
-            set.width !== width ||
-            set.height !== height ||
-            set.softness !== p.softness ||
-            set.colors[0] !== c1 ||
-            set.colors[1] !== c2 ||
-            set.colors[2] !== c3
-          ) {
-            set.width = width;
-            set.height = height;
-            set.softness = p.softness;
-            set.colors = [c1, c2, c3];
-            // Aperture shape, as the old pre-rendered sprite computed it.
-            const edge = 0.03 + p.softness * 0.36;
+          const { u, setColors } = v;
+          if (setColors[0] !== c1 || setColors[1] !== c2 || setColors[2] !== c3) {
+            setColors[0] = c1;
+            setColors[1] = c2;
+            setColors[2] = c3;
             colors.set(c1, 0);
             colors.set(c2, 3);
             colors.set(c3, 6);
-            const { loc } = v;
-            gl.uniform2f(loc.uResolution, width, height);
-            gl.uniform3fv(loc.uColors, colors);
-            // Where the soft edge reaches zero (the fwidth floor fits in the extra pixel).
-            const reach = 1 + edge * 0.5;
-            gl.uniform1f(loc.uExtent, v.hexagon ? reach * HEX_APOTHEM : reach);
-            gl.uniform1f(loc.uEdge, edge);
-            gl.uniform1f(loc.uRimPos, 1 - edge * 0.5 - 0.03);
-            gl.uniform1f(loc.uRimWidth, 0.05 + edge * 0.25);
-            gl.uniform1f(loc.uRimAmp, 0.5 * (1 - p.softness * 0.6));
+            gl.uniform3fv(u.loc.uColors, colors);
           }
+          u.f2("uResolution", width, height);
+          // Aperture shape, as the old pre-rendered sprite computed it.
+          const edge = 0.03 + p.softness * 0.36;
+          // Where the soft edge reaches zero (the fwidth floor fits in the extra pixel).
+          const reach = 1 + edge * 0.5;
+          u.f1("uExtent", v.hexagon ? reach * HEX_APOTHEM : reach);
+          u.f1("uEdge", edge);
+          u.f1("uRimPos", 1 - edge * 0.5 - 0.03);
+          u.f1("uRimWidth", 0.05 + edge * 0.25);
+          u.f1("uRimAmp", 0.5 * (1 - p.softness * 0.6));
           batch.draw(0, visible, v.hexagon ? 1 : 0);
           gl.disable(gl.BLEND);
         },
