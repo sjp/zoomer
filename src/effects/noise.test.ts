@@ -3,6 +3,7 @@ import {
   MAX_PERIOD,
   buildPeriodicNoiseTexture,
   createNoise,
+  createRng,
   fbm2,
   fbm3,
   fbmPeriodic2,
@@ -41,6 +42,60 @@ describe("hash32", () => {
   it("wraps inputs to 32 bits, as the shader's uint does", () => {
     expect(hash32(-1)).toBe(hash32(0xffffffff));
     expect(hash32(2 ** 32 + 5)).toBe(hash32(5));
+  });
+});
+
+describe("createRng", () => {
+  it("is deterministic per seed and truncates fractional seeds", () => {
+    const take = (rng: () => number) => Array.from({ length: 20 }, rng);
+    expect(take(createRng(42))).toEqual(take(createRng(42)));
+    expect(take(createRng(42.9))).toEqual(take(createRng(42)));
+    expect(take(createRng(43))).not.toEqual(take(createRng(42)));
+  });
+
+  it("returns floats in [0, 1) spread across the range", () => {
+    for (const seed of [0, 1, -7, 2 ** 40, NaN]) {
+      const rng = createRng(seed);
+      const buckets = new Array<number>(10).fill(0);
+      for (let i = 0; i < 10000; i++) {
+        const v = rng();
+        expect(v).toBeGreaterThanOrEqual(0);
+        expect(v).toBeLessThan(1);
+        buckets[Math.floor(v * 10)]++;
+      }
+      for (const n of buckets) expect(n).toBeGreaterThan(800);
+    }
+  });
+});
+
+describe("noise2", () => {
+  it("is deterministic per seed", () => {
+    const a = createNoise(4);
+    const b = createNoise(4);
+    const c = createNoise(5);
+    let differs = false;
+    for (let i = 0; i < 100; i++) {
+      const x = i * 0.37 - 5;
+      const y = i * -0.73 + 3;
+      expect(b.noise2(x, y)).toBe(a.noise2(x, y));
+      if (c.noise2(x, y) !== a.noise2(x, y)) differs = true;
+    }
+    expect(differs).toBe(true);
+  });
+
+  it("stays roughly within [-1, 1] and uses most of it", () => {
+    const noise = createNoise(8);
+    let lo = 0;
+    let hi = 0;
+    for (let i = 0; i < 20000; i++) {
+      const v = noise.noise2(i * 0.173, i * 0.0291);
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    expect(lo).toBeGreaterThanOrEqual(-1);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(lo).toBeLessThan(-0.6);
+    expect(hi).toBeGreaterThan(0.6);
   });
 });
 
@@ -129,6 +184,16 @@ describe("periodic2", () => {
 
 describe("fbm", () => {
   const noise = createNoise(6);
+
+  it("stays roughly within [-1, 1]", () => {
+    for (let i = 0; i < 2000; i++) {
+      const x = i * 0.311;
+      const y = i * -0.177;
+      expect(Math.abs(fbm2(noise, x, y, 5))).toBeLessThanOrEqual(1);
+      expect(Math.abs(fbm3(noise, x, y, i * 0.05, 4))).toBeLessThanOrEqual(1);
+      expect(Math.abs(fbmPeriodic2(noise, x, y, 16, 4))).toBeLessThanOrEqual(1);
+    }
+  });
 
   it("returns 0 for zero octaves rather than NaN", () => {
     expect(fbm2(noise, 1.3, 2.7, 0)).toBe(0);

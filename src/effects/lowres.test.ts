@@ -21,12 +21,22 @@ describe("lowResSize", () => {
     expect(lowResSize(1, 8)).toBe(1);
     expect(lowResSize(-10, 2)).toBe(1);
     expect(lowResSize(Number.NaN, 2)).toBe(1);
+    expect(lowResSize(Infinity, 2)).toBe(1);
+    expect(lowResSize(-Infinity, 2)).toBe(1);
+  });
+
+  it("floors fractional sizes before dividing", () => {
+    expect(lowResSize(100.9, 1)).toBe(100);
+    expect(lowResSize(0.5, 1)).toBe(1);
+    expect(lowResSize(101.5, 2)).toBe(51);
   });
 
   it("treats invalid divisors as 1", () => {
     expect(lowResSize(100, 0)).toBe(100);
     expect(lowResSize(100, 0.5)).toBe(100);
     expect(lowResSize(100, Number.NaN)).toBe(100);
+    expect(lowResSize(100, Infinity)).toBe(100);
+    expect(lowResSize(100, -2)).toBe(100);
   });
 });
 

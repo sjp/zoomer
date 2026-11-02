@@ -8,8 +8,31 @@ describe("hexToRgb", () => {
   });
 
   it("falls back to black on bad input", () => {
-    expect(hexToRgb("#fff")).toEqual([0, 0, 0]);
-    expect(hexToRgb("nonsense")).toEqual([0, 0, 0]);
+    for (const bad of [
+      "#fff",
+      "nonsense",
+      "",
+      "#",
+      "#ff00zz",
+      "#fffffff",
+      " #ffffff",
+      "#ff ff ff",
+    ]) {
+      expect(hexToRgb(bad)).toEqual([0, 0, 0]);
+    }
+  });
+
+  it("round-trips every channel value through hex", () => {
+    const hex = (n: number) => n.toString(16).padStart(2, "0");
+    for (let v = 0; v < 256; v++) {
+      const rgb: [number, number, number] = [v, 255 - v, (v * 7) & 255];
+      expect(hexToRgb(`#${rgb.map(hex).join("")}`)).toEqual(rgb);
+    }
+  });
+
+  it("maps to unit channels", () => {
+    expect(hexToUnitRgb("#ff0033")).toEqual([1, 0, 0.2]);
+    expect(hexToUnitRgb("bad")).toEqual([0, 0, 0]);
   });
 });
 
