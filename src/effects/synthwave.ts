@@ -12,6 +12,7 @@ import {
 } from "./gl";
 import { defineEffect } from "./types";
 import { clamp, smoothstep } from "./math";
+import { createRng } from "./noise";
 
 /** Points per mountain ridge (2^n + 1 for midpoint displacement). */
 const RIDGE_POINTS = 129;
@@ -35,18 +36,12 @@ const lineCov = (d: number, w: number) =>
 /** Floats per row of the row texture: three RGBA texels (see uRows in the shader). */
 const ROW_FLOATS = 12;
 
-/** Small seeded PRNG so the mountains are identical every time. */
-const mulberry32 = (seed: number) => () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = seed;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-
-/** Fills `out` with a 0..1 ridge line using midpoint displacement. */
-const generateRidge = (out: Float32Array, seed: number, roughness: number) => {
-  const rand = mulberry32(seed);
+/**
+ * Fills `out` with a 0..1 ridge line using midpoint displacement, seeded so the
+ * mountains are identical every time.
+ */
+export function generateRidge(out: Float32Array, seed: number, roughness: number): void {
+  const rand = createRng(seed);
   const last = out.length - 1;
   out[0] = rand();
   out[last] = rand();
@@ -66,7 +61,7 @@ const generateRidge = (out: Float32Array, seed: number, roughness: number) => {
   }
   const range = max - min || 1;
   for (let i = 0; i <= last; i++) out[i] = (out[i] - min) / range;
-};
+}
 
 /**
  * Ridge heights (0..1 of each layer's max height) with the low-middle envelope
@@ -78,9 +73,10 @@ const buildRidgeData = () => {
   const data = new Float32Array(RIDGE_POINTS * 2);
   const ridge = new Float32Array(RIDGE_POINTS);
   const last = RIDGE_POINTS - 1;
+  // Seeds picked to stay close to the ridges of the earlier local PRNG.
   const rows: [number, number][] = [
-    [1987, 0.55],
-    [2049, 0.5],
+    [150405, 0.55],
+    [57466, 0.5],
   ];
   rows.forEach(([seed, roughness], row) => {
     generateRidge(ridge, seed, roughness);
