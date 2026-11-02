@@ -295,6 +295,8 @@ export const caustics = defineEffect({
       let tileAge = Infinity;
       let tileDirty = true;
       let clock = 0;
+      /** The clock the ray table was last filled for (NaN: never). */
+      let rayClock = Number.NaN;
       let offAx = 0;
       let offAy = 0;
       let offBx = 0;
@@ -444,7 +446,9 @@ export const caustics = defineEffect({
           // 2. Ray table (deep water only).
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, rayTable.texture);
-          if (deep && p.rays) {
+          // The rays are fixed, so the table only changes with the clock: skip it while paused.
+          if (deep && p.rays && clock !== rayClock) {
+            rayClock = clock;
             fillRayTable(rayTable.data, rays, clock);
             rayTable.upload();
           }
