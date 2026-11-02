@@ -389,16 +389,17 @@ export const windowRain = defineEffect({
       });
 
       /** The drop map is about 1080p whatever the canvas size. */
-      const ensureDropTarget = () => {
+      const ensureDropTarget = (): RenderTarget => {
         const div = Math.max(1, scale);
         const w = lowResSize(width, div);
         const h = lowResSize(height, div);
-        if (dropTarget && w === dropW && h === dropH) return;
+        if (dropTarget && w === dropW && h === dropH) return dropTarget;
         dropTarget?.dispose();
         dropTarget = null;
         dropTarget = makeTarget(w, h, gl.RGBA8);
         dropW = w;
         dropH = h;
+        return dropTarget;
       };
 
       /**
@@ -541,10 +542,8 @@ export const windowRain = defineEffect({
           }
 
           // 2. Drop map.
-          ensureDropTarget();
-          const dt0 = dropTarget;
-          if (!dt0) return;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, dt0.framebuffer);
+          const dropMap = ensureDropTarget();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, dropMap.framebuffer);
           gl.viewport(0, 0, dropW, dropH);
           gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
           gl.disable(gl.BLEND);
@@ -600,7 +599,7 @@ export const windowRain = defineEffect({
           // 4. Composite to the canvas.
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, dt0.texture);
+          gl.bindTexture(gl.TEXTURE_2D, dropMap.texture);
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, fogTex);
           gl.useProgram(target.program);
