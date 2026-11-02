@@ -10,6 +10,8 @@ interface Props {
   effects: readonly EffectDefinition[];
   effect: EffectDefinition;
   values: AnyParamValues;
+  /** Why the current effect failed to start or stopped, if it did. */
+  error?: string;
   resolution: Resolution;
   frameRate: FrameRate;
   stats: Store<FrameStats | undefined>;
@@ -50,6 +52,11 @@ export function ControlPanel(props: Props) {
         </button>
       </header>
       <p className="description">{effect.description}</p>
+      {props.error && (
+        <p className="effect-error" role="alert">
+          {props.error}
+        </p>
+      )}
 
       <section className="controls">
         {Object.entries(effect.params).map(([key, def]) => (

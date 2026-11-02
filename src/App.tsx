@@ -33,6 +33,8 @@ export function App() {
   const [panelHidden, setPanelHidden] = useState(false);
   const [hoveringPanel, setHoveringPanel] = useState(false);
   const [recordingLeft, setRecordingLeft] = useState<number>();
+  // Why the current effect failed to start or stopped; the canvas clears it on switch.
+  const [effectError, setEffectError] = useState<string>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const idle = useIdle(3000);
 
@@ -120,6 +122,7 @@ export function App() {
         resolution={resolution}
         frameRate={frameRate}
         onStats={statsStore.set}
+        onError={setEffectError}
       />
       <div
         className="panel-wrap"
@@ -131,6 +134,7 @@ export function App() {
           effects={effects}
           effect={effect}
           values={values}
+          error={effectError}
           resolution={resolution}
           frameRate={frameRate}
           stats={statsStore}

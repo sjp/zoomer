@@ -7,6 +7,7 @@ import {
   type Viewport,
 } from "../effects/types";
 import { createFrameLimiter, frameDelta, FRAME_RATES, type FrameRate } from "../lib/frameRate";
+import { describeError } from "../lib/errors";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 
 export interface FrameStats {
@@ -24,7 +25,13 @@ interface Props {
   params: AnyParamValues;
   resolution: Resolution;
   frameRate: FrameRate;
-  onStats?: (stats: FrameStats) => void;
+  /** Receives stats a few times a second, and `undefined` while no effect is running. */
+  onStats?: (stats: FrameStats | undefined) => void;
+  /**
+   * Receives a message when the effect fails to start or crashes while running, and
+   * `undefined` when a new effect starts.
+   */
+  onError?: (message: string | undefined) => void;
   ref?: Ref<HTMLCanvasElement>;
 }
 
@@ -49,31 +56,46 @@ const WEBGL_OPTIONS: WebGLContextAttributes = {
 /**
  * Gets the context the effect asks for and creates its renderer. Returns null if the
  * context is unavailable or the renderer fails to build (e.g. a shader error), so a
- * broken effect leaves a blank canvas rather than crashing the app.
+ * broken effect leaves a blank canvas rather than crashing the app. Failures are
+ * logged and passed to `onError` as a message for the user.
  */
 function createInstance(
   effect: EffectDefinition,
   canvas: HTMLCanvasElement,
+  onError: (message: string) => void,
 ): EffectInstance<AnyParamValues> | null {
+  const fail = (reason: string, err?: unknown) => {
+    console.error(
+      `Failed to start "${effect.name}": ${reason}`,
+      ...(err === undefined ? [] : [err]),
+    );
+    onError(`This effect failed to start: ${reason}`);
+    return null;
+  };
   try {
     if (effect.context === "webgl2") {
       const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
-      if (!gl) {
-        console.error(`"${effect.name}" needs WebGL2, which this browser cannot provide.`);
-        return null;
-      }
+      if (!gl) return fail("WebGL2 is unavailable in this browser.");
+      // A lost context is restored later, which retries creation; not an error.
       return gl.isContextLost() ? null : effect.create(gl);
     }
     const ctx = canvas.getContext("2d", { alpha: false });
-    return ctx ? effect.create(ctx) : null;
+    return ctx ? effect.create(ctx) : fail("a 2D canvas is unavailable in this browser.");
   } catch (err) {
-    console.error(`Failed to start "${effect.name}":`, err);
-    return null;
+    return fail(describeError(err), err);
   }
 }
 
 /** Hosts one effect instance and drives its animation loop. */
-export function EffectCanvas({ effect, params, resolution, frameRate, onStats, ref }: Props) {
+export function EffectCanvas({
+  effect,
+  params,
+  resolution,
+  frameRate,
+  onStats,
+  onError,
+  ref,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Read the latest params each frame without recreating the effect.
   const paramsRef = useRef(params);
@@ -88,15 +110,45 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
   useEffect(() => {
     onStatsRef.current = onStats;
   }, [onStats]);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let instance = createInstance(effect, canvas);
+    const reportError = (message: string) => onErrorRef.current?.(message);
+    onErrorRef.current?.(undefined);
+    let instance = createInstance(effect, canvas, reportError);
+
+    /**
+     * Stops a running effect after it throws, so one bad frame logs once instead of
+     * 60-120 times a second. Disposes it (which may itself throw) and tells the UI.
+     */
+    const crash = (stage: string, err: unknown) => {
+      const failed = instance;
+      instance = null;
+      console.error(`"${effect.name}" crashed in ${stage}():`, err);
+      try {
+        failed?.dispose?.();
+      } catch (disposeErr) {
+        console.error(`"${effect.name}" also failed to dispose:`, disposeErr);
+      }
+      reportError(`This effect stopped after an error: ${describeError(err)}`);
+    };
     let viewport: Viewport | undefined;
     const fixed = RESOLUTIONS[resolution].size;
 
+    const resizeInstance = () => {
+      if (!instance || !viewport) return;
+      try {
+        instance.resize(viewport);
+      } catch (err) {
+        crash("resize", err);
+      }
+    };
     const applySize = () => {
       let dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       const cssPixels = Math.max(1, canvas.clientWidth * canvas.clientHeight);
@@ -110,7 +162,7 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
       canvas.width = width;
       canvas.height = height;
       viewport = { width, height, scale: height / 1080 };
-      instance?.resize(viewport);
+      resizeInstance();
     };
     applySize();
 
@@ -121,8 +173,8 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
       instance = null;
     };
     const onRestored = () => {
-      instance = createInstance(effect, canvas);
-      if (viewport) instance?.resize(viewport);
+      instance = createInstance(effect, canvas, reportError);
+      resizeInstance();
     };
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
@@ -136,13 +188,31 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
     let statsStart = last;
     let statsFrames = 0;
     let statsWork = 0;
+    // Whether the meter currently shows this effect's stats.
+    let statsShown = false;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      if (!instance || !shouldDraw(now, FRAME_RATES[frameRateRef.current].fps)) return;
+      if (!instance) {
+        // Failed, crashed, or waiting for a lost context: hide the meter and restart
+        // the sample window so stale numbers never show.
+        if (statsShown) onStatsRef.current?.(undefined);
+        statsShown = false;
+        statsStart = now;
+        statsFrames = 0;
+        statsWork = 0;
+        last = now;
+        return;
+      }
+      if (!shouldDraw(now, FRAME_RATES[frameRateRef.current].fps)) return;
       const dt = frameDelta(now, last);
       last = now;
       const start = performance.now();
-      instance.frame(dt, paramsRef.current);
+      try {
+        instance.frame(dt, paramsRef.current);
+      } catch (err) {
+        crash("frame", err);
+        return;
+      }
       statsWork += performance.now() - start;
       statsFrames++;
       const elapsed = now - statsStart;
@@ -151,6 +221,7 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
           fps: (statsFrames * 1000) / elapsed,
           frameMs: statsWork / statsFrames,
         });
+        statsShown = true;
         statsStart = now;
         statsFrames = 0;
         statsWork = 0;
@@ -163,7 +234,12 @@ export function EffectCanvas({ effect, params, resolution, frameRate, onStats, r
       observer?.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);
-      instance?.dispose?.();
+      try {
+        instance?.dispose?.();
+      } catch (err) {
+        console.error(`Failed to dispose "${effect.name}":`, err);
+      }
+      onStatsRef.current?.(undefined);
     };
   }, [effect, resolution]);
 

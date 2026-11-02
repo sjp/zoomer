@@ -102,6 +102,13 @@ body,
   line-height: 1.4;
 }
 
+.effect-error {
+  margin: 0;
+  color: #ff6b6b;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .hint {
   font-size: 12px;
   text-align: center;
