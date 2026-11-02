@@ -4,6 +4,7 @@ import {
   createProgram,
   createRenderTarget,
   createUniforms,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   type RenderTarget,
@@ -138,22 +139,25 @@ uniform float uSoftness;
 out vec4 outColor;
 
 const int TILE_SHIFT = ${TILE_SHIFT};
-
+${DITHER_GLSL}
 void main() {
   // Lamp coordinates, y down like the 2D canvas.
   vec2 p = vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y) * uScale;
   float t = clamp((p.y - 0.5) / (REF_H - 1.0), 0.0, 1.0);
   vec3 bg = mix(uBgTop, uBgBottom, t);
+  // Sub-LSB dither on all three output paths, so tiles and per-pixel areas match:
+  // the background gradient otherwise bands into strips about 47 px tall at 4K.
+  float dith = dither8(gl_FragCoord.xy);
 
   // Whole tiles of background or saturated core don't need the field (see MASK_FRAGMENT).
   float tile = texelFetch(uMask, ivec2(gl_FragCoord.xy) >> TILE_SHIFT, 0).r;
   if (tile > ${glslFloat((1 + MASK_CORE) / 2)}) {
-    outColor = vec4(clamp(bg, 0.0, 1.0), 1.0);
+    outColor = vec4(clamp(bg + dith, 0.0, 1.0), 1.0);
     return;
   }
   vec3 wax = mix(uWaxTop, uWaxBottom, t);
   if (tile > ${glslFloat(MASK_CORE / 2)}) {
-    outColor = vec4(clamp(wax + (1.0 - wax) * (uGlow * 0.4), 0.0, 1.0), 1.0);
+    outColor = vec4(clamp(wax + (1.0 - wax) * (uGlow * 0.4) + dith, 0.0, 1.0), 1.0);
     return;
   }
 
@@ -185,7 +189,7 @@ void main() {
   vec3 shaded = wax * shade;
   vec3 lit = shaded + (1.0 - shaded) * lift;
   vec3 outside = bg + wax * halo;
-  outColor = vec4(clamp(mix(outside, lit, alpha), 0.0, 1.0), 1.0);
+  outColor = vec4(clamp(mix(outside, lit, alpha) + dith, 0.0, 1.0), 1.0);
 }
 `;
 
