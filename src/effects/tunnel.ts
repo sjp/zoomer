@@ -90,8 +90,18 @@ void main() {
   // Shearing u by depth keeps the corkscrew attached to the walls.
   float u = atan(d.y, d.x) * (U_REPS / TAU) + uSpiral * dep + uScroll.x;
   float v = dep + uScroll.y;
+  // Analytic derivatives for the mip level: dFdx(u) would spike at the atan seam
+  // (u jumps a whole number of tiles there) and pick level 0 in a line along it.
+  // grad(atan(d.y, d.x)) = (-d.y, d.x) / |d|^2; dn^2 stays clear of 0.
+  vec2 dPx = dFdx(d);
+  vec2 dPy = dFdy(d);
+  vec2 dAng = vec2(-d.y, d.x) * ((U_REPS / TAU) / (dn * dn));
+  float depX = dFdx(dep);
+  float depY = dFdy(dep);
+  vec2 gx = vec2(dot(dAng, dPx) + uSpiral * depX, depX);
+  vec2 gy = vec2(dot(dAng, dPy) + uSpiral * depY, depY);
   // Texel i is centred at (i + 0.5) / TEX; u's half texel is in uScroll.
-  float texel = texture(uTex, vec2(u, v + 0.5 / TEX)).r;
+  float texel = textureGrad(uTex, vec2(u, v + 0.5 / TEX), gx, gy).r;
   float c = 0.5 + 0.5 * cos(fract(v) * (RINGS * TAU));
   float s = clamp(texel + uRings * (c * c * c - 0.3), 0.0, 1.0);
 
@@ -165,14 +175,42 @@ const buildTexture = (out: Float32Array, seed: number) => {
   }
 };
 
-let textureData: Float32Array | undefined;
-/** The wall texture is deterministic, so build it once and reuse it across instances. */
-const getTextureData = () => {
-  if (!textureData) {
-    textureData = new Float32Array(TEX * TEX);
-    buildTexture(textureData, 1337);
+/**
+ * Halves a square, tiling single-channel texture with a 2x2 box filter. Used to
+ * build the mip chain on the CPU: `generateMipmap` needs a colour-renderable
+ * format, and R16F is only renderable with EXT_color_buffer_float.
+ */
+export function downsample2x(src: Float32Array, size: number): Float32Array {
+  if (size <= 1) return src.slice(0, 1);
+  const half = size >> 1;
+  const out = new Float32Array(half * half);
+  for (let y = 0; y < half; y++) {
+    const r0 = 2 * y * size;
+    const r1 = r0 + size;
+    for (let x = 0; x < half; x++) {
+      const c = 2 * x;
+      out[y * half + x] = (src[r0 + c] + src[r0 + c + 1] + src[r1 + c] + src[r1 + c + 1]) / 4;
+    }
   }
-  return textureData;
+  return out;
+}
+
+/** Full mip chain of a square power-of-two texture: `[level0, level1, ..., 1x1]`. */
+export function buildMipChain(level0: Float32Array, size: number): Float32Array[] {
+  const levels = [level0];
+  for (let s = size; s > 1; s >>= 1) levels.push(downsample2x(levels[levels.length - 1], s));
+  return levels;
+}
+
+let textureLevels: Float32Array[] | undefined;
+/** The wall texture is deterministic, so build it (and its mips) once and reuse it across instances. */
+const getTextureLevels = () => {
+  if (!textureLevels) {
+    const data = new Float32Array(TEX * TEX);
+    buildTexture(data, 1337);
+    textureLevels = buildMipChain(data, TEX);
+  }
+  return textureLevels;
 };
 
 /**
@@ -240,11 +278,30 @@ export const tunnel = defineEffect({
           internalFormat: gl.R16F,
           format: gl.RED,
           type: gl.FLOAT,
-          data: getTextureData(),
+          data: getTextureLevels()[0],
           wrap: gl.REPEAT,
         }),
         (t) => gl.deleteTexture(t),
       );
+      // Mipmaps stop the walls shimmering where they minify (mid-depth and beyond);
+      // the shader picks the level with textureGrad. Uploaded straight after
+      // createDataTexture, so its unpack state still applies.
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      const levels = getTextureLevels();
+      for (let i = 1; i < levels.length; i++)
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          i,
+          gl.R16F,
+          TEX >> i,
+          TEX >> i,
+          0,
+          gl.RED,
+          gl.FLOAT,
+          levels[i],
+        );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.bindTexture(gl.TEXTURE_2D, null);
       const u = createUniforms(gl, program, [
         "uTex",
         "uPixScale",
