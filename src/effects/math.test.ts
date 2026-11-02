@@ -40,6 +40,15 @@ describe("fract", () => {
     expect(fract(-0.25)).toBe(0.75);
     expect(fract(3)).toBe(0);
   });
+
+  it("stays below 1 for tiny negative inputs", () => {
+    for (const x of [-1e-17, -1e-300, -Number.MIN_VALUE, -5e-324, -1e-16]) {
+      const f = fract(x);
+      expect(f).toBeGreaterThanOrEqual(0);
+      expect(f).toBeLessThan(1);
+    }
+    expect(fract(-0)).toBe(0);
+  });
 });
 
 describe("wrap", () => {

@@ -16,9 +16,13 @@ export function approach(x: number, target: number, step: number): number {
   return target > x ? Math.min(target, x + step) : Math.max(target, x - step);
 }
 
-/** GLSL `fract`: `x - floor(x)`, in [0, 1) for finite `x`. */
+/**
+ * GLSL `fract`: `x - floor(x)`, in [0, 1) for finite `x`. A tiny negative `x`
+ * would round up to exactly 1, so that case returns 0.
+ */
 export function fract(x: number): number {
-  return x - Math.floor(x);
+  const f = x - Math.floor(x);
+  return f < 1 ? f : 0;
 }
 
 /**
