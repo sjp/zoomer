@@ -345,10 +345,16 @@ export const flowfield = defineEffect({
         rands[i] = rng();
       };
 
-      const reseed = (seed: number) => {
+      /**
+       * New field and particles, all at random ages. The first `count` count as
+       * active already, so the frame doesn't respawn them fresh: that would line their
+       * ages up, fading them all in together and later dying together.
+       */
+      const reseed = (seed: number, count: number) => {
         noise3 = createNoise(seed * 131 + 17).noise3;
         rng = createRng(seed * 7907 + 3);
         for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
+        active = Math.min(Math.round(count), MAX_PARTICLES);
         lightMode = undefined;
       };
 
@@ -365,7 +371,7 @@ export const flowfield = defineEffect({
           beginFrame(gl, width, height);
           if (p.seed !== seedKey) {
             seedKey = p.seed;
-            reseed(p.seed);
+            reseed(p.seed, p.count);
           }
           ensureTargets();
           if (targets.length < 2) return;
