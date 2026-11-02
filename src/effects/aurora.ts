@@ -190,6 +190,16 @@ export function horizonMax(table: Float32Array): number {
 }
 
 /**
+ * Stars to draw for a star density (0..1) on a `width` x `height` canvas: MAX_STARS
+ * at full density on a 16:9 screen, more on wider screens (up to 1.5 times, capped
+ * at MAX_STARS) and fewer on narrower ones, so the sky looks equally dense.
+ */
+export function auroraStarCount(density: number, width: number, height: number): number {
+  const aspectShare = Math.min(1.5, width / Math.max(1, height) / (16 / 9));
+  return Math.max(0, Math.min(MAX_STARS, Math.round(density * MAX_STARS * aspectShare)));
+}
+
+/**
  * Fills `out` with up to `count` star instances (STAR_STRIDE floats each) from a
  * fixed seeded sequence, so changing the density adds or removes stars without
  * moving the others. Stars hidden by the silhouette are skipped, and stars dim
@@ -470,9 +480,11 @@ export const aurora = defineEffect({
           }
           if (starsDirty || p.stars !== starDensity) {
             starDensity = p.stars;
-            const aspectShare = Math.min(1.5, width / height / (16 / 9));
-            const count = Math.round(starDensity * MAX_STARS * aspectShare);
-            starCount = buildStars(stars.data, Math.min(MAX_STARS, count), horizonTable);
+            starCount = buildStars(
+              stars.data,
+              auroraStarCount(starDensity, width, height),
+              horizonTable,
+            );
             stars.upload(starCount);
           }
 

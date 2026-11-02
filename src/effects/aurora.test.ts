@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  auroraStarCount,
   buildHorizonTable,
   buildPathTable,
   buildRayTable,
@@ -161,5 +162,37 @@ describe("buildStars", () => {
     const horizon = new Float32Array(2);
     expect(buildStars(new Float32Array(60), 0, horizon)).toBe(0);
     expect(buildStars(new Float32Array(10 * STAR_STRIDE), 50, horizon)).toBe(10);
+  });
+});
+
+describe("auroraStarCount", () => {
+  it("draws MAX_STARS at full density on a 16:9 screen, at any resolution", () => {
+    expect(auroraStarCount(1, 1920, 1080)).toBe(MAX_STARS);
+    expect(auroraStarCount(1, 3840, 2160)).toBe(MAX_STARS);
+    expect(auroraStarCount(0.5, 1920, 1080)).toBe(MAX_STARS / 2);
+    expect(auroraStarCount(0, 1920, 1080)).toBe(0);
+  });
+
+  it("scales with the aspect, up to 1.5 times wider, capped at MAX_STARS", () => {
+    // 4:3 is three quarters as wide as 16:9.
+    expect(auroraStarCount(1, 1440, 1080)).toBe(MAX_STARS * 0.75);
+    expect(auroraStarCount(0.5, 3840, 1080)).toBe(MAX_STARS * 0.75);
+    expect(auroraStarCount(0.5, 10000, 1080)).toBe(MAX_STARS * 0.75);
+    expect(auroraStarCount(1, 3840, 1080)).toBe(MAX_STARS);
+    expect(auroraStarCount(1, 1080, 1920)).toBe(Math.round(MAX_STARS * (1080 / 1920) ** 2));
+  });
+
+  it("returns a whole count for any canvas, including an empty one", () => {
+    for (const [w, h] of [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [333, 77],
+    ]) {
+      const n = auroraStarCount(0.37, w, h);
+      expect(Number.isInteger(n)).toBe(true);
+      expect(n).toBeGreaterThanOrEqual(0);
+      expect(n).toBeLessThanOrEqual(MAX_STARS);
+    }
   });
 });
