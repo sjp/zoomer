@@ -13,6 +13,35 @@ import { smoothstep } from "./math";
 import { unitRgbMemo } from "./color";
 
 const MAX_STREAKS = 3000;
+/**
+ * Fill budget: the streaks' quads may cover at most this many screens in total
+ * at full jump, so wide streaks draw fewer of them rather than missing 4K/120.
+ */
+const FILL_SCREENS = 3;
+/** Typical streak distance (0 = centre, 1 = corner) for the area estimate. */
+const MEAN_DIST = 0.5;
+
+/**
+ * How many of `count` streaks to draw so their expected total area at full jump
+ * (the worst case, so the count doesn't change mid-jump) stays within
+ * `FILL_SCREENS` screens. `width` is the streak width param (1080p px) and
+ * `refWidth` the screen width in 1080p reference px. Matches `frame`: length
+ * `stretch * d * 0.9` half-diagonals, half-width `width / 2 * (0.3 + 1.2 d)`
+ * plus half a pixel of anti-aliasing on each side.
+ */
+export function hyperspaceStreakCount(
+  count: number,
+  width: number,
+  stretch: number,
+  refWidth: number,
+): number {
+  const radius = Math.hypot(refWidth, 1080) / 2;
+  const hw = (Math.max(0, width) / 2) * (0.3 + 1.2 * MEAN_DIST) + 0.5;
+  const len = Math.max(0, stretch) * MEAN_DIST * 0.9 * radius;
+  const perStreak = (len + 2 * hw) * 2 * hw;
+  const fit = Math.floor((FILL_SCREENS * refWidth * 1080) / perStreak);
+  return Math.max(1, Math.min(MAX_STREAKS, Math.floor(count), fit));
+}
 
 /**
  * Background colour with a radial glow that fades linearly to nothing at uGlowRadius,
@@ -190,7 +219,8 @@ export const hyperspace = defineEffect({
           const sb = streak[2];
           const halfWidth = (scale * p.width) / 2;
           const velocity = p.speed * (0.04 + jump);
-          const n = Math.min(p.count, MAX_STREAKS);
+          // Wider, longer streaks draw fewer of them, keeping the blended area within budget.
+          const n = hyperspaceStreakCount(p.count, p.width, p.stretch, width / scale);
           for (let i = 0; i < n; i++) {
             let d = dist[i] + dt * velocity * pace[i] * (0.1 + dist[i]);
             if (d > 1.1) {
