@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { coverageThreshold, layerUniforms } from "./clouds";
 import {
   buildPresetTable,
   cloudNoiseChannels,
+  coverageThreshold,
   createPresetTransition,
+  layerUniforms,
   lerpPreset,
   P,
   PRESET_STRIDE,

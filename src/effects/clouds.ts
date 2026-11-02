@@ -1,9 +1,13 @@
 import {
-  cloudNoiseChannels,
   buildPresetTable,
+  cloudNoiseChannels,
+  coverageThreshold,
   createPresetTransition,
+  LAYER_FLOATS,
+  layerUniforms,
   P,
   presetIndex,
+  STRETCH_X,
   TIME_OPTIONS,
 } from "./clouds-sky";
 import {
@@ -18,7 +22,6 @@ import {
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { defineEffect } from "./types";
-import { fract } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
 
 /** Noise texture side, in texels. */
@@ -31,18 +34,8 @@ const BASE_FREQ = 0.55;
 const FAR_FREQ = 1.9;
 /** ...and drift this fraction of the near layer's speed. */
 const FAR_SPEED = 0.45;
-/** Detail fetch frequency relative to the coarse one (non-integer to avoid lockstep). */
-const DETAIL_MUL = 4.37;
-/** The detail octaves drift a little faster than the bulk, so edges churn. */
-const DETAIL_DRIFT = 1.2;
-/** Horizontal squash of cloud space, so clouds are wider than tall. */
-const STRETCH_X = 0.6;
 /** Near-layer wind, in frame heights per second at speed 1. */
 const WIND = 0.012;
-/** Seconds (at speed 1) per evolution cross-fade cycle. */
-const EVOLVE_PERIOD = 28;
-/** Texture units each evolving sample slides (upwards) over one cycle. */
-const MORPH = 0.06;
 /** Offset towards the light of the lighting sample, in texture units (~5 texels). */
 const LIGHT_STEP = 0.02;
 /** Per-layer opacity: the far layer is slightly thinner and hazier. */
@@ -141,70 +134,6 @@ vec4 composite(vec2 uv) {
   return vec4(sky * (1.0 - c.a) + c.rgb + uGlowColor * (0.6 * g * c.a), 1.0);
 }
 `;
-
-/** Floats per layer in each of the three per-layer uniform arrays. */
-const LAYER_FLOATS = 4;
-
-/** Cheap deterministic hash of a number to [0, 1). */
-const hash = (k: number) => fract(Math.sin(k * 12.9898 + 4.1414) * 43758.5453);
-
-/**
- * Computes one layer's uniforms (writing 4 floats at `o` in each array).
- *
- * - `drift`: accumulated wind travel in frame heights (float64, unbounded).
- * - `evolve`: accumulated evolution time in seconds.
- * - `freq`: coarse texture repeats per frame height.
- *
- * The shape evolves by cross-fading two samples A and B of the noise, each at a
- * random offset that slides slowly and re-randomises once per cycle while its
- * weight is exactly 0, so there is never a visible jump. The cycles are half a
- * period apart, and the weights (triangle waves) always sum to 1. Offsets are
- * wrapped to [0, 1) since the texture tiles, keeping float32 uniforms precise.
- * Allocates nothing.
- */
-export function layerUniforms(
-  offA: Float32Array,
-  detail: Float32Array,
-  params: Float32Array,
-  o: number,
-  layer: number,
-  drift: number,
-  evolve: number,
-  freq: number,
-  opacity: number,
-): void {
-  const dx = -drift * STRETCH_X * freq;
-  const phase = evolve / EVOLVE_PERIOD + layer * 0.31;
-  const phaseB = phase + 0.5;
-  const ka = Math.floor(phase);
-  const kb = Math.floor(phaseB);
-  const fa = phase - ka;
-  const fb = phaseB - kb;
-  const seedA = ka * 2 + layer * 1013;
-  const seedB = kb * 2 + 1 + layer * 1013;
-  offA[o] = fract(dx + hash(seedA));
-  offA[o + 1] = fract(hash(seedA + 0.5) - MORPH * fa);
-  offA[o + 2] = fract(dx + hash(seedB));
-  offA[o + 3] = fract(hash(seedB + 0.5) - MORPH * fb);
-  const dfreq = freq * DETAIL_MUL;
-  detail[o] = fract(-drift * DETAIL_DRIFT * STRETCH_X * dfreq + layer * 0.37);
-  detail[o + 1] = fract(layer * 0.61);
-  detail[o + 2] = dfreq;
-  detail[o + 3] = 0;
-  const wa = 1 - Math.abs(2 * fa - 1);
-  const wb = 1 - wa;
-  params[o] = freq;
-  params[o + 1] = wa;
-  // Averaging two independent fields lowers their contrast by sqrt(wa² + wb²).
-  params[o + 2] = 1 / Math.sqrt(wa * wa + wb * wb);
-  params[o + 3] = opacity;
-}
-
-/** Density threshold (in unit-variance noise) for a coverage of 0..1. */
-export function coverageThreshold(coverage: number): number {
-  const c = Math.min(1, Math.max(0, coverage));
-  return 2.3 - 3.6 * c;
-}
 
 /**
  * A sky timelapse: fbm cumulus clouds with fake directional lighting drift and

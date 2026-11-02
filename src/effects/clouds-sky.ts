@@ -1,10 +1,12 @@
 /**
  * Pure (GL-free) building blocks for the time-lapse clouds effect: the tileable
- * noise texture, the time-of-day preset table and the smooth preset transition.
+ * noise texture, the per-layer motion uniforms, the time-of-day preset table and
+ * the smooth preset transition.
  */
 
 import { hexToUnitRgb } from "./color";
 import type { NoiseChannel } from "./noise";
+import { fract } from "./math";
 
 // ---------------------------------------------------------------------------
 // Noise texture
@@ -24,6 +26,85 @@ export const NOISE_PERIODS = [4, 8, 16, 32] as const;
  */
 export function cloudNoiseChannels(seed: number): NoiseChannel[] {
   return NOISE_PERIODS.map((period, c) => ({ period, seed: seed * 31 + c * 977 + 1 }));
+}
+
+// ---------------------------------------------------------------------------
+// Layer motion and coverage
+// ---------------------------------------------------------------------------
+
+/** Detail fetch frequency relative to the coarse one (non-integer to avoid lockstep). */
+const DETAIL_MUL = 4.37;
+/** The detail octaves drift a little faster than the bulk, so edges churn. */
+const DETAIL_DRIFT = 1.2;
+/** Horizontal squash of cloud space, so clouds are wider than tall. */
+export const STRETCH_X = 0.6;
+/** Seconds (at speed 1) per evolution cross-fade cycle. */
+const EVOLVE_PERIOD = 28;
+/** Texture units each evolving sample slides (upwards) over one cycle. */
+const MORPH = 0.06;
+
+/** Floats per layer in each of the three per-layer uniform arrays. */
+export const LAYER_FLOATS = 4;
+
+/** Cheap deterministic hash of a number to [0, 1). */
+const hash = (k: number) => fract(Math.sin(k * 12.9898 + 4.1414) * 43758.5453);
+
+/**
+ * Computes one layer's uniforms (writing 4 floats at `o` in each array).
+ *
+ * - `drift`: accumulated wind travel in frame heights (float64, unbounded).
+ * - `evolve`: accumulated evolution time in seconds.
+ * - `freq`: coarse texture repeats per frame height.
+ *
+ * The shape evolves by cross-fading two samples A and B of the noise, each at a
+ * random offset that slides slowly and re-randomises once per cycle while its
+ * weight is exactly 0, so there is never a visible jump. The cycles are half a
+ * period apart, and the weights (triangle waves) always sum to 1. Offsets are
+ * wrapped to [0, 1) since the texture tiles, keeping float32 uniforms precise.
+ * Allocates nothing.
+ */
+export function layerUniforms(
+  offA: Float32Array,
+  detail: Float32Array,
+  params: Float32Array,
+  o: number,
+  layer: number,
+  drift: number,
+  evolve: number,
+  freq: number,
+  opacity: number,
+): void {
+  const dx = -drift * STRETCH_X * freq;
+  const phase = evolve / EVOLVE_PERIOD + layer * 0.31;
+  const phaseB = phase + 0.5;
+  const ka = Math.floor(phase);
+  const kb = Math.floor(phaseB);
+  const fa = phase - ka;
+  const fb = phaseB - kb;
+  const seedA = ka * 2 + layer * 1013;
+  const seedB = kb * 2 + 1 + layer * 1013;
+  offA[o] = fract(dx + hash(seedA));
+  offA[o + 1] = fract(hash(seedA + 0.5) - MORPH * fa);
+  offA[o + 2] = fract(dx + hash(seedB));
+  offA[o + 3] = fract(hash(seedB + 0.5) - MORPH * fb);
+  const dfreq = freq * DETAIL_MUL;
+  detail[o] = fract(-drift * DETAIL_DRIFT * STRETCH_X * dfreq + layer * 0.37);
+  detail[o + 1] = fract(layer * 0.61);
+  detail[o + 2] = dfreq;
+  detail[o + 3] = 0;
+  const wa = 1 - Math.abs(2 * fa - 1);
+  const wb = 1 - wa;
+  params[o] = freq;
+  params[o + 1] = wa;
+  // Averaging two independent fields lowers their contrast by sqrt(wa² + wb²).
+  params[o + 2] = 1 / Math.sqrt(wa * wa + wb * wb);
+  params[o + 3] = opacity;
+}
+
+/** Density threshold (in unit-variance noise) for a coverage of 0..1. */
+export function coverageThreshold(coverage: number): number {
+  const c = Math.min(1, Math.max(0, coverage));
+  return 2.3 - 3.6 * c;
 }
 
 // ---------------------------------------------------------------------------
