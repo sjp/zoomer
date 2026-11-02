@@ -15,8 +15,8 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   withScope,
 } from "./gl";
@@ -161,7 +161,7 @@ export const clouds = defineEffect({
         gl.deleteProgram(p),
       );
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         "uNoise",
         "uAspect",
         "uLayers",
@@ -175,7 +175,7 @@ export const clouds = defineEffect({
         "uSkyTop",
         "uSkyBottom",
       ]);
-      const cLoc = getUniforms(gl, target.program, [
+      const cu = createUniforms(gl, target.program, [
         "uSkyTop",
         "uSkyBottom",
         "uGlowColor",
@@ -184,7 +184,7 @@ export const clouds = defineEffect({
         "uAspect",
       ]);
       gl.useProgram(program);
-      gl.uniform1i(loc.uNoise, 0);
+      u.i1("uNoise", 0);
 
       const noiseTex = scope.add(
         createDataTexture(gl, {
@@ -214,8 +214,6 @@ export const clouds = defineEffect({
       let sizeDirty = true;
       let lastTime = "";
       let timeIndex = 0;
-      let lastCoverage = NaN;
-      let lastLayers = -1;
       /** Wind travel per layer (frame heights) and evolution time; float64. */
       let driftNear = 0;
       let driftFar = 0;
@@ -245,54 +243,32 @@ export const clouds = defineEffect({
           if (transition.update(dt, timeIndex)) {
             const v = transition.values;
             gl.useProgram(program);
-            gl.uniform3f(loc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
-            gl.uniform3f(loc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
-            gl.uniform3f(
-              loc.uCloudLight,
-              v[P.cloudLight],
-              v[P.cloudLight + 1],
-              v[P.cloudLight + 2],
-            );
-            gl.uniform3f(
-              loc.uCloudShadow,
-              v[P.cloudShadow],
-              v[P.cloudShadow + 1],
-              v[P.cloudShadow + 2],
-            );
+            u.f3("uSkyTop", v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
+            u.f3("uSkyBottom", v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
+            u.f3("uCloudLight", v[P.cloudLight], v[P.cloudLight + 1], v[P.cloudLight + 2]);
+            u.f3("uCloudShadow", v[P.cloudShadow], v[P.cloudShadow + 1], v[P.cloudShadow + 2]);
             // The blended light direction may be shorter than 1; that only softens shading.
-            gl.uniform2f(loc.uSunStep, v[P.lightX] * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
+            u.f2("uSunStep", v[P.lightX] * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
             gl.useProgram(target.program);
-            gl.uniform3f(cLoc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
-            gl.uniform3f(cLoc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
-            gl.uniform3f(cLoc.uGlowColor, v[P.glow], v[P.glow + 1], v[P.glow + 2]);
-            gl.uniform4f(
-              cLoc.uSun,
-              v[P.sunX],
-              v[P.sunY],
-              Math.max(1e-3, v[P.glowRadius]),
-              v[P.glowStrength],
-            );
-            gl.uniform2f(cLoc.uDisc, Math.max(1e-3, v[P.discRadius]), v[P.discStrength]);
+            cu.f3("uSkyTop", v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
+            cu.f3("uSkyBottom", v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
+            cu.f3("uGlowColor", v[P.glow], v[P.glow + 1], v[P.glow + 2]);
+            cu.f4("uSun", v[P.sunX], v[P.sunY], Math.max(1e-3, v[P.glowRadius]), v[P.glowStrength]);
+            cu.f2("uDisc", Math.max(1e-3, v[P.discRadius]), v[P.discStrength]);
           }
           if (sizeDirty) {
             sizeDirty = false;
             const aspect = width / height;
             gl.useProgram(target.program);
-            gl.uniform1f(cLoc.uAspect, aspect);
+            cu.f1("uAspect", aspect);
             gl.useProgram(program);
-            gl.uniform1f(loc.uAspect, aspect);
+            u.f1("uAspect", aspect);
           }
 
           // Cloud pass, into the low-res target.
           gl.useProgram(program);
-          if (p.coverage !== lastCoverage) {
-            lastCoverage = p.coverage;
-            gl.uniform1f(loc.uThreshold, coverageThreshold(p.coverage));
-          }
-          if (layers !== lastLayers) {
-            lastLayers = layers;
-            gl.uniform1i(loc.uLayers, layers);
-          }
+          u.f1("uThreshold", coverageThreshold(p.coverage));
+          u.i1("uLayers", layers);
           layerUniforms(offA, detail, layerP, 0, 0, driftNear, evolve, freq, OPACITY[0]);
           layerUniforms(
             offA,
@@ -305,9 +281,9 @@ export const clouds = defineEffect({
             freq * FAR_FREQ,
             OPACITY[1],
           );
-          gl.uniform4fv(loc.uOffA, offA);
-          gl.uniform4fv(loc.uDetail, detail);
-          gl.uniform4fv(loc.uLayerP, layerP);
+          gl.uniform4fv(u.loc.uOffA, offA);
+          gl.uniform4fv(u.loc.uDetail, detail);
+          gl.uniform4fv(u.loc.uLayerP, layerP);
           target.bind();
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, noiseTex);
