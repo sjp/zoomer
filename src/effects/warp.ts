@@ -2,9 +2,12 @@ import type { Rgb } from "./color";
 import { beginFrame, withScope } from "./gl";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
 const MAX_STARS = 4000;
+/** Seconds a star added by a higher count takes to fade in. */
+const FADE_IN = 0.8;
 
 /**
  * Classic 3D starfield: stars stream past the camera and stretch into streaks.
@@ -52,6 +55,9 @@ export const warp = defineEffect({
       const ys = new Float32Array(MAX_STARS);
       const zs = new Float32Array(MAX_STARS);
       const mix = new Float32Array(MAX_STARS);
+      const life = new Float32Array(MAX_STARS);
+      /** Stars simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
       let width = 1;
       let height = 1;
       let scale = 1;
@@ -86,7 +92,10 @@ export const warp = defineEffect({
           const margin = 50 * scale;
           const sizePx = p.size * scale;
 
-          const n = Math.min(p.count, MAX_STARS);
+          const target = Math.min(Math.floor(p.count), MAX_STARS);
+          const n = (live = growLive(life, live, target));
+          const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
           let count = 0;
           for (let i = 0; i < n; i++) {
             let z = zs[i] - dz;
@@ -95,6 +104,8 @@ export const warp = defineEffect({
               z = 1;
             }
             zs[i] = z;
+            // Added stars appear mid-flight, so they fade in rather than pop.
+            const l = stepLife(life, i, target, fadeStep, outStep);
 
             const x = xs[i];
             const y = ys[i];
@@ -107,7 +118,8 @@ export const warp = defineEffect({
             }
             const fzt = focal / (z + tail);
             const depth = 1 - z;
-            const alpha = Math.min(1, depth * 1.6);
+            const alpha = Math.min(1, depth * 1.6) * l;
+            if (alpha <= 0) continue;
             const t = mix[i] * p.tintAmount;
             const o = count * STREAK_FLOATS;
             data[o] = cx + x * fzt;
@@ -120,6 +132,7 @@ export const warp = defineEffect({
             data[o + 7] = Math.max(0.5, sizePx * (0.2 + depth)) / 2;
             count++;
           }
+          live = trimLive(life, live, target);
 
           const bg = backgroundRgb(p.background);
           gl.clearColor(bg[0], bg[1], bg[2], 1);
