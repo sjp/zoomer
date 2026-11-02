@@ -1,13 +1,13 @@
-import { hexToUnitRgb } from "./color";
 import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
   createRenderTarget,
+  createUniforms,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   type RenderTarget,
+  type Uniforms,
   withScope,
 } from "./gl";
 import { createRng } from "./noise";
@@ -290,7 +290,7 @@ export const lavalamp = defineEffect({
         "uCount",
         "uPoolR2",
       ] as const;
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         ...fieldNames,
         "uMask",
         "uInvLampW",
@@ -302,11 +302,11 @@ export const lavalamp = defineEffect({
         "uGlow",
         "uSoftness",
       ]);
-      const maskLoc = getUniforms(gl, maskProgram, [...fieldNames, "uBgLimit", "uCoreLimit"]);
+      const maskU = createUniforms(gl, maskProgram, [...fieldNames, "uBgLimit", "uCoreLimit"]);
       // Uniforms persist with their program even in a shared context, so the ones
       // that only change with resize or params are uploaded only when they change.
       gl.useProgram(program);
-      gl.uniform1i(loc.uMask, 0);
+      u.i1("uMask", 0);
 
       // One R8 texel per tile; storage is (re)allocated when the tile grid changes.
       let mask: RenderTarget | null = null;
@@ -315,45 +315,32 @@ export const lavalamp = defineEffect({
 
       let width = 1;
       let height = 1;
-      let sizeDirty = true;
       let seedKey = NaN;
       let blobs: Blob[] = [];
       /** Lamp seconds (scaled by speed), kept in float64; only derived values reach the GPU. */
       let time = 0;
       const blobData = new Float32Array(MAX_BLOBS * 4);
       const blobR2 = new Float32Array(MAX_BLOBS);
-      let lastSize = NaN;
-      let lastGlow = NaN;
-      let lastSoftness = NaN;
-      let lastWaxTop = "";
-      let lastWaxBottom = "";
-      let lastBgTop = "";
-      let lastBgBottom = "";
 
       // Per-frame values read by uploadField.
-      let sizeChanged = true;
-      let sizeParamChanged = true;
       let scaleX = 1;
       let scaleY = 1;
       let poolR2 = 0;
       let count = 1;
       /** Uploads the field uniforms shared by both programs. */
-      const uploadField = (l: Record<(typeof fieldNames)[number], WebGLUniformLocation | null>) => {
-        if (sizeChanged) {
-          gl.uniform2f(l.uResolution, width, height);
-          gl.uniform2f(l.uScale, scaleX, scaleY);
-        }
-        if (sizeParamChanged) gl.uniform1f(l.uPoolR2, poolR2);
-        gl.uniform4fv(l.uBlobs, blobData);
-        gl.uniform1fv(l.uBlobR2, blobR2);
-        gl.uniform1i(l.uCount, count);
+      const uploadField = (fu: Uniforms<(typeof fieldNames)[number]>) => {
+        fu.f2("uResolution", width, height);
+        fu.f2("uScale", scaleX, scaleY);
+        fu.f1("uPoolR2", poolR2);
+        gl.uniform4fv(fu.loc.uBlobs, blobData);
+        gl.uniform1fv(fu.loc.uBlobR2, blobR2);
+        fu.i1("uCount", count);
       };
 
       return {
         resize(v) {
           width = v.width;
           height = v.height;
-          sizeDirty = true;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -400,30 +387,20 @@ export const lavalamp = defineEffect({
             mask = createRenderTarget(gl, tw, th, gl.R8, { filter: gl.NEAREST });
             if (!mask) throw new Error("Lava lamp: R8 mask is not renderable");
           }
-          sizeChanged = sizeDirty;
-          sizeDirty = false;
           scaleX = lampW / Math.max(1, width);
           scaleY = REF_H / Math.max(1, height);
-          sizeParamChanged = p.size !== lastSize;
-          lastSize = p.size;
           const poolR = 0.05 * Math.sqrt(p.size) * REF_H;
           poolR2 = poolR * poolR;
           count = n;
-          const softChanged = p.softness !== lastSoftness;
 
           mask.bind();
           gl.useProgram(maskProgram);
-          uploadField(maskLoc);
-          if (softChanged) {
-            // A pixel is pure background once both the halo (from 0.38) and the edge
-            // (from 1 - softness) are zero, and pure core once the edge, rim shade and
-            // core lift have all saturated. 1% margins absorb float rounding in the bounds.
-            gl.uniform1f(maskLoc.uBgLimit, 0.99 * Math.min(0.38, THRESHOLD - p.softness));
-            gl.uniform1f(
-              maskLoc.uCoreLimit,
-              1.01 * Math.max(THRESHOLD + 2.6, THRESHOLD + p.softness),
-            );
-          }
+          uploadField(maskU);
+          // A pixel is pure background once both the halo (from 0.38) and the edge
+          // (from 1 - softness) are zero, and pure core once the edge, rim shade and
+          // core lift have all saturated. 1% margins absorb float rounding in the bounds.
+          maskU.f1("uBgLimit", 0.99 * Math.min(0.38, THRESHOLD - p.softness));
+          maskU.f1("uCoreLimit", 1.01 * Math.max(THRESHOLD + 2.6, THRESHOLD + p.softness));
           triangle.draw();
 
           // Main pass, into the default framebuffer.
@@ -432,33 +409,15 @@ export const lavalamp = defineEffect({
           gl.useProgram(program);
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, mask.texture);
-          uploadField(loc);
-          if (sizeChanged) gl.uniform1f(loc.uInvLampW, 1 / lampW);
-          gl.uniform2f(loc.uPoolPhase, wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));
-          if (softChanged) {
-            lastSoftness = p.softness;
-            gl.uniform1f(loc.uSoftness, p.softness);
-          }
-          if (p.glow !== lastGlow) {
-            lastGlow = p.glow;
-            gl.uniform1f(loc.uGlow, p.glow);
-          }
-          if (p.colorTop !== lastWaxTop) {
-            lastWaxTop = p.colorTop;
-            gl.uniform3fv(loc.uWaxTop, hexToUnitRgb(p.colorTop));
-          }
-          if (p.colorBottom !== lastWaxBottom) {
-            lastWaxBottom = p.colorBottom;
-            gl.uniform3fv(loc.uWaxBottom, hexToUnitRgb(p.colorBottom));
-          }
-          if (p.bgTop !== lastBgTop) {
-            lastBgTop = p.bgTop;
-            gl.uniform3fv(loc.uBgTop, hexToUnitRgb(p.bgTop));
-          }
-          if (p.bgBottom !== lastBgBottom) {
-            lastBgBottom = p.bgBottom;
-            gl.uniform3fv(loc.uBgBottom, hexToUnitRgb(p.bgBottom));
-          }
+          uploadField(u);
+          u.f1("uInvLampW", 1 / lampW);
+          u.f2("uPoolPhase", wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));
+          u.f1("uSoftness", p.softness);
+          u.f1("uGlow", p.glow);
+          u.rgb("uWaxTop", p.colorTop);
+          u.rgb("uWaxBottom", p.colorBottom);
+          u.rgb("uBgTop", p.bgTop);
+          u.rgb("uBgBottom", p.bgBottom);
           triangle.draw();
           // Unbind the mask so it is never sampled while it is the render target.
           gl.bindTexture(gl.TEXTURE_2D, null);
