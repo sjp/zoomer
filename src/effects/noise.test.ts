@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildPeriodicNoiseTexture, createNoise, hash32 } from "./noise";
+import {
+  MAX_PERIOD,
+  buildPeriodicNoiseTexture,
+  createNoise,
+  fbm2,
+  fbm3,
+  fbmPeriodic2,
+  hash32,
+  toPeriod,
+} from "./noise";
 
 /** Reference lowbias32 in BigInt arithmetic, independent of Math.imul. */
 function reference(x: number): number {
@@ -74,5 +83,78 @@ describe("buildPeriodicNoiseTexture", () => {
     const tex = buildPeriodicNoiseTexture(16, [{ period: 4, seed: 9 }]);
     expect(tex[0]).toBe(128);
     expect(tex[4 * 16 + 8]).toBe(128);
+  });
+});
+
+describe("toPeriod", () => {
+  it("passes valid periods through", () => {
+    for (const p of [1, 2, 7, 100, MAX_PERIOD]) expect(toPeriod(p)).toBe(p);
+  });
+
+  it("rounds, clamps and replaces NaN", () => {
+    expect(toPeriod(2.4)).toBe(2);
+    expect(toPeriod(2.6)).toBe(3);
+    expect(toPeriod(0)).toBe(1);
+    expect(toPeriod(-5)).toBe(1);
+    expect(toPeriod(1000)).toBe(MAX_PERIOD);
+    expect(toPeriod(Infinity)).toBe(MAX_PERIOD);
+    expect(toPeriod(NaN)).toBe(1);
+  });
+});
+
+describe("periodic2", () => {
+  const noise = createNoise(5);
+
+  it("tiles with its period", () => {
+    for (let i = 0; i < 50; i++) {
+      const x = i * 0.731;
+      const y = i * 0.419;
+      expect(noise.periodic2(x + 12, y - 7, 12, 7)).toBeCloseTo(noise.periodic2(x, y, 12, 7), 12);
+    }
+  });
+
+  it("stays finite for out-of-range and fractional periods", () => {
+    for (const p of [0, -3, 2.5, 257, 300, 1000, NaN, Infinity]) {
+      for (let i = 0; i < 200; i++) {
+        const v = noise.periodic2(i * 1.37 + 0.2, i * 0.91 + 0.4, p, p);
+        expect(Number.isFinite(v)).toBe(true);
+      }
+    }
+  });
+
+  it("treats an out-of-range period as its coerced one", () => {
+    expect(noise.periodic2(3.3, 5.7, 1000, 2.6)).toBe(noise.periodic2(3.3, 5.7, MAX_PERIOD, 3));
+  });
+});
+
+describe("fbm", () => {
+  const noise = createNoise(6);
+
+  it("returns 0 for zero octaves rather than NaN", () => {
+    expect(fbm2(noise, 1.3, 2.7, 0)).toBe(0);
+    expect(fbm3(noise, 1.3, 2.7, 0.4, 0)).toBe(0);
+    expect(fbmPeriodic2(noise, 1.3, 2.7, 8, 0)).toBe(0);
+  });
+
+  it("drops fbmPeriodic2 octaves whose period would pass MAX_PERIOD", () => {
+    // 64 * 2^2 = 256 is the last octave that fits, so 3 and 9 octaves match.
+    for (let i = 0; i < 50; i++) {
+      const x = i * 0.53;
+      const y = i * 1.21;
+      const v = fbmPeriodic2(noise, x, y, 64, 9);
+      expect(Number.isFinite(v)).toBe(true);
+      expect(v).toBe(fbmPeriodic2(noise, x, y, 64, 3));
+    }
+  });
+
+  it("keeps fbmPeriodic2 tiling with its period when octaves are dropped", () => {
+    for (let i = 0; i < 50; i++) {
+      const x = i * 0.53;
+      const y = i * 1.21;
+      expect(fbmPeriodic2(noise, x + 100, y + 100, 100, 6)).toBeCloseTo(
+        fbmPeriodic2(noise, x, y, 100, 6),
+        12,
+      );
+    }
   });
 });

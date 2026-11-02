@@ -6,7 +6,8 @@
  * - `createNoise(seed)`: a noise source with
  *   - `noise2(x, y)` / `noise3(x, y, z)`: simplex noise in roughly [-1, 1];
  *   - `periodic2(x, y, px, py)`: gradient (Perlin) noise in roughly [-1, 1] that
- *     tiles seamlessly with integer periods `px`, `py` (each at most 256).
+ *     tiles seamlessly with integer periods `px`, `py` (each at most 256; see
+ *     `toPeriod` for what happens to other values).
  * - `fbm2`, `fbm3`, `fbmPeriodic2`: fractal Brownian motion (summed octaves) over
  *   the above, normalised back to roughly [-1, 1].
  * - `buildPeriodicNoiseTexture`: seamlessly tiling 8-bit noise texture data.
@@ -23,7 +24,8 @@ export interface Noise {
   noise3(x: number, y: number, z: number): number;
   /**
    * 2D gradient noise, roughly in [-1, 1], that repeats every `px` units in x and
-   * `py` units in y. Periods must be positive integers no greater than 256.
+   * `py` units in y. Periods should be positive integers no greater than 256;
+   * others are coerced by `toPeriod` rather than reading past the permutation table.
    */
   periodic2(x: number, y: number, px: number, py: number): number;
 }
@@ -80,6 +82,18 @@ const GRAD3 = new Float64Array([
 /** 8 unit gradients for 2D gradient noise, flattened as x,y pairs. */
 const S = Math.SQRT1_2;
 const GRAD2 = new Float64Array([1, 0, -1, 0, 0, 1, 0, -1, S, S, -S, S, S, -S, -S, -S]);
+
+/** Largest period `periodic2` supports: the size of its permutation table. */
+export const MAX_PERIOD = 256;
+
+/**
+ * Coerces a lattice period to what `periodic2` can tile with: rounded to an
+ * integer and clamped to [1, MAX_PERIOD]. NaN becomes 1. Valid periods pass
+ * through unchanged.
+ */
+export function toPeriod(p: number): number {
+  return p >= 1 ? Math.min(MAX_PERIOD, Math.round(p)) : 1;
+}
 
 const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 
@@ -220,6 +234,9 @@ export function createNoise(seed: number): Noise {
   };
 
   const periodic2 = (x: number, y: number, px: number, py: number): number => {
+    // Out-of-range or fractional periods would index past `perm` and return NaN.
+    px = toPeriod(px);
+    py = toPeriod(py);
     const xf = Math.floor(x);
     const yf = Math.floor(y);
     const fx = x - xf;
@@ -277,7 +294,7 @@ export function fbm2(
     amp *= gain;
     f *= lacunarity;
   }
-  return sum / norm;
+  return norm > 0 ? sum / norm : 0;
 }
 
 /** 3D fBm over simplex noise; see `fbm2`. Use `z` as time for evolving 2D fields. */
@@ -301,13 +318,14 @@ export function fbm3(
     amp *= gain;
     f *= lacunarity;
   }
-  return sum / norm;
+  return norm > 0 ? sum / norm : 0;
 }
 
 /**
  * Seamlessly tiling 2D fBm: repeats every `period` units in both x and y.
- * Lacunarity is fixed at 2 so each octave's period stays an integer; `period`
- * must be a positive integer and `period * 2^(octaves-1)` at most 256.
+ * Lacunarity is fixed at 2 so each octave's period stays an integer. `period` is
+ * coerced by `toPeriod`; octaves whose period `period * 2^o` would exceed
+ * MAX_PERIOD are dropped, so the result still tiles. Zero octaves return 0.
  */
 export function fbmPeriodic2(
   noise: Noise,
@@ -321,15 +339,17 @@ export function fbmPeriodic2(
   let amp = 1;
   let norm = 0;
   let f = 1;
+  const base = toPeriod(period);
   for (let o = 0; o < octaves; o++) {
+    const p = base * f;
+    if (p > MAX_PERIOD) break;
     const shift = o * OCTAVE_SHIFT;
-    const p = period * f;
     sum += amp * noise.periodic2(x * f + shift, y * f - shift, p, p);
     norm += amp;
     amp *= gain;
     f *= 2;
   }
-  return sum / norm;
+  return norm > 0 ? sum / norm : 0;
 }
 
 /** One channel of `buildPeriodicNoiseTexture`. */
