@@ -226,6 +226,7 @@ export function getUniforms<const N extends string>(
 /**
  * A program's uniforms, each remembering the last value sent, so a setter called
  * every frame with an unchanged value costs a few comparisons and no GL call.
+ * Setters return whether they uploaded, for effects that redo work on a change.
  * Uniforms are per-program state, and each effect owns its programs, so the cache
  * stays valid. Call the setters with the program bound: dev builds assert that
  * it is whenever a value is actually uploaded.
@@ -236,18 +237,18 @@ export function getUniforms<const N extends string>(
 export interface Uniforms<N extends string> {
   readonly program: WebGLProgram;
   readonly loc: Readonly<Record<N, WebGLUniformLocation | null>>;
-  f1(name: N, x: number): void;
-  f2(name: N, x: number, y: number): void;
-  f3(name: N, x: number, y: number, z: number): void;
-  f4(name: N, x: number, y: number, z: number, w: number): void;
+  f1(name: N, x: number): boolean;
+  f2(name: N, x: number, y: number): boolean;
+  f3(name: N, x: number, y: number, z: number): boolean;
+  f4(name: N, x: number, y: number, z: number, w: number): boolean;
   /** A `vec3` from the first three entries of `v`, e.g. an `Rgb`. */
-  v3(name: N, v: ArrayLike<number>): void;
+  v3(name: N, v: ArrayLike<number>): boolean;
   /** A `vec3` colour (0..1) from a hex string, parsed once per distinct string. */
-  rgb(name: N, hex: string): void;
+  rgb(name: N, hex: string): boolean;
   /** An `int`, `bool` or sampler unit. */
-  i1(name: N, x: number): void;
+  i1(name: N, x: number): boolean;
   /** A `uint`. */
-  u1(name: N, x: number): void;
+  u1(name: N, x: number): boolean;
 }
 
 /**
@@ -291,34 +292,47 @@ export function createUniforms<const N extends string>(
   }
 
   const f3 = (name: N, x: number, y: number, z: number) => {
-    if (changed(name, x, y, z, 0)) gl.uniform3f(loc[name], x, y, z);
+    if (!changed(name, x, y, z, 0)) return false;
+    gl.uniform3f(loc[name], x, y, z);
+    return true;
   };
   return {
     program,
     loc,
     f1(name, x) {
-      if (changed(name, x, 0, 0, 0)) gl.uniform1f(loc[name], x);
+      if (!changed(name, x, 0, 0, 0)) return false;
+      gl.uniform1f(loc[name], x);
+      return true;
     },
     f2(name, x, y) {
-      if (changed(name, x, y, 0, 0)) gl.uniform2f(loc[name], x, y);
+      if (!changed(name, x, y, 0, 0)) return false;
+      gl.uniform2f(loc[name], x, y);
+      return true;
     },
     f3,
     f4(name, x, y, z, w) {
-      if (changed(name, x, y, z, w)) gl.uniform4f(loc[name], x, y, z, w);
+      if (!changed(name, x, y, z, w)) return false;
+      gl.uniform4f(loc[name], x, y, z, w);
+      return true;
     },
     v3: (name, v) => f3(name, v[0], v[1], v[2]),
     rgb(name, hex) {
       const i = index[name];
-      if (lastHex[i] === hex) return;
+      if (lastHex[i] === hex) return false;
       const [r, g, b] = hexToUnitRgb(hex);
-      f3(name, r, g, b);
+      const uploaded = f3(name, r, g, b);
       lastHex[i] = hex;
+      return uploaded;
     },
     i1(name, x) {
-      if (changed(name, x, 0, 0, 0)) gl.uniform1i(loc[name], x);
+      if (!changed(name, x, 0, 0, 0)) return false;
+      gl.uniform1i(loc[name], x);
+      return true;
     },
     u1(name, x) {
-      if (changed(name, x, 0, 0, 0)) gl.uniform1ui(loc[name], x);
+      if (!changed(name, x, 0, 0, 0)) return false;
+      gl.uniform1ui(loc[name], x);
+      return true;
     },
   };
 }

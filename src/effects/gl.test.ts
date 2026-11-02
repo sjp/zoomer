@@ -355,9 +355,9 @@ describe("createUniforms", () => {
     ]);
 
     calls.length = 0;
-    u.f2("uB", 2, 4);
-    u.f4("uD", 7, 8, 9, 11);
-    u.f1("uA", 1);
+    expect(u.f2("uB", 2, 4)).toBe(true);
+    expect(u.f4("uD", 7, 8, 9, 11)).toBe(true);
+    expect(u.f1("uA", 1)).toBe(false);
     expect(calls).toEqual([
       ["2f", { name: "uB" }, 2, 4],
       ["4f", { name: "uD" }, 7, 8, 9, 11],
@@ -379,10 +379,10 @@ describe("createUniforms", () => {
     gl.useProgram(program);
     u.v3("uC", [0.5, 0.25, 1]);
     u.v3("uC", new Float32Array([0.5, 0.25, 1]));
-    u.rgb("uB", "#ff0000");
-    u.rgb("uB", "#ff0000");
+    expect(u.rgb("uB", "#ff0000")).toBe(true);
+    expect(u.rgb("uB", "#ff0000")).toBe(false);
     // The same colour spelled differently parses again but uploads nothing.
-    u.rgb("uB", "#FF0000");
+    expect(u.rgb("uB", "#FF0000")).toBe(false);
     expect(calls).toEqual([
       ["3f", { name: "uC" }, 0.5, 0.25, 1],
       ["3f", { name: "uB" }, 1, 0, 0],
