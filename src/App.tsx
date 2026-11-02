@@ -57,6 +57,30 @@ export function App() {
     return () => clearTimeout(timer);
   }, [effect, values]);
 
+  // Follow hand edits and pasted links. The app's own replaceState writes don't fire
+  // hashchange, and a hash that already matches the current state is skipped.
+  const current = useRef({ effect, values, recording });
+  useEffect(() => {
+    current.current = { effect, values, recording };
+  });
+  useEffect(() => {
+    const onHashChange = () => {
+      const now = current.current;
+      const hash = window.location.hash;
+      if (hash === encodeHash(now.effect, now.values)) return;
+      const next = stateFromHash(hash, effects);
+      if (now.recording && next.effect.id !== now.effect.id) {
+        // Switching effect would break the recording; put the current state back.
+        window.history.replaceState(null, "", encodeHash(now.effect, now.values));
+        return;
+      }
+      setEffectId(next.effect.id);
+      setValuesById((prev) => ({ ...prev, [next.effect.id]: next.values }));
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const setParam = useCallback(
     (key: string, value: ParamValue) =>
       setValuesById((prev) => ({
