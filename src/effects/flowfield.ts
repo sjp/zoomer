@@ -15,6 +15,7 @@ import { createFlowField } from "./flowfield-field";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "./noise";
 import { defineEffect } from "./types";
 import { smoothstep } from "./math";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 
 const MAX_PARTICLES = 8000;
 /** Reference particle speed in px/s at 1080p for a speed of 1. */
@@ -229,6 +230,8 @@ export const flowfield = defineEffect({
       const ys = new Float32Array(MAX_PARTICLES);
       const ages = new Float32Array(MAX_PARTICLES);
       const lives = new Float32Array(MAX_PARTICLES);
+      /** Count fade (see `fade.ts`): particles removed by a lower count fade out first. */
+      const countFade = new Float32Array(MAX_PARTICLES).fill(1);
       const rands = new Float32Array(MAX_PARTICLES);
       const instances = new Float32Array(MAX_PARTICLES * STRIDE);
 
@@ -293,6 +296,7 @@ export const flowfield = defineEffect({
       let scale = 1;
       let time = 0;
       let frameNo = 0;
+      /** Particles simulated: the count plus any still fading out after it dropped. */
       let active = 0;
       let seedKey = NaN;
       let noise3 = createNoise(1).noise3;
@@ -355,6 +359,7 @@ export const flowfield = defineEffect({
         rng = createRng(seed * 7907 + 3);
         for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
         active = Math.min(Math.round(count), MAX_PARTICLES);
+        countFade.fill(1, 0, active);
         lightMode = undefined;
       };
 
@@ -409,9 +414,10 @@ export const flowfield = defineEffect({
           triangle.draw();
 
           // Newly enabled particles start fresh so they fade in where they appear.
-          const n = Math.min(Math.round(p.count), MAX_PARTICLES);
-          for (let i = active; i < n; i++) spawn(i, false);
-          active = n;
+          const target = Math.min(Math.round(p.count), MAX_PARTICLES);
+          for (let i = active; i < target; i++) spawn(i, false);
+          const n = (active = growLive(countFade, active, target));
+          const fadeStep = dt / FADE_OUT;
 
           time += dt * p.evolve * EVOLVE_RATE;
           const freq = (p.fieldScale * FIELD_FREQ) / scale;
@@ -431,6 +437,7 @@ export const flowfield = defineEffect({
           );
 
           for (let i = 0; i < n; i++) {
+            const kept = stepLife(countFade, i, target, fadeStep, fadeStep);
             const age = ages[i] + dt;
             const x = xs[i];
             const y = ys[i];
@@ -453,7 +460,8 @@ export const flowfield = defineEffect({
             ys[i] = ny;
 
             const life = lives[i];
-            const f = smoothstep(0, LIFE_FADE, age) * smoothstep(life, life - LIFE_FADE, age);
+            const f =
+              smoothstep(0, LIFE_FADE, age) * smoothstep(life, life - LIFE_FADE, age) * kept;
             if (f <= 0 || step === 0) continue;
             const o = count * STRIDE;
             instances[o] = x;
@@ -465,6 +473,7 @@ export const flowfield = defineEffect({
             instances[o + 5] = p.opacity * f;
             count++;
           }
+          active = trimLive(countFade, active, target);
 
           if (count > 0) {
             gl.enable(gl.BLEND);
