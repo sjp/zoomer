@@ -1,9 +1,31 @@
-import type { AnyParamValues, EffectDefinition, ParamDef, ParamSchema, ParamValue } from "./types";
+import type {
+  AnyParamValues,
+  EffectDefinition,
+  NumberParam,
+  ParamDef,
+  ParamSchema,
+  ParamValue,
+} from "./types";
 
 export function defaults(schema: ParamSchema): AnyParamValues {
   const values: AnyParamValues = {};
   for (const [key, def] of Object.entries(schema)) values[key] = def.default;
   return values;
+}
+
+/**
+ * Clamps `n` to the param's range and snaps it to the nearest `min + k·step`, the
+ * values its slider can produce, so a hand-edited URL can't give an effect a
+ * fractional count. Rounded to 12 decimals so float error in `k·step` doesn't
+ * leave values like 0.30000000000000004.
+ */
+export function snap(def: NumberParam, n: number): number {
+  const clamped = Math.min(def.max, Math.max(def.min, n));
+  if (!(def.step > 0)) return clamped;
+  let k = Math.round((clamped - def.min) / def.step);
+  // Like a range input, stay on the grid below an off-grid max.
+  if (def.min + k * def.step > def.max) k--;
+  return Number((def.min + k * def.step).toFixed(12));
 }
 
 /** Converts a raw string (from the URL) to a valid value, or undefined if invalid. */
@@ -12,7 +34,7 @@ export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
     case "number": {
       const n = Number(raw);
       if (raw.trim() === "" || !Number.isFinite(n)) return undefined;
-      return Math.min(def.max, Math.max(def.min, n));
+      return snap(def, n);
     }
     case "color": {
       const hex = raw.startsWith("#") ? raw : `#${raw}`;
