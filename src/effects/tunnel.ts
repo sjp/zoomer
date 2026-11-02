@@ -5,6 +5,7 @@ import {
   createFullscreenTriangle,
   createProgram,
   createUniforms,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
@@ -77,7 +78,7 @@ const float BEND_REACH = ${glslFloat(BEND_REACH)};
 const float MIN_DIST = ${glslFloat(MIN_DIST)};
 /** exp(-(dn / 0.3)^2) as exp2(dn^2 * FOG_K). */
 const float FOG_K = -1.4426950408889634 / 0.09;
-
+${DITHER_GLSL}
 void main() {
   vec2 p = gl_FragCoord.xy * uPixScale + uPixOffset;
   // The wander is weighted to 1 at the centre and 0 towards the frame edges.
@@ -117,7 +118,8 @@ void main() {
   float k = (uGain.x * t + uGain.y) * fog;
   float g = 1.0 - fog;
   vec3 rgb = (col + (1.0 - col) * hot) * k + uGlow * (g * g);
-  outColor = vec4(clamp(rgb, 0.0, 1.0), 1.0);
+  // Sub-LSB dither: the dark, wide fog and core glow otherwise band into rings.
+  outColor = vec4(clamp(rgb + dither8(gl_FragCoord.xy), 0.0, 1.0), 1.0);
 }
 `;
 
