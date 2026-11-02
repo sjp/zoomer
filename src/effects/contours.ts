@@ -8,6 +8,7 @@ import {
   withScope,
 } from "./gl";
 import { createLowResTarget } from "./lowres";
+import { wrap } from "./math";
 import { defineEffect } from "./types";
 
 /**
@@ -17,6 +18,22 @@ import { defineEffect } from "./types";
 export const FIELD_ROWS = 270;
 /** Noise-space z (time) advanced per second at speed 1. */
 const Z_RATE = 0.04;
+/**
+ * The shader's simplex noise repeats exactly in z with this period: a z shift of
+ * 3k moves the skewed lattice by (k, k, 4k) and leaves the cell offsets unchanged,
+ * and `mod(i, 289)` makes the hash repeat when k is a multiple of 289. So z can wrap
+ * on the CPU without a seam (proved against a CPU port in contours.test.ts).
+ */
+export const Z_PERIOD = 3 * 289;
+
+/**
+ * Advances noise z by `dz`, wrapped into [-Z_PERIOD / 2, Z_PERIOD / 2) so the
+ * float32 uniform keeps its precision however long the effect runs. Centring the
+ * range halves the largest |z| and so the worst-case float32 step error.
+ */
+export function advanceZ(z: number, dz: number): number {
+  return wrap(z + dz, -Z_PERIOD / 2, Z_PERIOD);
+}
 /** Index contours are this much wider than ordinary lines. */
 const INDEX_WIDTH = 1.8;
 /** Opacity of ordinary and index lines. */
@@ -371,7 +388,7 @@ export const contours = defineEffect({
       let width = 1;
       let height = 1;
       let vpScale = 1;
-      /** Noise z, kept in float64 on the CPU. */
+      /** Noise z, kept in float64 on the CPU and wrapped to the noise's period. */
       let z = 0;
       let sizeDirty = true;
       let lastLineWidth = NaN;
@@ -385,7 +402,7 @@ export const contours = defineEffect({
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          z += dt * p.speed * Z_RATE;
+          z = advanceZ(z, dt * p.speed * Z_RATE);
 
           // A resize may replace the target, losing the field.
           let fieldDirty = sizeDirty;
