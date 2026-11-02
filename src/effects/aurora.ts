@@ -1,13 +1,14 @@
-import { hexToUnitRgb, type Rgb, unitRgbMemo } from "./color";
+import { unitRgbMemo } from "./color";
 import {
   beginFrame,
   type ColumnTable,
   createColumnTable,
   createFullscreenTriangle,
   createProgram,
+  createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
@@ -235,8 +236,8 @@ uniform sampler2D uPath;
 uniform sampler2D uRays;
 /** Silhouette height (fraction of canvas height) and slope (px/px). */
 uniform sampler2D uHorizon;
-/** Fine and coarse ray scale (repeats per canvas height), then their drifts. */
-uniform vec4 uRayUv;
+/** Fine and coarse ray drifts, in table periods. */
+uniform vec2 uRayDrift;
 uniform vec3 uSkyTop;
 uniform vec3 uSkyBottom;
 uniform vec3 uSilhouette;
@@ -276,8 +277,8 @@ void main() {
   vec3 base = textureLod(uPath, vec2(u, 0.25), 0.0).rgb;
   vec3 amp = textureLod(uPath, vec2(u, 0.75), 0.0).rgb * uGain;
   float xh = frag.x / uResolution.y;
-  vec3 fine = textureLod(uRays, vec2(xh * uRayUv.x + uRayUv.z, 0.5), 0.0).rgb;
-  vec3 coarse = textureLod(uRays, vec2(xh * uRayUv.y + uRayUv.w, 0.5), 0.0).rgb;
+  vec3 fine = textureLod(uRays, vec2(xh * ${glslFloat(RAY_SCALE_FINE)} + uRayDrift.x, 0.5), 0.0).rgb;
+  vec3 coarse = textureLod(uRays, vec2(xh * ${glslFloat(RAY_SCALE_COARSE)} + uRayDrift.y, 0.5), 0.0).rgb;
 
   vec3 d = vec3(y) - base;
   // Long fade upwards, short fade downwards.
@@ -336,8 +337,6 @@ const HORIZON_OPTIONS = [
 const toHorizonKind = (v: string): HorizonKind =>
   v === "hills" || v === "pines" || v === "none" ? v : "none";
 
-const scaleRgb = (c: Rgb, k: number): Rgb => [c[0] * k, c[1] * k, c[2] * k];
-
 /**
  * Northern lights: rippling green-to-purple curtains with fine vertical rays over
  * a starry night sky, optionally above a hill or pine-tree silhouette.
@@ -364,12 +363,12 @@ export const aurora = defineEffect({
         gl.deleteProgram(p),
       );
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const loc = getUniforms(gl, program, [
+      const u = createUniforms(gl, program, [
         "uResolution",
         "uPath",
         "uRays",
         "uHorizon",
-        "uRayUv",
+        "uRayDrift",
         "uSkyTop",
         "uSkyBottom",
         "uSilhouette",
@@ -381,16 +380,16 @@ export const aurora = defineEffect({
         "uHorizonTop",
       ]);
       gl.useProgram(program);
-      gl.uniform1i(loc.uPath, 0);
-      gl.uniform1i(loc.uRays, 1);
-      gl.uniform1i(loc.uHorizon, 2);
-      gl.uniform2f(loc.uFalloff, 1 / HALF_UP, 1 / HALF_DOWN);
-      gl.uniform1f(loc.uColorSpan, 1 / COLOR_SPAN);
+      u.i1("uPath", 0);
+      u.i1("uRays", 1);
+      u.i1("uHorizon", 2);
+      u.f2("uFalloff", 1 / HALF_UP, 1 / HALF_DOWN);
+      u.f1("uColorSpan", 1 / COLOR_SPAN);
 
       const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const starLoc = getUniforms(gl, starProgram, ["uResolution", "uScale", "uTime"]);
+      const starU = createUniforms(gl, starProgram, ["uResolution", "uScale", "uTime"]);
       const stars = scope.own(createSpriteBatch(gl, MAX_STARS, [4, 2]));
       gl.useProgram(null);
 
@@ -402,13 +401,7 @@ export const aurora = defineEffect({
       scope.defer(() => horizon?.dispose());
 
       const noise = createNoise(1337);
-      const lowRgb = unitRgbMemo();
-      const highRgb = unitRgbMemo();
-      let skyHex = "";
-      let lastLow: Rgb | undefined;
-      let lastHigh: Rgb | undefined;
-      let lastGain = Number.NaN;
-      let lastBands = Number.NaN;
+      const skyRgb = unitRgbMemo();
 
       let width = 1;
       let height = 1;
@@ -434,7 +427,7 @@ export const aurora = defineEffect({
         horizon = null; // so a failed create below can't dispose it twice
         horizon = createColumnTable(gl, cols, 2, { data: horizonTable });
         gl.useProgram(program);
-        gl.uniform1f(loc.uHorizonTop, horizonTop);
+        u.f1("uHorizonTop", horizonTop);
       };
 
       return {
@@ -467,36 +460,21 @@ export const aurora = defineEffect({
           }
 
           gl.useProgram(program);
-          const low = lowRgb(p.lowColor);
-          if (low !== lastLow) {
-            lastLow = low;
-            gl.uniform3fv(loc.uLow, low);
-          }
-          const high = highRgb(p.highColor);
-          if (high !== lastHigh) {
-            lastHigh = high;
-            gl.uniform3fv(loc.uHigh, high);
-          }
-          if (p.sky !== skyHex) {
-            skyHex = p.sky;
-            const sky = hexToUnitRgb(skyHex);
-            gl.uniform3fv(loc.uSkyTop, sky);
-            gl.uniform3fv(loc.uSkyBottom, scaleRgb(sky, 0.22));
-            gl.uniform3fv(loc.uSilhouette, scaleRgb(sky, 0.07));
-          }
-          if (p.intensity !== lastGain || p.bands !== lastBands) {
-            lastGain = p.intensity;
-            lastBands = p.bands;
-            const g = p.intensity;
-            gl.uniform3f(
-              loc.uGain,
-              BAND_GAIN[0] * g,
-              p.bands >= 2 ? BAND_GAIN[1] * g : 0,
-              p.bands >= 3 ? BAND_GAIN[2] * g : 0,
-            );
-          }
-          gl.uniform2f(loc.uResolution, width, height);
-          gl.uniform4f(loc.uRayUv, RAY_SCALE_FINE, RAY_SCALE_COARSE, driftFine, driftCoarse);
+          u.rgb("uLow", p.lowColor);
+          u.rgb("uHigh", p.highColor);
+          const [sr, sg, sb] = skyRgb(p.sky);
+          u.f3("uSkyTop", sr, sg, sb);
+          u.f3("uSkyBottom", sr * 0.22, sg * 0.22, sb * 0.22);
+          u.f3("uSilhouette", sr * 0.07, sg * 0.07, sb * 0.07);
+          const g = p.intensity;
+          u.f3(
+            "uGain",
+            BAND_GAIN[0] * g,
+            p.bands >= 2 ? BAND_GAIN[1] * g : 0,
+            p.bands >= 3 ? BAND_GAIN[2] * g : 0,
+          );
+          u.f2("uResolution", width, height);
+          u.f2("uRayDrift", driftFine, driftCoarse);
 
           buildPathTable(path.data, PATH_COLS, width / height, pathTime, noise);
 
@@ -513,9 +491,9 @@ export const aurora = defineEffect({
             gl.blendEquation(gl.FUNC_ADD);
             gl.blendFunc(gl.ONE, gl.ONE);
             gl.useProgram(starProgram);
-            gl.uniform2f(starLoc.uResolution, width, height);
-            gl.uniform1f(starLoc.uScale, scale);
-            gl.uniform1f(starLoc.uTime, twinkleTime);
+            starU.f2("uResolution", width, height);
+            starU.f1("uScale", scale);
+            starU.f1("uTime", twinkleTime);
             stars.draw(0, starCount);
             gl.disable(gl.BLEND);
           }
