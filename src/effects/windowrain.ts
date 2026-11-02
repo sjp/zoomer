@@ -22,7 +22,9 @@ import {
   instanceCapacity,
   resizeRainSim,
   stepRainSim,
+  wipeStampCapacity,
   writeDropInstances,
+  writeWipeStamps,
 } from "./windowrain-sim";
 import { wrap } from "./math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
@@ -54,6 +56,12 @@ const REFOG_SECONDS = 30;
 const FOG_DIFFUSE = 0.6;
 /** Wipe disc radius relative to the drop radius. */
 const WIPE_GROW = 1.25;
+/**
+ * Most distance between wipe stamps along a runner's step, relative to its
+ * radius: the wipe disc's fully clear core (half its radius), so a fast step at
+ * a low frame rate leaves no gap.
+ */
+const WIPE_STAMP_SPACING = 0.5 * WIPE_GROW;
 
 /** Background light: soft additive disc, colour mixed between the two light colours. */
 const LIGHT_VERTEX = /* glsl */ `#version 300 es
@@ -268,7 +276,7 @@ export const windowRain = defineEffect({
     return withScope((scope) => {
       const rng = createRng(Math.random() * 0xffffffff);
       const sim = createRainSim(1920, 1080, rng);
-      const capacity = instanceCapacity(DEFAULT_CONFIG);
+      const capacity = instanceCapacity(DEFAULT_CONFIG) + wipeStampCapacity(DEFAULT_CONFIG);
 
       const octagon = polygonStrip(8, Math.PI / 8);
       const drops = scope.own(createSpriteBatch(gl, capacity, [4, 1], [octagon]));
@@ -472,6 +480,11 @@ export const windowRain = defineEffect({
           frameNo = (frameNo + 1) >>> 0;
           stepRainSim(sim, dt, p);
           const count = writeDropInstances(sim, drops.data, scale);
+          // Wipe stamps go after the runners, so one draw covers both.
+          const stamps = p.fog
+            ? writeWipeStamps(sim, drops.data, scale, count, WIPE_STAMP_SPACING)
+            : 0;
+          drops.upload(count + stamps);
 
           // 1. Background, at a low rate (or at once when its inputs change).
           const prevW = target.width;
@@ -536,7 +549,6 @@ export const windowRain = defineEffect({
           gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
           gl.disable(gl.BLEND);
           if (count > 0) {
-            drops.upload(count);
             gl.useProgram(dropProgram);
             dropU.f2("uResolution", width, height);
             dropU.f1("uInvScale", 1 / scale);
@@ -574,7 +586,7 @@ export const windowRain = defineEffect({
               wipeU.f2("uResolution", width, height);
               wipeU.f1("uInvScale", 1 / scale);
               wipeU.f1("uMargin", width / fogW);
-              drops.draw(sim.runnerFirst, sim.runnersWritten);
+              drops.draw(sim.runnerFirst, sim.runnersWritten + stamps);
               gl.blendEquation(gl.FUNC_ADD);
               gl.disable(gl.BLEND);
             }

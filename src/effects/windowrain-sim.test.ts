@@ -11,6 +11,7 @@ import {
   instanceCapacity,
   INSTANCE_STRIDE,
   MAX_RUNNER_R,
+  MAX_WIPE_STAMPS,
   RESTING,
   RUNNING,
   resizeRainSim,
@@ -21,7 +22,9 @@ import {
   TRAIL,
   TRAIL_GRACE,
   wipeCapsule,
+  wipeStampCapacity,
   writeDropInstances,
+  writeWipeStamps,
   type RainSim,
   type RainSimConfig,
 } from "./windowrain-sim";
@@ -507,5 +510,85 @@ describe("helpers", () => {
     })();
     stepRainSim(sim, 10, { rain: 0.125, speed: 1 });
     expect(sim.ry[0]).toBeLessThan(150);
+  });
+});
+
+describe("writeWipeStamps", () => {
+  /** One running drop at (x, y), radius r, that last moved by (sx, sy). */
+  const setup = (sx: number, sy: number, r = 10) => {
+    const sim = empty();
+    sim.runnerCount = 1;
+    spawnRunner(sim, 0);
+    sim.rx[0] = 500;
+    sim.ry[0] = 300;
+    sim.rr[0] = r;
+    sim.rAge[0] = 10;
+    sim.rState[0] = RUNNING;
+    sim.rv[0] = 200;
+    sim.rStepX[0] = sx;
+    sim.rStepY[0] = sy;
+    const out = new Float32Array(
+      (instanceCapacity(SMALL) + wipeStampCapacity(SMALL)) * INSTANCE_STRIDE,
+    );
+    const n = writeDropInstances(sim, out, 2);
+    return { sim, out, n };
+  };
+
+  it("writes nothing for a step within the spacing", () => {
+    const { sim, out, n } = setup(0, 5);
+    expect(writeWipeStamps(sim, out, 2, n, 0.5)).toBe(0);
+  });
+
+  it("fills a long step with evenly spaced copies of the runner", () => {
+    // 60 units at most 5 apart would need 12 intervals; capped at MAX_WIPE_STAMPS + 1
+    // = 9, with the runner and the last frame's position at the ends.
+    expect(MAX_WIPE_STAMPS).toBe(8);
+    const { sim, out, n } = setup(0, 60);
+    const k = writeWipeStamps(sim, out, 2, n, 0.5);
+    expect(k).toBe(MAX_WIPE_STAMPS);
+    const runner = sim.runnerFirst * INSTANCE_STRIDE;
+    let lastY = out[runner + 1];
+    for (let i = 0; i < k; i++) {
+      const o = (n + i) * INSTANCE_STRIDE;
+      expect(out[o]).toBeCloseTo(1000, 3);
+      expect(lastY - out[o + 1]).toBeCloseTo((60 / 9) * 2, 3);
+      lastY = out[o + 1];
+      for (let c = 2; c < 5; c++) expect(out[o + c]).toBe(out[runner + c]);
+    }
+    // The last stamp stops one interval short of where the runner was.
+    expect(lastY).toBeCloseTo((300 - 60 + 60 / 9) * 2, 3);
+  });
+
+  it("spaces stamps at most `spacing` radii apart below the cap", () => {
+    const { sim, out, n } = setup(9, 12); // 15 units, 5 apart: 3 intervals
+    expect(writeWipeStamps(sim, out, 1, n, 0.5)).toBe(2);
+  });
+
+  it("records each runner's step, and none after a respawn", () => {
+    const sim = empty();
+    sim.runnerCount = 1;
+    spawnRunner(sim, 0);
+    sim.ry[0] = 100;
+    sim.rr[0] = 16;
+    sim.rState[0] = RUNNING;
+    const y0 = sim.ry[0];
+    const x0 = sim.rx[0];
+    stepRainSim(sim, 0.1, { rain: 1 / SMALL.maxRunners, speed: 3 });
+    expect(sim.rStepY[0]).toBeCloseTo(sim.ry[0] - y0, 3);
+    expect(sim.rStepX[0]).toBeCloseTo(sim.rx[0] - x0, 3);
+    expect(sim.rStepY[0]).toBeGreaterThan(0);
+    spawnRunner(sim, 0);
+    expect([sim.rStepX[0], sim.rStepY[0]]).toEqual([0, 0]);
+  });
+
+  it("stamps fast runners at a low frame rate, within capacity", () => {
+    const sim = make();
+    const cap = instanceCapacity(SMALL) + wipeStampCapacity(SMALL);
+    const out = new Float32Array(cap * INSTANCE_STRIDE);
+    for (let t = 0; t < 40; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 3 });
+    const n = writeDropInstances(sim, out, 1);
+    const k = writeWipeStamps(sim, out, 1, n, 0.5);
+    expect(k).toBeGreaterThan(0);
+    expect(n + k).toBeLessThanOrEqual(cap);
   });
 });

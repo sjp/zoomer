@@ -132,6 +132,9 @@ export interface RainSim {
   readonly rState: Uint8Array;
   /** Count fade of each runner slot, like `staticFade`. */
   readonly runnerFade: Float32Array;
+  /** How far each runner moved in the last step (0 if it didn't, or respawned). */
+  readonly rStepX: Float32Array;
+  readonly rStepY: Float32Array;
   /** Active runner slots, `[0, runnerCount)`, including any still fading out. */
   runnerCount: number;
 
@@ -191,6 +194,8 @@ export function createRainSim(
     rAge: new Float32Array(nr),
     rState: new Uint8Array(nr),
     runnerFade: new Float32Array(nr).fill(1),
+    rStepX: new Float32Array(nr),
+    rStepY: new Float32Array(nr),
     runnerCount: 0,
     cols: 0,
     rows: 0,
@@ -224,6 +229,9 @@ export function resizeRainSim(sim: RainSim, width: number, height: number) {
       sim.rx[i] *= kx;
       sim.ry[i] *= ky;
     }
+    // The last step was in the old coordinates.
+    sim.rStepX.fill(0);
+    sim.rStepY.fill(0);
   }
   sim.width = w;
   sim.height = h;
@@ -262,6 +270,8 @@ export function spawnRunner(sim: RainSim, i: number) {
   sim.rTravel[i] = -trailSpacing(rng);
   sim.rAge[i] = 0;
   sim.rState[i] = RESTING;
+  sim.rStepX[i] = 0;
+  sim.rStepY[i] = 0;
 }
 
 const trailSpacing = (rng: () => number) => 5 + rng() * 10;
@@ -434,6 +444,8 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
   const speed = Math.max(0, p.speed);
   for (let i = 0; i < sim.runnerCount; i++) {
     sim.rAge[i] += dt;
+    sim.rStepX[i] = 0;
+    sim.rStepY[i] = 0;
     if (rState[i] === RESTING) {
       if (rr[i] < sim.rBreak[i]) {
         rr[i] = Math.min(sim.rBreak[i], rr[i] + GROW_RATE * dt * (0.5 + rng()));
@@ -458,6 +470,8 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     const y1 = y0 + v * dt;
     rx[i] = x1;
     ry[i] = y1;
+    sim.rStepX[i] = x1 - x0;
+    sim.rStepY[i] = y1 - y0;
 
     // Collect droplets and resting runners in the way.
     let vol = rr[i] * rr[i] * rr[i];
@@ -544,4 +558,51 @@ export function writeDropInstances(sim: RainSim, out: Float32Array, scale: numbe
   sim.runnerFirst = runnerFirst;
   sim.runnersWritten = sim.runnerCount;
   return o / INSTANCE_STRIDE;
+}
+
+/** Extra wipe stamps per runner at most, filling the gap a fast step leaves. */
+export const MAX_WIPE_STAMPS = 8;
+
+/** Instances `writeWipeStamps` can write at most. */
+export function wipeStampCapacity(c: Readonly<RainSimConfig>): number {
+  return c.maxRunners * MAX_WIPE_STAMPS;
+}
+
+/**
+ * Fills the gaps in the fog wipe at low frame rates. Each runner's own instance
+ * stamps one disc where it is now, and the last frame's stamped where it was, so
+ * a step longer than the disc leaves unwiped fog in between. This writes copies
+ * of each runner's instance (from `writeDropInstances`, which must run first)
+ * back along its last step, spaced at most `spacing` times its radius, starting
+ * at instance `first`; returns how many it wrote. Draw them together with the
+ * runners: they directly follow the runners when `first` is the instance count.
+ */
+export function writeWipeStamps(
+  sim: RainSim,
+  out: Float32Array,
+  scale: number,
+  first: number,
+  spacing: number,
+): number {
+  let o = first * INSTANCE_STRIDE;
+  const start = o;
+  for (let i = 0; i < sim.runnersWritten; i++) {
+    const sx = sim.rStepX[i];
+    const sy = sim.rStepY[i];
+    const gap = spacing * sim.rr[i];
+    if (!(gap > 0)) continue;
+    const n = Math.min(MAX_WIPE_STAMPS + 1, Math.ceil(Math.hypot(sx, sy) / gap));
+    if (n < 2) continue;
+    const src = (sim.runnerFirst + i) * INSTANCE_STRIDE;
+    for (let k = 1; k < n; k++) {
+      const t = k / n;
+      out[o] = out[src] - sx * t * scale;
+      out[o + 1] = out[src + 1] - sy * t * scale;
+      out[o + 2] = out[src + 2];
+      out[o + 3] = out[src + 3];
+      out[o + 4] = out[src + 4];
+      o += INSTANCE_STRIDE;
+    }
+  }
+  return (o - start) / INSTANCE_STRIDE;
 }
