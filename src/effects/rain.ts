@@ -151,11 +151,19 @@ export const rain = defineEffect({
         "uHeadColor",
       ]);
       const atlas = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
-      let atlasKey = "";
+      let atlasCell = 0;
+      let atlasCharset = "";
       let glyphCount = 1;
       let batch: SpriteBatch | undefined;
       scope.defer(() => batch?.dispose());
       let capacity = 0;
+      /** The batch's instance data and stride, and how many instances this frame. */
+      let data: Float32Array = new Float32Array(0);
+      let stride = 0;
+      let emitted = 0;
+      /** This frame's head length (rows) and trail length (seconds), read by `emit`. */
+      let lead = 0;
+      let trailAge = 0;
 
       let width = 1;
       let height = 1;
@@ -195,9 +203,26 @@ export const rain = defineEffect({
         for (let c = 0; c < cols; c++) resetColumn(c, density, true);
         if (capacity < cols * 2) {
           batch?.dispose();
+          batch = undefined;
           capacity = cols * 2;
           batch = createSpriteBatch(gl, capacity, [4, 2]);
+          data = batch.data;
+          stride = batch.stride;
         }
+      };
+
+      /** Appends one drop instance covering its still-visible rows from `minRow` down. */
+      const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
+        const r0 = Math.max(minRow, Math.floor(head - lead - trailAge * rate));
+        const r1 = Math.min(rows, Math.floor(head) + 1);
+        if (r0 >= r1) return;
+        const o = emitted++ * stride;
+        data[o] = c;
+        data[o + 1] = head;
+        data[o + 2] = rate;
+        data[o + 3] = s;
+        data[o + 4] = r0;
+        data[o + 5] = r1;
       };
 
       /** Renders each glyph, white on black, into its own cell-sized tile (red = coverage). */
@@ -249,33 +274,19 @@ export const rain = defineEffect({
             layout(p.density);
           }
           const charset = CHARSETS[p.charset] ? p.charset : "katakana";
-          const key = `${cell}|${charset}`;
-          if (atlasKey !== key) {
+          if (atlasCell !== cell || atlasCharset !== charset) {
             buildAtlas(CHARSETS[charset]);
-            atlasKey = key;
+            atlasCell = cell;
+            atlasCharset = charset;
           }
 
           // The old renderer faded the canvas by `fade` per 60th of a second.
           const decay = 60 * Math.log(1 - p.fade);
-          const trailAge = Math.log(CUTOFF) / decay;
-          const lead = p.brightHead ? 1 : 0;
+          trailAge = Math.log(CUTOFF) / decay;
+          lead = p.brightHead ? 1 : 0;
 
           if (!batch) return;
-          const data = batch.data;
-          const stride = batch.stride;
-          let n = 0;
-          const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
-            const r0 = Math.max(minRow, Math.floor(head - lead - trailAge * rate));
-            const r1 = Math.min(rows, Math.floor(head) + 1);
-            if (r0 >= r1) return;
-            const o = n++ * stride;
-            data[o] = c;
-            data[o + 1] = head;
-            data[o + 2] = rate;
-            data[o + 3] = s;
-            data[o + 4] = r0;
-            data[o + 5] = r1;
-          };
+          emitted = 0;
 
           for (let c = 0; c < cols; c++) {
             heads[c] += dt * p.speed * pace[c];
@@ -301,6 +312,7 @@ export const rain = defineEffect({
 
           gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
+          const n = emitted;
           if (n === 0) return;
 
           batch.upload(n);
