@@ -1,9 +1,59 @@
-const CANDIDATE_TYPES = [
-  "video/mp4;codecs=avc1.640028",
-  "video/mp4",
-  "video/webm;codecs=vp9",
-  "video/webm",
-];
+/**
+ * H.264 levels from Table A-1 of the spec: the largest frame (in 16×16 macroblocks)
+ * and macroblock rate each allows, with its `avc1` level byte. Levels below 4.0 are
+ * left out: 4.0 was the old fixed choice and every H.264 encoder supports it.
+ */
+const AVC_LEVELS = [
+  { level: 0x28, maxFrame: 8192, maxRate: 245_760 }, // 4.0: 1080p30
+  { level: 0x2a, maxFrame: 8704, maxRate: 522_240 }, // 4.2: 1080p60
+  { level: 0x32, maxFrame: 22_080, maxRate: 589_824 }, // 5.0: 1440p30
+  { level: 0x33, maxFrame: 36_864, maxRate: 983_040 }, // 5.1: 4K30
+  { level: 0x34, maxFrame: 36_864, maxRate: 2_073_600 }, // 5.2: 4K60
+  { level: 0x3c, maxFrame: 139_264, maxRate: 4_177_920 }, // 6.0: 8K30
+] as const;
+
+/**
+ * The lowest H.264 level that fits `width`×`height` at `fps`, as two hex digits for an
+ * `avc1.6400xx` (High profile) codec string. Each side must also be at most
+ * √(8·maxFrame) macroblocks. Sizes beyond level 6.0 get 6.0 and are left to the encoder.
+ */
+export function avcLevel(width: number, height: number, fps: number): string {
+  const mbW = Math.ceil(width / 16);
+  const mbH = Math.ceil(height / 16);
+  const frame = mbW * mbH;
+  const fit = AVC_LEVELS.find(
+    (l) =>
+      frame <= l.maxFrame &&
+      frame * fps <= l.maxRate &&
+      Math.max(mbW, mbH) <= Math.sqrt(8 * l.maxFrame),
+  );
+  return (fit ?? AVC_LEVELS[AVC_LEVELS.length - 1]).level.toString(16);
+}
+
+/** MIME types to try, best first. Prefers MP4 (Zoom accepts it) at a level that fits. */
+export function candidateTypes(width: number, height: number, fps: number): string[] {
+  return [
+    `video/mp4;codecs=avc1.6400${avcLevel(width, height, fps)}`,
+    "video/mp4",
+    "video/webm;codecs=vp9",
+    "video/webm",
+  ];
+}
+
+/** Bitrate at 1920×1080, in bits per second. */
+const BITRATE_1080P = 12_000_000;
+const MIN_BITRATE = 2_000_000;
+const MAX_BITRATE = 80_000_000;
+
+/**
+ * Video bitrate for a `width`×`height` clip: 12 Mbps at 1080p, scaled with pixel
+ * count (48 Mbps at 4K), clamped so tiny canvases still look clean and huge ones
+ * stay within what browser encoders accept.
+ */
+export function videoBitrate(width: number, height: number): number {
+  const scaled = (BITRATE_1080P * width * height) / (1920 * 1080);
+  return Math.round(Math.min(MAX_BITRATE, Math.max(MIN_BITRATE, scaled)));
+}
 
 export interface Recording {
   blob: Blob;
@@ -20,7 +70,8 @@ export function recordCanvas(
   seconds: number,
   fps = 30,
 ): Promise<Recording> {
-  const mimeType = CANDIDATE_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
+  const { width, height } = canvas;
+  const mimeType = candidateTypes(width, height, fps).find((t) => MediaRecorder.isTypeSupported(t));
   if (!mimeType) return Promise.reject(new Error("This browser cannot record video."));
 
   return new Promise((resolve, reject) => {
@@ -55,7 +106,7 @@ export function recordCanvas(
       stream = canvas.captureStream(fps);
       recorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 12_000_000,
+        videoBitsPerSecond: videoBitrate(width, height),
       });
       const rec = recorder;
       rec.ondataavailable = (e) => {

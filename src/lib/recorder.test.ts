@@ -1,5 +1,53 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { recordCanvas } from "./recorder";
+import { avcLevel, candidateTypes, recordCanvas, videoBitrate } from "./recorder";
+
+describe("avcLevel", () => {
+  it.each([
+    [1280, 720, 60, "28"],
+    [1920, 1080, 30, "28"],
+    [1920, 1080, 60, "2a"],
+    [2560, 1440, 30, "32"],
+    [2560, 1440, 60, "33"],
+    [3840, 2160, 30, "33"],
+    [3840, 2160, 60, "34"],
+    [4096, 2160, 60, "34"],
+    [7680, 4320, 30, "3c"],
+  ])("picks the lowest level for %d×%d at %d fps", (w, h, fps, level) => {
+    expect(avcLevel(w, h, fps)).toBe(level);
+  });
+
+  it("rejects a level whose frame size fits but whose sides are too long", () => {
+    // 5000×200 is only 4069 macroblocks, but 313 wide exceeds 4.x's √(8·8192) = 256.
+    expect(avcLevel(5000, 200, 30)).toBe("32");
+  });
+
+  it("falls back to the highest level for sizes beyond it", () => {
+    expect(avcLevel(16_384, 16_384, 60)).toBe("3c");
+  });
+});
+
+describe("candidateTypes", () => {
+  it("puts the size-matched MP4 first and WebM last", () => {
+    expect(candidateTypes(3840, 2160, 60)).toEqual([
+      "video/mp4;codecs=avc1.640034",
+      "video/mp4",
+      "video/webm;codecs=vp9",
+      "video/webm",
+    ]);
+  });
+});
+
+describe("videoBitrate", () => {
+  it("is 12 Mbps at 1080p and scales with pixel count", () => {
+    expect(videoBitrate(1920, 1080)).toBe(12_000_000);
+    expect(videoBitrate(3840, 2160)).toBe(48_000_000);
+  });
+
+  it("is clamped at both ends", () => {
+    expect(videoBitrate(320, 180)).toBe(2_000_000);
+    expect(videoBitrate(7680, 4320)).toBe(80_000_000);
+  });
+});
 
 /** A MediaRecorder stand-in that the test drives by hand. */
 class FakeRecorder {
