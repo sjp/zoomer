@@ -5,6 +5,8 @@ share the screen or window, go fullscreen, or record a clip to use as a virtual 
 Every effect aims for 120 fps at 4K while using as little GPU and CPU as possible, and keeps
 its motion slow so video codecs don't smear it.
 
+**Try it: <https://sjp.github.io/zoomer/>**
+
 Effects: Warp Speed, Hyperspace, Digital Rain, Synthwave Grid, Bokeh Lights, Wormhole Tunnel,
 Lava Lamp, Snowfall, Flow Field, Gradient Blobs, Aurora, Topographic Contours, Underwater
 Caustics, Rain on a Window, Fireflies, Constellation Network, Fireplace and Time-lapse Clouds.
