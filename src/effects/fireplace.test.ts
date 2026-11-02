@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildHearthProfile,
-  buildNoiseTexture,
   buildRamp,
   createEmberState,
+  fireNoiseChannels,
   type EmberEnv,
   emberAlpha,
   fireLayout,
@@ -11,11 +11,12 @@ import {
   getPalette,
   HEARTH_PROFILE_COLUMNS,
   hearthMaxHeight,
+  NOISE_SIZE,
   PALETTES,
   RAMP_SIZE,
   stepEmbers,
 } from "./fireplace-model";
-import { createRng } from "./noise";
+import { buildPeriodicNoiseTexture, createRng } from "./noise";
 
 describe("buildRamp", () => {
   it("is transparent at zero heat and opaque near-white at full heat", () => {
@@ -67,10 +68,10 @@ describe("buildRamp", () => {
   });
 });
 
-describe("buildNoiseTexture", () => {
+describe("fire noise texture", () => {
   it("tiles seamlessly", () => {
     const size = 32;
-    const tex = buildNoiseTexture(size, 4);
+    const tex = buildPeriodicNoiseTexture(size, fireNoiseChannels(4));
     expect(tex.length).toBe(size * size * 2);
     // Neighbours across the wrap differ as little as neighbours inside.
     let wrapDiff = 0;
@@ -83,7 +84,7 @@ describe("buildNoiseTexture", () => {
   });
 
   it("uses the value range", () => {
-    const tex = buildNoiseTexture();
+    const tex = buildPeriodicNoiseTexture(NOISE_SIZE, fireNoiseChannels());
     let lo = 255;
     let hi = 0;
     for (const v of tex) {

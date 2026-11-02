@@ -12,7 +12,7 @@ import {
 } from "./gl";
 import {
   buildHearthProfile,
-  buildNoiseTexture,
+  fireNoiseChannels,
   buildRamp,
   createEmberState,
   emberAlpha,
@@ -32,7 +32,7 @@ import {
   stepEmbers,
 } from "./fireplace-model";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
-import { createNoise, createRng } from "./noise";
+import { buildPeriodicNoiseTexture, createNoise, createRng } from "./noise";
 import { createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 import { unitRgbMemo } from "./color";
@@ -271,7 +271,7 @@ export const fireplace = defineEffect({
           internalFormat: gl.RG8,
           format: gl.RG,
           type: gl.UNSIGNED_BYTE,
-          data: buildNoiseTexture(),
+          data: buildPeriodicNoiseTexture(NOISE_SIZE, fireNoiseChannels()),
           wrap: gl.REPEAT,
         }),
         (t) => gl.deleteTexture(t),

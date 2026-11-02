@@ -4,7 +4,7 @@
  */
 
 import { hexToUnitRgb } from "./color";
-import { createNoise } from "./noise";
+import type { NoiseChannel } from "./noise";
 
 // ---------------------------------------------------------------------------
 // Noise texture
@@ -18,28 +18,12 @@ import { createNoise } from "./noise";
 export const NOISE_PERIODS = [4, 8, 16, 32] as const;
 
 /**
- * Builds a `size` x `size` RGBA8 texture (row-major, 4 bytes per texel) whose four
- * channels are decorrelated octaves of gradient noise (see `NOISE_PERIODS`). It
- * tiles seamlessly, so it can be sampled with REPEAT wrapping. 128 is mid-grey.
- * `size` must be a positive integer; it should be a multiple of 32 so every
- * octave's cells span whole texels.
+ * Channels of the clouds' RGBA8 noise texture, for `buildPeriodicNoiseTexture`:
+ * decorrelated octaves at `NOISE_PERIODS`, each with its own permutation. The
+ * texture size should be a multiple of 32 so every octave's cells span whole texels.
  */
-export function buildNoiseTexture(size: number, seed: number): Uint8Array {
-  const data = new Uint8Array(size * size * 4);
-  for (let c = 0; c < 4; c++) {
-    // A separate permutation per channel keeps the octaves decorrelated.
-    const noise = createNoise(seed * 31 + c * 977 + 1);
-    const period = NOISE_PERIODS[c];
-    const k = period / size;
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const v = noise.periodic2(x * k, y * k, period, period);
-        const b = Math.round((v * 0.5 + 0.5) * 255);
-        data[(y * size + x) * 4 + c] = b < 0 ? 0 : b > 255 ? 255 : b;
-      }
-    }
-  }
-  return data;
+export function cloudNoiseChannels(seed: number): NoiseChannel[] {
+  return NOISE_PERIODS.map((period, c) => ({ period, seed: seed * 31 + c * 977 + 1 }));
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createNoise, hash32 } from "./noise";
+import { buildPeriodicNoiseTexture, createNoise, hash32 } from "./noise";
 
 /** Reference lowbias32 in BigInt arithmetic, independent of Math.imul. */
 function reference(x: number): number {
@@ -49,5 +49,30 @@ describe("noise3", () => {
       const v = noise.noise3(i * 0.37, i * -0.11, i * 0.053);
       expect(Math.abs(v)).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe("buildPeriodicNoiseTexture", () => {
+  it("interleaves one byte per channel per texel", () => {
+    const channels = [
+      { period: 4, seed: 1 },
+      { period: 8, seed: 2 },
+      { period: 4, seed: 3 },
+    ];
+    const tex = buildPeriodicNoiseTexture(16, channels);
+    expect(tex).toHaveLength(16 * 16 * 3);
+    // Each channel matches the same channel built on its own.
+    channels.forEach((ch, c) => {
+      const single = buildPeriodicNoiseTexture(16, [ch]);
+      for (let i = 0; i < 16 * 16; i++) expect(tex[i * 3 + c]).toBe(single[i]);
+    });
+  });
+
+  it("maps zero noise to mid-grey at lattice points", () => {
+    // Gradient noise is zero on its lattice, which a period of 4 over 16 texels hits
+    // every 4th texel.
+    const tex = buildPeriodicNoiseTexture(16, [{ period: 4, seed: 9 }]);
+    expect(tex[0]).toBe(128);
+    expect(tex[4 * 16 + 8]).toBe(128);
   });
 });

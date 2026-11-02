@@ -9,6 +9,7 @@
  *     tiles seamlessly with integer periods `px`, `py` (each at most 256).
  * - `fbm2`, `fbm3`, `fbmPeriodic2`: fractal Brownian motion (summed octaves) over
  *   the above, normalised back to roughly [-1, 1].
+ * - `buildPeriodicNoiseTexture`: seamlessly tiling 8-bit noise texture data.
  *
  * Noise is relatively expensive in JavaScript (tens of nanoseconds per sample), so
  * effects should evaluate it into small offscreen textures and upscale/pan them,
@@ -329,4 +330,39 @@ export function fbmPeriodic2(
     f *= 2;
   }
   return sum / norm;
+}
+
+/** One channel of `buildPeriodicNoiseTexture`. */
+export interface NoiseChannel {
+  /** Lattice cells across the texture side; a positive integer, at most 256. */
+  period: number;
+  /** Seed of the channel's own permutation, so channels are decorrelated. */
+  seed: number;
+}
+
+/**
+ * Builds a `size` x `size` 8-bit texture, row-major with `channels.length` bytes per
+ * texel (RG8 for two channels, RGBA8 for four), for sampling with REPEAT wrapping.
+ * Each channel is one octave of seamlessly tiling gradient noise (`periodic2`)
+ * mapped from [-1, 1] to 0..255, so 128 is mid-grey. `size` should be a multiple
+ * of every period so each lattice cell spans whole texels.
+ */
+export function buildPeriodicNoiseTexture(
+  size: number,
+  channels: readonly NoiseChannel[],
+): Uint8Array {
+  const stride = channels.length;
+  const data = new Uint8Array(size * size * stride);
+  channels.forEach(({ period, seed }, c) => {
+    const noise = createNoise(seed);
+    const k = period / size;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const v = noise.periodic2(x * k, y * k, period, period);
+        const b = Math.round((v * 0.5 + 0.5) * 255);
+        data[(y * size + x) * stride + c] = b < 0 ? 0 : b > 255 ? 255 : b;
+      }
+    }
+  });
+  return data;
 }

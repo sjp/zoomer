@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { coverageThreshold, layerUniforms } from "./clouds";
 import {
-  buildNoiseTexture,
   buildPresetTable,
+  cloudNoiseChannels,
   createPresetTransition,
   lerpPreset,
   P,
@@ -12,6 +12,10 @@ import {
   TIME_OPTIONS,
   transitionWeight,
 } from "./clouds-sky";
+import { buildPeriodicNoiseTexture } from "./noise";
+
+const buildNoiseTexture = (size: number, seed: number) =>
+  buildPeriodicNoiseTexture(size, cloudNoiseChannels(seed));
 
 const SIZE = 64;
 const tex = buildNoiseTexture(SIZE, 3);
@@ -27,7 +31,7 @@ const meanStep = (c: number, pick: (i: number) => [number, number, number, numbe
   return sum / SIZE;
 };
 
-describe("buildNoiseTexture", () => {
+describe("cloud noise texture", () => {
   it("has size x size RGBA texels and uses a wide value range around mid-grey", () => {
     expect(tex).toHaveLength(SIZE * SIZE * 4);
     for (let c = 0; c < 4; c++) {

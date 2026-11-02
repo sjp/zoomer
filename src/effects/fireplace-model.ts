@@ -3,7 +3,7 @@
  * the tiling noise texture, the hearth silhouette profile, the fire layout and the
  * ember simulation. Everything here is unit tested.
  */
-import { createNoise } from "./noise";
+import type { NoiseChannel } from "./noise";
 
 /** One palette stop: heat position 0..1, straight (not premultiplied) colour and alpha. */
 export interface RampStop {
@@ -113,25 +113,15 @@ export const NOISE_SIZE = 128;
 export const NOISE_PERIOD = 16;
 
 /**
- * A seamlessly tiling RG8 noise texture (`size` x `size`, 2 bytes per texel):
- * two independent single-octave gradient noises, each mapped from about [-1, 1] to
- * 0..255. The shader sums scaled lookups of R into fBm and uses G as a domain warp.
+ * Channels of the fire's RG8 noise texture, for `buildPeriodicNoiseTexture`: two
+ * independent single-octave gradient noises. The shader sums scaled lookups of R
+ * into fBm and uses G as a domain warp.
  */
-export function buildNoiseTexture(size = NOISE_SIZE, period = NOISE_PERIOD, seed = 0xf12e) {
-  const a = createNoise(seed);
-  const b = createNoise(seed + 1);
-  const out = new Uint8Array(size * size * 2);
-  const k = period / size;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const o = (y * size + x) * 2;
-      const r = a.periodic2(x * k, y * k, period, period);
-      const g = b.periodic2(x * k, y * k, period, period);
-      out[o] = Math.round(Math.min(1, Math.max(0, r * 0.5 + 0.5)) * 255);
-      out[o + 1] = Math.round(Math.min(1, Math.max(0, g * 0.5 + 0.5)) * 255);
-    }
-  }
-  return out;
+export function fireNoiseChannels(period = NOISE_PERIOD, seed = 0xf12e): NoiseChannel[] {
+  return [
+    { period, seed },
+    { period, seed: seed + 1 },
+  ];
 }
 
 /** Fire placement in reference units (1080 tall), x from the left, y up from the bottom. */

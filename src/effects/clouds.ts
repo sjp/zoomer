@@ -1,5 +1,5 @@
 import {
-  buildNoiseTexture,
+  cloudNoiseChannels,
   buildPresetTable,
   createPresetTransition,
   P,
@@ -19,6 +19,7 @@ import {
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { defineEffect } from "./types";
 import { fract } from "./math";
+import { buildPeriodicNoiseTexture } from "./noise";
 
 /** Noise texture side, in texels. */
 const NOISE_SIZE = 256;
@@ -263,7 +264,7 @@ export const clouds = defineEffect({
           internalFormat: gl.RGBA8,
           format: gl.RGBA,
           type: gl.UNSIGNED_BYTE,
-          data: buildNoiseTexture(NOISE_SIZE, NOISE_SEED),
+          data: buildPeriodicNoiseTexture(NOISE_SIZE, cloudNoiseChannels(NOISE_SEED)),
           wrap: gl.REPEAT,
         }),
         (t) => gl.deleteTexture(t),
