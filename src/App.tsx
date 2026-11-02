@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
+import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { decodeHash, defaults, encodeHash, parseValues } from "./effects/params";
 import { effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, ParamValue } from "./effects/types";
@@ -130,26 +131,28 @@ export function App() {
         onPointerEnter={() => setHoveringPanel(true)}
         onPointerLeave={() => setHoveringPanel(false)}
       >
-        <ControlPanel
-          effects={effects}
-          effect={effect}
-          values={values}
-          error={effectError}
-          resolution={resolution}
-          frameRate={frameRate}
-          stats={statsStore}
-          recordingLeft={recordingLeft}
-          onEffectChange={setEffectId}
-          onParamChange={setParam}
-          onReset={() =>
-            setValuesById((prev) => ({ ...prev, [effect.id]: defaults(effect.params) }))
-          }
-          onResolutionChange={setResolution}
-          onFrameRateChange={setFrameRate}
-          onRecord={(s) => void record(s)}
-          onFullscreen={toggleFullscreen}
-          onHide={() => setPanelHidden(true)}
-        />
+        <PanelErrorBoundary>
+          <ControlPanel
+            effects={effects}
+            effect={effect}
+            values={values}
+            error={effectError}
+            resolution={resolution}
+            frameRate={frameRate}
+            stats={statsStore}
+            recordingLeft={recordingLeft}
+            onEffectChange={setEffectId}
+            onParamChange={setParam}
+            onReset={() =>
+              setValuesById((prev) => ({ ...prev, [effect.id]: defaults(effect.params) }))
+            }
+            onResolutionChange={setResolution}
+            onFrameRateChange={setFrameRate}
+            onRecord={(s) => void record(s)}
+            onFullscreen={toggleFullscreen}
+            onHide={() => setPanelHidden(true)}
+          />
+        </PanelErrorBoundary>
       </div>
     </main>
   );
