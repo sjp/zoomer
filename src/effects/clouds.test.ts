@@ -5,6 +5,8 @@ import {
   coverageThreshold,
   createPresetTransition,
   layerUniforms,
+  LIGHT_BLEND,
+  lightWeight,
   lerpPreset,
   P,
   PRESET_STRIDE,
@@ -240,6 +242,44 @@ describe("layerUniforms", () => {
     }
     expect(jumps).toBeGreaterThanOrEqual(6);
     expect(worst).toBeLessThan(0.01);
+  });
+});
+
+describe("lightWeight", () => {
+  it("uses only the dominant sample away from the swap", () => {
+    expect(lightWeight(0)).toBe(0);
+    expect(lightWeight(0.5 - LIGHT_BLEND)).toBeCloseTo(0, 9);
+    expect(lightWeight(0.5 + LIGHT_BLEND)).toBeCloseTo(1, 9);
+    expect(lightWeight(0.3)).toBe(0);
+    expect(lightWeight(0.7)).toBe(1);
+    expect(lightWeight(1)).toBe(1);
+    expect(lightWeight(0.5)).toBeCloseTo(0.5, 9);
+  });
+
+  it("ramps continuously and monotonically across the swap", () => {
+    let prev = lightWeight(0);
+    for (let wa = 0.001; wa <= 1; wa += 0.001) {
+      const w = lightWeight(wa);
+      expect(w).toBeGreaterThanOrEqual(prev);
+      expect(w - prev).toBeLessThan(0.001 / LIGHT_BLEND);
+      prev = w;
+    }
+  });
+
+  it("is written to detail.w and fetches both light samples only near the swap", () => {
+    const offA = new Float32Array(4);
+    const detail = new Float32Array(4);
+    const params = new Float32Array(4);
+    let both = 0;
+    let n = 0;
+    let worst = 0;
+    for (let t = 0; t < 280; t += 0.05, n++) {
+      layerUniforms(offA, detail, params, 0, 0, 0, t, 1, 1);
+      worst = Math.max(worst, Math.abs(detail[3] - lightWeight(params[1])));
+      if (detail[3] > 0 && detail[3] < 1) both++;
+    }
+    expect(worst).toBeLessThan(1e-5);
+    expect(both / n).toBeCloseTo(2 * LIGHT_BLEND, 1);
   });
 });
 

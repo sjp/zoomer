@@ -44,8 +44,11 @@ const HAZE = [0, 0.3] as const;
 
 /**
  * Cloud pass, rendered at reduced resolution. Per layer: two coarse fetches (the
- * evolving cross-fade), one detail fetch, and two coarse fetches offset towards
- * the light for the fake lighting. Output is premultiplied RGBA.
+ * evolving cross-fade), one detail fetch, and one coarse fetch offset towards the
+ * light from the higher-weighted sample for the fake lighting (two only while
+ * the lighting cross-fades near the A/B swap; see `lightWeight`). So 8 fetches
+ * per pixel with two layers, 10 for about a fifth of the time. Output is
+ * premultiplied RGBA.
  */
 const CLOUD_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -55,7 +58,7 @@ uniform float uAspect;
 uniform int uLayers;
 /** Per layer: xy = coarse offset of sample A, zw = of sample B (texture units). */
 uniform vec4 uOffA[2];
-/** Per layer: xy = detail offset, z = detail frequency. */
+/** Per layer: xy = detail offset, z = detail frequency, w = light weight of A. */
 uniform vec4 uDetail[2];
 /** Per layer: x = coarse frequency, y = weight of A, z = contrast fix, w = opacity. */
 uniform vec4 uLayerP[2];
@@ -78,22 +81,25 @@ const float NORM = 10.0;
 const float EDGE = 0.9;
 const float LIGHT_GAIN = 1.2;
 
-/** Evolving coarse fbm (4 octaves), centred, before NORM. */
-float coarse(vec2 t, vec4 off, vec4 lp) {
-  float a = dot(texture(uNoise, t + off.xy), OCT);
-  float b = dot(texture(uNoise, t + off.zw), OCT);
-  return (mix(b, a, lp.y) - MEAN) * lp.z;
-}
-
 vec4 cloudLayer(vec2 q, vec4 off, vec4 det, vec4 lp, float haze, vec3 sky) {
   vec2 t = q * lp.x;
-  float c = coarse(t, off, lp);
-  float cs = coarse(t + uSunStep, off, lp);
+  // Evolving coarse fbm (4 octaves): A and B cross-faded, centred, before NORM.
+  float a = dot(texture(uNoise, t + off.xy), OCT);
+  float b = dot(texture(uNoise, t + off.zw), OCT);
+  float c = (mix(b, a, lp.y) - MEAN) * lp.z;
+  // Gradient towards the light, from the dominant sample only. The branches
+  // depend only on uniforms, so every pixel takes the same path.
+  float lw = det.w;
+  float g = 0.0;
+  if (lw > 0.0) g += lw * (dot(texture(uNoise, t + uSunStep + off.xy), OCT) - a);
+  if (lw < 1.0) g += (1.0 - lw) * (dot(texture(uNoise, t + uSunStep + off.zw), OCT) - b);
+  // Mixing two independent gradients lowers their contrast; undo it as for c.
+  g *= inversesqrt(lw * lw + (1.0 - lw) * (1.0 - lw));
   float d = dot(texture(uNoise, q * det.z + det.xy), OCT) - MEAN;
   float n = (c + 0.25 * d) * NORM;
   float dens = smoothstep(uThreshold, uThreshold + EDGE, n);
   // Denser towards the light means this point is in the cloud's own shadow.
-  float lit = clamp(0.62 - (cs - c) * (NORM * LIGHT_GAIN) - 0.15 * dens, 0.0, 1.0);
+  float lit = clamp(0.62 - g * (NORM * LIGHT_GAIN) - 0.15 * dens, 0.0, 1.0);
   vec3 col = mix(mix(uCloudShadow, uCloudLight, lit), sky, haze);
   float a = dens * lp.w;
   return vec4(col * a, a);

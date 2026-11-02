@@ -43,6 +43,22 @@ const EVOLVE_PERIOD = 28;
 /** Texture units each evolving sample slides (upwards) over one cycle. */
 const MORPH = 0.06;
 
+/**
+ * Half-width, in A-weight, of the window around the A/B swap where the lighting
+ * cross-fades between the two samples' gradients instead of jumping.
+ */
+export const LIGHT_BLEND = 0.1;
+
+/**
+ * Weight of sample A's gradient in the lighting. The light sample comes from the
+ * higher-weighted sample only (1 or 0), except within `LIGHT_BLEND` of the swap at
+ * `wa` = 0.5, where it ramps linearly so the shading never jumps. The shader skips
+ * the fetch of a sample whose light weight is 0.
+ */
+export function lightWeight(wa: number): number {
+  return Math.min(1, Math.max(0, (wa - 0.5) / (2 * LIGHT_BLEND) + 0.5));
+}
+
 /** Floats per layer in each of the three per-layer uniform arrays. */
 export const LAYER_FLOATS = 4;
 
@@ -91,9 +107,9 @@ export function layerUniforms(
   detail[o] = fract(-drift * DETAIL_DRIFT * STRETCH_X * dfreq + layer * 0.37);
   detail[o + 1] = fract(layer * 0.61);
   detail[o + 2] = dfreq;
-  detail[o + 3] = 0;
   const wa = 1 - Math.abs(2 * fa - 1);
   const wb = 1 - wa;
+  detail[o + 3] = lightWeight(wa);
   params[o] = freq;
   params[o + 1] = wa;
   // Averaging two independent fields lowers their contrast by sqrt(wa² + wb²).
