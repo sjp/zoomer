@@ -462,7 +462,10 @@ export const aurora = defineEffect({
           gl.useProgram(program);
           u.rgb("uLow", p.lowColor);
           u.rgb("uHigh", p.highColor);
-          const [sr, sg, sb] = skyRgb(p.sky);
+          const sky = skyRgb(p.sky);
+          const sr = sky[0];
+          const sg = sky[1];
+          const sb = sky[2];
           u.f3("uSkyTop", sr, sg, sb);
           u.f3("uSkyBottom", sr * 0.22, sg * 0.22, sb * 0.22);
           u.f3("uSilhouette", sr * 0.07, sg * 0.07, sb * 0.07);

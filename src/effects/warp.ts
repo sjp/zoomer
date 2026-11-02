@@ -75,8 +75,14 @@ export const warp = defineEffect({
           const focal = Math.max(width, height) / 2;
           const dz = p.speed * dt * 0.25;
           const tail = p.streak * p.speed * 0.03;
-          const [sr, sg, sb] = starRgb(p.starColor);
-          const [tr, tg, tb] = tintRgb(p.tint);
+          const star = starRgb(p.starColor);
+          const tint = tintRgb(p.tint);
+          const sr = star[0];
+          const sg = star[1];
+          const sb = star[2];
+          const tr = tint[0];
+          const tg = tint[1];
+          const tb = tint[2];
           const margin = 50 * scale;
           const sizePx = p.size * scale;
 
@@ -115,8 +121,8 @@ export const warp = defineEffect({
             count++;
           }
 
-          const [br, bg, bb] = backgroundRgb(p.background);
-          gl.clearColor(br, bg, bb, 1);
+          const bg = backgroundRgb(p.background);
+          gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
 
           // Additive blending. Lens-style aberration: each colour channel is scaled

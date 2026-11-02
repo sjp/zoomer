@@ -180,8 +180,14 @@ export const hyperspace = defineEffect({
           // colours instead of costing another full-screen blended pass.
           const flashAmount = p.flash ? flash * 0.6 : 0;
           const keep = 1 - flashAmount;
-          const [gr, gg, gb] = glowRgb(p.glowColor);
-          const [sr, sg, sb] = streakRgb(p.color);
+          const glow = glowRgb(p.glowColor);
+          const streak = streakRgb(p.color);
+          const gr = glow[0];
+          const gg = glow[1];
+          const gb = glow[2];
+          const sr = streak[0];
+          const sg = streak[1];
+          const sb = streak[2];
           const halfWidth = (scale * p.width) / 2;
           const velocity = p.speed * (0.04 + jump);
           const n = Math.min(p.count, MAX_STREAKS);
@@ -209,18 +215,18 @@ export const hyperspace = defineEffect({
             data[o + 7] = halfWidth * (0.3 + d * 1.2);
           }
 
-          const [br, bg, bb] = backgroundRgb(p.background);
+          const bg = backgroundRgb(p.background);
           const glowAlpha = Math.max(0, p.glow) * (0.15 + 0.5 * jump);
           if (glowAlpha === 0 && flashAmount === 0) {
             // A flat 8-bit colour plus sub-LSB dither rounds back to itself, so a
             // (typically fast) clear gives the same pixels as the shader pass.
-            gl.clearColor(br, bg, bb, 1);
+            gl.clearColor(bg[0], bg[1], bg[2], 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
           } else {
             gl.useProgram(bgProgram);
             bgU.f2("uResolution", width, height);
-            bgU.f3("uBackground", br, bg, bb);
-            bgU.f3("uGlow", gr, gg, gb);
+            bgU.v3("uBackground", bg);
+            bgU.v3("uGlow", glow);
             bgU.f1("uGlowAlpha", glowAlpha);
             bgU.f1("uGlowRadius", Math.max(1, radius * 0.8));
             bgU.f1("uFlash", flashAmount);
