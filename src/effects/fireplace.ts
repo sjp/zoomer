@@ -78,7 +78,7 @@ out vec4 outColor;
 void main() {
   vec2 q = gl_FragCoord.xy * uPxScale + uPxOffset;
   float v = q.y;
-  float vc = clamp(v, 0.0, 1.3);
+  float vc = clamp(v, 0.0, ${f(FIRE_V_MAX)});
   // Sideways lick: warp u with a slow noise, more strongly higher up.
   float w = texture(uNoise, q * uNoiseScale * ${f(OCTAVES[0].scale)} + uOff[0]).g - 0.5;
   float u = q.x + w * (0.1 + 0.45 * vc);
