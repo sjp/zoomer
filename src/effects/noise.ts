@@ -2,6 +2,7 @@
  * Small, dependency-free, seeded noise toolkit shared by effects.
  *
  * - `createRng(seed)`: fast deterministic PRNG (mulberry32), returns floats in [0, 1).
+ * - `hash32(x)` / `HASH32_GLSL`: the lowbias32 integer hash, identical in JS and GLSL.
  * - `createNoise(seed)`: a noise source with
  *   - `noise2(x, y)` / `noise3(x, y, z)`: simplex noise in roughly [-1, 1];
  *   - `periodic2(x, y, px, py)`: gradient (Perlin) noise in roughly [-1, 1] that
@@ -37,6 +38,32 @@ export function createRng(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/**
+ * 32-bit integer hash (Chris Wellons' lowbias32): well mixed, cheap, and the same
+ * as `hash32` in `HASH32_GLSL`, so JS can derive seeds the shader agrees with.
+ * Takes any number (truncated to 32 bits); returns an unsigned 32-bit integer.
+ */
+export function hash32(x: number): number {
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x7feb352d);
+  x ^= x >>> 15;
+  x = Math.imul(x, 0x846ca68b);
+  x ^= x >>> 16;
+  return x >>> 0;
+}
+
+/** GLSL for `uint hash32(uint x)`, the shader twin of `hash32`. */
+export const HASH32_GLSL = /* glsl */ `
+uint hash32(uint x) {
+  x ^= x >> 16;
+  x *= 0x7feb352du;
+  x ^= x >> 15;
+  x *= 0x846ca68bu;
+  x ^= x >> 16;
+  return x;
+}
+`;
 
 const F2 = 0.5 * (Math.sqrt(3) - 1);
 const G2 = (3 - Math.sqrt(3)) / 6;

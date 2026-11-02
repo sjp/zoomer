@@ -10,7 +10,7 @@ import {
   withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
-import { createRng } from "./noise";
+import { createRng, hash32, HASH32_GLSL } from "./noise";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 import {
@@ -156,15 +156,7 @@ uniform float uAdd;
 uniform float uDiffuse;
 uniform uint uSeed;
 out vec4 outColor;
-uint hash(uint x) {
-  x ^= x >> 16;
-  x *= 0x7feb352du;
-  x ^= x >> 15;
-  x *= 0x846ca68bu;
-  x ^= x >> 16;
-  return x;
-}
-void main() {
+${HASH32_GLSL}void main() {
   ivec2 q = ivec2(gl_FragCoord.xy);
   ivec2 m = textureSize(uPrev, 0) - 1;
   float c = texelFetch(uPrev, q, 0).r;
@@ -173,7 +165,7 @@ void main() {
     + texelFetch(uPrev, ivec2(q.x, min(q.y + 1, m.y)), 0).r
     + texelFetch(uPrev, ivec2(q.x, max(q.y - 1, 0)), 0).r;
   float v = mix(c, n * 0.25, uDiffuse);
-  float r = float(hash(uint(q.y) * 8192u + uint(q.x) + uSeed) >> 8u) * (1.0 / 16777216.0);
+  float r = float(hash32(uint(q.y) * 8192u + uint(q.x) + uSeed) >> 8u) * (1.0 / 16777216.0);
   v = floor(v * 255.0 + uAdd + r) * (1.0 / 255.0);
   outColor = vec4(clamp(v, 0.0, 1.0), 0.0, 0.0, 1.0);
 }
@@ -230,16 +222,6 @@ interface Target {
   tex: WebGLTexture;
   fbo: WebGLFramebuffer;
 }
-
-/** 32-bit integer hash (lowbias32), for per-frame shader seeds. */
-const hash32 = (x: number) => {
-  x ^= x >>> 16;
-  x = Math.imul(x, 0x7feb352d);
-  x ^= x >>> 15;
-  x = Math.imul(x, 0x846ca68b);
-  x ^= x >>> 16;
-  return x >>> 0;
-};
 
 /**
  * Looking through a rainy window at night: defocused city lights behind glass

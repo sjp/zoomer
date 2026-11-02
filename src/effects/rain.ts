@@ -9,6 +9,7 @@ import {
 } from "./gl";
 import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
+import { HASH32_GLSL } from "./noise";
 
 const CHARSETS: Record<string, string> = {
   katakana: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:.=*+-<>",
@@ -80,15 +81,7 @@ uniform vec3 uBody;
 uniform vec3 uHeadColor;
 out vec4 outColor;
 
-uint hash(uint x) {
-  x ^= x >> 16;
-  x *= 0x7feb352du;
-  x ^= x >> 15;
-  x *= 0x846ca68bu;
-  x ^= x >> 16;
-  return x;
-}
-
+${HASH32_GLSL}
 void main() {
   int px = int(gl_FragCoord.x);
   int py = int(uHeight - gl_FragCoord.y);
@@ -96,7 +89,7 @@ void main() {
   int row = py / uCellPx;
   ivec2 local = ivec2(px - col * uCellPx, py - row * uCellPx);
 
-  uint h = hash(uint(col) * 0x9e3779b1u ^ hash(uint(row) + uint(vSeed) * 0x85ebca77u));
+  uint h = hash32(uint(col) * 0x9e3779b1u ^ hash32(uint(row) + uint(vSeed) * 0x85ebca77u));
   int g = int(h % uint(uCount));
   ivec2 tile = ivec2(g % ${ATLAS_COLS}, g / ${ATLAS_COLS}) * uCellPx;
   float glyph = texelFetch(uAtlas, tile + local, 0).r;

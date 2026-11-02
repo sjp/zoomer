@@ -7,7 +7,7 @@ import {
   getUniforms,
   withScope,
 } from "./gl";
-import { createRng } from "./noise";
+import { createRng, hash32, HASH32_GLSL } from "./noise";
 import { defineEffect } from "./types";
 
 const MAX_PARTICLES = 8000;
@@ -147,16 +147,6 @@ const createNoise3 = (seed: number) => {
   };
 };
 
-/** 32-bit integer hash (lowbias32), matching the fade shader's. */
-const hash32 = (x: number) => {
-  x ^= x >>> 16;
-  x = Math.imul(x, 0x7feb352d);
-  x ^= x >>> 15;
-  x = Math.imul(x, 0x846ca68b);
-  x ^= x >>> 16;
-  return x >>> 0;
-};
-
 /**
  * One anti-aliased line segment per instance, expanded from gl_VertexID into a
  * quad with butt ends. Positions are canvas pixels with y down.
@@ -249,19 +239,11 @@ uniform uint uStride;
 
 out vec4 outColor;
 
-uint hash(uint x) {
-  x ^= x >> 16;
-  x *= 0x7feb352du;
-  x ^= x >> 15;
-  x *= 0x846ca68bu;
-  x ^= x >> 16;
-  return x;
-}
-
+${HASH32_GLSL}
 void main() {
   uvec2 q = uvec2(gl_FragCoord.xy);
   vec3 v = texelFetch(uPrev, ivec2(q), 0).rgb;
-  float r = float(hash(q.y * uStride + q.x + uSeed) >> 8u) * (1.0 / 16777216.0);
+  float r = float(hash32(q.y * uStride + q.x + uSeed) >> 8u) * (1.0 / 16777216.0);
   v = floor(v * uFade.x + uFade.y + r) * uInvLevels;
   outColor = vec4(max(v, 0.0), 1.0);
 }
