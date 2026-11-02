@@ -151,8 +151,8 @@ export interface StreakRenderer {
   /** Uploads the first `count` streaks of `data`. */
   upload(count: number): void;
   /**
-   * Draws the uploaded streaks additively. Sets its own program, vertex array,
-   * blending and viewport-independent state; the caller sets the viewport.
+   * Draws the uploaded streaks additively. Sets its own program, vertex array and
+   * blending; everything else is as `beginFrame` left it, plus the caller's viewport.
    * `zoom` scales each colour channel's positions about the centre (needs the
    * `chromatic` option); omit it to draw unscaled.
    */
@@ -211,10 +211,6 @@ export function createStreakRenderer(
     draw(count, width, height, zoom) {
       const n = clampCount(count);
       if (n <= 0) return;
-      gl.disable(gl.DEPTH_TEST);
-      gl.disable(gl.CULL_FACE);
-      gl.disable(gl.SCISSOR_TEST);
-      gl.colorMask(true, true, true, true);
       gl.enable(gl.BLEND);
       gl.blendEquation(gl.FUNC_ADD);
       gl.blendFunc(gl.ONE, gl.ONE);
