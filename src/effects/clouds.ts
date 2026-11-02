@@ -22,6 +22,7 @@ import {
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { defineEffect } from "./types";
+import { approach } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
 
 /** Noise texture side, in texels. */
@@ -40,6 +41,8 @@ const WIND = 0.012;
 const LIGHT_STEP = 0.02;
 /** Per-layer opacity: the far layer is slightly thinner and hazier. */
 const OPACITY = [1, 0.85] as const;
+/** Seconds the far layer takes to fade in or out when the layer count changes. */
+const LAYER_FADE = 1;
 const HAZE = [0, 0.3] as const;
 
 /**
@@ -224,6 +227,8 @@ export const clouds = defineEffect({
       let driftNear = 0;
       let driftFar = 0;
       let evolve = 0;
+      /** Far layer's fade, 0..1; NaN before the first frame, which starts at its target. */
+      let farFade = Number.NaN;
 
       return {
         resize(v) {
@@ -237,7 +242,12 @@ export const clouds = defineEffect({
           driftNear += step * WIND;
           driftFar += step * WIND * FAR_SPEED;
           evolve += step;
-          const layers = p.layers >= 1.5 ? 2 : 1;
+          const farTarget = p.layers >= 1.5 ? 1 : 0;
+          if (Number.isNaN(farFade)) farFade = farTarget;
+          const fadeStep = Math.max(0, dt) / LAYER_FADE;
+          farFade = approach(farFade, farTarget, fadeStep);
+          // The far layer costs its fetches only while it is at all visible.
+          const layers = farFade > 0 ? 2 : 1;
           const freq = BASE_FREQ / Math.max(0.1, p.scale);
 
           target.resize(width, height, qualityDivisor(p.quality));
@@ -285,7 +295,7 @@ export const clouds = defineEffect({
             driftFar,
             evolve,
             freq * FAR_FREQ,
-            OPACITY[1],
+            OPACITY[1] * farFade,
           );
           gl.uniform4fv(u.loc.uOffA, offA);
           gl.uniform4fv(u.loc.uDetail, detail);
