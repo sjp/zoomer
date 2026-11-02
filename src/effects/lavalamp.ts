@@ -13,10 +13,13 @@ import {
 } from "./gl";
 import { createRng } from "./noise";
 import { createChangeKey } from "./change-key";
+import { growLive, stepLife, trimLive } from "./fade";
 import { defineEffect } from "./types";
 
 const MAX_BLOBS = 20;
 const TAU = Math.PI * 2;
+/** Seconds a blob takes to grow in or shrink away when the count changes. */
+const BLOB_FADE = 1.2;
 /** Base blob radius as a fraction of the frame height, for a size of 1. */
 const BASE_RADIUS = 0.085;
 /**
@@ -326,6 +329,10 @@ export const lavalamp = defineEffect({
       let time = 0;
       const blobData = new Float32Array(MAX_BLOBS * 4);
       const blobR2 = new Float32Array(MAX_BLOBS);
+      /** Count fade (see `fade.ts`): blobs grow in and shrink away on a count change. */
+      const blobLife = new Float32Array(MAX_BLOBS);
+      /** Blobs in the field: the count plus any still shrinking away; NaN before the first frame. */
+      let live = Number.NaN;
       /** What blobData and blobR2 were last computed from. */
       const blobInputs = createChangeKey(5);
       /**
@@ -374,7 +381,21 @@ export const lavalamp = defineEffect({
             1,
             Math.min(REF_H * MAX_ASPECT, (REF_H * width) / Math.max(1, height)),
           );
-          const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.count)));
+          const target = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.count)));
+          if (Number.isNaN(live)) {
+            // The lamp starts full rather than growing every blob in.
+            blobLife.fill(1);
+            live = target;
+          }
+          const n = (live = growLive(blobLife, live, target));
+          const fadeStep = dt / BLOB_FADE;
+          let fading = false;
+          for (let i = 0; i < n; i++) {
+            const before = blobLife[i];
+            if (stepLife(blobLife, i, target, fadeStep, fadeStep) !== before) fading = true;
+          }
+          live = trimLive(blobLife, live, target);
+          if (fading) blobInputs.invalidate();
           const baseR = BASE_RADIUS * p.size * REF_H;
           blobInputs.set(0, time);
           blobInputs.set(1, n);
@@ -402,7 +423,8 @@ export const lavalamp = defineEffect({
             blobData[o + 1] = qy;
             blobData[o + 2] = -cx * qx;
             blobData[o + 3] = -cy * qy;
-            blobR2[i] = r * r;
+            // Shrinking r² with the fade grows or shrinks the blob from or to nothing.
+            blobR2[i] = r * r * blobLife[i];
           }
 
           // Tile classification pass, into the mask texture.
