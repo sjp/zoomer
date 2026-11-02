@@ -11,6 +11,11 @@ export function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Moves `x` towards `target` by at most `step` (non-negative), without overshooting. */
+export function approach(x: number, target: number, step: number): number {
+  return target > x ? Math.min(target, x + step) : Math.max(target, x - step);
+}
+
 /** GLSL `fract`: `x - floor(x)`, in [0, 1) for finite `x`. */
 export function fract(x: number): number {
   return x - Math.floor(x);

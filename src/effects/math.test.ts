@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { clamp, fract, smoothstep, wrap } from "./math";
+import { approach, clamp, fract, smoothstep, wrap } from "./math";
 
 describe("clamp", () => {
   it("limits to the range", () => {
     expect(clamp(-1, 0, 1)).toBe(0);
     expect(clamp(0.25, 0, 1)).toBe(0.25);
     expect(clamp(3, 0, 1)).toBe(1);
+  });
+});
+
+describe("approach", () => {
+  it("steps towards the target without overshooting", () => {
+    expect(approach(0, 1, 0.25)).toBe(0.25);
+    expect(approach(1, 0, 0.25)).toBe(0.75);
+    expect(approach(0.9, 1, 0.25)).toBe(1);
+    expect(approach(0.1, 0, 0.25)).toBe(0);
+    expect(approach(0.5, 0.5, 0.25)).toBe(0.5);
   });
 });
 
