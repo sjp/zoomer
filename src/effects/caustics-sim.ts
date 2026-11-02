@@ -4,6 +4,8 @@
  * simulation. No GL here, so it is unit tested directly.
  */
 
+import { FADE_OUT, stepLife } from "./fade";
+
 const TAU = Math.PI * 2;
 
 /**
@@ -161,20 +163,25 @@ export function seedBubbles(s: BubbleState, rng: () => number, refWidth: number)
 }
 
 /**
- * Moves the first `count` bubbles up by `rise * dt` and fades them in over
- * `fade` seconds. A bubble that leaves the top respawns just below the bottom
- * at a new x, so the jump is never visible.
+ * Moves the first `live` bubbles up by `rise * dt`. Those below `target` fade in
+ * over `fade` seconds and the rest fade out over `FADE_OUT` (see `fade.ts`), both
+ * on the wall clock `fadeDt`, so bubbles still appear and leave while the motion
+ * (`dt`, scaled by the speed) is paused. A bubble that leaves the top respawns
+ * just below the bottom at a new x, so the jump is never visible.
  */
 export function stepBubbles(
   s: BubbleState,
-  count: number,
+  live: number,
+  target: number,
   dt: number,
+  fadeDt: number,
   refWidth: number,
   rng: () => number,
   fade = 1.5,
 ): void {
-  const n = Math.min(count, s.x.length);
-  const fadeStep = fade > 0 ? dt / fade : 1;
+  const n = Math.min(live, s.x.length);
+  const fadeStep = fade > 0 ? fadeDt / fade : 1;
+  const outStep = fadeDt / FADE_OUT;
   for (let i = 0; i < n; i++) {
     const y = s.y[i] - s.rise[i] * dt;
     if (y < -bubbleMargin(s.r[i])) {
@@ -183,7 +190,7 @@ export function stepBubbles(
     } else {
       s.y[i] = y;
     }
-    s.life[i] = Math.min(1, s.life[i] + fadeStep);
+    stepLife(s.life, i, target, fadeStep, outStep);
   }
 }
 

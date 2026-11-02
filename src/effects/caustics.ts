@@ -28,6 +28,7 @@ import { createRng } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect, type ParamSchema, type ParamValues } from "./types";
 import { wrap } from "./math";
+import { growLive, trimLive } from "./fade";
 
 /** On-screen size of one caustic tile period in reference px at scale 1. */
 const TILE_REF_PX = 900;
@@ -289,7 +290,8 @@ export const caustics = defineEffect({
       // Per bubble: centre x, centre y, radius (device px, y down), then alpha.
       const batch = scope.own(createSpriteBatch(gl, MAX_BUBBLES, [3, 1], [polygonStrip(8)]));
       const bubbles = createBubbleState(MAX_BUBBLES);
-      let prevBubbles = 0;
+      /** Bubbles simulated: the count plus any still fading out after it dropped. */
+      let liveBubbles = 0;
 
       let width = 1;
       let height = 1;
@@ -481,11 +483,13 @@ export const caustics = defineEffect({
           triangle.draw();
 
           // 4. Bubbles (deep water only).
-          const n = deep ? Math.min(MAX_BUBBLES, Math.max(0, Math.floor(p.bubbles))) : 0;
-          for (let i = prevBubbles; i < n; i++) bubbles.life[i] = 0;
-          prevBubbles = n;
+          const target = deep ? Math.min(MAX_BUBBLES, Math.max(0, Math.floor(p.bubbles))) : 0;
+          // Bubbles belong to deep water only; a scene change is a hard cut.
+          if (!deep) liveBubbles = 0;
+          const n = (liveBubbles = growLive(bubbles.life, liveBubbles, target));
           if (n > 0) {
-            stepBubbles(bubbles, n, sdt, refWidth, rng);
+            stepBubbles(bubbles, n, target, sdt, dt, refWidth, rng);
+            liveBubbles = trimLive(bubbles.life, liveBubbles, target);
             const data = batch.data;
             const stride = batch.stride;
             const alphaScale = Math.min(1, 0.4 + 0.4 * p.intensity);

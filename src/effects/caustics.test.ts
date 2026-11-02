@@ -114,11 +114,11 @@ describe("bubbles", () => {
     const s = createBubbleState(1);
     const rng = createRng(3);
     spawnBubble(s, 0, rng, 1920, 500);
-    stepBubbles(s, 1, 1, 1920, rng);
+    stepBubbles(s, 1, 1, 1, 1, 1920, rng);
     expect(s.y[0]).toBeCloseTo(500 - s.rise[0], 3);
 
     s.y[0] = -bubbleMargin(s.r[0]) + 0.1;
-    stepBubbles(s, 1, 0.5, 1920, rng);
+    stepBubbles(s, 1, 1, 0.5, 0.5, 1920, rng);
     expect(s.y[0]).toBeGreaterThan(1080 + bubbleMargin(s.r[0]) - 1e-3);
   });
 
@@ -128,9 +128,28 @@ describe("bubbles", () => {
     seedBubbles(s, rng, 1920);
     const y3 = s.y[3];
     s.life[0] = 0;
-    stepBubbles(s, 2, 0.75, 1920, rng, 1.5);
+    stepBubbles(s, 2, 2, 0.75, 0.75, 1920, rng, 1.5);
     expect(s.y[3]).toBe(y3);
     expect(s.life[0]).toBeCloseTo(0.5);
+  });
+
+  it("fades in on the wall clock while the motion is paused (speed 0)", () => {
+    const s = createBubbleState(1);
+    const rng = createRng(6);
+    spawnBubble(s, 0, rng, 1920, 500);
+    s.life[0] = 0;
+    stepBubbles(s, 1, 1, 0, 0.75, 1920, rng, 1.5);
+    expect(s.y[0]).toBe(500);
+    expect(s.life[0]).toBeCloseTo(0.5);
+  });
+
+  it("fades out bubbles at or beyond the target", () => {
+    const s = createBubbleState(2);
+    const rng = createRng(7);
+    seedBubbles(s, rng, 1920);
+    stepBubbles(s, 2, 1, 0, 0.3, 1920, rng);
+    expect(s.life[0]).toBe(1);
+    expect(s.life[1]).toBeCloseTo(0.5);
   });
 
   it("wobbles by less than a radius", () => {
