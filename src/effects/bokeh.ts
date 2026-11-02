@@ -10,6 +10,7 @@ import {
 } from "./gl";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
 const MAX_LIGHTS = 200;
@@ -226,7 +227,8 @@ export const bokeh = defineEffect({
       let refWidth = 1920;
       // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
-      let prevCount = 0;
+      /** Items simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
 
       for (let i = 0; i < MAX_LIGHTS; i++) {
         xs[i] = Math.random() * refWidth;
@@ -253,9 +255,8 @@ export const bokeh = defineEffect({
           time += dt;
 
           // Bigger lights draw fewer of them, keeping the blended area within budget.
-          const n = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
-          for (let i = prevCount; i < n; i++) life[i] = 0;
-          prevCount = n;
+          const target = bokehLightCount(p.count, p.size, p.sizeVariation, refWidth);
+          const n = (live = growLive(life, live, target));
 
           const dir = (p.direction * Math.PI) / 180;
           const driftX = Math.cos(dir) * p.speed * DRIFT_PX;
@@ -263,6 +264,7 @@ export const bokeh = defineEffect({
           const wanderPx = p.wander * DRIFT_PX * 0.9;
           const spread = p.sizeVariation * 1.1;
           const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
 
           const data = batch.data;
           const stride = batch.stride;
@@ -289,8 +291,7 @@ export const bokeh = defineEffect({
             xs[i] = x;
             ys[i] = y;
 
-            const l = Math.min(1, life[i] + fadeStep);
-            life[i] = l;
+            const l = stepLife(life, i, target, fadeStep, outStep);
 
             const tw = 0.5 + 0.5 * Math.sin(time * twinkleRate[i] + twinklePhase[i]);
             const pulse = 1 - p.twinkle * 0.6 * tw;
@@ -305,6 +306,8 @@ export const bokeh = defineEffect({
             data[o + 4] = hue[i];
             visible++;
           }
+
+          live = trimLive(life, live, target);
 
           background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
           if (visible === 0) return;
