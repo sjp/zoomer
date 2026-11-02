@@ -4,6 +4,7 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
@@ -250,12 +251,13 @@ uniform vec3 uGain;
 uniform float uHorizonTop;
 
 out vec4 outColor;
+${DITHER_GLSL}
 
 void main() {
   vec2 frag = gl_FragCoord.xy;
   float u = frag.x / uResolution.x;
   float y = frag.y / uResolution.y;
-  float dither = fract(52.9829189 * fract(dot(frag, vec2(0.06711056, 0.00583715)))) - 0.5;
+  float dither = dither8(frag);
 
   // Silhouette first: fully covered pixels skip the curtains.
   float cover = 0.0;
@@ -264,7 +266,7 @@ void main() {
     float dist = (hs.x * uResolution.y - frag.y) * inversesqrt(1.0 + hs.y * hs.y);
     cover = clamp(dist + 0.5, 0.0, 1.0);
     if (cover >= 1.0) {
-      outColor = vec4(uSilhouette + dither / 255.0, 1.0);
+      outColor = vec4(uSilhouette + dither, 1.0);
       return;
     }
   }
@@ -288,7 +290,7 @@ void main() {
   col += 1.0 - exp2(-aurora);
 
   col = mix(col, uSilhouette, cover);
-  outColor = vec4(col + dither / 255.0, 1.0);
+  outColor = vec4(col + dither, 1.0);
 }
 `;
 

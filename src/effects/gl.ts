@@ -17,6 +17,19 @@ void main() {
 `;
 
 /**
+ * GLSL for `float dither8(vec2 fragCoord)`: a static, per-pixel offset of up to
+ * +-0.5 LSB of an 8-bit channel (interleaved gradient noise, Jimenez 2014). Add it
+ * to a colour just before the write, so wide, shallow gradients don't band into
+ * visible strips at 4K. Interpolate it into a fragment shader after the precision
+ * statement. ALU only, a few instructions per pixel.
+ */
+export const DITHER_GLSL = /* glsl */ `
+float dither8(vec2 fragCoord) {
+  return (fract(52.9829189 * fract(dot(fragCoord, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+}
+`;
+
+/**
  * Formats a number as a GLSL float literal, for constants interpolated into shader
  * source: integers gain a ".0" (GLSL ES has no implicit int-to-float conversion),
  * other values use JavaScript's shortest round-trip form (exponents are valid GLSL).

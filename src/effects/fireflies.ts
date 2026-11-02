@@ -1,4 +1,4 @@
-import { beginFrame, createProgram, getUniforms, glslFloat, withScope } from "./gl";
+import { beginFrame, createProgram, DITHER_GLSL, getUniforms, glslFloat, withScope } from "./gl";
 import { createNoise } from "./noise";
 import {
   createGradientBackground,
@@ -188,6 +188,7 @@ in vec2 vBeam;
 flat in float vIntensity;
 uniform vec3 uColor;
 out vec4 outColor;
+${DITHER_GLSL}
 void main() {
   float across = 1.0 - smoothstep(${glslFloat(BEAM_CORE)}, 1.0, abs(vBeam.x));
   float v = clamp(vBeam.y, 0.0, 1.0);
@@ -195,8 +196,7 @@ void main() {
   vec3 c = uColor * (across * along * vIntensity);
   // Sub-LSB dither hides banding in the wide, shallow beam. Clamped at zero, since
   // a negative additive output would be clamped anyway and bias the edges.
-  float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  outColor = vec4(max(c + (n - 0.5) / 255.0, 0.0), 0.0);
+  outColor = vec4(max(c + dither8(gl_FragCoord.xy), 0.0), 0.0);
 }
 `;
 

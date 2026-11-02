@@ -32,6 +32,7 @@
 import {
   createFullscreenTriangle,
   createProgram,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   type Scope,
   withScope,
@@ -135,14 +136,14 @@ uniform sampler2D uLowRes;
 uniform vec2 uLowResSize;
 in vec2 vUv;
 out vec4 outColor;
+${dither ? DITHER_GLSL : ""}
 ${composite}
 void main() {
   vec4 c = composite(vUv);
 ${
   dither
     ? `  // Sub-LSB dither: upscaled 8-bit gradients band visibly without it.
-  float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  c.rgb += (n - 0.5) / 255.0;`
+  c.rgb += dither8(gl_FragCoord.xy);`
     : ""
 }
   outColor = vec4(c.rgb, 1.0);

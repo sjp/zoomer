@@ -2,6 +2,7 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   withScope,
@@ -27,6 +28,7 @@ uniform float uGlowRadius;
 uniform float uFlash;
 
 out vec4 outColor;
+${DITHER_GLSL}
 
 void main() {
   float r = length(gl_FragCoord.xy - 0.5 * uResolution);
@@ -34,8 +36,7 @@ void main() {
   vec3 c = mix(uBackground, uGlow, a);
   c = uFlash + (1.0 - uFlash) * c;
   // Sub-LSB dither hides banding in the wide, shallow gradient.
-  float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  outColor = vec4(c + (n - 0.5) / 255.0, 1.0);
+  outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
 

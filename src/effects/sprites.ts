@@ -8,6 +8,7 @@ import {
   createFullscreenTriangle,
   createProgram,
   createScope,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   type Scope,
@@ -147,12 +148,12 @@ in vec2 vUv;
 uniform vec3 uTop;
 uniform vec3 uBottom;
 out vec4 outColor;
+${DITHER_GLSL}
 void main() {
   vec3 c = mix(uTop, uBottom, 1.0 - vUv.y);
   // Sub-LSB dither (interleaved gradient noise, static per pixel): dark, shallow
   // gradients otherwise band into strips tens of pixels tall at 4K.
-  float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  outColor = vec4(c + (n - 0.5) / 255.0, 1.0);
+  outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
 

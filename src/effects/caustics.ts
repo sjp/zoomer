@@ -16,6 +16,7 @@ import {
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
@@ -125,6 +126,7 @@ uniform vec3 uGrid;
 uniform vec3 uRayColor;
 in vec2 vUv;
 out vec4 outColor;
+${DITHER_GLSL}
 void main() {
   vec2 p = gl_FragCoord.xy;
   vec2 ua = uMatA * p + uOffA;
@@ -134,8 +136,7 @@ void main() {
   vec3 c = (a + b) * 0.5 + a * b;
 ${scene}
   // Sub-LSB dither: the floor and depth gradients are wide and shallow.
-  float n = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
-  outColor = vec4(col + (n - 0.5) / 255.0, 1.0);
+  outColor = vec4(col + dither8(p), 1.0);
 }
 `;
 }

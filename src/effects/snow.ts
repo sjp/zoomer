@@ -1,10 +1,11 @@
 import { hexToRgb, mixRgb, type Rgb } from "./color";
 import {
   beginFrame,
+  createFullscreenTriangle,
   createProgram,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
-  createFullscreenTriangle,
   withScope,
 } from "./gl";
 import { createNoise, createRng } from "./noise";
@@ -96,6 +97,7 @@ uniform float uHeight;
 uniform vec3 uMist;
 uniform float uAmount;
 out vec4 outColor;
+${DITHER_GLSL}
 void main() {
   float y = uHeight - gl_FragCoord.y;
   float t = (y - 0.6 * uHeight) / (0.4 * uHeight);
@@ -107,8 +109,7 @@ void main() {
   // The mist blends over the dithered sky, scaling its dither by (1 - a), and its
   // own ramp is undithered: add the same IGN pattern scaled by a, so the total stays
   // +-0.5 LSB and the bottom of the frame doesn't band again.
-  float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  outColor = vec4(uMist * a + a * (n - 0.5) / 255.0, a);
+  outColor = vec4(uMist * a + a * dither8(gl_FragCoord.xy), a);
 }
 `;
 
