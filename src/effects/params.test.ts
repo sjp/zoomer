@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coerce, decodeHash, encodeHash, parseValues, snap } from "./params";
+import { coerce, decodeHash, encodeHash, parseValues, snap, stateFromHash } from "./params";
 import { effects } from "./registry";
 import type { ParamDef, ParamSchema } from "./types";
 
@@ -73,6 +73,28 @@ describe("hash round trip", () => {
     expect(effectId).toBe(effect.id);
     expect(parseValues(schema, raw)).toEqual(values);
   });
+});
+
+describe("stateFromHash", () => {
+  const list = [
+    { ...effects[0], id: "first", params: schema },
+    { ...effects[0], id: "second", params: schema },
+  ];
+
+  it("applies the hash's params to the effect it names", () => {
+    const { effect, values } = stateFromHash("#effect=second&speed=5&on=0", list);
+    expect(effect.id).toBe("second");
+    expect(values).toEqual({ speed: 5, color: "#ffffff", on: false, mode: "a" });
+  });
+
+  it.each(["#effect=gone&speed=5", "#speed=5", "", "#"])(
+    "uses the first effect's defaults for %j",
+    (hash) => {
+      const { effect, values } = stateFromHash(hash, list);
+      expect(effect.id).toBe("first");
+      expect(values).toEqual({ speed: 3, color: "#ffffff", on: true, mode: "a" });
+    },
+  );
 });
 
 describe("registry", () => {

@@ -84,3 +84,18 @@ export function encodeHash(effect: EffectDefinition, values: AnyParamValues): st
   }
   return `#${params.toString()}`;
 }
+
+/**
+ * The effect and values a hash describes. An unknown or missing effect id falls back
+ * to the first effect with its defaults, since the hash's params were meant for a
+ * different schema.
+ */
+export function stateFromHash(
+  hash: string,
+  effects: readonly EffectDefinition[],
+): { effect: EffectDefinition; values: AnyParamValues } {
+  const { effectId, raw } = decodeHash(hash);
+  const effect = effects.find((e) => e.id === effectId);
+  if (!effect) return { effect: effects[0], values: defaults(effects[0].params) };
+  return { effect, values: parseValues(effect.params, raw) };
+}

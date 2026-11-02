@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
-import { decodeHash, defaults, encodeHash, parseValues } from "./effects/params";
+import { defaults, encodeHash, stateFromHash } from "./effects/params";
 import { effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
@@ -12,9 +12,8 @@ import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
 
 function initialState() {
-  const { effectId, raw } = decodeHash(window.location.hash);
-  const effect = getEffect(effectId) ?? effects[0];
-  return { effectId: effect.id, values: { [effect.id]: parseValues(effect.params, raw) } };
+  const { effect, values } = stateFromHash(window.location.hash, effects);
+  return { effectId: effect.id, values: { [effect.id]: values } };
 }
 
 /** How long the URL waits for params to settle before updating, in ms. */
