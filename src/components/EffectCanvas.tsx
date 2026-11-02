@@ -6,6 +6,7 @@ import {
   type EffectInstance,
   type Viewport,
 } from "../effects/types";
+import { beginFrame } from "../effects/gl";
 import { createFrameLimiter, frameDelta, FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { describeError } from "../lib/errors";
 import { createGpuTimer, type GpuTimer } from "../lib/gpuTimer";
@@ -165,6 +166,17 @@ export function EffectCanvas({
         failed?.dispose?.();
       } catch (disposeErr) {
         console.error(`"${effect.name}" also failed to dispose:`, disposeErr);
+      }
+      // A throw midway through a frame can leave an FBO bound, scissor or blending
+      // on, and so on. Every frame starts with beginFrame anyway; resetting here as
+      // well means whatever runs next on this context never inherits that state.
+      if (effect.context === "webgl2") {
+        try {
+          const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
+          if (gl && !gl.isContextLost()) beginFrame(gl, canvas.width, canvas.height);
+        } catch {
+          // Best effort: the next effect resets its own state each frame.
+        }
       }
       reportError(`This effect stopped after an error: ${describeError(err)}`);
     };
