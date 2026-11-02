@@ -1,3 +1,4 @@
+import { stepDecimals } from "../effects/params";
 import type { ParamDef, ParamValue } from "../effects/types";
 
 interface Props {
@@ -5,11 +6,6 @@ interface Props {
   def: ParamDef;
   value: ParamValue;
   onChange: (value: ParamValue) => void;
-}
-
-function decimals(step: number) {
-  const s = String(step);
-  return s.includes(".") ? s.split(".")[1].length : 0;
 }
 
 export function ParamControl({ id, def, value, onChange }: Props) {
@@ -20,7 +16,7 @@ export function ParamControl({ id, def, value, onChange }: Props) {
         <div className="control">
           <label htmlFor={inputId}>
             {def.label}
-            <output>{Number(value).toFixed(decimals(def.step))}</output>
+            <output>{Number(value).toFixed(stepDecimals(def.step))}</output>
           </label>
           <input
             id={inputId}

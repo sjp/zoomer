@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { coerce, decodeHash, encodeHash, parseValues, snap, stateFromHash } from "./params";
+import {
+  coerce,
+  decodeHash,
+  encodeHash,
+  parseValues,
+  snap,
+  stateFromHash,
+  stepDecimals,
+} from "./params";
 import { effects } from "./registry";
 import type { ParamDef, ParamSchema } from "./types";
 
@@ -72,6 +80,24 @@ describe("hash round trip", () => {
     const { effectId, raw } = decodeHash(hash);
     expect(effectId).toBe(effect.id);
     expect(parseValues(schema, raw)).toEqual(values);
+  });
+});
+
+describe("stepDecimals", () => {
+  it.each([
+    [1, 0],
+    [10, 0],
+    [0.1, 1],
+    [0.25, 2],
+    [0.005, 3],
+    [1e-7, 7],
+    [2.5e-8, 9],
+    [1e21, 0],
+    [0, 0],
+    [-0.1, 0],
+    [Number.NaN, 0],
+  ])("step %s needs %d decimals", (step, expected) => {
+    expect(stepDecimals(step)).toBe(expected);
   });
 });
 

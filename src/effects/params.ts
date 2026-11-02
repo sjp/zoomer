@@ -28,6 +28,17 @@ export function snap(def: NumberParam, n: number): number {
   return Number((def.min + k * def.step).toFixed(12));
 }
 
+/**
+ * How many decimals a slider with this step needs to show its values exactly. Reads
+ * the shortest round-trip string, so exponent forms like `1e-7` or `2.5e-8` work.
+ */
+export function stepDecimals(step: number): number {
+  if (!(step > 0) || !Number.isFinite(step)) return 0;
+  const [mantissa, exponent = "0"] = String(step).split("e");
+  const fraction = mantissa.split(".")[1]?.length ?? 0;
+  return Math.min(20, Math.max(0, fraction - Number(exponent)));
+}
+
 /** Converts a raw string (from the URL) to a valid value, or undefined if invalid. */
 export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
   switch (def.kind) {
