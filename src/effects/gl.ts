@@ -42,6 +42,81 @@ export function beginFrame(gl: WebGL2RenderingContext, width: number, height: nu
   gl.bindVertexArray(null);
 }
 
+/**
+ * Collects cleanup for the resources an effect (or helper) builds, so they can all
+ * be released at once: on `dispose()`, or when a later step of `create` throws
+ * (a shader that fails to compile, say). Effects share one long-lived context, so
+ * anything a failed `create` leaves behind would otherwise leak.
+ */
+export interface Scope {
+  /** Registers `dispose(resource)` and returns `resource`. */
+  add<T>(resource: T, dispose: (resource: T) => void): T;
+  /** Registers `resource.dispose()` and returns `resource`. */
+  own<T extends { dispose(): void }>(resource: T): T;
+  /**
+   * Registers a cleanup callback, for resources that are replaced over time
+   * (the callback reads the current one) or non-GL teardown.
+   */
+  defer(cleanup: () => void): void;
+  /**
+   * Runs every cleanup, most recent first, and forgets them, so a second call does
+   * nothing. A cleanup that throws doesn't stop the rest; the first error is rethrown
+   * once all have run.
+   */
+  dispose(): void;
+}
+
+export function createScope(): Scope {
+  const cleanups: (() => void)[] = [];
+  return {
+    add(resource, dispose) {
+      cleanups.push(() => dispose(resource));
+      return resource;
+    },
+    own(resource) {
+      cleanups.push(() => resource.dispose());
+      return resource;
+    },
+    defer(cleanup) {
+      cleanups.push(cleanup);
+    },
+    dispose() {
+      let failed = false;
+      let first: unknown;
+      while (cleanups.length > 0) {
+        const cleanup = cleanups.pop()!;
+        try {
+          cleanup();
+        } catch (err) {
+          if (!failed) first = err;
+          failed = true;
+        }
+      }
+      if (failed) throw first;
+    },
+  };
+}
+
+/**
+ * Runs `build` with a fresh scope and returns its result. If `build` throws, the
+ * scope is disposed (releasing everything built so far) and the error rethrown.
+ * On success the caller owns the scope, typically returning
+ * `dispose: () => scope.dispose()` from it.
+ */
+export function withScope<T>(build: (scope: Scope) => T): T {
+  const scope = createScope();
+  try {
+    return build(scope);
+  } catch (err) {
+    try {
+      scope.dispose();
+    } catch (cleanupErr) {
+      console.error("WebGL: cleanup after a failed create also failed:", cleanupErr);
+    }
+    throw err;
+  }
+}
+
 /** Prefixes each source line with its number, so log line references are easy to find. */
 const numbered = (source: string) =>
   source

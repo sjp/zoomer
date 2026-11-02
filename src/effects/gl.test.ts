@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { beginFrame } from "./gl";
+import { describe, expect, it, vi } from "vitest";
+import { beginFrame, createScope, withScope } from "./gl";
 
 const ENUMS = {
   FRAMEBUFFER: 0x8d40,
@@ -61,5 +61,84 @@ describe("beginFrame", () => {
     expect(state.blendEquation).toBe(ENUMS.FUNC_ADD);
     expect(state.colorMask).toEqual([true, true, true, true]);
     expect(state.vertexArray).toBeNull();
+  });
+});
+
+describe("createScope", () => {
+  it("runs cleanups in reverse order of registration", () => {
+    const scope = createScope();
+    const order: string[] = [];
+    const a = scope.add("a", (r) => order.push(r));
+    scope.own({ dispose: () => order.push("b") });
+    scope.defer(() => order.push("c"));
+    expect(a).toBe("a");
+    scope.dispose();
+    expect(order).toEqual(["c", "b", "a"]);
+  });
+
+  it("is idempotent", () => {
+    const scope = createScope();
+    let count = 0;
+    scope.defer(() => count++);
+    scope.dispose();
+    scope.dispose();
+    expect(count).toBe(1);
+  });
+
+  it("runs every cleanup even if one throws, then rethrows the first error", () => {
+    const scope = createScope();
+    const order: string[] = [];
+    scope.defer(() => order.push("a"));
+    scope.defer(() => {
+      throw new Error("first");
+    });
+    scope.defer(() => {
+      throw new Error("second");
+    });
+    scope.defer(() => order.push("d"));
+    expect(() => scope.dispose()).toThrow("second");
+    expect(order).toEqual(["d", "a"]);
+    expect(() => scope.dispose()).not.toThrow();
+  });
+});
+
+describe("withScope", () => {
+  it("returns the result and leaves the scope to the caller on success", () => {
+    let disposed = false;
+    const result = withScope((scope) => {
+      scope.defer(() => (disposed = true));
+      return { dispose: () => scope.dispose() };
+    });
+    expect(disposed).toBe(false);
+    result.dispose();
+    expect(disposed).toBe(true);
+  });
+
+  it("disposes everything built so far and rethrows when build throws", () => {
+    const order: string[] = [];
+    const err = new Error("shader failed");
+    expect(() =>
+      withScope((scope) => {
+        scope.add("triangle", (r) => order.push(r));
+        scope.add("program", (r) => order.push(r));
+        throw err;
+      }),
+    ).toThrow(err);
+    expect(order).toEqual(["program", "triangle"]);
+  });
+
+  it("rethrows the build error even if a cleanup also throws", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("build");
+    expect(() =>
+      withScope((scope) => {
+        scope.defer(() => {
+          throw new Error("cleanup");
+        });
+        throw err;
+      }),
+    ).toThrow(err);
+    expect(spy).toHaveBeenCalledOnce();
+    spy.mockRestore();
   });
 });
