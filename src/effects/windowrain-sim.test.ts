@@ -11,6 +11,7 @@ import {
   instanceCapacity,
   INSTANCE_STRIDE,
   MAX_RUNNER_R,
+  MAX_TRAIL_R,
   MAX_WIPE_STAMPS,
   RESTING,
   RUNNING,
@@ -465,6 +466,33 @@ describe("runners", () => {
     expect(sim.rAge[1]).toBeLessThan(0.06);
     expect(sim.rr[0] ** 3).toBeGreaterThan(before * 0.9);
     expect(sim.rr[0]).toBeLessThanOrEqual(MAX_RUNNER_R);
+  });
+
+  it("leaves trail droplets no larger than wipes are sure to reach", () => {
+    // A full-size runner swallowing every other runner, all fully grown, at once:
+    // the most volume one step can gather.
+    const sim = empty();
+    sim.runnerCount = SMALL.maxRunners;
+    for (let i = 0; i < SMALL.maxRunners; i++) {
+      spawnRunner(sim, i);
+      sim.rx[i] = 500;
+      sim.ry[i] = 101;
+      sim.rr[i] = 18;
+      sim.rBreak[i] = 50;
+    }
+    sim.rr[0] = MAX_RUNNER_R;
+    sim.rState[0] = RUNNING;
+    sim.rv[0] = 300;
+    sim.rTravel[0] = 0;
+    stepRainSim(sim, 0.1, { rain: 1, speed: 3 });
+    const trails = Array.from(sim.dr.subarray(SMALL.maxStatic)).filter(
+      (_, k) => sim.dKind[SMALL.maxStatic + k] === TRAIL,
+    );
+    expect(trails.length).toBeGreaterThan(0);
+    // wipeCapsule searches cells STATIC_MAX_R beyond the capsule and wipes within
+    // half a droplet's radius, so droplets up to twice STATIC_MAX_R are found.
+    expect(Math.max(...trails)).toBeLessThanOrEqual(MAX_TRAIL_R);
+    expect(MAX_TRAIL_R).toBeLessThanOrEqual(2 * STATIC_MAX_R);
   });
 
   it("respawns runners that leave the bottom", () => {

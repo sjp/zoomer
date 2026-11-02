@@ -76,6 +76,12 @@ const BREAK_SPREAD = 7;
 const SPAWN_MIN_R = 4;
 const SPAWN_SPREAD_R = 6;
 export const MAX_RUNNER_R = 24;
+/**
+ * Largest trail droplet: a share of the runner's radius, capped with it, so it
+ * stays within the 2 * STATIC_MAX_R that `wipeCapsule`'s grid search reaches.
+ */
+const TRAIL_SHARE_MAX = 0.35;
+export const MAX_TRAIL_R = TRAIL_SHARE_MAX * MAX_RUNNER_R;
 /** A running drop smaller than this sticks to the glass again. */
 export const STOP_R = 7;
 /** Fall speed in reference px/s for a drop of radius `BREAK_MIN` at speed 1. */
@@ -492,7 +498,7 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     let r = Math.cbrt(vol);
     while (sim.rTravel[i] >= 0) {
       sim.rTravel[i] -= trailSpacing(rng);
-      const tr = r * (0.18 + 0.17 * rng());
+      const tr = Math.min(r, MAX_RUNNER_R) * (0.18 + (TRAIL_SHARE_MAX - 0.18) * rng());
       if (emitTrail(sim, x0 + (rng() - 0.5) * r * 0.5, y0 - r * 0.7, tr)) {
         vol = Math.max(0, vol - tr * tr * tr * TRAIL_LOSS);
         r = Math.cbrt(vol);
