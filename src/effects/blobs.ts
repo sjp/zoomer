@@ -295,6 +295,7 @@ export const blobs = defineEffect({
       );
       const triangle = scope.own(createFullscreenTriangle(gl));
       const mainT = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
+      // Sampled by mainT's composite, so it must never render direct: DIVISORS are all > 1.
       const auxT = scope.own(createLowResTarget(gl));
       const u = createUniforms(gl, program, ["uToUnits", "uBlobs", "uColors", "uBase", "uCount"]);
       const cu = createUniforms(gl, mainT.program, ["uAux", "uMix", "uGrain"]);

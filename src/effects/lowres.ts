@@ -77,13 +77,34 @@ export function lowResSize(size: number, divisor: number): number {
   return Math.max(1, Math.ceil(s / d - 1e-9));
 }
 
+/**
+ * Whether a target can skip its texture and render straight to the canvas: only
+ * when the low-res size equals the full size, the blit is a plain copy (no
+ * `composite`) and the format is RGBA8 (an RGBA16F target keeps its extra
+ * precision until the dithered blit). Saves a full-screen fetch and write.
+ */
+export function rendersDirect(
+  fullWidth: number,
+  fullHeight: number,
+  lowWidth: number,
+  lowHeight: number,
+  hasComposite: boolean,
+  wantFloat: boolean,
+): boolean {
+  return !hasComposite && !wantFloat && lowWidth === fullWidth && lowHeight === fullHeight;
+}
+
 export interface LowResTarget {
   /**
    * Sets the full (canvas) size and divisor. Recreates the texture (cleared to
    * black) when the low-res size changes; no-op otherwise.
    */
   resize(width: number, height: number, divisor: number): void;
-  /** Binds the FBO and sets the viewport to the low-res size. Caller unbinds. */
+  /**
+   * Binds the FBO and sets the viewport to the low-res size. Caller unbinds.
+   * When rendering direct (see `rendersDirect`), binds the default framebuffer
+   * and sets the full-size viewport instead.
+   */
   bind(): void;
   /**
    * Draws the low-res texture to the currently bound framebuffer, filling the
@@ -94,6 +115,8 @@ export interface LowResTarget {
    * The viewport defaults to the full size passed to `resize`. Pass an explicit
    * output size when the target covers only part of the canvas but the
    * `composite` shader must shade all of it.
+   *
+   * A no-op when rendering direct: the image is already on the canvas.
    */
   blit(outWidth?: number, outHeight?: number): void;
   /** Low-res size in pixels. */
@@ -102,12 +125,17 @@ export interface LowResTarget {
   /** Full (output) size passed to `resize`. */
   readonly fullWidth: number;
   readonly fullHeight: number;
-  /** The low-res texture; null until the first `resize`. */
+  /**
+   * The low-res texture; null until the first `resize`, and while rendering
+   * direct. Effects that sample it themselves must pass a `composite`.
+   */
   readonly texture: WebGLTexture | null;
   /** The blit program, for setting custom uniforms declared in `composite`. */
   readonly program: WebGLProgram;
   /** True if the texture is RGBA16F (requested and supported). */
   readonly isFloat: boolean;
+  /** True while `bind` targets the canvas directly and `blit` does nothing. */
+  readonly direct: boolean;
   dispose(): void;
 }
 
@@ -187,6 +215,8 @@ function buildLowResTarget(
   let fullWidth = 1;
   let fullHeight = 1;
   let isFloat = false;
+  let direct = false;
+  const hasComposite = opts.composite !== undefined;
 
   const target: LowResTarget = {
     resize(w, h, divisor) {
@@ -194,6 +224,14 @@ function buildLowResTarget(
       fullHeight = Math.max(1, Math.floor(h));
       const lw = lowResSize(w, divisor);
       const lh = lowResSize(h, divisor);
+      direct = rendersDirect(fullWidth, fullHeight, lw, lh, hasComposite, wantFloat);
+      if (direct) {
+        // No texture needed: free it rather than keep a full-size copy around.
+        rt?.dispose();
+        rt = null;
+        isFloat = false;
+        return;
+      }
       if (rt && lw === rt.width && lh === rt.height) return;
       rt?.dispose();
       rt = null;
@@ -209,9 +247,13 @@ function buildLowResTarget(
       gl.uniform2f(uSize, lw, lh);
     },
     bind() {
-      rt?.bind();
+      if (direct) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, fullWidth, fullHeight);
+      } else rt?.bind();
     },
     blit(outWidth = fullWidth, outHeight = fullHeight) {
+      if (direct) return;
       gl.viewport(0, 0, outWidth, outHeight);
       gl.disable(gl.BLEND);
       gl.useProgram(program);
@@ -220,10 +262,10 @@ function buildLowResTarget(
       triangle.draw();
     },
     get width() {
-      return rt?.width ?? 0;
+      return direct ? fullWidth : (rt?.width ?? 0);
     },
     get height() {
-      return rt?.height ?? 0;
+      return direct ? fullHeight : (rt?.height ?? 0);
     },
     get fullWidth() {
       return fullWidth;
@@ -236,6 +278,9 @@ function buildLowResTarget(
     },
     get isFloat() {
       return isFloat;
+    },
+    get direct() {
+      return direct;
     },
     program,
     dispose: () => scope.dispose(),
