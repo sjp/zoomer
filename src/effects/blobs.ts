@@ -325,6 +325,7 @@ export const blobs = defineEffect({
       let lastC4 = "";
       let lastBg = "";
       let lastSoftness = Number.NaN;
+      let lastSpeed = Number.NaN;
       let count = 3;
       let softness = 1;
 
@@ -398,13 +399,15 @@ export const blobs = defineEffect({
             mainIsA = true;
             renderKey(mainT, time);
             renderKey(auxT, time + p.speed * KEYFRAME_INTERVAL);
-          } else if (due === 1) {
+          } else if (due === 1 || p.speed !== lastSpeed) {
             // Old B becomes A; the old A's texture is reused for the next B, rendered at
-            // the sim time it will be shown at (one interval after the old B).
-            mainIsA = !mainIsA;
+            // the sim time it will be shown at (one interval after the old B). A speed
+            // change moves that time, so B is re-rendered for it (A is already shown).
+            if (due === 1) mainIsA = !mainIsA;
             const lead = p.speed * (KEYFRAME_INTERVAL - clock.elapsed);
             renderKey(mainIsA ? auxT : mainT, time + lead);
           }
+          lastSpeed = p.speed;
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
           // Blit: main on unit 0 (bound by blit), aux on unit 1.
