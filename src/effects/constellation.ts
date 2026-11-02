@@ -141,11 +141,31 @@ export function buildGrid(
 }
 
 /**
+ * Which links `findLinks` may skip because they can't be seen, so they don't use
+ * up the link cap. Mutable, so an effect can keep one and update it each frame.
+ */
+export interface LinkFilter {
+  /**
+   * Visible rectangle: a link whose endpoints are both beyond the same edge
+   * (both left of `minX`, say) can't cross it, so it is skipped.
+   */
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  /** Links shorter than `reach` times `maxDist` only; e.g. below 1 when the rest are too faint. */
+  reach: number;
+  /** Optional per-point weight; links to a point whose weight is 0 or less are skipped. */
+  weight: ArrayLike<number> | null;
+}
+
+/**
  * Finds every pair of points closer than `maxDist` (which must not exceed the grid's
  * cell size), visiting each cell's own points and a half stencil of 4 neighbours
  * (right, and the three below), so each pair of the 9-cell neighbourhood is tested
  * once. Writes the pair to `outA`/`outB` and its length divided by `maxDist` to
- * `outT`. Stops at `cap` links; returns the number written.
+ * `outT`. Stops at `cap` links; returns the number written. With a `filter`, links
+ * it rules out are skipped before they count towards the cap.
  */
 export function findLinks(
   grid: LinkGrid,
@@ -156,10 +176,18 @@ export function findLinks(
   outB: Int32Array | Uint16Array,
   outT: Float32Array,
   cap: number,
+  filter: LinkFilter | null = null,
 ): number {
   const { cols, rows, cellStart, order } = grid;
-  const max2 = maxDist * maxDist;
+  const reach = filter ? Math.min(1, filter.reach) * maxDist : maxDist;
+  if (!(reach > 0)) return 0;
+  const max2 = reach * reach;
   const inv = 1 / maxDist;
+  const minX = filter ? filter.minX : -Infinity;
+  const minY = filter ? filter.minY : -Infinity;
+  const maxX = filter ? filter.maxX : Infinity;
+  const maxY = filter ? filter.maxY : Infinity;
+  const weight = filter ? filter.weight : null;
   let count = 0;
   for (let cy = 0; cy < rows; cy++) {
     for (let cx = 0; cx < cols; cx++) {
@@ -169,8 +197,14 @@ export function findLinks(
       if (start === end) continue;
       for (let s = start; s < end; s++) {
         const i = order[s];
+        if (weight && !(weight[i] > 0)) continue;
         const x = xs[i];
         const y = ys[i];
+        // Which edges of the view this point is beyond.
+        const left = x < minX;
+        const right = x > maxX;
+        const above = y < minY;
+        const below = y > maxY;
         // k = 0: rest of own cell; 1: right; 2..4: below-left, below, below-right.
         for (let k = 0; k < 5; k++) {
           let from: number;
@@ -188,10 +222,21 @@ export function findLinks(
           }
           for (let q = from; q < to; q++) {
             const j = order[q];
-            const dx = xs[j] - x;
-            const dy = ys[j] - y;
+            const xj = xs[j];
+            const yj = ys[j];
+            const dx = xj - x;
+            const dy = yj - y;
             const d2 = dx * dx + dy * dy;
             if (d2 >= max2) continue;
+            if (
+              (left && xj < minX) ||
+              (right && xj > maxX) ||
+              (above && yj < minY) ||
+              (below && yj > maxY)
+            ) {
+              continue;
+            }
+            if (weight && !(weight[j] > 0)) continue;
             if (count >= cap) return count;
             outA[count] = i;
             outB[count] = j;
@@ -316,6 +361,14 @@ export const constellation = defineEffect({
 
       const grid = createLinkGrid(MAX_POINTS);
       const linkA = new Uint16Array(LINK_CAP);
+      const linkFilter: LinkFilter = {
+        minX: 0,
+        minY: 0,
+        maxX: 0,
+        maxY: 0,
+        reach: 1,
+        weight: life,
+      };
       const linkB = new Uint16Array(LINK_CAP);
       const linkT = new Float32Array(LINK_CAP);
 
@@ -379,7 +432,17 @@ export const constellation = defineEffect({
 
           // Links.
           buildGrid(grid, xs, ys, n, minX, minY, spanX, spanY, dist);
-          const links = findLinks(grid, xs, ys, dist, linkA, linkB, linkT, LINK_CAP);
+          // Skip what can't be seen before it counts towards the cap: links wholly
+          // beyond one edge (a line's half width outside the screen, in reference px),
+          // to points that have faded out, and too long to reach MIN_LINK_ALPHA even
+          // at full depth and life (the alpha below is at most lineOpacity * falloff).
+          const pad = p.lineWidth * 0.5 + 1;
+          linkFilter.minX = -pad;
+          linkFilter.minY = -pad;
+          linkFilter.maxX = refWidth + pad;
+          linkFilter.maxY = 1080 + pad;
+          linkFilter.reach = p.lineOpacity > 0 ? 1 - Math.sqrt(MIN_LINK_ALPHA / p.lineOpacity) : 0;
+          const links = findLinks(grid, xs, ys, dist, linkA, linkB, linkT, LINK_CAP, linkFilter);
           const lc = lineRgb(p.lineColor);
           const halfWidth = p.lineWidth * 0.5 * scale;
           const sd = streaks.data;

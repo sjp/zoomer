@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildGrid, createLinkGrid, driftPoint, findLinks, linkFalloff } from "./constellation";
+import {
+  buildGrid,
+  createLinkGrid,
+  driftPoint,
+  findLinks,
+  linkFalloff,
+  type LinkFilter,
+} from "./constellation";
 import { createRng } from "./noise";
 import { wrap } from "./math";
 
@@ -179,5 +186,91 @@ describe("grid neighbour search", () => {
     expect(
       findLinks(grid, xs, xs, 10, new Int32Array(1), new Int32Array(1), new Float32Array(1), 1),
     ).toBe(0);
+  });
+});
+
+describe("findLinks filter", () => {
+  /** Links among the given points, as sorted "i,j" pairs. */
+  const linksOf = (pts: number[][], maxDist: number, filter: LinkFilter, cap = 100) => {
+    const n = pts.length;
+    const xs = new Float32Array(pts.map((p) => p[0]));
+    const ys = new Float32Array(pts.map((p) => p[1]));
+    const grid = createLinkGrid(n);
+    buildGrid(grid, xs, ys, n, -maxDist, -maxDist, 100 + 2 * maxDist, 100 + 2 * maxDist, maxDist);
+    const a = new Int32Array(cap);
+    const b = new Int32Array(cap);
+    const t = new Float32Array(cap);
+    const count = findLinks(grid, xs, ys, maxDist, a, b, t, cap, filter);
+    const out: string[] = [];
+    for (let l = 0; l < count; l++) out.push(`${Math.min(a[l], b[l])},${Math.max(a[l], b[l])}`);
+    return { pairs: out.sort(), t: t.slice(0, count) };
+  };
+  const view = (over: Partial<LinkFilter> = {}): LinkFilter => ({
+    minX: 0,
+    minY: 0,
+    maxX: 100,
+    maxY: 100,
+    reach: 1,
+    weight: null,
+    ...over,
+  });
+
+  it("skips links wholly beyond one edge of the view", () => {
+    const pts = [
+      [-15, 50], // 0: left margin
+      [-5, 58], //  1: left margin
+      [5, 50], //   2: on screen
+      [50, -5], //  3: top margin
+      [58, -15], // 4: top margin
+      [-5, 5], //   5: left margin
+      [5, -5], //   6: top margin
+    ];
+    // 0-1 and 3-4 can't cross the screen. 0-2 and 1-2 end on it, and 5-6 cuts
+    // the corner between points beyond different edges, so they stay.
+    expect(linksOf(pts, 25, view()).pairs).toEqual(["0,2", "1,2", "5,6"]);
+  });
+
+  it("finds every link without a filter", () => {
+    const pts = [
+      [-15, 50],
+      [-5, 58],
+      [5, 50],
+    ];
+    const n = pts.length;
+    const xs = new Float32Array(pts.map((p) => p[0]));
+    const ys = new Float32Array(pts.map((p) => p[1]));
+    expect(gridLinks(xs, ys, n, -25, -25, 150, 150, 25, 10).count).toBe(3);
+  });
+
+  it("skips links to points with no weight", () => {
+    const pts = [
+      [10, 10],
+      [15, 10],
+      [20, 10],
+    ];
+    const weight = new Float32Array([1, 0, 0.5]);
+    expect(linksOf(pts, 20, view({ weight })).pairs).toEqual(["0,2"]);
+  });
+
+  it("limits links to `reach` times the distance, keeping t relative to it", () => {
+    const pts = [
+      [10, 10],
+      [15, 10],
+      [28, 10],
+    ];
+    const { pairs, t } = linksOf(pts, 20, view({ reach: 0.7 }));
+    expect(pairs).toEqual(["0,1", "1,2"]);
+    const ts = [...t].sort();
+    expect(ts[0]).toBeCloseTo(0.25, 6);
+    expect(ts[1]).toBeCloseTo(0.65, 6);
+    expect(linksOf(pts, 20, view({ reach: 0 })).pairs).toEqual([]);
+  });
+
+  it("leaves the cap to visible links", () => {
+    // Many pairs far off to the left, then one on screen: the cap still finds it.
+    const pts: number[][] = [];
+    for (let i = 0; i < 10; i++) pts.push([-15 + i * 0.5, 50]);
+    pts.push([40, 50], [45, 50]);
+    expect(linksOf(pts, 20, view(), 1).pairs).toEqual(["10,11"]);
   });
 });
