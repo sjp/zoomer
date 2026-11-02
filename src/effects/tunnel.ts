@@ -88,8 +88,10 @@ void main() {
   // Depth in texture tiles.
   float dep = (V_SCALE / TEX) / dn;
 
-  // Shearing u by depth keeps the corkscrew attached to the walls.
-  float u = atan(d.y, d.x) * (U_REPS / TAU) + uSpiral * dep + uScroll.x;
+  // Shearing u by depth keeps the corkscrew attached to the walls. The 1e-7 nudge
+  // avoids atan(0, 0), undefined in GLSL ES, at the exact centre pixel of an odd-sized
+  // canvas; other pixels are at least 1 / height away, so the angle shift is invisible.
+  float u = atan(d.y, d.x + 1e-7) * (U_REPS / TAU) + uSpiral * dep + uScroll.x;
   float v = dep + uScroll.y;
   // Analytic derivatives for the mip level: dFdx(u) would spike at the atan seam
   // (u jumps a whole number of tiles there) and pick level 0 in a line along it.
