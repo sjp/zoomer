@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createRng } from "./noise";
 import { defineEffect } from "./types";
@@ -353,292 +354,293 @@ export const flowfield = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const xs = new Float32Array(MAX_PARTICLES);
-    const ys = new Float32Array(MAX_PARTICLES);
-    const ages = new Float32Array(MAX_PARTICLES);
-    const lives = new Float32Array(MAX_PARTICLES);
-    const rands = new Float32Array(MAX_PARTICLES);
-    const instances = new Float32Array(MAX_PARTICLES * STRIDE);
+    return withScope((scope) => {
+      const xs = new Float32Array(MAX_PARTICLES);
+      const ys = new Float32Array(MAX_PARTICLES);
+      const ages = new Float32Array(MAX_PARTICLES);
+      const lives = new Float32Array(MAX_PARTICLES);
+      const rands = new Float32Array(MAX_PARTICLES);
+      const instances = new Float32Array(MAX_PARTICLES * STRIDE);
 
-    const segProgram = createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT);
-    const fadeProgram = createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT);
-    const compProgram = createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
-    const segLoc = getUniforms(gl, segProgram, [
-      "uResolution",
-      "uHalfWidth",
-      "uColor1",
-      "uColor2",
-      "uColor3",
-      "uThree",
-      "uLight",
-    ]);
-    const fadeLoc = getUniforms(gl, fadeProgram, [
-      "uPrev",
-      "uFade",
-      "uInvLevels",
-      "uSeed",
-      "uStride",
-    ]);
-    const compLoc = getUniforms(gl, compProgram, ["uLayer", "uBackground", "uLayerScale"]);
-    // Uniforms live in their programs, so the samplers only need setting once.
-    gl.useProgram(fadeProgram);
-    gl.uniform1i(fadeLoc.uPrev, 0);
-    gl.useProgram(compProgram);
-    gl.uniform1i(compLoc.uLayer, 0);
-    gl.useProgram(null);
-    const triangle = createFullscreenTriangle(gl);
+      const segProgram = scope.add(createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const fadeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const compProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const segLoc = getUniforms(gl, segProgram, [
+        "uResolution",
+        "uHalfWidth",
+        "uColor1",
+        "uColor2",
+        "uColor3",
+        "uThree",
+        "uLight",
+      ]);
+      const fadeLoc = getUniforms(gl, fadeProgram, [
+        "uPrev",
+        "uFade",
+        "uInvLevels",
+        "uSeed",
+        "uStride",
+      ]);
+      const compLoc = getUniforms(gl, compProgram, ["uLayer", "uBackground", "uLayerScale"]);
+      // Uniforms live in their programs, so the samplers only need setting once.
+      gl.useProgram(fadeProgram);
+      gl.uniform1i(fadeLoc.uPrev, 0);
+      gl.useProgram(compProgram);
+      gl.uniform1i(compLoc.uLayer, 0);
+      gl.useProgram(null);
+      const triangle = scope.own(createFullscreenTriangle(gl));
 
-    const vao = gl.createVertexArray();
-    const instanceBuffer = gl.createBuffer();
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, instances.byteLength, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, STRIDE * 4, 0);
-    gl.vertexAttribDivisor(0, 1);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, STRIDE * 4, 16);
-    gl.vertexAttribDivisor(1, 1);
-    gl.bindVertexArray(null);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+      const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      gl.bindVertexArray(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, instances.byteLength, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 4, gl.FLOAT, false, STRIDE * 4, 0);
+      gl.vertexAttribDivisor(0, 1);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, STRIDE * 4, 16);
+      gl.vertexAttribDivisor(1, 1);
+      gl.bindVertexArray(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-    /** 10-bit layers avoid 8-bit grain in long, faint trails at the same bandwidth. */
-    let use10 = true;
-    let targets: Target[] = [];
-    /** Index of the target holding the latest layer. */
-    let current = 0;
-    let targetW = 0;
-    let targetH = 0;
+      /** 10-bit layers avoid 8-bit grain in long, faint trails at the same bandwidth. */
+      let use10 = true;
+      let targets: Target[] = [];
+      /** Index of the target holding the latest layer. */
+      let current = 0;
+      let targetW = 0;
+      let targetH = 0;
 
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let time = 0;
-    let frameNo = 0;
-    let active = 0;
-    let seedKey = NaN;
-    let noise3 = createNoise3(1);
-    let rng = createRng(1);
-    /** Whether the trail layer is in light mode, or undefined to clear it. */
-    let lightMode: boolean | undefined;
-    const EMPTY = new Float32Array([0, 0, 0, 1]);
-    const INVALIDATE = [gl.COLOR_ATTACHMENT0];
-    /** Parsed colour uniforms, cached by hex string. */
-    const colorCache = new Map<string, Float32Array>();
-    const unitColor = (hex: string) => {
-      let c = colorCache.get(hex);
-      if (!c) {
-        if (colorCache.size > 64) colorCache.clear();
-        c = new Float32Array(hexToUnitRgb(hex));
-        colorCache.set(hex, c);
-      }
-      return c;
-    };
-
-    const deleteTargets = () => {
-      for (const t of targets) {
-        gl.deleteFramebuffer(t.fbo);
-        gl.deleteTexture(t.tex);
-      }
-      targets = [];
-    };
-
-    const makeTarget = (tenBit: boolean): Target | null => {
-      const tex = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texStorage2D(gl.TEXTURE_2D, 1, tenBit ? gl.RGB10_A2 : gl.RGBA8, width, height);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      const fbo = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-      const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      if (ok) return { tex, fbo };
-      gl.deleteFramebuffer(fbo);
-      gl.deleteTexture(tex);
-      return null;
-    };
-
-    /** (Re)creates both layer targets at the canvas size; they start uncleared. */
-    const ensureTargets = () => {
-      if (targets.length === 2 && targetW === width && targetH === height) return;
-      deleteTargets();
-      for (let i = 0; i < 2; i++) {
-        let t = makeTarget(use10);
-        if (!t && use10) {
-          // 10-bit not renderable after all: start over in 8-bit.
-          use10 = false;
-          deleteTargets();
-          i = -1;
-          continue;
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let time = 0;
+      let frameNo = 0;
+      let active = 0;
+      let seedKey = NaN;
+      let noise3 = createNoise3(1);
+      let rng = createRng(1);
+      /** Whether the trail layer is in light mode, or undefined to clear it. */
+      let lightMode: boolean | undefined;
+      const EMPTY = new Float32Array([0, 0, 0, 1]);
+      const INVALIDATE = [gl.COLOR_ATTACHMENT0];
+      /** Parsed colour uniforms, cached by hex string. */
+      const colorCache = new Map<string, Float32Array>();
+      const unitColor = (hex: string) => {
+        let c = colorCache.get(hex);
+        if (!c) {
+          if (colorCache.size > 64) colorCache.clear();
+          c = new Float32Array(hexToUnitRgb(hex));
+          colorCache.set(hex, c);
         }
-        if (!t) t = makeTarget(false);
-        if (!t) break;
-        targets.push(t);
-      }
-      targetW = width;
-      targetH = height;
-      lightMode = undefined;
-    };
+        return c;
+      };
 
-    const spawn = (i: number, randomAge: boolean) => {
-      xs[i] = rng() * width;
-      ys[i] = rng() * height;
-      lives[i] = LIFE_MIN + rng() * LIFE_SPREAD;
-      ages[i] = randomAge ? rng() * lives[i] : 0;
-      rands[i] = rng();
-    };
-
-    const reseed = (seed: number) => {
-      noise3 = createNoise3(seed * 131 + 17);
-      rng = createRng(seed * 7907 + 3);
-      for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
-      lightMode = undefined;
-    };
-
-    return {
-      resize(v) {
-        ({ width, height, scale } = v);
-        width = Math.max(1, Math.round(width));
-        height = Math.max(1, Math.round(height));
-        // Resizing clears the layer; respawn so no trail spans the old and new size.
-        for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
-        lightMode = undefined;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        if (p.seed !== seedKey) {
-          seedKey = p.seed;
-          reseed(p.seed);
+      const deleteTargets = () => {
+        for (const t of targets) {
+          gl.deleteFramebuffer(t.fbo);
+          gl.deleteTexture(t.tex);
         }
-        ensureTargets();
-        if (targets.length < 2) return;
+        targets = [];
+      };
+      scope.defer(deleteTargets);
 
-        gl.activeTexture(gl.TEXTURE0);
+      const makeTarget = (tenBit: boolean): Target | null => {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, tenBit ? gl.RGB10_A2 : gl.RGBA8, width, height);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        const fbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (ok) return { tex, fbo };
+        gl.deleteFramebuffer(fbo);
+        gl.deleteTexture(tex);
+        return null;
+      };
 
-        const bg = unitColor(p.background);
-        const light = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] > 140 / 255;
-        if (light !== lightMode) {
-          lightMode = light;
-          for (const t of targets) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
-            gl.clearBufferfv(gl.COLOR, 0, EMPTY);
-          }
-        }
-
-        // Fade the previous layer into the other target. The time constant spans 0.1s to 3s.
-        const src = targets[current];
-        current ^= 1;
-        const dst = targets[current];
-        const tau = 0.1 * Math.pow(30, p.trail);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
-        // Every pixel is overwritten below, so the old contents need not be loaded.
-        gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-        gl.useProgram(fadeProgram);
-        gl.bindTexture(gl.TEXTURE_2D, src.tex);
-        const keep = Math.exp(-dt / tau);
-        const clean = Math.min(1, dt * CLEAN_RATE);
-        const levels = use10 ? 1023 : 255;
-        gl.uniform2f(fadeLoc.uFade, (keep + clean) * levels, -clean * levels);
-        gl.uniform1f(fadeLoc.uInvLevels, 1 / levels);
-        frameNo = (frameNo + 1) >>> 0;
-        gl.uniform1ui(fadeLoc.uSeed, hash32(frameNo));
-        gl.uniform1ui(fadeLoc.uStride, width);
-        triangle.draw();
-
-        // Newly enabled particles start fresh so they fade in where they appear.
-        const n = Math.min(Math.round(p.count), MAX_PARTICLES);
-        for (let i = active; i < n; i++) spawn(i, false);
-        active = n;
-
-        time += dt * p.evolve * EVOLVE_RATE;
-        const freq = (p.fieldScale * FIELD_FREQ) / scale;
-        const swirl = TAU * p.turbulence;
-        const step = p.speed * SPEED_PX * scale * dt;
-        const margin = 10 * scale;
-        const byAngle = p.colorBy === "angle";
-        let count = 0;
-
-        for (let i = 0; i < n; i++) {
-          const age = ages[i] + dt;
-          const x = xs[i];
-          const y = ys[i];
-          if (
-            age >= lives[i] ||
-            x < -margin ||
-            x > width + margin ||
-            y < -margin ||
-            y > height + margin
-          ) {
-            spawn(i, false);
+      /** (Re)creates both layer targets at the canvas size; they start uncleared. */
+      const ensureTargets = () => {
+        if (targets.length === 2 && targetW === width && targetH === height) return;
+        deleteTargets();
+        for (let i = 0; i < 2; i++) {
+          let t = makeTarget(use10);
+          if (!t && use10) {
+            // 10-bit not renderable after all: start over in 8-bit.
+            use10 = false;
+            deleteTargets();
+            i = -1;
             continue;
           }
-          ages[i] = age;
-          const angle = noise3(x * freq, y * freq, time) * swirl;
-          const cos = Math.cos(angle);
-          const nx = x + cos * step;
-          const ny = y + Math.sin(angle) * step;
-          xs[i] = nx;
-          ys[i] = ny;
-
-          const life = lives[i];
-          const f = smoothstep(0, LIFE_FADE, age) * smoothstep(life, life - LIFE_FADE, age);
-          if (f <= 0 || step === 0) continue;
-          const o = count * STRIDE;
-          instances[o] = x;
-          instances[o + 1] = y;
-          instances[o + 2] = nx;
-          instances[o + 3] = ny;
-          // Map direction smoothly around the circle: colour 1 one way, colour 3 the other.
-          instances[o + 4] = byAngle ? 0.5 - 0.5 * cos : rands[i];
-          instances[o + 5] = p.opacity * f;
-          count++;
+          if (!t) t = makeTarget(false);
+          if (!t) break;
+          targets.push(t);
         }
+        targetW = width;
+        targetH = height;
+        lightMode = undefined;
+      };
 
-        if (count > 0) {
-          gl.enable(gl.BLEND);
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-          gl.useProgram(segProgram);
-          gl.uniform2f(segLoc.uResolution, width, height);
-          gl.uniform1f(segLoc.uHalfWidth, Math.max(0.5, p.lineWidth * scale) / 2);
-          gl.uniform3fv(segLoc.uColor1, unitColor(p.color1));
-          gl.uniform3fv(segLoc.uColor2, unitColor(p.color2));
-          gl.uniform3fv(segLoc.uColor3, unitColor(p.color3));
-          gl.uniform1f(segLoc.uThree, p.useColor3 ? 1 : 0);
-          gl.uniform1f(segLoc.uLight, light ? 1 : 0);
-          gl.bindVertexArray(vao);
-          gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-          gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances, 0, count * STRIDE);
-          gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
-          gl.bindVertexArray(null);
-          gl.bindBuffer(gl.ARRAY_BUFFER, null);
-          gl.disable(gl.BLEND);
-        }
+      const spawn = (i: number, randomAge: boolean) => {
+        xs[i] = rng() * width;
+        ys[i] = rng() * height;
+        lives[i] = LIFE_MIN + rng() * LIFE_SPREAD;
+        ages[i] = randomAge ? rng() * lives[i] : 0;
+        rands[i] = rng();
+      };
 
-        // Full repaint of the visible canvas: the layer composited over the background.
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.useProgram(compProgram);
-        gl.bindTexture(gl.TEXTURE_2D, dst.tex);
-        gl.uniform3fv(compLoc.uBackground, bg);
-        if (light) gl.uniform3f(compLoc.uLayerScale, -bg[0], -bg[1], -bg[2]);
-        else gl.uniform3f(compLoc.uLayerScale, 1 - bg[0], 1 - bg[1], 1 - bg[2]);
-        triangle.draw();
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      },
-      dispose() {
-        deleteTargets();
-        gl.deleteProgram(segProgram);
-        gl.deleteProgram(fadeProgram);
-        gl.deleteProgram(compProgram);
-        gl.deleteVertexArray(vao);
-        gl.deleteBuffer(instanceBuffer);
-        triangle.dispose();
-      },
-    };
+      const reseed = (seed: number) => {
+        noise3 = createNoise3(seed * 131 + 17);
+        rng = createRng(seed * 7907 + 3);
+        for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
+        lightMode = undefined;
+      };
+
+      return {
+        resize(v) {
+          ({ width, height, scale } = v);
+          width = Math.max(1, Math.round(width));
+          height = Math.max(1, Math.round(height));
+          // Resizing clears the layer; respawn so no trail spans the old and new size.
+          for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
+          lightMode = undefined;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          if (p.seed !== seedKey) {
+            seedKey = p.seed;
+            reseed(p.seed);
+          }
+          ensureTargets();
+          if (targets.length < 2) return;
+
+          gl.activeTexture(gl.TEXTURE0);
+
+          const bg = unitColor(p.background);
+          const light = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] > 140 / 255;
+          if (light !== lightMode) {
+            lightMode = light;
+            for (const t of targets) {
+              gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+              gl.clearBufferfv(gl.COLOR, 0, EMPTY);
+            }
+          }
+
+          // Fade the previous layer into the other target. The time constant spans 0.1s to 3s.
+          const src = targets[current];
+          current ^= 1;
+          const dst = targets[current];
+          const tau = 0.1 * Math.pow(30, p.trail);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+          // Every pixel is overwritten below, so the old contents need not be loaded.
+          gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
+          gl.useProgram(fadeProgram);
+          gl.bindTexture(gl.TEXTURE_2D, src.tex);
+          const keep = Math.exp(-dt / tau);
+          const clean = Math.min(1, dt * CLEAN_RATE);
+          const levels = use10 ? 1023 : 255;
+          gl.uniform2f(fadeLoc.uFade, (keep + clean) * levels, -clean * levels);
+          gl.uniform1f(fadeLoc.uInvLevels, 1 / levels);
+          frameNo = (frameNo + 1) >>> 0;
+          gl.uniform1ui(fadeLoc.uSeed, hash32(frameNo));
+          gl.uniform1ui(fadeLoc.uStride, width);
+          triangle.draw();
+
+          // Newly enabled particles start fresh so they fade in where they appear.
+          const n = Math.min(Math.round(p.count), MAX_PARTICLES);
+          for (let i = active; i < n; i++) spawn(i, false);
+          active = n;
+
+          time += dt * p.evolve * EVOLVE_RATE;
+          const freq = (p.fieldScale * FIELD_FREQ) / scale;
+          const swirl = TAU * p.turbulence;
+          const step = p.speed * SPEED_PX * scale * dt;
+          const margin = 10 * scale;
+          const byAngle = p.colorBy === "angle";
+          let count = 0;
+
+          for (let i = 0; i < n; i++) {
+            const age = ages[i] + dt;
+            const x = xs[i];
+            const y = ys[i];
+            if (
+              age >= lives[i] ||
+              x < -margin ||
+              x > width + margin ||
+              y < -margin ||
+              y > height + margin
+            ) {
+              spawn(i, false);
+              continue;
+            }
+            ages[i] = age;
+            const angle = noise3(x * freq, y * freq, time) * swirl;
+            const cos = Math.cos(angle);
+            const nx = x + cos * step;
+            const ny = y + Math.sin(angle) * step;
+            xs[i] = nx;
+            ys[i] = ny;
+
+            const life = lives[i];
+            const f = smoothstep(0, LIFE_FADE, age) * smoothstep(life, life - LIFE_FADE, age);
+            if (f <= 0 || step === 0) continue;
+            const o = count * STRIDE;
+            instances[o] = x;
+            instances[o + 1] = y;
+            instances[o + 2] = nx;
+            instances[o + 3] = ny;
+            // Map direction smoothly around the circle: colour 1 one way, colour 3 the other.
+            instances[o + 4] = byAngle ? 0.5 - 0.5 * cos : rands[i];
+            instances[o + 5] = p.opacity * f;
+            count++;
+          }
+
+          if (count > 0) {
+            gl.enable(gl.BLEND);
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.useProgram(segProgram);
+            gl.uniform2f(segLoc.uResolution, width, height);
+            gl.uniform1f(segLoc.uHalfWidth, Math.max(0.5, p.lineWidth * scale) / 2);
+            gl.uniform3fv(segLoc.uColor1, unitColor(p.color1));
+            gl.uniform3fv(segLoc.uColor2, unitColor(p.color2));
+            gl.uniform3fv(segLoc.uColor3, unitColor(p.color3));
+            gl.uniform1f(segLoc.uThree, p.useColor3 ? 1 : 0);
+            gl.uniform1f(segLoc.uLight, light ? 1 : 0);
+            gl.bindVertexArray(vao);
+            gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances, 0, count * STRIDE);
+            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+            gl.bindVertexArray(null);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.disable(gl.BLEND);
+          }
+
+          // Full repaint of the visible canvas: the layer composited over the background.
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.useProgram(compProgram);
+          gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+          gl.uniform3fv(compLoc.uBackground, bg);
+          if (light) gl.uniform3f(compLoc.uLayerScale, -bg[0], -bg[1], -bg[2]);
+          else gl.uniform3f(compLoc.uLayerScale, 1 - bg[0], 1 - bg[1], 1 - bg[2]);
+          triangle.draw();
+          gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

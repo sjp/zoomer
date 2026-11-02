@@ -7,6 +7,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
+  withScope,
 } from "./gl";
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
 import { createSpriteBatch, unitRgbMemo } from "./sprites";
@@ -356,192 +357,199 @@ export const aurora = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT);
-    const triangle = createFullscreenTriangle(gl);
-    const loc = getUniforms(gl, program, [
-      "uResolution",
-      "uPath",
-      "uRays",
-      "uHorizon",
-      "uRayUv",
-      "uSkyTop",
-      "uSkyBottom",
-      "uSilhouette",
-      "uLow",
-      "uHigh",
-      "uFalloff",
-      "uColorSpan",
-      "uGain",
-      "uHorizonTop",
-    ]);
-    gl.useProgram(program);
-    gl.uniform1i(loc.uPath, 0);
-    gl.uniform1i(loc.uRays, 1);
-    gl.uniform1i(loc.uHorizon, 2);
-    gl.uniform2f(loc.uFalloff, 1 / HALF_UP, 1 / HALF_DOWN);
-    gl.uniform1f(loc.uColorSpan, 1 / COLOR_SPAN);
-
-    const starProgram = createProgram(gl, STAR_VERTEX, STAR_FRAGMENT);
-    const starLoc = getUniforms(gl, starProgram, ["uResolution", "uScale", "uTime"]);
-    const stars = createSpriteBatch(gl, MAX_STARS, [4, 2]);
-    gl.useProgram(null);
-
-    const pathData = new Float32Array(PATH_COLS * 2 * 4);
-    const pathTex = createDataTexture(gl, {
-      width: PATH_COLS,
-      height: 2,
-      internalFormat: gl.RGBA16F,
-      format: gl.RGBA,
-      type: gl.FLOAT,
-      data: pathData,
-    });
-    const rayTex = createDataTexture(gl, {
-      width: RAY_COLS,
-      height: 1,
-      internalFormat: gl.RGBA16F,
-      format: gl.RGBA,
-      type: gl.FLOAT,
-      data: getRayTable(),
-      wrap: gl.REPEAT,
-    });
-    let horizonTex: WebGLTexture | null = null;
-
-    const noise = createNoise(1337);
-    const lowRgb = unitRgbMemo();
-    const highRgb = unitRgbMemo();
-    let skyHex = "";
-    let lastLow: Rgb | undefined;
-    let lastHigh: Rgb | undefined;
-    let lastGain = Number.NaN;
-    let lastBands = Number.NaN;
-
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let sizeDirty = true;
-    let horizonKind: HorizonKind | undefined;
-    let horizonTable: Float32Array = new Float32Array(2);
-    let horizonTop = -1;
-    let starDensity = Number.NaN;
-    let starCount = 0;
-
-    /** Curtain noise time and ray drifts (wrapped to one table period). */
-    let pathTime = 0;
-    let driftFine = 0;
-    let driftCoarse = 0;
-    let twinkleTime = 0;
-
-    const rebuildHorizon = (kind: HorizonKind) => {
-      const cols = kind === "none" ? 1 : Math.min(2048, Math.max(16, Math.ceil(width / 2)));
-      horizonTable = buildHorizonTable(kind, cols, width / height);
-      horizonTop = kind === "none" ? -1 : horizonMax(horizonTable) * height + 2;
-      if (horizonTex) gl.deleteTexture(horizonTex);
-      horizonTex = createDataTexture(gl, {
-        width: cols,
-        height: 1,
-        internalFormat: gl.RG16F,
-        format: gl.RG,
-        type: gl.FLOAT,
-        data: horizonTable,
-      });
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const loc = getUniforms(gl, program, [
+        "uResolution",
+        "uPath",
+        "uRays",
+        "uHorizon",
+        "uRayUv",
+        "uSkyTop",
+        "uSkyBottom",
+        "uSilhouette",
+        "uLow",
+        "uHigh",
+        "uFalloff",
+        "uColorSpan",
+        "uGain",
+        "uHorizonTop",
+      ]);
       gl.useProgram(program);
-      gl.uniform1f(loc.uHorizonTop, horizonTop);
-    };
+      gl.uniform1i(loc.uPath, 0);
+      gl.uniform1i(loc.uRays, 1);
+      gl.uniform1i(loc.uHorizon, 2);
+      gl.uniform2f(loc.uFalloff, 1 / HALF_UP, 1 / HALF_DOWN);
+      gl.uniform1f(loc.uColorSpan, 1 / COLOR_SPAN);
 
-    return {
-      resize(v) {
-        if (v.width !== width || v.height !== height) sizeDirty = true;
-        ({ width, height, scale } = v);
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        const speed = p.speed;
-        pathTime += dt * speed * 0.05;
-        driftFine = (driftFine + dt * speed * 0.004) % 1;
-        driftCoarse = (driftCoarse - dt * speed * 0.0025) % 1;
-        twinkleTime = (twinkleTime + dt * speed) % TWINKLE_PERIOD;
+      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const starLoc = getUniforms(gl, starProgram, ["uResolution", "uScale", "uTime"]);
+      const stars = scope.own(createSpriteBatch(gl, MAX_STARS, [4, 2]));
+      gl.useProgram(null);
 
-        const kind = toHorizonKind(p.horizon);
-        let starsDirty = false;
-        if (sizeDirty || kind !== horizonKind) {
-          sizeDirty = false;
-          horizonKind = kind;
-          rebuildHorizon(kind);
-          starsDirty = true;
-        }
-        if (starsDirty || p.stars !== starDensity) {
-          starDensity = p.stars;
-          const aspectShare = Math.min(1.5, width / height / (16 / 9));
-          const count = Math.round(starDensity * MAX_STARS * aspectShare);
-          starCount = buildStars(stars.data, Math.min(MAX_STARS, count), horizonTable);
-          stars.upload(starCount);
-        }
-
-        gl.useProgram(program);
-        const low = lowRgb(p.lowColor);
-        if (low !== lastLow) {
-          lastLow = low;
-          gl.uniform3fv(loc.uLow, low);
-        }
-        const high = highRgb(p.highColor);
-        if (high !== lastHigh) {
-          lastHigh = high;
-          gl.uniform3fv(loc.uHigh, high);
-        }
-        if (p.sky !== skyHex) {
-          skyHex = p.sky;
-          const sky = hexToUnitRgb(skyHex);
-          gl.uniform3fv(loc.uSkyTop, sky);
-          gl.uniform3fv(loc.uSkyBottom, scaleRgb(sky, 0.22));
-          gl.uniform3fv(loc.uSilhouette, scaleRgb(sky, 0.07));
-        }
-        if (p.intensity !== lastGain || p.bands !== lastBands) {
-          lastGain = p.intensity;
-          lastBands = p.bands;
-          const g = p.intensity;
-          gl.uniform3f(
-            loc.uGain,
-            BAND_GAIN[0] * g,
-            p.bands >= 2 ? BAND_GAIN[1] * g : 0,
-            p.bands >= 3 ? BAND_GAIN[2] * g : 0,
-          );
-        }
-        gl.uniform2f(loc.uResolution, width, height);
-        gl.uniform4f(loc.uRayUv, RAY_SCALE_FINE, RAY_SCALE_COARSE, driftFine, driftCoarse);
-
-        buildPathTable(pathData, PATH_COLS, width / height, pathTime, noise);
-
-        resetUnpackState(gl);
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, horizonTex);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, rayTex);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, pathTex);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PATH_COLS, 2, gl.RGBA, gl.FLOAT, pathData);
-        triangle.draw();
-
-        if (starCount > 0) {
-          gl.enable(gl.BLEND);
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          gl.useProgram(starProgram);
-          gl.uniform2f(starLoc.uResolution, width, height);
-          gl.uniform1f(starLoc.uScale, scale);
-          gl.uniform1f(starLoc.uTime, twinkleTime);
-          stars.draw(0, starCount);
-          gl.disable(gl.BLEND);
-        }
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteProgram(starProgram);
-        gl.deleteTexture(pathTex);
-        gl.deleteTexture(rayTex);
+      const pathData = new Float32Array(PATH_COLS * 2 * 4);
+      const pathTex = scope.add(
+        createDataTexture(gl, {
+          width: PATH_COLS,
+          height: 2,
+          internalFormat: gl.RGBA16F,
+          format: gl.RGBA,
+          type: gl.FLOAT,
+          data: pathData,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      const rayTex = scope.add(
+        createDataTexture(gl, {
+          width: RAY_COLS,
+          height: 1,
+          internalFormat: gl.RGBA16F,
+          format: gl.RGBA,
+          type: gl.FLOAT,
+          data: getRayTable(),
+          wrap: gl.REPEAT,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      let horizonTex: WebGLTexture | null = null;
+      scope.defer(() => {
         if (horizonTex) gl.deleteTexture(horizonTex);
-        triangle.dispose();
-        stars.dispose();
-      },
-    };
+      });
+
+      const noise = createNoise(1337);
+      const lowRgb = unitRgbMemo();
+      const highRgb = unitRgbMemo();
+      let skyHex = "";
+      let lastLow: Rgb | undefined;
+      let lastHigh: Rgb | undefined;
+      let lastGain = Number.NaN;
+      let lastBands = Number.NaN;
+
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let sizeDirty = true;
+      let horizonKind: HorizonKind | undefined;
+      let horizonTable: Float32Array = new Float32Array(2);
+      let horizonTop = -1;
+      let starDensity = Number.NaN;
+      let starCount = 0;
+
+      /** Curtain noise time and ray drifts (wrapped to one table period). */
+      let pathTime = 0;
+      let driftFine = 0;
+      let driftCoarse = 0;
+      let twinkleTime = 0;
+
+      const rebuildHorizon = (kind: HorizonKind) => {
+        const cols = kind === "none" ? 1 : Math.min(2048, Math.max(16, Math.ceil(width / 2)));
+        horizonTable = buildHorizonTable(kind, cols, width / height);
+        horizonTop = kind === "none" ? -1 : horizonMax(horizonTable) * height + 2;
+        if (horizonTex) gl.deleteTexture(horizonTex);
+        horizonTex = createDataTexture(gl, {
+          width: cols,
+          height: 1,
+          internalFormat: gl.RG16F,
+          format: gl.RG,
+          type: gl.FLOAT,
+          data: horizonTable,
+        });
+        gl.useProgram(program);
+        gl.uniform1f(loc.uHorizonTop, horizonTop);
+      };
+
+      return {
+        resize(v) {
+          if (v.width !== width || v.height !== height) sizeDirty = true;
+          ({ width, height, scale } = v);
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          const speed = p.speed;
+          pathTime += dt * speed * 0.05;
+          driftFine = (driftFine + dt * speed * 0.004) % 1;
+          driftCoarse = (driftCoarse - dt * speed * 0.0025) % 1;
+          twinkleTime = (twinkleTime + dt * speed) % TWINKLE_PERIOD;
+
+          const kind = toHorizonKind(p.horizon);
+          let starsDirty = false;
+          if (sizeDirty || kind !== horizonKind) {
+            sizeDirty = false;
+            horizonKind = kind;
+            rebuildHorizon(kind);
+            starsDirty = true;
+          }
+          if (starsDirty || p.stars !== starDensity) {
+            starDensity = p.stars;
+            const aspectShare = Math.min(1.5, width / height / (16 / 9));
+            const count = Math.round(starDensity * MAX_STARS * aspectShare);
+            starCount = buildStars(stars.data, Math.min(MAX_STARS, count), horizonTable);
+            stars.upload(starCount);
+          }
+
+          gl.useProgram(program);
+          const low = lowRgb(p.lowColor);
+          if (low !== lastLow) {
+            lastLow = low;
+            gl.uniform3fv(loc.uLow, low);
+          }
+          const high = highRgb(p.highColor);
+          if (high !== lastHigh) {
+            lastHigh = high;
+            gl.uniform3fv(loc.uHigh, high);
+          }
+          if (p.sky !== skyHex) {
+            skyHex = p.sky;
+            const sky = hexToUnitRgb(skyHex);
+            gl.uniform3fv(loc.uSkyTop, sky);
+            gl.uniform3fv(loc.uSkyBottom, scaleRgb(sky, 0.22));
+            gl.uniform3fv(loc.uSilhouette, scaleRgb(sky, 0.07));
+          }
+          if (p.intensity !== lastGain || p.bands !== lastBands) {
+            lastGain = p.intensity;
+            lastBands = p.bands;
+            const g = p.intensity;
+            gl.uniform3f(
+              loc.uGain,
+              BAND_GAIN[0] * g,
+              p.bands >= 2 ? BAND_GAIN[1] * g : 0,
+              p.bands >= 3 ? BAND_GAIN[2] * g : 0,
+            );
+          }
+          gl.uniform2f(loc.uResolution, width, height);
+          gl.uniform4f(loc.uRayUv, RAY_SCALE_FINE, RAY_SCALE_COARSE, driftFine, driftCoarse);
+
+          buildPathTable(pathData, PATH_COLS, width / height, pathTime, noise);
+
+          resetUnpackState(gl);
+          gl.activeTexture(gl.TEXTURE2);
+          gl.bindTexture(gl.TEXTURE_2D, horizonTex);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, rayTex);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, pathTex);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PATH_COLS, 2, gl.RGBA, gl.FLOAT, pathData);
+          triangle.draw();
+
+          if (starCount > 0) {
+            gl.enable(gl.BLEND);
+            gl.blendEquation(gl.FUNC_ADD);
+            gl.blendFunc(gl.ONE, gl.ONE);
+            gl.useProgram(starProgram);
+            gl.uniform2f(starLoc.uResolution, width, height);
+            gl.uniform1f(starLoc.uScale, scale);
+            gl.uniform1f(starLoc.uTime, twinkleTime);
+            stars.draw(0, starCount);
+            gl.disable(gl.BLEND);
+          }
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

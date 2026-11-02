@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createRng } from "./noise";
@@ -275,319 +276,326 @@ export const windowRain = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const rng = createRng(Math.random() * 0xffffffff);
-    const sim = createRainSim(1920, 1080, rng);
-    const capacity = instanceCapacity(DEFAULT_CONFIG);
+    return withScope((scope) => {
+      const rng = createRng(Math.random() * 0xffffffff);
+      const sim = createRainSim(1920, 1080, rng);
+      const capacity = instanceCapacity(DEFAULT_CONFIG);
 
-    const octagon = polygonStrip(8, Math.PI / 8);
-    const drops = createSpriteBatch(gl, capacity, [4, 1], [octagon]);
-    const lightBatch = createSpriteBatch(gl, MAX_LIGHTS, [4, 1], [octagon]);
-    const gradient = createGradientBackground(gl);
-    const target = createLowResTarget(gl, { composite: COMPOSITE });
-    const triangle = createFullscreenTriangle(gl);
+      const octagon = polygonStrip(8, Math.PI / 8);
+      const drops = scope.own(createSpriteBatch(gl, capacity, [4, 1], [octagon]));
+      const lightBatch = scope.own(createSpriteBatch(gl, MAX_LIGHTS, [4, 1], [octagon]));
+      const gradient = scope.own(createGradientBackground(gl));
+      const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
+      const triangle = scope.own(createFullscreenTriangle(gl));
 
-    const lightProgram = createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT);
-    const dropProgram = createProgram(gl, DROP_VERTEX, DROP_FRAGMENT);
-    const wipeProgram = createProgram(gl, DROP_VERTEX, WIPE_FRAGMENT);
-    const fogProgram = createProgram(gl, FULLSCREEN_VERTEX, FOG_FRAGMENT);
-    const lightLoc = getUniforms(gl, lightProgram, ["uResolution", "uColor1", "uColor2", "uEdge"]);
-    const dropNames = ["uResolution", "uInvScale", "uGrow", "uMargin"] as const;
-    const dropLoc = getUniforms(gl, dropProgram, dropNames);
-    const wipeLoc = getUniforms(gl, wipeProgram, dropNames);
-    const fogLoc = getUniforms(gl, fogProgram, ["uPrev", "uAdd", "uDiffuse", "uSeed"]);
-    const compLoc = getUniforms(gl, target.program, [
-      "uDrops",
-      "uFog",
-      "uOffsetScale",
-      "uFogOn",
-      "uFogTint",
-    ]);
-    gl.useProgram(dropProgram);
-    gl.uniform1f(dropLoc.uGrow, 1);
-    gl.useProgram(wipeProgram);
-    gl.uniform1f(wipeLoc.uGrow, WIPE_GROW);
-    gl.useProgram(fogProgram);
-    gl.uniform1i(fogLoc.uPrev, 0);
-    gl.useProgram(target.program);
-    gl.uniform1i(compLoc.uDrops, 1);
-    gl.uniform1i(compLoc.uFog, 2);
-    gl.useProgram(null);
+      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const dropProgram = scope.add(createProgram(gl, DROP_VERTEX, DROP_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const wipeProgram = scope.add(createProgram(gl, DROP_VERTEX, WIPE_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const fogProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FOG_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const lightLoc = getUniforms(gl, lightProgram, [
+        "uResolution",
+        "uColor1",
+        "uColor2",
+        "uEdge",
+      ]);
+      const dropNames = ["uResolution", "uInvScale", "uGrow", "uMargin"] as const;
+      const dropLoc = getUniforms(gl, dropProgram, dropNames);
+      const wipeLoc = getUniforms(gl, wipeProgram, dropNames);
+      const fogLoc = getUniforms(gl, fogProgram, ["uPrev", "uAdd", "uDiffuse", "uSeed"]);
+      const compLoc = getUniforms(gl, target.program, [
+        "uDrops",
+        "uFog",
+        "uOffsetScale",
+        "uFogOn",
+        "uFogTint",
+      ]);
+      gl.useProgram(dropProgram);
+      gl.uniform1f(dropLoc.uGrow, 1);
+      gl.useProgram(wipeProgram);
+      gl.uniform1f(wipeLoc.uGrow, WIPE_GROW);
+      gl.useProgram(fogProgram);
+      gl.uniform1i(fogLoc.uPrev, 0);
+      gl.useProgram(target.program);
+      gl.uniform1i(compLoc.uDrops, 1);
+      gl.uniform1i(compLoc.uFog, 2);
+      gl.useProgram(null);
 
-    // Background lights, reference units.
-    const lx = new Float32Array(MAX_LIGHTS);
-    const ly = new Float32Array(MAX_LIGHTS);
-    const lSize = new Float32Array(MAX_LIGHTS);
-    const lMix = new Float32Array(MAX_LIGHTS);
-    const lBright = new Float32Array(MAX_LIGHTS);
-    const lDrift = new Float32Array(MAX_LIGHTS);
-    let refWidth = 1920;
-    for (let i = 0; i < MAX_LIGHTS; i++) {
-      lx[i] = rng() * refWidth;
-      // City lights crowd the lower part of the view.
-      ly[i] = 1080 * (0.15 + 0.9 * Math.sqrt(rng()));
-      lSize[i] = 0.6 + rng() * 0.8;
-      lMix[i] = rng() < 0.5 ? rng() * 0.3 : 0.7 + rng() * 0.3;
-      lBright[i] = 0.25 + rng() * 0.6;
-      lDrift[i] = (rng() - 0.5) * 2;
-    }
-
-    const lightColor1 = unitRgbMemo();
-    const lightColor2 = unitRgbMemo();
-    const bgColor = unitRgbMemo();
-    const top: Rgb = [0, 0, 0];
-    const fogTint: Rgb = [0, 0, 0];
-
-    let dropTarget: Target | null = null;
-    let dropW = 0;
-    let dropH = 0;
-    let fogTargets: Target[] = [];
-    let fogCurrent = 0;
-    let fogW = 0;
-    let fogH = 0;
-    let fogWasOn = false;
-    const FOG_CLEAR = new Float32Array([1, 0, 0, 1]);
-    const DROP_CLEAR = new Float32Array([ENC_MID, ENC_MID, 0, 0]);
-    const INVALIDATE = [gl.COLOR_ATTACHMENT0];
-
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let frameNo = 0;
-    let bgTimer = Infinity;
-    // Inputs the background was last drawn with; any change redraws it at once.
-    let bgLights = -1;
-    let bgBlur = -1;
-    let bgC1: Rgb | null = null;
-    let bgC2: Rgb | null = null;
-    let bgBack: Rgb | null = null;
-    let lastBack: Rgb | null = null;
-
-    const makeTarget = (w: number, h: number, format: GLenum): Target => {
-      const tex = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texStorage2D(gl.TEXTURE_2D, 1, format, w, h);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      const fbo = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      return { tex, fbo };
-    };
-    const deleteTarget = (t: Target | null) => {
-      if (!t) return;
-      gl.deleteTexture(t.tex);
-      gl.deleteFramebuffer(t.fbo);
-    };
-
-    /** The drop map is about 1080p whatever the canvas size. */
-    const ensureDropTarget = () => {
-      const div = Math.max(1, scale);
-      const w = lowResSize(width, div);
-      const h = lowResSize(height, div);
-      if (dropTarget && w === dropW && h === dropH) return;
-      deleteTarget(dropTarget);
-      dropTarget = makeTarget(w, h, gl.RGBA8);
-      dropW = w;
-      dropH = h;
-    };
-
-    /** Fog targets, `FOG_TEXEL` reference px per texel; (re)created fully fogged. */
-    const ensureFogTargets = () => {
-      const w = lowResSize(width, FOG_TEXEL * scale);
-      const h = lowResSize(height, FOG_TEXEL * scale);
-      if (fogTargets.length === 2 && w === fogW && h === fogH) return false;
-      for (const t of fogTargets) deleteTarget(t);
-      fogTargets = [makeTarget(w, h, gl.R8), makeTarget(w, h, gl.R8)];
-      fogW = w;
-      fogH = h;
-      return true;
-    };
-
-    const drawBackground = (lights: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
-      target.bind();
-      gradient.draw(top, back);
-      const n = Math.min(MAX_LIGHTS, Math.max(0, Math.round(lights)));
-      if (n === 0) return;
-      const data = lightBatch.data;
-      const stride = lightBatch.stride;
-      const baseR = (25 + 85 * blur) * scale;
-      // Bigger, softer discs spread the same light wider.
-      const dim = 0.9 / (0.6 + blur);
-      for (let i = 0; i < n; i++) {
-        const o = i * stride;
-        data[o] = lx[i] * scale;
-        data[o + 1] = ly[i] * scale;
-        data[o + 2] = baseR * lSize[i];
-        data[o + 3] = lBright[i] * dim;
-        data[o + 4] = lMix[i];
+      // Background lights, reference units.
+      const lx = new Float32Array(MAX_LIGHTS);
+      const ly = new Float32Array(MAX_LIGHTS);
+      const lSize = new Float32Array(MAX_LIGHTS);
+      const lMix = new Float32Array(MAX_LIGHTS);
+      const lBright = new Float32Array(MAX_LIGHTS);
+      const lDrift = new Float32Array(MAX_LIGHTS);
+      let refWidth = 1920;
+      for (let i = 0; i < MAX_LIGHTS; i++) {
+        lx[i] = rng() * refWidth;
+        // City lights crowd the lower part of the view.
+        ly[i] = 1080 * (0.15 + 0.9 * Math.sqrt(rng()));
+        lSize[i] = 0.6 + rng() * 0.8;
+        lMix[i] = rng() < 0.5 ? rng() * 0.3 : 0.7 + rng() * 0.3;
+        lBright[i] = 0.25 + rng() * 0.6;
+        lDrift[i] = (rng() - 0.5) * 2;
       }
-      lightBatch.upload(n);
-      gl.enable(gl.BLEND);
-      gl.blendEquation(gl.FUNC_ADD);
-      gl.blendFunc(gl.ONE, gl.ONE);
-      gl.useProgram(lightProgram);
-      gl.uniform2f(lightLoc.uResolution, width, height);
-      gl.uniform3fv(lightLoc.uColor1, c1);
-      gl.uniform3fv(lightLoc.uColor2, c2);
-      gl.uniform1f(lightLoc.uEdge, 0.25 + 0.7 * blur);
-      lightBatch.draw(0, n);
-      gl.disable(gl.BLEND);
-    };
 
-    return {
-      resize(v) {
-        ({ width, height, scale } = v);
-        width = Math.max(1, Math.round(width));
-        height = Math.max(1, Math.round(height));
-        const newRefWidth = width / scale;
-        const k = newRefWidth / refWidth;
-        for (let i = 0; i < MAX_LIGHTS; i++) lx[i] *= k;
-        refWidth = newRefWidth;
-        resizeRainSim(sim, refWidth, 1080);
-        bgTimer = Infinity;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        frameNo = (frameNo + 1) >>> 0;
-        stepRainSim(sim, dt, p);
-        const count = writeDropInstances(sim, drops.data, scale);
+      const lightColor1 = unitRgbMemo();
+      const lightColor2 = unitRgbMemo();
+      const bgColor = unitRgbMemo();
+      const top: Rgb = [0, 0, 0];
+      const fogTint: Rgb = [0, 0, 0];
 
-        // 1. Background, at a low rate (or at once when its inputs change).
-        const prevW = target.width;
-        const prevH = target.height;
-        target.resize(width, height, qualityDivisor(p.quality, BG_DIVISORS));
-        const c1 = lightColor1(p.lightColor1);
-        const c2 = lightColor2(p.lightColor2);
-        const back = bgColor(p.background);
-        if (back !== lastBack) {
-          lastBack = back;
-          for (let c = 0; c < 3; c++) {
-            top[c] = back[c] * 0.45;
-            fogTint[c] = back[c] * 0.35 + 0.07;
-          }
-          gl.useProgram(target.program);
-          gl.uniform3fv(compLoc.uFogTint, fogTint);
-        }
-        bgTimer += dt;
-        const nLights = Math.min(MAX_LIGHTS, p.lights);
-        for (let i = 0; i < nLights; i++) {
-          let x = lx[i] + lDrift[i] * DRIFT_PX * dt;
-          if (x < -200) x += refWidth + 400;
-          else if (x > refWidth + 200) x -= refWidth + 400;
-          lx[i] = x;
-        }
-        if (
-          bgTimer >= 1 / BG_RATE ||
-          prevW !== target.width ||
-          prevH !== target.height ||
-          bgLights !== p.lights ||
-          bgBlur !== p.blur ||
-          bgC1 !== c1 ||
-          bgC2 !== c2 ||
-          bgBack !== back
-        ) {
-          bgTimer = 0;
-          bgLights = p.lights;
-          bgBlur = p.blur;
-          bgC1 = c1;
-          bgC2 = c2;
-          bgBack = back;
-          drawBackground(p.lights, p.blur, c1, c2, back);
-        }
+      let dropTarget: Target | null = null;
+      let dropW = 0;
+      let dropH = 0;
+      let fogTargets: Target[] = [];
+      let fogCurrent = 0;
+      let fogW = 0;
+      let fogH = 0;
+      let fogWasOn = false;
+      const FOG_CLEAR = new Float32Array([1, 0, 0, 1]);
+      const DROP_CLEAR = new Float32Array([ENC_MID, ENC_MID, 0, 0]);
+      const INVALIDATE = [gl.COLOR_ATTACHMENT0];
 
-        // 2. Drop map.
-        ensureDropTarget();
-        const dt0 = dropTarget;
-        if (!dt0) return;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, dt0.fbo);
-        gl.viewport(0, 0, dropW, dropH);
-        gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
-        gl.disable(gl.BLEND);
-        if (count > 0) {
-          drops.upload(count);
-          gl.useProgram(dropProgram);
-          gl.uniform2f(dropLoc.uResolution, width, height);
-          gl.uniform1f(dropLoc.uInvScale, 1 / scale);
-          gl.uniform1f(dropLoc.uMargin, width / dropW);
-          drops.draw(0, count);
-        }
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let frameNo = 0;
+      let bgTimer = Infinity;
+      // Inputs the background was last drawn with; any change redraws it at once.
+      let bgLights = -1;
+      let bgBlur = -1;
+      let bgC1: Rgb | null = null;
+      let bgC2: Rgb | null = null;
+      let bgBack: Rgb | null = null;
+      let lastBack: Rgb | null = null;
 
-        // 3. Fog: refog step into the other target, then runners wipe it.
-        let fogTex: WebGLTexture | null = null;
-        if (p.fog) {
-          const fresh = ensureFogTargets();
-          if (fresh || !fogWasOn) {
-            for (const t of fogTargets) {
-              gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
-              gl.clearBufferfv(gl.COLOR, 0, FOG_CLEAR);
-            }
-          }
-          const src = fogTargets[fogCurrent];
-          fogCurrent ^= 1;
-          const dst = fogTargets[fogCurrent];
-          gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
-          gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-          gl.viewport(0, 0, fogW, fogH);
-          gl.useProgram(fogProgram);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, src.tex);
-          gl.uniform1f(fogLoc.uAdd, (255 * dt) / REFOG_SECONDS);
-          gl.uniform1f(fogLoc.uDiffuse, Math.min(1, dt * FOG_DIFFUSE));
-          gl.uniform1ui(fogLoc.uSeed, hash32(frameNo));
-          triangle.draw();
-          gl.bindTexture(gl.TEXTURE_2D, null);
-          if (sim.runnersWritten > 0) {
-            gl.enable(gl.BLEND);
-            gl.blendEquation(gl.MIN);
-            gl.useProgram(wipeProgram);
-            gl.uniform2f(wipeLoc.uResolution, width, height);
-            gl.uniform1f(wipeLoc.uInvScale, 1 / scale);
-            gl.uniform1f(wipeLoc.uMargin, width / fogW);
-            drops.draw(sim.runnerFirst, sim.runnersWritten);
-            gl.blendEquation(gl.FUNC_ADD);
-            gl.disable(gl.BLEND);
-          }
-          fogTex = dst.tex;
-        }
-        fogWasOn = p.fog;
-
-        // 4. Composite to the canvas.
+      const makeTarget = (w: number, h: number, format: GLenum): Target => {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, format, w, h);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        const fbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, dt0.tex);
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, fogTex);
-        gl.useProgram(target.program);
-        gl.uniform1f(compLoc.uFogOn, p.fog ? 1 : 0);
-        gl.uniform2f(
-          compLoc.uOffsetScale,
-          (OFFSET_RANGE * scale) / width,
-          (OFFSET_RANGE * scale) / height,
-        );
-        target.blit();
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        gl.activeTexture(gl.TEXTURE0);
-      },
-      dispose() {
+        return { tex, fbo };
+      };
+      const deleteTarget = (t: Target | null) => {
+        if (!t) return;
+        gl.deleteTexture(t.tex);
+        gl.deleteFramebuffer(t.fbo);
+      };
+      scope.defer(() => {
         deleteTarget(dropTarget);
         for (const t of fogTargets) deleteTarget(t);
-        drops.dispose();
-        lightBatch.dispose();
-        gradient.dispose();
-        target.dispose();
-        triangle.dispose();
-        gl.deleteProgram(lightProgram);
-        gl.deleteProgram(dropProgram);
-        gl.deleteProgram(wipeProgram);
-        gl.deleteProgram(fogProgram);
-      },
-    };
+      });
+
+      /** The drop map is about 1080p whatever the canvas size. */
+      const ensureDropTarget = () => {
+        const div = Math.max(1, scale);
+        const w = lowResSize(width, div);
+        const h = lowResSize(height, div);
+        if (dropTarget && w === dropW && h === dropH) return;
+        deleteTarget(dropTarget);
+        dropTarget = makeTarget(w, h, gl.RGBA8);
+        dropW = w;
+        dropH = h;
+      };
+
+      /** Fog targets, `FOG_TEXEL` reference px per texel; (re)created fully fogged. */
+      const ensureFogTargets = () => {
+        const w = lowResSize(width, FOG_TEXEL * scale);
+        const h = lowResSize(height, FOG_TEXEL * scale);
+        if (fogTargets.length === 2 && w === fogW && h === fogH) return false;
+        for (const t of fogTargets) deleteTarget(t);
+        fogTargets = [makeTarget(w, h, gl.R8), makeTarget(w, h, gl.R8)];
+        fogW = w;
+        fogH = h;
+        return true;
+      };
+
+      const drawBackground = (lights: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
+        target.bind();
+        gradient.draw(top, back);
+        const n = Math.min(MAX_LIGHTS, Math.max(0, Math.round(lights)));
+        if (n === 0) return;
+        const data = lightBatch.data;
+        const stride = lightBatch.stride;
+        const baseR = (25 + 85 * blur) * scale;
+        // Bigger, softer discs spread the same light wider.
+        const dim = 0.9 / (0.6 + blur);
+        for (let i = 0; i < n; i++) {
+          const o = i * stride;
+          data[o] = lx[i] * scale;
+          data[o + 1] = ly[i] * scale;
+          data[o + 2] = baseR * lSize[i];
+          data[o + 3] = lBright[i] * dim;
+          data[o + 4] = lMix[i];
+        }
+        lightBatch.upload(n);
+        gl.enable(gl.BLEND);
+        gl.blendEquation(gl.FUNC_ADD);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.useProgram(lightProgram);
+        gl.uniform2f(lightLoc.uResolution, width, height);
+        gl.uniform3fv(lightLoc.uColor1, c1);
+        gl.uniform3fv(lightLoc.uColor2, c2);
+        gl.uniform1f(lightLoc.uEdge, 0.25 + 0.7 * blur);
+        lightBatch.draw(0, n);
+        gl.disable(gl.BLEND);
+      };
+
+      return {
+        resize(v) {
+          ({ width, height, scale } = v);
+          width = Math.max(1, Math.round(width));
+          height = Math.max(1, Math.round(height));
+          const newRefWidth = width / scale;
+          const k = newRefWidth / refWidth;
+          for (let i = 0; i < MAX_LIGHTS; i++) lx[i] *= k;
+          refWidth = newRefWidth;
+          resizeRainSim(sim, refWidth, 1080);
+          bgTimer = Infinity;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          frameNo = (frameNo + 1) >>> 0;
+          stepRainSim(sim, dt, p);
+          const count = writeDropInstances(sim, drops.data, scale);
+
+          // 1. Background, at a low rate (or at once when its inputs change).
+          const prevW = target.width;
+          const prevH = target.height;
+          target.resize(width, height, qualityDivisor(p.quality, BG_DIVISORS));
+          const c1 = lightColor1(p.lightColor1);
+          const c2 = lightColor2(p.lightColor2);
+          const back = bgColor(p.background);
+          if (back !== lastBack) {
+            lastBack = back;
+            for (let c = 0; c < 3; c++) {
+              top[c] = back[c] * 0.45;
+              fogTint[c] = back[c] * 0.35 + 0.07;
+            }
+            gl.useProgram(target.program);
+            gl.uniform3fv(compLoc.uFogTint, fogTint);
+          }
+          bgTimer += dt;
+          const nLights = Math.min(MAX_LIGHTS, p.lights);
+          for (let i = 0; i < nLights; i++) {
+            let x = lx[i] + lDrift[i] * DRIFT_PX * dt;
+            if (x < -200) x += refWidth + 400;
+            else if (x > refWidth + 200) x -= refWidth + 400;
+            lx[i] = x;
+          }
+          if (
+            bgTimer >= 1 / BG_RATE ||
+            prevW !== target.width ||
+            prevH !== target.height ||
+            bgLights !== p.lights ||
+            bgBlur !== p.blur ||
+            bgC1 !== c1 ||
+            bgC2 !== c2 ||
+            bgBack !== back
+          ) {
+            bgTimer = 0;
+            bgLights = p.lights;
+            bgBlur = p.blur;
+            bgC1 = c1;
+            bgC2 = c2;
+            bgBack = back;
+            drawBackground(p.lights, p.blur, c1, c2, back);
+          }
+
+          // 2. Drop map.
+          ensureDropTarget();
+          const dt0 = dropTarget;
+          if (!dt0) return;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, dt0.fbo);
+          gl.viewport(0, 0, dropW, dropH);
+          gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
+          gl.disable(gl.BLEND);
+          if (count > 0) {
+            drops.upload(count);
+            gl.useProgram(dropProgram);
+            gl.uniform2f(dropLoc.uResolution, width, height);
+            gl.uniform1f(dropLoc.uInvScale, 1 / scale);
+            gl.uniform1f(dropLoc.uMargin, width / dropW);
+            drops.draw(0, count);
+          }
+
+          // 3. Fog: refog step into the other target, then runners wipe it.
+          let fogTex: WebGLTexture | null = null;
+          if (p.fog) {
+            const fresh = ensureFogTargets();
+            if (fresh || !fogWasOn) {
+              for (const t of fogTargets) {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+                gl.clearBufferfv(gl.COLOR, 0, FOG_CLEAR);
+              }
+            }
+            const src = fogTargets[fogCurrent];
+            fogCurrent ^= 1;
+            const dst = fogTargets[fogCurrent];
+            gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+            gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
+            gl.viewport(0, 0, fogW, fogH);
+            gl.useProgram(fogProgram);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, src.tex);
+            gl.uniform1f(fogLoc.uAdd, (255 * dt) / REFOG_SECONDS);
+            gl.uniform1f(fogLoc.uDiffuse, Math.min(1, dt * FOG_DIFFUSE));
+            gl.uniform1ui(fogLoc.uSeed, hash32(frameNo));
+            triangle.draw();
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            if (sim.runnersWritten > 0) {
+              gl.enable(gl.BLEND);
+              gl.blendEquation(gl.MIN);
+              gl.useProgram(wipeProgram);
+              gl.uniform2f(wipeLoc.uResolution, width, height);
+              gl.uniform1f(wipeLoc.uInvScale, 1 / scale);
+              gl.uniform1f(wipeLoc.uMargin, width / fogW);
+              drops.draw(sim.runnerFirst, sim.runnersWritten);
+              gl.blendEquation(gl.FUNC_ADD);
+              gl.disable(gl.BLEND);
+            }
+            fogTex = dst.tex;
+          }
+          fogWasOn = p.fog;
+
+          // 4. Composite to the canvas.
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, dt0.tex);
+          gl.activeTexture(gl.TEXTURE2);
+          gl.bindTexture(gl.TEXTURE_2D, fogTex);
+          gl.useProgram(target.program);
+          gl.uniform1f(compLoc.uFogOn, p.fog ? 1 : 0);
+          gl.uniform2f(
+            compLoc.uOffsetScale,
+            (OFFSET_RANGE * scale) / width,
+            (OFFSET_RANGE * scale) / height,
+          );
+          target.blit();
+          gl.activeTexture(gl.TEXTURE2);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE0);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

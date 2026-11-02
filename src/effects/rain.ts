@@ -1,5 +1,5 @@
 import { hexToRgb, mixRgb, type Rgb } from "./color";
-import { beginFrame, createProgram, getUniforms, resetUnpackState } from "./gl";
+import { beginFrame, createProgram, getUniforms, resetUnpackState, withScope } from "./gl";
 import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 
@@ -133,197 +133,196 @@ export const rain = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, VERTEX, FRAGMENT);
-    const loc = getUniforms(gl, program, [
-      "uResolution",
-      "uCell",
-      "uCellPx",
-      "uAtlas",
-      "uCount",
-      "uRows",
-      "uHeight",
-      "uDecay",
-      "uBrightHead",
-      "uBackground",
-      "uBody",
-      "uHeadColor",
-    ]);
-    const atlas = gl.createTexture();
-    let atlasKey = "";
-    let glyphCount = 1;
-    let batch: SpriteBatch | undefined;
-    let capacity = 0;
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
+      const loc = getUniforms(gl, program, [
+        "uResolution",
+        "uCell",
+        "uCellPx",
+        "uAtlas",
+        "uCount",
+        "uRows",
+        "uHeight",
+        "uDecay",
+        "uBrightHead",
+        "uBackground",
+        "uBody",
+        "uHeadColor",
+      ]);
+      const atlas = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      let atlasKey = "";
+      let glyphCount = 1;
+      let batch: SpriteBatch | undefined;
+      scope.defer(() => batch?.dispose());
+      let capacity = 0;
 
-    let width = 1;
-    let height = 1;
-    let scale = 1;
-    let cell = 0;
-    let rows = 0;
-    let cols = 0;
-    // The current drop of each column, and the previous one, whose trail can still
-    // be fading below the current drop's head.
-    let heads = new Float32Array(0);
-    let pace = new Float32Array(0);
-    let seed = new Float32Array(0);
-    let active = new Uint8Array(0);
-    let prevHeads = new Float32Array(0);
-    let prevPace = new Float32Array(0);
-    let prevSeed = new Float32Array(0);
-    let prevActive = new Uint8Array(0);
+      let width = 1;
+      let height = 1;
+      let scale = 1;
+      let cell = 0;
+      let rows = 0;
+      let cols = 0;
+      // The current drop of each column, and the previous one, whose trail can still
+      // be fading below the current drop's head.
+      let heads = new Float32Array(0);
+      let pace = new Float32Array(0);
+      let seed = new Float32Array(0);
+      let active = new Uint8Array(0);
+      let prevHeads = new Float32Array(0);
+      let prevPace = new Float32Array(0);
+      let prevSeed = new Float32Array(0);
+      let prevActive = new Uint8Array(0);
 
-    const resetColumn = (c: number, density: number, scatter: boolean) => {
-      heads[c] = -Math.random() * rows * (scatter ? 1.5 : 0.5);
-      pace[c] = 0.6 + Math.random() * 0.8;
-      seed[c] = Math.floor(Math.random() * 65536);
-      active[c] = Math.random() < density ? 1 : 0;
-    };
+      const resetColumn = (c: number, density: number, scatter: boolean) => {
+        heads[c] = -Math.random() * rows * (scatter ? 1.5 : 0.5);
+        pace[c] = 0.6 + Math.random() * 0.8;
+        seed[c] = Math.floor(Math.random() * 65536);
+        active[c] = Math.random() < density ? 1 : 0;
+      };
 
-    const layout = (density: number) => {
-      cols = Math.ceil(width / cell);
-      rows = Math.ceil(height / cell);
-      heads = new Float32Array(cols);
-      pace = new Float32Array(cols);
-      seed = new Float32Array(cols);
-      active = new Uint8Array(cols);
-      prevHeads = new Float32Array(cols);
-      prevPace = new Float32Array(cols);
-      prevSeed = new Float32Array(cols);
-      prevActive = new Uint8Array(cols);
-      for (let c = 0; c < cols; c++) resetColumn(c, density, true);
-      if (capacity < cols * 2) {
-        batch?.dispose();
-        capacity = cols * 2;
-        batch = createSpriteBatch(gl, capacity, [4, 2]);
-      }
-    };
-
-    /** Renders each glyph, white on black, into its own cell-sized tile (red = coverage). */
-    const buildAtlas = (chars: string) => {
-      const glyphs = Array.from(chars);
-      glyphCount = glyphs.length;
-      const canvas = new OffscreenCanvas(
-        ATLAS_COLS * cell,
-        Math.ceil(glyphCount / ATLAS_COLS) * cell,
-      );
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Digital Rain: no 2D context for the glyph atlas");
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${cell}px ${FONT_FAMILY}`;
-      ctx.textBaseline = "top";
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#fff";
-      glyphs.forEach((ch, i) => {
-        const x = (i % ATLAS_COLS) * cell;
-        const y = Math.floor(i / ATLAS_COLS) * cell;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(x, y, cell, cell);
-        ctx.clip();
-        ctx.fillText(ch, x + cell / 2, y);
-        ctx.restore();
-      });
-      gl.bindTexture(gl.TEXTURE_2D, atlas);
-      resetUnpackState(gl);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, canvas);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    };
-
-    return {
-      resize(v) {
-        ({ width, height, scale } = v);
-        cell = 0; // force layout on next frame
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        const newCell = Math.max(4, Math.round(p.fontSize * scale));
-        if (cell !== newCell) {
-          cell = newCell;
-          layout(p.density);
+      const layout = (density: number) => {
+        cols = Math.ceil(width / cell);
+        rows = Math.ceil(height / cell);
+        heads = new Float32Array(cols);
+        pace = new Float32Array(cols);
+        seed = new Float32Array(cols);
+        active = new Uint8Array(cols);
+        prevHeads = new Float32Array(cols);
+        prevPace = new Float32Array(cols);
+        prevSeed = new Float32Array(cols);
+        prevActive = new Uint8Array(cols);
+        for (let c = 0; c < cols; c++) resetColumn(c, density, true);
+        if (capacity < cols * 2) {
+          batch?.dispose();
+          capacity = cols * 2;
+          batch = createSpriteBatch(gl, capacity, [4, 2]);
         }
-        const charset = CHARSETS[p.charset] ? p.charset : "katakana";
-        const key = `${cell}|${charset}`;
-        if (atlasKey !== key) {
-          buildAtlas(CHARSETS[charset]);
-          atlasKey = key;
-        }
+      };
 
-        // The old renderer faded the canvas by `fade` per 60th of a second.
-        const decay = 60 * Math.log(1 - p.fade);
-        const trailAge = Math.log(CUTOFF) / decay;
-        const lead = p.brightHead ? 1 : 0;
-
-        if (!batch) return;
-        const data = batch.data;
-        const stride = batch.stride;
-        let n = 0;
-        const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
-          const r0 = Math.max(minRow, Math.floor(head - lead - trailAge * rate));
-          const r1 = Math.min(rows, Math.floor(head) + 1);
-          if (r0 >= r1) return;
-          const o = n++ * stride;
-          data[o] = c;
-          data[o + 1] = head;
-          data[o + 2] = rate;
-          data[o + 3] = s;
-          data[o + 4] = r0;
-          data[o + 5] = r1;
-        };
-
-        for (let c = 0; c < cols; c++) {
-          heads[c] += dt * p.speed * pace[c];
-          prevHeads[c] += dt * p.speed * prevPace[c];
-          if (Math.floor(heads[c]) > rows + rows * 0.3 * pace[c]) {
-            prevHeads[c] = heads[c];
-            prevPace[c] = pace[c];
-            prevSeed[c] = seed[c];
-            prevActive[c] = active[c];
-            resetColumn(c, p.density, false);
-          }
-          const head = heads[c];
-          if (active[c]) emit(c, head, p.speed * pace[c], seed[c], 0);
-          if (prevActive[c]) {
-            // The current drop repaints the cells it has passed.
-            const minRow = active[c] ? Math.max(0, Math.floor(head) + 1) : 0;
-            emit(c, prevHeads[c], p.speed * prevPace[c], prevSeed[c], minRow);
-          }
-        }
-
-        const bg = hexToRgb(p.background);
-        const color = hexToRgb(p.color);
-
-        gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        if (n === 0) return;
-
-        batch.upload(n);
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0);
+      /** Renders each glyph, white on black, into its own cell-sized tile (red = coverage). */
+      const buildAtlas = (chars: string) => {
+        const glyphs = Array.from(chars);
+        glyphCount = glyphs.length;
+        const canvas = new OffscreenCanvas(
+          ATLAS_COLS * cell,
+          Math.ceil(glyphCount / ATLAS_COLS) * cell,
+        );
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Digital Rain: no 2D context for the glyph atlas");
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${cell}px ${FONT_FAMILY}`;
+        ctx.textBaseline = "top";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        glyphs.forEach((ch, i) => {
+          const x = (i % ATLAS_COLS) * cell;
+          const y = Math.floor(i / ATLAS_COLS) * cell;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(x, y, cell, cell);
+          ctx.clip();
+          ctx.fillText(ch, x + cell / 2, y);
+          ctx.restore();
+        });
         gl.bindTexture(gl.TEXTURE_2D, atlas);
-        gl.uniform1i(loc.uAtlas, 0);
-        gl.uniform2f(loc.uResolution, width, height);
-        gl.uniform1f(loc.uCell, cell);
-        gl.uniform1i(loc.uCellPx, cell);
-        gl.uniform1i(loc.uCount, glyphCount);
-        gl.uniform1i(loc.uRows, rows);
-        gl.uniform1f(loc.uHeight, height);
-        gl.uniform1f(loc.uDecay, decay);
-        gl.uniform1i(loc.uBrightHead, p.brightHead ? 1 : 0);
-        gl.uniform3fv(loc.uBackground, unit(bg));
-        gl.uniform3fv(loc.uBody, unit(color));
-        gl.uniform3fv(loc.uHeadColor, unit(mixRgb(color, [255, 255, 255], 0.8)));
-        batch.draw(0, n);
+        resetUnpackState(gl);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, canvas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.bindTexture(gl.TEXTURE_2D, null);
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteTexture(atlas);
-        batch?.dispose();
-      },
-    };
+      };
+
+      return {
+        resize(v) {
+          ({ width, height, scale } = v);
+          cell = 0; // force layout on next frame
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          const newCell = Math.max(4, Math.round(p.fontSize * scale));
+          if (cell !== newCell) {
+            cell = newCell;
+            layout(p.density);
+          }
+          const charset = CHARSETS[p.charset] ? p.charset : "katakana";
+          const key = `${cell}|${charset}`;
+          if (atlasKey !== key) {
+            buildAtlas(CHARSETS[charset]);
+            atlasKey = key;
+          }
+
+          // The old renderer faded the canvas by `fade` per 60th of a second.
+          const decay = 60 * Math.log(1 - p.fade);
+          const trailAge = Math.log(CUTOFF) / decay;
+          const lead = p.brightHead ? 1 : 0;
+
+          if (!batch) return;
+          const data = batch.data;
+          const stride = batch.stride;
+          let n = 0;
+          const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
+            const r0 = Math.max(minRow, Math.floor(head - lead - trailAge * rate));
+            const r1 = Math.min(rows, Math.floor(head) + 1);
+            if (r0 >= r1) return;
+            const o = n++ * stride;
+            data[o] = c;
+            data[o + 1] = head;
+            data[o + 2] = rate;
+            data[o + 3] = s;
+            data[o + 4] = r0;
+            data[o + 5] = r1;
+          };
+
+          for (let c = 0; c < cols; c++) {
+            heads[c] += dt * p.speed * pace[c];
+            prevHeads[c] += dt * p.speed * prevPace[c];
+            if (Math.floor(heads[c]) > rows + rows * 0.3 * pace[c]) {
+              prevHeads[c] = heads[c];
+              prevPace[c] = pace[c];
+              prevSeed[c] = seed[c];
+              prevActive[c] = active[c];
+              resetColumn(c, p.density, false);
+            }
+            const head = heads[c];
+            if (active[c]) emit(c, head, p.speed * pace[c], seed[c], 0);
+            if (prevActive[c]) {
+              // The current drop repaints the cells it has passed.
+              const minRow = active[c] ? Math.max(0, Math.floor(head) + 1) : 0;
+              emit(c, prevHeads[c], p.speed * prevPace[c], prevSeed[c], minRow);
+            }
+          }
+
+          const bg = hexToRgb(p.background);
+          const color = hexToRgb(p.color);
+
+          gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          if (n === 0) return;
+
+          batch.upload(n);
+          gl.useProgram(program);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, atlas);
+          gl.uniform1i(loc.uAtlas, 0);
+          gl.uniform2f(loc.uResolution, width, height);
+          gl.uniform1f(loc.uCell, cell);
+          gl.uniform1i(loc.uCellPx, cell);
+          gl.uniform1i(loc.uCount, glyphCount);
+          gl.uniform1i(loc.uRows, rows);
+          gl.uniform1f(loc.uHeight, height);
+          gl.uniform1f(loc.uDecay, decay);
+          gl.uniform1i(loc.uBrightHead, p.brightHead ? 1 : 0);
+          gl.uniform3fv(loc.uBackground, unit(bg));
+          gl.uniform3fv(loc.uBody, unit(color));
+          gl.uniform3fv(loc.uHeadColor, unit(mixRgb(color, [255, 255, 255], 0.8)));
+          batch.draw(0, n);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });
