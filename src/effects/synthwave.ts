@@ -5,6 +5,7 @@ import {
   createFullscreenTriangle,
   createProgram,
   createUniforms,
+  DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   resetUnpackState,
@@ -149,7 +150,7 @@ out vec4 outColor;
 
 const int RIDGE_LAST = ${RIDGE_POINTS - 1};
 const float RIDGE_SEGMENTS = ${glslFloat(RIDGE_POINTS - 1)};
-
+${DITHER_GLSL}
 /** Box-filtered coverage of a line of width w at signed distance d from the pixel centre. */
 float lineCov(float d, float w) {
   return clamp(min(d + 0.5 * w, 0.5) - max(d - 0.5 * w, -0.5), 0.0, 1.0);
@@ -262,9 +263,10 @@ void main() {
     col = min(col + (uVGlow * vg + uVCore * vc) * h.a + h.rgb, vec3(1.0));
   }
 
-  // Haze band hugging the horizon, then CRT scanlines.
+  // Haze band hugging the horizon, then CRT scanlines. Sub-LSB dither keeps the
+  // tall, dark sky and haze gradients from banding into strips at 4K.
   vec4 post = texelFetch(uRows, ivec2(1, row), 0);
-  outColor = vec4(clamp(col * post.a + post.rgb, 0.0, 1.0), 1.0);
+  outColor = vec4(clamp(col * post.a + post.rgb + dither8(gl_FragCoord.xy), 0.0, 1.0), 1.0);
 }
 `;
 
