@@ -4,9 +4,9 @@ import {
   createFullscreenTriangle,
   createGradientBackground,
   createProgram,
+  createUniforms,
   createRenderTarget,
   FULLSCREEN_VERTEX,
-  getUniforms,
   glslFloat,
   type RenderTarget,
   TO_CLIP_GLSL,
@@ -283,17 +283,17 @@ export const windowRain = defineEffect({
       const fogProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FOG_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
-      const lightLoc = getUniforms(gl, lightProgram, [
+      const lightU = createUniforms(gl, lightProgram, [
         "uResolution",
         "uColor1",
         "uColor2",
         "uEdge",
       ]);
       const dropNames = ["uResolution", "uInvScale", "uGrow", "uMargin"] as const;
-      const dropLoc = getUniforms(gl, dropProgram, dropNames);
-      const wipeLoc = getUniforms(gl, wipeProgram, dropNames);
-      const fogLoc = getUniforms(gl, fogProgram, ["uPrev", "uAdd", "uDiffuse", "uSeed"]);
-      const compLoc = getUniforms(gl, target.program, [
+      const dropU = createUniforms(gl, dropProgram, dropNames);
+      const wipeU = createUniforms(gl, wipeProgram, dropNames);
+      const fogU = createUniforms(gl, fogProgram, ["uPrev", "uAdd", "uDiffuse", "uSeed"]);
+      const compU = createUniforms(gl, target.program, [
         "uDrops",
         "uFog",
         "uOffsetScale",
@@ -301,14 +301,14 @@ export const windowRain = defineEffect({
         "uFogTint",
       ]);
       gl.useProgram(dropProgram);
-      gl.uniform1f(dropLoc.uGrow, 1);
+      dropU.f1("uGrow", 1);
       gl.useProgram(wipeProgram);
-      gl.uniform1f(wipeLoc.uGrow, WIPE_GROW);
+      wipeU.f1("uGrow", WIPE_GROW);
       gl.useProgram(fogProgram);
-      gl.uniform1i(fogLoc.uPrev, 0);
+      fogU.i1("uPrev", 0);
       gl.useProgram(target.program);
-      gl.uniform1i(compLoc.uDrops, 1);
-      gl.uniform1i(compLoc.uFog, 2);
+      compU.i1("uDrops", 1);
+      compU.i1("uFog", 2);
       gl.useProgram(null);
 
       // Background lights, reference units.
@@ -422,10 +422,10 @@ export const windowRain = defineEffect({
         gl.blendEquation(gl.FUNC_ADD);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.useProgram(lightProgram);
-        gl.uniform2f(lightLoc.uResolution, width, height);
-        gl.uniform3fv(lightLoc.uColor1, c1);
-        gl.uniform3fv(lightLoc.uColor2, c2);
-        gl.uniform1f(lightLoc.uEdge, 0.25 + 0.7 * blur);
+        lightU.f2("uResolution", width, height);
+        lightU.v3("uColor1", c1);
+        lightU.v3("uColor2", c2);
+        lightU.f1("uEdge", 0.25 + 0.7 * blur);
         lightBatch.draw(0, n);
         gl.disable(gl.BLEND);
       };
@@ -462,7 +462,7 @@ export const windowRain = defineEffect({
               fogTint[c] = back[c] * 0.35 + 0.07;
             }
             gl.useProgram(target.program);
-            gl.uniform3fv(compLoc.uFogTint, fogTint);
+            compU.v3("uFogTint", fogTint);
           }
           bgTimer += dt;
           const nLights = Math.min(MAX_LIGHTS, p.lights);
@@ -499,9 +499,9 @@ export const windowRain = defineEffect({
           if (count > 0) {
             drops.upload(count);
             gl.useProgram(dropProgram);
-            gl.uniform2f(dropLoc.uResolution, width, height);
-            gl.uniform1f(dropLoc.uInvScale, 1 / scale);
-            gl.uniform1f(dropLoc.uMargin, width / dropW);
+            dropU.f2("uResolution", width, height);
+            dropU.f1("uInvScale", 1 / scale);
+            dropU.f1("uMargin", width / dropW);
             drops.draw(0, count);
           }
 
@@ -524,18 +524,18 @@ export const windowRain = defineEffect({
             gl.useProgram(fogProgram);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, src.texture);
-            gl.uniform1f(fogLoc.uAdd, (255 * dt) / REFOG_SECONDS);
-            gl.uniform1f(fogLoc.uDiffuse, Math.min(1, dt * FOG_DIFFUSE));
-            gl.uniform1ui(fogLoc.uSeed, hash32(frameNo));
+            fogU.f1("uAdd", (255 * dt) / REFOG_SECONDS);
+            fogU.f1("uDiffuse", Math.min(1, dt * FOG_DIFFUSE));
+            fogU.u1("uSeed", hash32(frameNo));
             triangle.draw();
             gl.bindTexture(gl.TEXTURE_2D, null);
             if (sim.runnersWritten > 0) {
               gl.enable(gl.BLEND);
               gl.blendEquation(gl.MIN);
               gl.useProgram(wipeProgram);
-              gl.uniform2f(wipeLoc.uResolution, width, height);
-              gl.uniform1f(wipeLoc.uInvScale, 1 / scale);
-              gl.uniform1f(wipeLoc.uMargin, width / fogW);
+              wipeU.f2("uResolution", width, height);
+              wipeU.f1("uInvScale", 1 / scale);
+              wipeU.f1("uMargin", width / fogW);
               drops.draw(sim.runnerFirst, sim.runnersWritten);
               gl.blendEquation(gl.FUNC_ADD);
               gl.disable(gl.BLEND);
@@ -551,12 +551,8 @@ export const windowRain = defineEffect({
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, fogTex);
           gl.useProgram(target.program);
-          gl.uniform1f(compLoc.uFogOn, p.fog ? 1 : 0);
-          gl.uniform2f(
-            compLoc.uOffsetScale,
-            (OFFSET_RANGE * scale) / width,
-            (OFFSET_RANGE * scale) / height,
-          );
+          compU.f1("uFogOn", p.fog ? 1 : 0);
+          compU.f2("uOffsetScale", (OFFSET_RANGE * scale) / width, (OFFSET_RANGE * scale) / height);
           target.blit();
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, null);
