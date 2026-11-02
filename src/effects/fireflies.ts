@@ -103,14 +103,14 @@ export function layoutBeams(n: number, angleDeg: number, refWidth: number, out: 
   // Lean the group against the slant so the beams stay central on screen.
   const centre = refWidth * (0.42 - 0.08 * Math.sign(slope));
   for (let i = 0; i < count; i++) {
-    const [dx, hw, intensity] = BEAM_LAYOUT[i];
+    const layout = BEAM_LAYOUT[i];
     const b = out[i];
     b.slope = slope;
-    b.x0 = centre + dx * refWidth - slope * 540;
-    b.halfWidth = hw;
+    b.x0 = centre + layout[0] * refWidth - slope * 540;
+    b.halfWidth = layout[1];
     b.y0 = -20;
     b.y1 = 1080;
-    b.intensity = intensity;
+    b.intensity = layout[2];
   }
   return count;
 }
@@ -277,6 +277,7 @@ export const fireflies = defineEffect({
       const xs = new Float32Array(MAX_SPECKS);
       const ys = new Float32Array(MAX_SPECKS);
       const heading = new Float32Array(MAX_SPECKS);
+      /** Speed factor, including the square root of the speck's size factor. */
       const pace = new Float32Array(MAX_SPECKS);
       /** Size and brightness factors; defocused specks are larger and fainter. */
       const radiusK = new Float32Array(MAX_SPECKS);
@@ -302,9 +303,11 @@ export const fireflies = defineEffect({
         xs[i] = rng() * refWidth;
         ys[i] = rng() * 1080;
         heading[i] = rng() * TAU;
-        pace[i] = 0.6 + rng() * 0.8;
+        const speed = 0.6 + rng() * 0.8;
         const defocused = rng() < DEFOCUS_SHARE;
         radiusK[i] = defocused ? 1.8 + rng() * 1.2 : 0.75 + rng() * 0.5;
+        // Larger (nearer) specks drift faster; folded in once rather than per frame.
+        pace[i] = speed * Math.sqrt(radiusK[i]);
         brightK[i] = defocused ? 0.3 + rng() * 0.15 : 0.8 + rng() * 0.2;
         newBlink(i);
         blinkPhase[i] = rng();
@@ -340,7 +343,7 @@ export const fireflies = defineEffect({
           for (let i = 0; i < n; i++) {
             // Smooth random walk: the heading turns by slow 1D noise, never jitters.
             heading[i] += noise.noise2(noiseT, seed[i]) * turn * dt;
-            const sp = drift * pace[i] * radiusK[i] ** 0.5;
+            const sp = drift * pace[i];
             const radius = baseRadius * radiusK[i];
             const margin = radius;
             // Wrap within a margin of the edges, so the jump is off-screen.
