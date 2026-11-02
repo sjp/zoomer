@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor, type LowResTarget } from "./lowres";
 import { createRng } from "./noise";
@@ -290,170 +291,157 @@ export const blobs = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT);
-    const triangle = createFullscreenTriangle(gl);
-    let main: LowResTarget | undefined;
-    let aux: LowResTarget | undefined;
-    try {
-      main = createLowResTarget(gl, { composite: COMPOSITE });
-      aux = createLowResTarget(gl);
-    } catch (err) {
-      main?.dispose();
-      gl.deleteProgram(program);
-      triangle.dispose();
-      throw err;
-    }
-    // Narrowed copies for the closures below.
-    const mainT = main;
-    const auxT = aux;
-    const loc = getUniforms(gl, program, ["uToUnits", "uBlobs", "uColors", "uBase", "uCount"]);
-    const cLoc = getUniforms(gl, mainT.program, ["uAux", "uMix", "uGrain"]);
-    gl.useProgram(mainT.program);
-    gl.uniform1i(cLoc.uAux, 1);
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const mainT = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
+      const auxT = scope.own(createLowResTarget(gl));
+      const loc = getUniforms(gl, program, ["uToUnits", "uBlobs", "uColors", "uBase", "uCount"]);
+      const cLoc = getUniforms(gl, mainT.program, ["uAux", "uMix", "uGrain"]);
+      gl.useProgram(mainT.program);
+      gl.uniform1i(cLoc.uAux, 1);
 
-    const blobData = new Float32Array(MAX_BLOBS * 4);
-    const colorData = new Float32Array(MAX_BLOBS * 3);
-    const custom = ["", "", "", ""];
-    const clock: KeyframeClock = { elapsed: 0 };
+      const blobData = new Float32Array(MAX_BLOBS * 4);
+      const colorData = new Float32Array(MAX_BLOBS * 3);
+      const custom = ["", "", "", ""];
+      const clock: KeyframeClock = { elapsed: 0 };
 
-    let width = 1;
-    let height = 1;
-    let aspect = 1;
-    /** Sim seconds (speed-scaled), float64. */
-    let time = 0;
-    /** Sim time each target currently holds; NaN when stale. */
-    let simMain = Number.NaN;
-    let simAux = Number.NaN;
-    /** True when `main` holds keyframe A (the older one). */
-    let mainIsA = true;
-    let lastLowW = 0;
-    let lastLowH = 0;
-    let lastAspect = 0;
-    let lastPalette = "";
-    let lastC1 = "";
-    let lastC2 = "";
-    let lastC3 = "";
-    let lastC4 = "";
-    let lastBg = "";
-    let lastCount = -1;
-    let lastSoftness = Number.NaN;
-    let lastMix = Number.NaN;
-    let lastGrain = Number.NaN;
-    let count = 3;
-    let softness = 1;
+      let width = 1;
+      let height = 1;
+      let aspect = 1;
+      /** Sim seconds (speed-scaled), float64. */
+      let time = 0;
+      /** Sim time each target currently holds; NaN when stale. */
+      let simMain = Number.NaN;
+      let simAux = Number.NaN;
+      /** True when `main` holds keyframe A (the older one). */
+      let mainIsA = true;
+      let lastLowW = 0;
+      let lastLowH = 0;
+      let lastAspect = 0;
+      let lastPalette = "";
+      let lastC1 = "";
+      let lastC2 = "";
+      let lastC3 = "";
+      let lastC4 = "";
+      let lastBg = "";
+      let lastCount = -1;
+      let lastSoftness = Number.NaN;
+      let lastMix = Number.NaN;
+      let lastGrain = Number.NaN;
+      let count = 3;
+      let softness = 1;
 
-    /** Renders the blob field at sim time `t` into `target`, unless it already holds it. */
-    const renderKey = (target: LowResTarget, t: number): void => {
-      if ((target === mainT ? simMain : simAux) === t) return;
-      writeBlobUniforms(blobData, count, t, aspect, softness);
-      gl.useProgram(program);
-      gl.uniform4fv(loc.uBlobs, blobData);
-      target.bind();
-      triangle.draw();
-      if (target === mainT) simMain = t;
-      else simAux = t;
-    };
-
-    return {
-      resize(v) {
-        width = v.width;
-        height = v.height;
-        aspect = width / Math.max(1, height);
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        time += (Number.isFinite(dt) && dt > 0 ? dt : 0) * p.speed;
-        let invalid = false;
-
-        const divisor = qualityDivisor(p.quality, DIVISORS);
-        mainT.resize(width, height, divisor);
-        auxT.resize(width, height, divisor);
+      /** Renders the blob field at sim time `t` into `target`, unless it already holds it. */
+      const renderKey = (target: LowResTarget, t: number): void => {
+        if ((target === mainT ? simMain : simAux) === t) return;
+        writeBlobUniforms(blobData, count, t, aspect, softness);
         gl.useProgram(program);
-        if (mainT.width !== lastLowW || mainT.height !== lastLowH || aspect !== lastAspect) {
-          lastLowW = mainT.width;
-          lastLowH = mainT.height;
-          lastAspect = aspect;
-          gl.uniform2f(loc.uToUnits, aspect / lastLowW, 1 / lastLowH);
-          invalid = true;
-        }
-        const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
-        if (n !== lastCount) {
-          lastCount = count = n;
-          gl.uniform1i(loc.uCount, n);
-          invalid = true;
-        }
-        if (p.softness !== lastSoftness) {
-          lastSoftness = softness = p.softness;
-          invalid = true;
-        }
-        if (
-          p.palette !== lastPalette ||
-          p.color1 !== lastC1 ||
-          p.color2 !== lastC2 ||
-          p.color3 !== lastC3 ||
-          p.color4 !== lastC4
-        ) {
-          lastPalette = p.palette;
-          custom[0] = lastC1 = p.color1;
-          custom[1] = lastC2 = p.color2;
-          custom[2] = lastC3 = p.color3;
-          custom[3] = lastC4 = p.color4;
-          for (let i = 0; i < MAX_BLOBS; i++)
-            colorData.set(hexToLinear(paletteColor(p.palette, custom, i)), i * 3);
-          gl.uniform3fv(loc.uColors, colorData);
-          invalid = true;
-        }
-        if (p.background !== lastBg) {
-          lastBg = p.background;
-          gl.uniform3fv(loc.uBase, hexToLinear(p.background));
-          invalid = true;
-        }
-        if (invalid) {
-          simMain = Number.NaN;
-          simAux = Number.NaN;
-        }
+        gl.uniform4fv(loc.uBlobs, blobData);
+        target.bind();
+        triangle.draw();
+        if (target === mainT) simMain = t;
+        else simAux = t;
+      };
 
-        const due = advanceKeyframes(clock, dt, KEYFRAME_INTERVAL, invalid);
-        if (due === 2) {
-          mainIsA = true;
-          renderKey(mainT, time);
-          renderKey(auxT, time + p.speed * KEYFRAME_INTERVAL);
-        } else if (due === 1) {
-          // Old B becomes A; the old A's texture is reused for the next B, rendered at
-          // the sim time it will be shown at (one interval after the old B).
-          mainIsA = !mainIsA;
-          const lead = p.speed * (KEYFRAME_INTERVAL - clock.elapsed);
-          renderKey(mainIsA ? auxT : mainT, time + lead);
-        }
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return {
+        resize(v) {
+          width = v.width;
+          height = v.height;
+          aspect = width / Math.max(1, height);
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time += (Number.isFinite(dt) && dt > 0 ? dt : 0) * p.speed;
+          let invalid = false;
 
-        // Blit: main on unit 0 (bound by blit), aux on unit 1.
-        gl.useProgram(mainT.program);
-        const b = keyframeMix(clock, KEYFRAME_INTERVAL);
-        const mix = mainIsA ? b : 1 - b;
-        if (mix !== lastMix) {
-          lastMix = mix;
-          gl.uniform1f(cLoc.uMix, mix);
-        }
-        if (p.grain !== lastGrain) {
-          lastGrain = p.grain;
-          gl.uniform1f(cLoc.uGrain, Math.max(0, p.grain) * GRAIN_AMP);
-        }
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, auxT.texture);
-        mainT.blit();
-        // Unbind both so neither is sampled while it is a render target next frame.
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        gl.activeTexture(gl.TEXTURE0);
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        triangle.dispose();
-        mainT.dispose();
-        auxT.dispose();
-      },
-    };
+          const divisor = qualityDivisor(p.quality, DIVISORS);
+          mainT.resize(width, height, divisor);
+          auxT.resize(width, height, divisor);
+          gl.useProgram(program);
+          if (mainT.width !== lastLowW || mainT.height !== lastLowH || aspect !== lastAspect) {
+            lastLowW = mainT.width;
+            lastLowH = mainT.height;
+            lastAspect = aspect;
+            gl.uniform2f(loc.uToUnits, aspect / lastLowW, 1 / lastLowH);
+            invalid = true;
+          }
+          const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.blobs)));
+          if (n !== lastCount) {
+            lastCount = count = n;
+            gl.uniform1i(loc.uCount, n);
+            invalid = true;
+          }
+          if (p.softness !== lastSoftness) {
+            lastSoftness = softness = p.softness;
+            invalid = true;
+          }
+          if (
+            p.palette !== lastPalette ||
+            p.color1 !== lastC1 ||
+            p.color2 !== lastC2 ||
+            p.color3 !== lastC3 ||
+            p.color4 !== lastC4
+          ) {
+            lastPalette = p.palette;
+            custom[0] = lastC1 = p.color1;
+            custom[1] = lastC2 = p.color2;
+            custom[2] = lastC3 = p.color3;
+            custom[3] = lastC4 = p.color4;
+            for (let i = 0; i < MAX_BLOBS; i++)
+              colorData.set(hexToLinear(paletteColor(p.palette, custom, i)), i * 3);
+            gl.uniform3fv(loc.uColors, colorData);
+            invalid = true;
+          }
+          if (p.background !== lastBg) {
+            lastBg = p.background;
+            gl.uniform3fv(loc.uBase, hexToLinear(p.background));
+            invalid = true;
+          }
+          if (invalid) {
+            simMain = Number.NaN;
+            simAux = Number.NaN;
+          }
+
+          const due = advanceKeyframes(clock, dt, KEYFRAME_INTERVAL, invalid);
+          if (due === 2) {
+            mainIsA = true;
+            renderKey(mainT, time);
+            renderKey(auxT, time + p.speed * KEYFRAME_INTERVAL);
+          } else if (due === 1) {
+            // Old B becomes A; the old A's texture is reused for the next B, rendered at
+            // the sim time it will be shown at (one interval after the old B).
+            mainIsA = !mainIsA;
+            const lead = p.speed * (KEYFRAME_INTERVAL - clock.elapsed);
+            renderKey(mainIsA ? auxT : mainT, time + lead);
+          }
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+          // Blit: main on unit 0 (bound by blit), aux on unit 1.
+          gl.useProgram(mainT.program);
+          const b = keyframeMix(clock, KEYFRAME_INTERVAL);
+          const mix = mainIsA ? b : 1 - b;
+          if (mix !== lastMix) {
+            lastMix = mix;
+            gl.uniform1f(cLoc.uMix, mix);
+          }
+          if (p.grain !== lastGrain) {
+            lastGrain = p.grain;
+            gl.uniform1f(cLoc.uGrain, Math.max(0, p.grain) * GRAIN_AMP);
+          }
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, auxT.texture);
+          mainT.blit();
+          // Unbind both so neither is sampled while it is a render target next frame.
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE0);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });

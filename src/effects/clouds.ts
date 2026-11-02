@@ -13,6 +13,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  withScope,
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { defineEffect } from "./types";
@@ -226,169 +227,170 @@ export const clouds = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const target = createLowResTarget(gl, { composite: COMPOSITE });
-    let program: WebGLProgram;
-    try {
-      program = createProgram(gl, FULLSCREEN_VERTEX, CLOUD_FRAGMENT);
-    } catch (err) {
-      target.dispose();
-      throw err;
-    }
-    const triangle = createFullscreenTriangle(gl);
-    const loc = getUniforms(gl, program, [
-      "uNoise",
-      "uAspect",
-      "uLayers",
-      "uOffA",
-      "uDetail",
-      "uLayerP",
-      "uThreshold",
-      "uSunStep",
-      "uCloudLight",
-      "uCloudShadow",
-      "uSkyTop",
-      "uSkyBottom",
-    ]);
-    const cLoc = getUniforms(gl, target.program, [
-      "uSkyTop",
-      "uSkyBottom",
-      "uGlowColor",
-      "uSun",
-      "uDisc",
-      "uAspect",
-    ]);
-    gl.useProgram(program);
-    gl.uniform1i(loc.uNoise, 0);
+    return withScope((scope) => {
+      const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, CLOUD_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const loc = getUniforms(gl, program, [
+        "uNoise",
+        "uAspect",
+        "uLayers",
+        "uOffA",
+        "uDetail",
+        "uLayerP",
+        "uThreshold",
+        "uSunStep",
+        "uCloudLight",
+        "uCloudShadow",
+        "uSkyTop",
+        "uSkyBottom",
+      ]);
+      const cLoc = getUniforms(gl, target.program, [
+        "uSkyTop",
+        "uSkyBottom",
+        "uGlowColor",
+        "uSun",
+        "uDisc",
+        "uAspect",
+      ]);
+      gl.useProgram(program);
+      gl.uniform1i(loc.uNoise, 0);
 
-    const noiseTex = createDataTexture(gl, {
-      width: NOISE_SIZE,
-      height: NOISE_SIZE,
-      internalFormat: gl.RGBA8,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE,
-      data: buildNoiseTexture(NOISE_SIZE, NOISE_SEED),
-      wrap: gl.REPEAT,
+      const noiseTex = scope.add(
+        createDataTexture(gl, {
+          width: NOISE_SIZE,
+          height: NOISE_SIZE,
+          internalFormat: gl.RGBA8,
+          format: gl.RGBA,
+          type: gl.UNSIGNED_BYTE,
+          data: buildNoiseTexture(NOISE_SIZE, NOISE_SEED),
+          wrap: gl.REPEAT,
+        }),
+        (t) => gl.deleteTexture(t),
+      );
+      // Mipmaps keep the detail fetch from aliasing at low quality settings.
+      gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      const transition = createPresetTransition(buildPresetTable());
+      const offA = new Float32Array(2 * LAYER_FLOATS);
+      const detail = new Float32Array(2 * LAYER_FLOATS);
+      const layerP = new Float32Array(2 * LAYER_FLOATS);
+
+      let width = 1;
+      let height = 1;
+      let sizeDirty = true;
+      let lastTime = "";
+      let timeIndex = 0;
+      let lastCoverage = NaN;
+      let lastLayers = -1;
+      /** Wind travel per layer (frame heights) and evolution time; float64. */
+      let driftNear = 0;
+      let driftFar = 0;
+      let evolve = 0;
+
+      return {
+        resize(v) {
+          width = Math.max(1, v.width);
+          height = Math.max(1, v.height);
+          sizeDirty = true;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          const step = Math.max(0, dt) * p.speed;
+          driftNear += step * WIND;
+          driftFar += step * WIND * FAR_SPEED;
+          evolve += step;
+          const layers = p.layers >= 1.5 ? 2 : 1;
+          const freq = BASE_FREQ / Math.max(0.1, p.scale);
+
+          target.resize(width, height, qualityDivisor(p.quality));
+
+          if (p.time !== lastTime) {
+            lastTime = p.time;
+            timeIndex = presetIndex(p.time);
+          }
+          if (transition.update(dt, timeIndex)) {
+            const v = transition.values;
+            gl.useProgram(program);
+            gl.uniform3f(loc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
+            gl.uniform3f(loc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
+            gl.uniform3f(
+              loc.uCloudLight,
+              v[P.cloudLight],
+              v[P.cloudLight + 1],
+              v[P.cloudLight + 2],
+            );
+            gl.uniform3f(
+              loc.uCloudShadow,
+              v[P.cloudShadow],
+              v[P.cloudShadow + 1],
+              v[P.cloudShadow + 2],
+            );
+            // The blended light direction may be shorter than 1; that only softens shading.
+            gl.uniform2f(loc.uSunStep, v[P.lightX] * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
+            gl.useProgram(target.program);
+            gl.uniform3f(cLoc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
+            gl.uniform3f(cLoc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
+            gl.uniform3f(cLoc.uGlowColor, v[P.glow], v[P.glow + 1], v[P.glow + 2]);
+            gl.uniform4f(
+              cLoc.uSun,
+              v[P.sunX],
+              v[P.sunY],
+              Math.max(1e-3, v[P.glowRadius]),
+              v[P.glowStrength],
+            );
+            gl.uniform2f(cLoc.uDisc, Math.max(1e-3, v[P.discRadius]), v[P.discStrength]);
+          }
+          if (sizeDirty) {
+            sizeDirty = false;
+            const aspect = width / height;
+            gl.useProgram(target.program);
+            gl.uniform1f(cLoc.uAspect, aspect);
+            gl.useProgram(program);
+            gl.uniform1f(loc.uAspect, aspect);
+          }
+
+          // Cloud pass, into the low-res target.
+          gl.useProgram(program);
+          if (p.coverage !== lastCoverage) {
+            lastCoverage = p.coverage;
+            gl.uniform1f(loc.uThreshold, coverageThreshold(p.coverage));
+          }
+          if (layers !== lastLayers) {
+            lastLayers = layers;
+            gl.uniform1i(loc.uLayers, layers);
+          }
+          layerUniforms(offA, detail, layerP, 0, 0, driftNear, evolve, freq, OPACITY[0]);
+          layerUniforms(
+            offA,
+            detail,
+            layerP,
+            LAYER_FLOATS,
+            1,
+            driftFar,
+            evolve,
+            freq * FAR_FREQ,
+            OPACITY[1],
+          );
+          gl.uniform4fv(loc.uOffA, offA);
+          gl.uniform4fv(loc.uDetail, detail);
+          gl.uniform4fv(loc.uLayerP, layerP);
+          target.bind();
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+          triangle.draw();
+
+          // Composite: sky + glow, then the upscaled clouds, to the canvas.
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          target.blit();
+        },
+        dispose: () => scope.dispose(),
+      };
     });
-    // Mipmaps keep the detail fetch from aliasing at low quality settings.
-    gl.bindTexture(gl.TEXTURE_2D, noiseTex);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    const transition = createPresetTransition(buildPresetTable());
-    const offA = new Float32Array(2 * LAYER_FLOATS);
-    const detail = new Float32Array(2 * LAYER_FLOATS);
-    const layerP = new Float32Array(2 * LAYER_FLOATS);
-
-    let width = 1;
-    let height = 1;
-    let sizeDirty = true;
-    let lastTime = "";
-    let timeIndex = 0;
-    let lastCoverage = NaN;
-    let lastLayers = -1;
-    /** Wind travel per layer (frame heights) and evolution time; float64. */
-    let driftNear = 0;
-    let driftFar = 0;
-    let evolve = 0;
-
-    return {
-      resize(v) {
-        width = Math.max(1, v.width);
-        height = Math.max(1, v.height);
-        sizeDirty = true;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        const step = Math.max(0, dt) * p.speed;
-        driftNear += step * WIND;
-        driftFar += step * WIND * FAR_SPEED;
-        evolve += step;
-        const layers = p.layers >= 1.5 ? 2 : 1;
-        const freq = BASE_FREQ / Math.max(0.1, p.scale);
-
-        target.resize(width, height, qualityDivisor(p.quality));
-
-        if (p.time !== lastTime) {
-          lastTime = p.time;
-          timeIndex = presetIndex(p.time);
-        }
-        if (transition.update(dt, timeIndex)) {
-          const v = transition.values;
-          gl.useProgram(program);
-          gl.uniform3f(loc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
-          gl.uniform3f(loc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
-          gl.uniform3f(loc.uCloudLight, v[P.cloudLight], v[P.cloudLight + 1], v[P.cloudLight + 2]);
-          gl.uniform3f(
-            loc.uCloudShadow,
-            v[P.cloudShadow],
-            v[P.cloudShadow + 1],
-            v[P.cloudShadow + 2],
-          );
-          // The blended light direction may be shorter than 1; that only softens shading.
-          gl.uniform2f(loc.uSunStep, v[P.lightX] * LIGHT_STEP, v[P.lightY] * LIGHT_STEP);
-          gl.useProgram(target.program);
-          gl.uniform3f(cLoc.uSkyTop, v[P.skyTop], v[P.skyTop + 1], v[P.skyTop + 2]);
-          gl.uniform3f(cLoc.uSkyBottom, v[P.skyBottom], v[P.skyBottom + 1], v[P.skyBottom + 2]);
-          gl.uniform3f(cLoc.uGlowColor, v[P.glow], v[P.glow + 1], v[P.glow + 2]);
-          gl.uniform4f(
-            cLoc.uSun,
-            v[P.sunX],
-            v[P.sunY],
-            Math.max(1e-3, v[P.glowRadius]),
-            v[P.glowStrength],
-          );
-          gl.uniform2f(cLoc.uDisc, Math.max(1e-3, v[P.discRadius]), v[P.discStrength]);
-        }
-        if (sizeDirty) {
-          sizeDirty = false;
-          const aspect = width / height;
-          gl.useProgram(target.program);
-          gl.uniform1f(cLoc.uAspect, aspect);
-          gl.useProgram(program);
-          gl.uniform1f(loc.uAspect, aspect);
-        }
-
-        // Cloud pass, into the low-res target.
-        gl.useProgram(program);
-        if (p.coverage !== lastCoverage) {
-          lastCoverage = p.coverage;
-          gl.uniform1f(loc.uThreshold, coverageThreshold(p.coverage));
-        }
-        if (layers !== lastLayers) {
-          lastLayers = layers;
-          gl.uniform1i(loc.uLayers, layers);
-        }
-        layerUniforms(offA, detail, layerP, 0, 0, driftNear, evolve, freq, OPACITY[0]);
-        layerUniforms(
-          offA,
-          detail,
-          layerP,
-          LAYER_FLOATS,
-          1,
-          driftFar,
-          evolve,
-          freq * FAR_FREQ,
-          OPACITY[1],
-        );
-        gl.uniform4fv(loc.uOffA, offA);
-        gl.uniform4fv(loc.uDetail, detail);
-        gl.uniform4fv(loc.uLayerP, layerP);
-        target.bind();
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, noiseTex);
-        triangle.draw();
-
-        // Composite: sky + glow, then the upscaled clouds, to the canvas.
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        target.blit();
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteTexture(noiseTex);
-        triangle.dispose();
-        target.dispose();
-      },
-    };
   },
 });

@@ -6,6 +6,7 @@ import {
   FULLSCREEN_VERTEX,
   getUniforms,
   resetUnpackState,
+  withScope,
 } from "./gl";
 import { createRng } from "./noise";
 import { defineEffect } from "./types";
@@ -274,207 +275,215 @@ export const lavalamp = defineEffect({
   },
   context: "webgl2",
   create(gl) {
-    const program = createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT);
-    let maskProgram: WebGLProgram;
-    try {
-      maskProgram = createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT);
-    } catch (err) {
-      gl.deleteProgram(program);
-      throw err;
-    }
-    const triangle = createFullscreenTriangle(gl);
-    const fieldNames = ["uResolution", "uScale", "uBlobs", "uBlobR2", "uCount", "uPoolR2"] as const;
-    const loc = getUniforms(gl, program, [
-      ...fieldNames,
-      "uMask",
-      "uInvLampW",
-      "uPoolPhase",
-      "uWaxTop",
-      "uWaxBottom",
-      "uBgTop",
-      "uBgBottom",
-      "uGlow",
-      "uSoftness",
-    ]);
-    const maskLoc = getUniforms(gl, maskProgram, [...fieldNames, "uBgLimit", "uCoreLimit"]);
-    // Uniforms persist with their program even in a shared context, so the ones
-    // that only change with resize or params are uploaded only when they change.
-    gl.useProgram(program);
-    gl.uniform1i(loc.uMask, 0);
+    return withScope((scope) => {
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const maskProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) =>
+        gl.deleteProgram(p),
+      );
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const fieldNames = [
+        "uResolution",
+        "uScale",
+        "uBlobs",
+        "uBlobR2",
+        "uCount",
+        "uPoolR2",
+      ] as const;
+      const loc = getUniforms(gl, program, [
+        ...fieldNames,
+        "uMask",
+        "uInvLampW",
+        "uPoolPhase",
+        "uWaxTop",
+        "uWaxBottom",
+        "uBgTop",
+        "uBgBottom",
+        "uGlow",
+        "uSoftness",
+      ]);
+      const maskLoc = getUniforms(gl, maskProgram, [...fieldNames, "uBgLimit", "uCoreLimit"]);
+      // Uniforms persist with their program even in a shared context, so the ones
+      // that only change with resize or params are uploaded only when they change.
+      gl.useProgram(program);
+      gl.uniform1i(loc.uMask, 0);
 
-    // One R8 texel per tile; storage is (re)allocated when the tile grid changes.
-    const maskTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, maskTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    const maskFbo = gl.createFramebuffer();
-    let maskW = 0;
-    let maskH = 0;
+      // One R8 texel per tile; storage is (re)allocated when the tile grid changes.
+      const maskTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      gl.bindTexture(gl.TEXTURE_2D, maskTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      const maskFbo = scope.add(gl.createFramebuffer(), (f) => gl.deleteFramebuffer(f));
+      let maskW = 0;
+      let maskH = 0;
 
-    let width = 1;
-    let height = 1;
-    let sizeDirty = true;
-    let seedKey = NaN;
-    let blobs: Blob[] = [];
-    /** Lamp seconds (scaled by speed), kept in float64; only derived values reach the GPU. */
-    let time = 0;
-    const blobData = new Float32Array(MAX_BLOBS * 4);
-    const blobR2 = new Float32Array(MAX_BLOBS);
-    let lastSize = NaN;
-    let lastGlow = NaN;
-    let lastSoftness = NaN;
-    let lastWaxTop = "";
-    let lastWaxBottom = "";
-    let lastBgTop = "";
-    let lastBgBottom = "";
+      let width = 1;
+      let height = 1;
+      let sizeDirty = true;
+      let seedKey = NaN;
+      let blobs: Blob[] = [];
+      /** Lamp seconds (scaled by speed), kept in float64; only derived values reach the GPU. */
+      let time = 0;
+      const blobData = new Float32Array(MAX_BLOBS * 4);
+      const blobR2 = new Float32Array(MAX_BLOBS);
+      let lastSize = NaN;
+      let lastGlow = NaN;
+      let lastSoftness = NaN;
+      let lastWaxTop = "";
+      let lastWaxBottom = "";
+      let lastBgTop = "";
+      let lastBgBottom = "";
 
-    // Per-frame values read by uploadField.
-    let sizeChanged = true;
-    let sizeParamChanged = true;
-    let scaleX = 1;
-    let scaleY = 1;
-    let poolR2 = 0;
-    let count = 1;
-    /** Uploads the field uniforms shared by both programs. */
-    const uploadField = (l: Record<(typeof fieldNames)[number], WebGLUniformLocation | null>) => {
-      if (sizeChanged) {
-        gl.uniform2f(l.uResolution, width, height);
-        gl.uniform2f(l.uScale, scaleX, scaleY);
-      }
-      if (sizeParamChanged) gl.uniform1f(l.uPoolR2, poolR2);
-      gl.uniform4fv(l.uBlobs, blobData);
-      gl.uniform1fv(l.uBlobR2, blobR2);
-      gl.uniform1i(l.uCount, count);
-    };
-
-    return {
-      resize(v) {
-        width = v.width;
-        height = v.height;
-        sizeDirty = true;
-      },
-      frame(dt, p) {
-        beginFrame(gl, width, height);
-        time += dt * p.speed;
-        if (p.seed !== seedKey) {
-          seedKey = p.seed;
-          blobs = makeBlobs(p.seed);
+      // Per-frame values read by uploadField.
+      let sizeChanged = true;
+      let sizeParamChanged = true;
+      let scaleX = 1;
+      let scaleY = 1;
+      let poolR2 = 0;
+      let count = 1;
+      /** Uploads the field uniforms shared by both programs. */
+      const uploadField = (l: Record<(typeof fieldNames)[number], WebGLUniformLocation | null>) => {
+        if (sizeChanged) {
+          gl.uniform2f(l.uResolution, width, height);
+          gl.uniform2f(l.uScale, scaleX, scaleY);
         }
+        if (sizeParamChanged) gl.uniform1f(l.uPoolR2, poolR2);
+        gl.uniform4fv(l.uBlobs, blobData);
+        gl.uniform1fv(l.uBlobR2, blobR2);
+        gl.uniform1i(l.uCount, count);
+      };
 
-        const lampW = Math.max(
-          1,
-          Math.min(REF_H * MAX_ASPECT, (REF_H * width) / Math.max(1, height)),
-        );
-        const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.count)));
-        const baseR = BASE_RADIUS * p.size * REF_H;
-        for (let i = 0; i < n; i++) {
-          const b = blobs[i];
-          const r = baseR * b.size * (1 + 0.12 * Math.sin(time * b.wr + b.pr));
-          // Stay inside the frame horizontally; vertical travel may poke past the edges.
-          const wander = 0.09 * Math.sin(time * b.w1 + b.p1) + 0.04 * Math.sin(time * b.w2 + b.p2);
-          const margin = Math.min(r, lampW / 2);
-          const vel = Math.abs(blobY(b, time + 0.25) - blobY(b, time - 0.25)) * 2;
-          const cx = margin + (b.baseX + wander) * (lampW - 2 * margin);
-          const cy = blobY(b, time) * REF_H;
-          // Moving wax stretches along its travel, keeping its area: the term is
-          // r² / (dx² s + dy² / s + EPS), i.e. offsets pre-scaled by (√s, 1/√s).
-          const qx = Math.sqrt(1 + Math.min(0.35, vel * 4));
-          const qy = 1 / qx;
-          const o = i * 4;
-          blobData[o] = qx;
-          blobData[o + 1] = qy;
-          blobData[o + 2] = -cx * qx;
-          blobData[o + 3] = -cy * qy;
-          blobR2[i] = r * r;
-        }
+      return {
+        resize(v) {
+          width = v.width;
+          height = v.height;
+          sizeDirty = true;
+        },
+        frame(dt, p) {
+          beginFrame(gl, width, height);
+          time += dt * p.speed;
+          if (p.seed !== seedKey) {
+            seedKey = p.seed;
+            blobs = makeBlobs(p.seed);
+          }
 
-        // Tile classification pass, into the mask texture.
-        const tw = (width + TILE - 1) >> TILE_SHIFT;
-        const th = (height + TILE - 1) >> TILE_SHIFT;
-        if (tw !== maskW || th !== maskH) {
-          maskW = tw;
-          maskH = th;
-          gl.bindTexture(gl.TEXTURE_2D, maskTex);
-          resetUnpackState(gl);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tw, th, 0, gl.RED, gl.UNSIGNED_BYTE, null);
-          gl.bindTexture(gl.TEXTURE_2D, null);
-          gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
-          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, maskTex, 0);
-        }
-        sizeChanged = sizeDirty;
-        sizeDirty = false;
-        scaleX = lampW / Math.max(1, width);
-        scaleY = REF_H / Math.max(1, height);
-        sizeParamChanged = p.size !== lastSize;
-        lastSize = p.size;
-        const poolR = 0.05 * Math.sqrt(p.size) * REF_H;
-        poolR2 = poolR * poolR;
-        count = n;
-        const softChanged = p.softness !== lastSoftness;
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
-        gl.viewport(0, 0, tw, th);
-        gl.useProgram(maskProgram);
-        uploadField(maskLoc);
-        if (softChanged) {
-          // A pixel is pure background once both the halo (from 0.38) and the edge
-          // (from 1 - softness) are zero, and pure core once the edge, rim shade and
-          // core lift have all saturated. 1% margins absorb float rounding in the bounds.
-          gl.uniform1f(maskLoc.uBgLimit, 0.99 * Math.min(0.38, THRESHOLD - p.softness));
-          gl.uniform1f(
-            maskLoc.uCoreLimit,
-            1.01 * Math.max(THRESHOLD + 2.6, THRESHOLD + p.softness),
+          const lampW = Math.max(
+            1,
+            Math.min(REF_H * MAX_ASPECT, (REF_H * width) / Math.max(1, height)),
           );
-        }
-        triangle.draw();
+          const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.count)));
+          const baseR = BASE_RADIUS * p.size * REF_H;
+          for (let i = 0; i < n; i++) {
+            const b = blobs[i];
+            const r = baseR * b.size * (1 + 0.12 * Math.sin(time * b.wr + b.pr));
+            // Stay inside the frame horizontally; vertical travel may poke past the edges.
+            const wander =
+              0.09 * Math.sin(time * b.w1 + b.p1) + 0.04 * Math.sin(time * b.w2 + b.p2);
+            const margin = Math.min(r, lampW / 2);
+            const vel = Math.abs(blobY(b, time + 0.25) - blobY(b, time - 0.25)) * 2;
+            const cx = margin + (b.baseX + wander) * (lampW - 2 * margin);
+            const cy = blobY(b, time) * REF_H;
+            // Moving wax stretches along its travel, keeping its area: the term is
+            // r² / (dx² s + dy² / s + EPS), i.e. offsets pre-scaled by (√s, 1/√s).
+            const qx = Math.sqrt(1 + Math.min(0.35, vel * 4));
+            const qy = 1 / qx;
+            const o = i * 4;
+            blobData[o] = qx;
+            blobData[o + 1] = qy;
+            blobData[o + 2] = -cx * qx;
+            blobData[o + 3] = -cy * qy;
+            blobR2[i] = r * r;
+          }
 
-        // Main pass, into the default framebuffer.
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, width, height);
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, maskTex);
-        uploadField(loc);
-        if (sizeChanged) gl.uniform1f(loc.uInvLampW, 1 / lampW);
-        gl.uniform2f(loc.uPoolPhase, wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));
-        if (softChanged) {
-          lastSoftness = p.softness;
-          gl.uniform1f(loc.uSoftness, p.softness);
-        }
-        if (p.glow !== lastGlow) {
-          lastGlow = p.glow;
-          gl.uniform1f(loc.uGlow, p.glow);
-        }
-        if (p.colorTop !== lastWaxTop) {
-          lastWaxTop = p.colorTop;
-          gl.uniform3fv(loc.uWaxTop, hexToUnitRgb(p.colorTop));
-        }
-        if (p.colorBottom !== lastWaxBottom) {
-          lastWaxBottom = p.colorBottom;
-          gl.uniform3fv(loc.uWaxBottom, hexToUnitRgb(p.colorBottom));
-        }
-        if (p.bgTop !== lastBgTop) {
-          lastBgTop = p.bgTop;
-          gl.uniform3fv(loc.uBgTop, hexToUnitRgb(p.bgTop));
-        }
-        if (p.bgBottom !== lastBgBottom) {
-          lastBgBottom = p.bgBottom;
-          gl.uniform3fv(loc.uBgBottom, hexToUnitRgb(p.bgBottom));
-        }
-        triangle.draw();
-        // Unbind the mask so it is never sampled while it is the render target.
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      },
-      dispose() {
-        gl.deleteProgram(program);
-        gl.deleteProgram(maskProgram);
-        gl.deleteFramebuffer(maskFbo);
-        gl.deleteTexture(maskTex);
-        triangle.dispose();
-      },
-    };
+          // Tile classification pass, into the mask texture.
+          const tw = (width + TILE - 1) >> TILE_SHIFT;
+          const th = (height + TILE - 1) >> TILE_SHIFT;
+          if (tw !== maskW || th !== maskH) {
+            maskW = tw;
+            maskH = th;
+            gl.bindTexture(gl.TEXTURE_2D, maskTex);
+            resetUnpackState(gl);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tw, th, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
+            gl.framebufferTexture2D(
+              gl.FRAMEBUFFER,
+              gl.COLOR_ATTACHMENT0,
+              gl.TEXTURE_2D,
+              maskTex,
+              0,
+            );
+          }
+          sizeChanged = sizeDirty;
+          sizeDirty = false;
+          scaleX = lampW / Math.max(1, width);
+          scaleY = REF_H / Math.max(1, height);
+          sizeParamChanged = p.size !== lastSize;
+          lastSize = p.size;
+          const poolR = 0.05 * Math.sqrt(p.size) * REF_H;
+          poolR2 = poolR * poolR;
+          count = n;
+          const softChanged = p.softness !== lastSoftness;
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
+          gl.viewport(0, 0, tw, th);
+          gl.useProgram(maskProgram);
+          uploadField(maskLoc);
+          if (softChanged) {
+            // A pixel is pure background once both the halo (from 0.38) and the edge
+            // (from 1 - softness) are zero, and pure core once the edge, rim shade and
+            // core lift have all saturated. 1% margins absorb float rounding in the bounds.
+            gl.uniform1f(maskLoc.uBgLimit, 0.99 * Math.min(0.38, THRESHOLD - p.softness));
+            gl.uniform1f(
+              maskLoc.uCoreLimit,
+              1.01 * Math.max(THRESHOLD + 2.6, THRESHOLD + p.softness),
+            );
+          }
+          triangle.draw();
+
+          // Main pass, into the default framebuffer.
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, width, height);
+          gl.useProgram(program);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, maskTex);
+          uploadField(loc);
+          if (sizeChanged) gl.uniform1f(loc.uInvLampW, 1 / lampW);
+          gl.uniform2f(loc.uPoolPhase, wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));
+          if (softChanged) {
+            lastSoftness = p.softness;
+            gl.uniform1f(loc.uSoftness, p.softness);
+          }
+          if (p.glow !== lastGlow) {
+            lastGlow = p.glow;
+            gl.uniform1f(loc.uGlow, p.glow);
+          }
+          if (p.colorTop !== lastWaxTop) {
+            lastWaxTop = p.colorTop;
+            gl.uniform3fv(loc.uWaxTop, hexToUnitRgb(p.colorTop));
+          }
+          if (p.colorBottom !== lastWaxBottom) {
+            lastWaxBottom = p.colorBottom;
+            gl.uniform3fv(loc.uWaxBottom, hexToUnitRgb(p.colorBottom));
+          }
+          if (p.bgTop !== lastBgTop) {
+            lastBgTop = p.bgTop;
+            gl.uniform3fv(loc.uBgTop, hexToUnitRgb(p.bgTop));
+          }
+          if (p.bgBottom !== lastBgBottom) {
+            lastBgBottom = p.bgBottom;
+            gl.uniform3fv(loc.uBgBottom, hexToUnitRgb(p.bgBottom));
+          }
+          triangle.draw();
+          // Unbind the mask so it is never sampled while it is the render target.
+          gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        dispose: () => scope.dispose(),
+      };
+    });
   },
 });
