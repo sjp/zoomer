@@ -99,6 +99,40 @@ export function fillRayTable(out: Float32Array, rays: readonly Ray[], time: numb
   for (let j = 0; j < n; j++) if (out[j] > 1) out[j] = 1;
 }
 
+/** Second layer: larger cells, rotated, so the two tilings never line up. */
+export const LAYER_B_SCALE = 1.6;
+export const LAYER_B_ANGLE = 0.7;
+/** Deep water: cells squashed vertically, as if seen at a glancing angle. */
+export const DEEP_SQUASH = 0.55;
+
+/**
+ * Writes the column-major mat2 uniforms (`[m00, m10, m01, m11]`) that map device
+ * pixels to tile units for the two caustic layers, for a tile period of `tilePx`
+ * device pixels: layer A unrotated, layer B LAYER_B_SCALE times larger and
+ * rotated by LAYER_B_ANGLE. In deep water both squash cells vertically by
+ * DEEP_SQUASH (y is stretched before B's rotation, as a glancing view would).
+ */
+export function tileMatrices(
+  tilePx: number,
+  deep: boolean,
+  matA: Float32Array,
+  matB: Float32Array,
+): void {
+  const ia = 1 / tilePx;
+  const sy = deep ? 1 / DEEP_SQUASH : 1;
+  matA[0] = ia;
+  matA[1] = 0;
+  matA[2] = 0;
+  matA[3] = ia * sy;
+  const ib = 1 / (tilePx * LAYER_B_SCALE);
+  const cs = Math.cos(LAYER_B_ANGLE) * ib;
+  const sn = Math.sin(LAYER_B_ANGLE) * ib;
+  matB[0] = cs;
+  matB[1] = sn;
+  matB[2] = -sn * sy;
+  matB[3] = cs * sy;
+}
+
 /** Bubble radius range in reference px (1080p). */
 export const BUBBLE_MIN_R = 2.5;
 export const BUBBLE_MAX_R = 10;
@@ -192,6 +226,11 @@ export function stepBubbles(
     }
     stepLife(s.life, i, target, fadeStep, outStep);
   }
+}
+
+/** Scales every bubble's x by `k`, keeping bubbles in place relative to a resized width. */
+export function rescaleBubbles(s: BubbleState, k: number): void {
+  for (let i = 0; i < s.x.length; i++) s.x[i] *= k;
 }
 
 /** Drawn x of bubble `i` at `time`: a gentle side-to-side wobble about its track. */

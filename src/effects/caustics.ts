@@ -2,6 +2,8 @@ import { hexToUnitRgb } from "./color";
 import {
   advancePhases,
   bubbleX,
+  rescaleBubbles,
+  tileMatrices,
   CAUSTIC_RATES,
   createBubbleState,
   createRays,
@@ -32,11 +34,6 @@ import { growLive, trimLive } from "./fade";
 
 /** On-screen size of one caustic tile period in reference px at scale 1. */
 const TILE_REF_PX = 900;
-/** Second layer: larger cells, rotated, so the two tilings never line up. */
-const LAYER_B_SCALE = 1.6;
-const LAYER_B_ANGLE = 0.7;
-/** Deep water: cells squashed vertically, as if seen at a glancing angle. */
-const DEEP_SQUASH = 0.55;
 /** Pool tile grid pitch and grout half-width in reference px. */
 const GRID_REF_PX = 150;
 const GROUT_REF_PX = 1.2;
@@ -376,20 +373,7 @@ export const caustics = defineEffect({
         const deep = p.scene === "deep";
         const tilePx = TILE_REF_PX * Math.max(0.1, p.scale) * vpScale;
         ensureTile(tileResolution(tilePx));
-        // mat2 uniforms are column-major: [m00, m10, m01, m11].
-        const ia = 1 / tilePx;
-        matA[0] = ia;
-        matA[1] = 0;
-        matA[2] = 0;
-        matA[3] = deep ? ia / DEEP_SQUASH : ia;
-        const ib = 1 / (tilePx * LAYER_B_SCALE);
-        const cs = Math.cos(LAYER_B_ANGLE) * ib;
-        const sn = Math.sin(LAYER_B_ANGLE) * ib;
-        const sy = deep ? 1 / DEEP_SQUASH : 1;
-        matB[0] = cs;
-        matB[1] = sn;
-        matB[2] = -sn * sy;
-        matB[3] = cs * sy;
+        tileMatrices(tilePx, deep, matA, matB);
         const ch = Math.max(0, p.chromatic) * CHROMA_TILE;
         chroma[0] = ch;
         chroma[1] = ch * 0.6;
@@ -419,7 +403,7 @@ export const caustics = defineEffect({
         resize(v) {
           const newRefWidth = v.width / v.scale;
           const s = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_BUBBLES; i++) bubbles.x[i] *= s;
+          rescaleBubbles(bubbles, s);
           refWidth = newRefWidth;
           width = v.width;
           height = v.height;

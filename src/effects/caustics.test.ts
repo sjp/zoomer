@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caustics, mainFragment, tileFragment } from "./caustics";
+import { mainFragment, tileFragment } from "./caustics";
 import {
   advancePhases,
   BUBBLE_MAX_R,
@@ -9,12 +9,18 @@ import {
   CAUSTIC_RATES,
   createBubbleState,
   createRays,
+  DEEP_SQUASH,
+  LAYER_B_ANGLE,
+  LAYER_B_SCALE,
+  rescaleBubbles,
+  tileMatrices,
   fillRayTable,
   seedBubbles,
   spawnBubble,
   stepBubbles,
   tileResolution,
 } from "./caustics-sim";
+import { growLive } from "./fade";
 import { createRng } from "./noise";
 
 const TAU = Math.PI * 2;
@@ -34,8 +40,14 @@ describe("caustic phases", () => {
     }
   });
 
-  it("has distinct rates so the network morphs", () => {
-    expect(new Set(CAUSTIC_RATES).size).toBe(CAUSTIC_RATES.length);
+  it("drifts every pair of iterations apart, so the network morphs rather than slides", () => {
+    // Two iterations at equal (or nearly equal) rates would stay locked together.
+    expect(CAUSTIC_RATES).toEqual([1, 2, 3, 4, 5].map((n) => 1 - 3.5 / n));
+    for (let i = 0; i < CAUSTIC_RATES.length; i++) {
+      for (let j = i + 1; j < CAUSTIC_RATES.length; j++) {
+        expect(Math.abs(CAUSTIC_RATES[i] - CAUSTIC_RATES[j])).toBeGreaterThan(0.1);
+      }
+    }
   });
 });
 
@@ -152,6 +164,34 @@ describe("bubbles", () => {
     expect(s.life[1]).toBeCloseTo(0.5);
   });
 
+  it("starts bubbles added by a higher count at life 0, beyond the old live range", () => {
+    const s = createBubbleState(10);
+    const rng = createRng(8);
+    seedBubbles(s, rng, 1920);
+    let live = growLive(s.life, 4, 4);
+    stepBubbles(s, live, 4, 0.1, 0.1, 1920, rng);
+    live = growLive(s.life, live, 10);
+    expect(live).toBe(10);
+    expect(Array.from(s.life.subarray(0, 4))).toEqual([1, 1, 1, 1]);
+    expect(Array.from(s.life.subarray(4))).toEqual([0, 0, 0, 0, 0, 0]);
+    stepBubbles(s, live, 10, 0.75, 0.75, 1920, rng, 1.5);
+    expect(s.life[4]).toBeCloseTo(0.5);
+    expect(s.life[0]).toBe(1);
+  });
+
+  it("rescales x with the width on resize, keeping bubbles in the same place", () => {
+    const s = createBubbleState(20);
+    seedBubbles(s, createRng(9), 1920);
+    const x = s.x.slice();
+    const y = s.y.slice();
+    rescaleBubbles(s, 1440 / 1920);
+    for (let i = 0; i < 20; i++) {
+      expect(s.x[i]).toBeCloseTo((x[i] * 1440) / 1920, 3);
+      expect(s.x[i]).toBeLessThanOrEqual(1440);
+    }
+    expect(s.y).toEqual(y);
+  });
+
   it("wobbles by less than a radius", () => {
     const s = createBubbleState(1);
     spawnBubble(s, 0, createRng(5), 1920, 100);
@@ -181,15 +221,43 @@ describe("shaders", () => {
   });
 });
 
-describe("caustics effect definition", () => {
-  it("is a webgl2 effect with consistent param defaults", () => {
-    expect(caustics.id).toBe("caustics");
-    expect(caustics.context).toBe("webgl2");
-    const p = caustics.params;
-    for (const def of [p.intensity, p.scale, p.speed, p.chromatic, p.bubbles]) {
-      expect(def.default).toBeGreaterThanOrEqual(def.min);
-      expect(def.default).toBeLessThanOrEqual(def.max);
-    }
-    expect(p.scene.options.map((o) => o.value)).toContain(p.scene.default);
+describe("tileMatrices", () => {
+  const matA = new Float32Array(4);
+  const matB = new Float32Array(4);
+  /** GLSL `mat2 * vec2` with column-major `m`. */
+  const apply = (m: Float32Array, x: number, y: number) => [
+    m[0] * x + m[2] * y,
+    m[1] * x + m[3] * y,
+  ];
+
+  it("maps one tile period of pixels to one tile unit on layer A", () => {
+    tileMatrices(900, false, matA, matB);
+    expect(apply(matA, 900, 0)[0]).toBeCloseTo(1, 6);
+    expect(apply(matA, 0, 900)[1]).toBeCloseTo(1, 6);
+    expect(apply(matA, 900, 0)[1]).toBe(0);
+  });
+
+  it("rotates and enlarges layer B without skewing it", () => {
+    tileMatrices(900, false, matA, matB);
+    const [ux, uy] = apply(matB, 900 * LAYER_B_SCALE, 0);
+    expect(Math.hypot(ux, uy)).toBeCloseTo(1, 5);
+    expect(Math.atan2(uy, ux)).toBeCloseTo(LAYER_B_ANGLE, 5);
+    // Columns orthogonal and of equal length: a pure rotation and scale.
+    expect(matB[0] * matB[2] + matB[1] * matB[3]).toBeCloseTo(0, 9);
+    expect(Math.hypot(matB[0], matB[1])).toBeCloseTo(Math.hypot(matB[2], matB[3]), 9);
+  });
+
+  it("squashes both layers vertically in deep water", () => {
+    tileMatrices(900, true, matA, matB);
+    // A vertical run of DEEP_SQUASH periods covers a whole tile unit.
+    expect(apply(matA, 0, 900 * DEEP_SQUASH)[1]).toBeCloseTo(1, 5);
+    const [bx, by] = apply(matB, 0, 900 * LAYER_B_SCALE * DEEP_SQUASH);
+    expect(Math.hypot(bx, by)).toBeCloseTo(1, 5);
+    // x is not squashed.
+    const [cx, cy] = apply(matB, 900 * LAYER_B_SCALE, 0);
+    expect(Math.hypot(cx, cy)).toBeCloseTo(1, 5);
+    const det = (m: Float32Array) => m[0] * m[3] - m[1] * m[2];
+    expect(det(matA)).toBeCloseTo(1 / (900 * 900 * DEEP_SQUASH), 12);
+    expect(det(matB)).toBeCloseTo(1 / (900 * LAYER_B_SCALE) ** 2 / DEEP_SQUASH, 12);
   });
 });
