@@ -3,9 +3,11 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createRenderTarget,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
+  type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
@@ -220,11 +222,6 @@ vec4 composite(vec2 uv) {
 }
 `;
 
-interface Target {
-  tex: WebGLTexture;
-  fbo: WebGLFramebuffer;
-}
-
 /**
  * Looking through a rainy window at night: defocused city lights behind glass
  * covered in droplets. Larger drops break loose and run down, wiping the small
@@ -337,10 +334,10 @@ export const windowRain = defineEffect({
       const top: Rgb = [0, 0, 0];
       const fogTint: Rgb = [0, 0, 0];
 
-      let dropTarget: Target | null = null;
+      let dropTarget: RenderTarget | null = null;
       let dropW = 0;
       let dropH = 0;
-      let fogTargets: Target[] = [];
+      let fogTargets: RenderTarget[] = [];
       let fogCurrent = 0;
       let fogW = 0;
       let fogH = 0;
@@ -362,29 +359,15 @@ export const windowRain = defineEffect({
       let bgBack: Rgb | null = null;
       let lastBack: Rgb | null = null;
 
-      const makeTarget = (w: number, h: number, format: GLenum): Target => {
-        const tex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, format, w, h);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        const fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return { tex, fbo };
-      };
-      const deleteTarget = (t: Target | null) => {
-        if (!t) return;
-        gl.deleteTexture(t.tex);
-        gl.deleteFramebuffer(t.fbo);
+      const makeTarget = (w: number, h: number, format: GLenum): RenderTarget => {
+        const t = createRenderTarget(gl, w, h, format);
+        // R8 and RGBA8 are always colour-renderable in WebGL2.
+        if (!t) throw new Error("Window rain: render target is not renderable");
+        return t;
       };
       scope.defer(() => {
-        deleteTarget(dropTarget);
-        for (const t of fogTargets) deleteTarget(t);
+        dropTarget?.dispose();
+        for (const t of fogTargets) t.dispose();
       });
 
       /** The drop map is about 1080p whatever the canvas size. */
@@ -393,7 +376,8 @@ export const windowRain = defineEffect({
         const w = lowResSize(width, div);
         const h = lowResSize(height, div);
         if (dropTarget && w === dropW && h === dropH) return;
-        deleteTarget(dropTarget);
+        dropTarget?.dispose();
+        dropTarget = null;
         dropTarget = makeTarget(w, h, gl.RGBA8);
         dropW = w;
         dropH = h;
@@ -404,8 +388,11 @@ export const windowRain = defineEffect({
         const w = lowResSize(width, FOG_TEXEL * scale);
         const h = lowResSize(height, FOG_TEXEL * scale);
         if (fogTargets.length === 2 && w === fogW && h === fogH) return false;
-        for (const t of fogTargets) deleteTarget(t);
-        fogTargets = [makeTarget(w, h, gl.R8), makeTarget(w, h, gl.R8)];
+        for (const t of fogTargets) t.dispose();
+        fogTargets = [];
+        // One at a time, so a throw on the second still leaves the first disposable.
+        fogTargets.push(makeTarget(w, h, gl.R8));
+        fogTargets.push(makeTarget(w, h, gl.R8));
         fogW = w;
         fogH = h;
         return true;
@@ -504,7 +491,7 @@ export const windowRain = defineEffect({
           ensureDropTarget();
           const dt0 = dropTarget;
           if (!dt0) return;
-          gl.bindFramebuffer(gl.FRAMEBUFFER, dt0.fbo);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, dt0.framebuffer);
           gl.viewport(0, 0, dropW, dropH);
           gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
           gl.disable(gl.BLEND);
@@ -523,19 +510,19 @@ export const windowRain = defineEffect({
             const fresh = ensureFogTargets();
             if (fresh || !fogWasOn) {
               for (const t of fogTargets) {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
                 gl.clearBufferfv(gl.COLOR, 0, FOG_CLEAR);
               }
             }
             const src = fogTargets[fogCurrent];
             fogCurrent ^= 1;
             const dst = fogTargets[fogCurrent];
-            gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
             gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
             gl.viewport(0, 0, fogW, fogH);
             gl.useProgram(fogProgram);
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, src.tex);
+            gl.bindTexture(gl.TEXTURE_2D, src.texture);
             gl.uniform1f(fogLoc.uAdd, (255 * dt) / REFOG_SECONDS);
             gl.uniform1f(fogLoc.uDiffuse, Math.min(1, dt * FOG_DIFFUSE));
             gl.uniform1ui(fogLoc.uSeed, hash32(frameNo));
@@ -552,14 +539,14 @@ export const windowRain = defineEffect({
               gl.blendEquation(gl.FUNC_ADD);
               gl.disable(gl.BLEND);
             }
-            fogTex = dst.tex;
+            fogTex = dst.texture;
           }
           fogWasOn = p.fog;
 
           // 4. Composite to the canvas.
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, dt0.tex);
+          gl.bindTexture(gl.TEXTURE_2D, dt0.texture);
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, fogTex);
           gl.useProgram(target.program);

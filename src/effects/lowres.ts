@@ -32,8 +32,10 @@
 import {
   createFullscreenTriangle,
   createProgram,
+  createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
+  type RenderTarget,
   type Scope,
   withScope,
 } from "./gl";
@@ -77,8 +79,8 @@ export function lowResSize(size: number, divisor: number): number {
 
 export interface LowResTarget {
   /**
-   * Sets the full (canvas) size and divisor. Recreates the texture when the
-   * low-res size changes; no-op otherwise.
+   * Sets the full (canvas) size and divisor. Recreates the texture (cleared to
+   * black) when the low-res size changes; no-op otherwise.
    */
   resize(width: number, height: number, divisor: number): void;
   /** Binds the FBO and sets the viewport to the low-res size. Caller unbinds. */
@@ -100,7 +102,8 @@ export interface LowResTarget {
   /** Full (output) size passed to `resize`. */
   readonly fullWidth: number;
   readonly fullHeight: number;
-  readonly texture: WebGLTexture;
+  /** The low-res texture; null until the first `resize`. */
+  readonly texture: WebGLTexture | null;
   /** The blit program, for setting custom uniforms declared in `composite`. */
   readonly program: WebGLProgram;
   /** True if the texture is RGBA16F (requested and supported). */
@@ -177,41 +180,13 @@ function buildLowResTarget(
   const triangle = scope.own(createFullscreenTriangle(gl));
 
   let wantFloat = opts.format === "rgba16f" && gl.getExtension("EXT_color_buffer_float") !== null;
-  let texture: WebGLTexture = gl.createTexture();
-  // `allocate` replaces the texture, so delete whichever one is current.
-  scope.defer(() => gl.deleteTexture(texture));
-  const fbo = scope.add(gl.createFramebuffer(), (f) => gl.deleteFramebuffer(f));
-  let width = 0;
-  let height = 0;
+  /** Null only until the first `resize`. */
+  let rt: RenderTarget | null = null;
+  // `resize` replaces the target, so dispose whichever one is current.
+  scope.defer(() => rt?.dispose());
   let fullWidth = 1;
   let fullHeight = 1;
   let isFloat = false;
-
-  /** (Re)allocates texture storage at width x height; returns framebuffer completeness. */
-  const allocate = (float: boolean): boolean => {
-    gl.deleteTexture(texture);
-    texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, float ? gl.RGBA16F : gl.RGBA8, width, height);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-    if (ok) {
-      // Start from black rather than undefined contents.
-      gl.disable(gl.SCISSOR_TEST);
-      gl.colorMask(true, true, true, true);
-      gl.viewport(0, 0, width, height);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    return ok;
-  };
 
   const target: LowResTarget = {
     resize(w, h, divisor) {
@@ -219,35 +194,36 @@ function buildLowResTarget(
       fullHeight = Math.max(1, Math.floor(h));
       const lw = lowResSize(w, divisor);
       const lh = lowResSize(h, divisor);
-      if (lw === width && lh === height) return;
-      width = lw;
-      height = lh;
-      isFloat = wantFloat && allocate(true);
-      if (!isFloat) {
+      if (rt && lw === rt.width && lh === rt.height) return;
+      rt?.dispose();
+      rt = null;
+      if (wantFloat) {
+        rt = createRenderTarget(gl, lw, lh, gl.RGBA16F);
         // 16F not renderable after all: stop trying and use 8-bit from now on.
-        if (wantFloat) wantFloat = false;
-        allocate(false);
+        if (!rt) wantFloat = false;
       }
+      isFloat = rt !== null;
+      rt ??= createRenderTarget(gl, lw, lh, gl.RGBA8);
+      if (!rt) throw new Error("Low-res target: RGBA8 is not renderable");
       gl.useProgram(program);
-      gl.uniform2f(uSize, width, height);
+      gl.uniform2f(uSize, lw, lh);
     },
     bind() {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-      gl.viewport(0, 0, width, height);
+      rt?.bind();
     },
     blit(outWidth = fullWidth, outHeight = fullHeight) {
       gl.viewport(0, 0, outWidth, outHeight);
       gl.disable(gl.BLEND);
       gl.useProgram(program);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.bindTexture(gl.TEXTURE_2D, rt?.texture ?? null);
       triangle.draw();
     },
     get width() {
-      return width;
+      return rt?.width ?? 0;
     },
     get height() {
-      return height;
+      return rt?.height ?? 0;
     },
     get fullWidth() {
       return fullWidth;
@@ -256,7 +232,7 @@ function buildLowResTarget(
       return fullHeight;
     },
     get texture() {
-      return texture;
+      return rt?.texture ?? null;
     },
     get isFloat() {
       return isFloat;

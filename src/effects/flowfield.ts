@@ -3,8 +3,10 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createRenderTarget,
   FULLSCREEN_VERTEX,
   getUniforms,
+  type RenderTarget,
   withScope,
 } from "./gl";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "./noise";
@@ -153,11 +155,6 @@ void main() {
 }
 `;
 
-interface Target {
-  tex: WebGLTexture;
-  fbo: WebGLFramebuffer;
-}
-
 /**
  * Generative-art streams: thousands of particles drift along a slowly evolving
  * noise vector field and leave silky fading trails.
@@ -279,7 +276,7 @@ export const flowfield = defineEffect({
 
       /** 10-bit layers avoid 8-bit grain in long, faint trails at the same bandwidth. */
       let use10 = true;
-      let targets: Target[] = [];
+      let targets: RenderTarget[] = [];
       /** Index of the target holding the latest layer. */
       let current = 0;
       let targetW = 0;
@@ -311,35 +308,17 @@ export const flowfield = defineEffect({
       };
 
       const deleteTargets = () => {
-        for (const t of targets) {
-          gl.deleteFramebuffer(t.fbo);
-          gl.deleteTexture(t.tex);
-        }
+        for (const t of targets) t.dispose();
         targets = [];
       };
       scope.defer(deleteTargets);
 
-      const makeTarget = (tenBit: boolean): Target | null => {
-        const tex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, tenBit ? gl.RGB10_A2 : gl.RGBA8, width, height);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        const fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-        const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        if (ok) return { tex, fbo };
-        gl.deleteFramebuffer(fbo);
-        gl.deleteTexture(tex);
-        return null;
-      };
+      const makeTarget = (tenBit: boolean) =>
+        createRenderTarget(gl, width, height, tenBit ? gl.RGB10_A2 : gl.RGBA8, {
+          filter: gl.NEAREST,
+        });
 
-      /** (Re)creates both layer targets at the canvas size; they start uncleared. */
+      /** (Re)creates both layer targets at the canvas size; the next frame clears them. */
       const ensureTargets = () => {
         if (targets.length === 2 && targetW === width && targetH === height) return;
         deleteTargets();
@@ -401,7 +380,7 @@ export const flowfield = defineEffect({
           if (light !== lightMode) {
             lightMode = light;
             for (const t of targets) {
-              gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+              gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
               gl.clearBufferfv(gl.COLOR, 0, EMPTY);
             }
           }
@@ -411,11 +390,11 @@ export const flowfield = defineEffect({
           current ^= 1;
           const dst = targets[current];
           const tau = 0.1 * Math.pow(30, p.trail);
-          gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
           // Every pixel is overwritten below, so the old contents need not be loaded.
           gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
           gl.useProgram(fadeProgram);
-          gl.bindTexture(gl.TEXTURE_2D, src.tex);
+          gl.bindTexture(gl.TEXTURE_2D, src.texture);
           const keep = Math.exp(-dt / tau);
           const clean = Math.min(1, dt * CLEAN_RATE);
           const levels = use10 ? 1023 : 255;
@@ -499,7 +478,7 @@ export const flowfield = defineEffect({
           // Full repaint of the visible canvas: the layer composited over the background.
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.useProgram(compProgram);
-          gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+          gl.bindTexture(gl.TEXTURE_2D, dst.texture);
           gl.uniform3fv(compLoc.uBackground, bg);
           if (light) gl.uniform3f(compLoc.uLayerScale, -bg[0], -bg[1], -bg[2]);
           else gl.uniform3f(compLoc.uLayerScale, 1 - bg[0], 1 - bg[1], 1 - bg[2]);

@@ -3,10 +3,11 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
+  createRenderTarget,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
-  resetUnpackState,
+  type RenderTarget,
   withScope,
 } from "./gl";
 import { createRng } from "./noise";
@@ -308,16 +309,9 @@ export const lavalamp = defineEffect({
       gl.uniform1i(loc.uMask, 0);
 
       // One R8 texel per tile; storage is (re)allocated when the tile grid changes.
-      const maskTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
-      gl.bindTexture(gl.TEXTURE_2D, maskTex);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      const maskFbo = scope.add(gl.createFramebuffer(), (f) => gl.deleteFramebuffer(f));
-      let maskW = 0;
-      let maskH = 0;
+      let mask: RenderTarget | null = null;
+      // Replaced when the tile grid changes, so dispose whichever one is current.
+      scope.defer(() => mask?.dispose());
 
       let width = 1;
       let height = 1;
@@ -400,21 +394,11 @@ export const lavalamp = defineEffect({
           // Tile classification pass, into the mask texture.
           const tw = (width + TILE - 1) >> TILE_SHIFT;
           const th = (height + TILE - 1) >> TILE_SHIFT;
-          if (tw !== maskW || th !== maskH) {
-            maskW = tw;
-            maskH = th;
-            gl.bindTexture(gl.TEXTURE_2D, maskTex);
-            resetUnpackState(gl);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tw, th, 0, gl.RED, gl.UNSIGNED_BYTE, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
-            gl.framebufferTexture2D(
-              gl.FRAMEBUFFER,
-              gl.COLOR_ATTACHMENT0,
-              gl.TEXTURE_2D,
-              maskTex,
-              0,
-            );
+          if (!mask || tw !== mask.width || th !== mask.height) {
+            mask?.dispose();
+            mask = null;
+            mask = createRenderTarget(gl, tw, th, gl.R8, { filter: gl.NEAREST });
+            if (!mask) throw new Error("Lava lamp: R8 mask is not renderable");
           }
           sizeChanged = sizeDirty;
           sizeDirty = false;
@@ -427,8 +411,7 @@ export const lavalamp = defineEffect({
           count = n;
           const softChanged = p.softness !== lastSoftness;
 
-          gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
-          gl.viewport(0, 0, tw, th);
+          mask.bind();
           gl.useProgram(maskProgram);
           uploadField(maskLoc);
           if (softChanged) {
@@ -448,7 +431,7 @@ export const lavalamp = defineEffect({
           gl.viewport(0, 0, width, height);
           gl.useProgram(program);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, maskTex);
+          gl.bindTexture(gl.TEXTURE_2D, mask.texture);
           uploadField(loc);
           if (sizeChanged) gl.uniform1f(loc.uInvLampW, 1 / lampW);
           gl.uniform2f(loc.uPoolPhase, wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));

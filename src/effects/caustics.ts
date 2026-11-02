@@ -15,10 +15,12 @@ import {
   createColumnTable,
   createFullscreenTriangle,
   createProgram,
+  createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
+  type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
@@ -250,10 +252,9 @@ export const caustics = defineEffect({
         (p) => gl.deleteProgram(p),
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
-      const tileFbo = scope.add(gl.createFramebuffer(), (f) => gl.deleteFramebuffer(f));
-      let tileTex: WebGLTexture | null = null;
-      scope.defer(() => gl.deleteTexture(tileTex));
-      let tileRes = 0;
+      let tile: RenderTarget | null = null;
+      // `ensureTile` replaces the tile, so dispose whichever one is current.
+      scope.defer(() => tile?.dispose());
 
       // Four variants: [pool, deep] x [mono, chromatic]; index = deep * 2 + chromatic.
       const mains = [false, true].flatMap((deep) =>
@@ -325,20 +326,11 @@ export const caustics = defineEffect({
       };
 
       const ensureTile = (res: number) => {
-        if (res === tileRes && tileTex) return;
-        tileRes = res;
-        gl.deleteTexture(tileTex);
-        tileTex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, tileTex);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.R8, res, res);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, tileFbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tileTex, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (tile && res === tile.width) return;
+        tile?.dispose();
+        tile = null;
+        tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
+        if (!tile) throw new Error("Caustics: R8 tile is not renderable");
         tileDirty = true;
       };
 
@@ -442,8 +434,7 @@ export const caustics = defineEffect({
           if (tileDirty || (sdt > 0 && tileAge >= TILE_INTERVAL * 0.9)) {
             tileAge = 0;
             tileDirty = false;
-            gl.bindFramebuffer(gl.FRAMEBUFFER, tileFbo);
-            gl.viewport(0, 0, tileRes, tileRes);
+            tile?.bind();
             gl.useProgram(tileProgram);
             gl.uniform1fv(uT, phases);
             triangle.draw();
@@ -459,7 +450,7 @@ export const caustics = defineEffect({
             rayTable.upload();
           }
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, tileTex);
+          gl.bindTexture(gl.TEXTURE_2D, tile?.texture ?? null);
 
           // 3. Full-screen composite.
           const main = mains[(deep ? 2 : 0) + (p.chromatic > 0 ? 1 : 0)];

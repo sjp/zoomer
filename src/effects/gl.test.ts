@@ -3,6 +3,7 @@ import {
   beginFrame,
   columnTableFormat,
   createColumnTable,
+  createRenderTarget,
   createScope,
   glslFloat,
   withScope,
@@ -171,7 +172,7 @@ describe("glslFloat", () => {
 });
 
 /** A fake context that records every call by name, for the texture helpers. */
-function recordingGl() {
+function recordingGl(overrides: Record<string, unknown> = {}) {
   const calls: { name: string; args: unknown[] }[] = [];
   const enums: Record<string, number> = {
     TEXTURE_2D: 1,
@@ -189,6 +190,7 @@ function recordingGl() {
   const texture = { id: "tex" };
   const gl = new Proxy(enums, {
     get(target, key: string) {
+      if (key in overrides) return overrides[key];
       if (key in target) return target[key];
       if (key === "createTexture") return () => texture;
       // Any other enum the helpers read (unpack state and so on) is just a number.
@@ -254,5 +256,45 @@ describe("createColumnTable", () => {
     expect(() => createColumnTable(gl, 3, 2, { data: new Float32Array(5) })).toThrow(
       "needs 6 floats",
     );
+  });
+});
+
+describe("createRenderTarget", () => {
+  const COMPLETE = 0x8cd5;
+  const fbo = { id: "fbo" };
+  const make = (status: number, lost = false) =>
+    recordingGl({
+      FRAMEBUFFER_COMPLETE: COMPLETE,
+      createFramebuffer: () => fbo,
+      checkFramebufferStatus: () => status,
+      isContextLost: () => lost,
+    });
+
+  it("returns a cleared target of the requested size when complete", () => {
+    const { gl, calls, texture } = make(COMPLETE);
+    const t = createRenderTarget(gl, 64, 32, 7)!;
+    expect(t).not.toBeNull();
+    expect([t.width, t.height, t.texture, t.framebuffer]).toEqual([64, 32, texture, fbo]);
+    expect(calls.find((c) => c.name === "texStorage2D")!.args.slice(1)).toEqual([1, 7, 64, 32]);
+    expect(calls.some((c) => c.name === "clear")).toBe(true);
+    // Leaves the default framebuffer bound.
+    expect(calls.findLast((c) => c.name === "bindFramebuffer")!.args[1]).toBeNull();
+
+    calls.length = 0;
+    t.dispose();
+    expect(calls.map((c) => c.name).sort()).toEqual(["deleteFramebuffer", "deleteTexture"]);
+  });
+
+  it("deletes everything and returns null when the format isn't renderable", () => {
+    const { gl, calls } = make(0);
+    expect(createRenderTarget(gl, 4, 4, 7)).toBeNull();
+    expect(calls.some((c) => c.name === "deleteTexture")).toBe(true);
+    expect(calls.some((c) => c.name === "deleteFramebuffer")).toBe(true);
+    expect(calls.some((c) => c.name === "clear")).toBe(false);
+  });
+
+  it("doesn't blame the format for a lost context", () => {
+    const { gl } = make(0, true);
+    expect(createRenderTarget(gl, 4, 4, 7)).not.toBeNull();
   });
 });

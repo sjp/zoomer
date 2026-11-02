@@ -408,3 +408,81 @@ export function createColumnTable(
     dispose: () => gl.deleteTexture(texture),
   };
 }
+
+export interface RenderTargetOptions {
+  /** Defaults to `gl.LINEAR`. */
+  filter?: GLenum;
+  /** Defaults to `gl.CLAMP_TO_EDGE`. */
+  wrap?: GLenum;
+}
+
+/** A texture with immutable storage and a framebuffer that renders into it. */
+export interface RenderTarget {
+  readonly texture: WebGLTexture;
+  readonly framebuffer: WebGLFramebuffer;
+  readonly width: number;
+  readonly height: number;
+  /** Binds the framebuffer and sets the viewport to cover it. Caller unbinds. */
+  bind(): void;
+  dispose(): void;
+}
+
+/**
+ * Creates a `width` x `height` texture of `internalFormat` (e.g. `gl.RGBA8`, `gl.R8`)
+ * attached to a new framebuffer, cleared to transparent black. Returns null, having
+ * deleted both, if the format isn't renderable here (e.g. `RGBA16F` without
+ * `EXT_color_buffer_float`), so callers can fall back to another format.
+ * Leaves the default framebuffer bound; the clear changes the viewport, clear
+ * colour, scissor test and colour mask, which `beginFrame` resets anyway.
+ */
+export function createRenderTarget(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number,
+  internalFormat: GLenum,
+  options: RenderTargetOptions = {},
+): RenderTarget | null {
+  const filter = options.filter ?? gl.LINEAR;
+  const wrap = options.wrap ?? gl.CLAMP_TO_EDGE;
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  const framebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  if (complete) {
+    // Start from known contents rather than whatever the driver hands out.
+    gl.disable(gl.SCISSOR_TEST);
+    gl.colorMask(true, true, true, true);
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  const dispose = () => {
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(texture);
+  };
+  // A lost context reports every framebuffer incomplete; that isn't the format's fault.
+  if (!complete && !gl.isContextLost()) {
+    dispose();
+    return null;
+  }
+  return {
+    texture,
+    framebuffer,
+    width,
+    height,
+    bind() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.viewport(0, 0, width, height);
+    },
+    dispose,
+  };
+}
