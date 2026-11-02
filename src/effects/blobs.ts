@@ -5,6 +5,7 @@ import {
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
+  glslFloat,
   withScope,
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor, type LowResTarget } from "./lowres";
@@ -222,8 +223,8 @@ uniform int uCount;
 out vec4 outColor;
 
 const int MAX_BLOBS = ${MAX_BLOBS};
-const float BASE_WEIGHT = ${BASE_WEIGHT.toFixed(3)};
-const float INV_GAMMA = ${(1 / GAMMA).toFixed(6)};
+const float BASE_WEIGHT = ${glslFloat(BASE_WEIGHT)};
+const float INV_GAMMA = ${glslFloat(1 / GAMMA)};
 
 void main() {
   vec2 p = gl_FragCoord.xy * uToUnits;
