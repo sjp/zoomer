@@ -12,6 +12,7 @@ import { defineEffect } from "./types";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { smoothstep } from "./math";
 import { unitRgbMemo } from "./color";
+import { createJump } from "./hyperspace-sim";
 
 const MAX_STREAKS = 3000;
 /** Seconds a streak added by a higher count takes to fade in. */
@@ -161,10 +162,7 @@ export const hyperspace = defineEffect({
       let width = 1;
       let height = 1;
       let scale = 1;
-      let cycleTime = 0;
-      /** Linear jump progress: 0 = normal space, 1 = full hyperspace. */
-      let progress = -1;
-      let flashLevel = 0;
+      const jumpCycle = createJump();
 
       const spawn = (i: number, d: number) => {
         const angle = Math.random() * Math.PI * 2;
@@ -176,34 +174,15 @@ export const hyperspace = defineEffect({
       };
       for (let i = 0; i < MAX_STREAKS; i++) spawn(i, Math.random());
 
-      /** Whether the effect should currently be heading into hyperspace. */
-      const wantHyperspace = (mode: string, cycleSeconds: number) => {
-        if (mode === "in") return true;
-        if (mode === "out") return false;
-        // Auto cycle: normal space for the first quarter, hyperspace for the next 60%.
-        const phase = (cycleTime % cycleSeconds) / cycleSeconds;
-        return phase >= 0.25 && phase < 0.85;
-      };
-
       return {
         resize(v) {
           ({ width, height, scale } = v);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          cycleTime += dt;
-          const target = wantHyperspace(p.mode, p.cycleSeconds) ? 1 : 0;
-          // The first frame starts in its target state rather than jumping into it.
-          if (progress < 0) progress = target;
-          const before = progress;
-          const stepSize = dt / p.jumpSeconds;
-          progress =
-            target > progress ? Math.min(1, progress + stepSize) : Math.max(0, progress - stepSize);
-          // Flash as the jump in reaches full speed.
-          if (before < 0.9 && progress >= 0.9) flashLevel = 1;
-          flashLevel = Math.max(0, flashLevel - dt / 0.35);
-          const jump = smoothstep(0, 1, progress);
-          const flash = flashLevel;
+          jumpCycle.step(dt, p.mode, p.jumpSeconds, p.cycleSeconds);
+          const jump = smoothstep(0, 1, jumpCycle.progress);
+          const flash = jumpCycle.flash;
 
           const cx = width / 2;
           const cy = height / 2;
