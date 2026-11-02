@@ -1,12 +1,13 @@
 import {
   beginFrame,
+  createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
-  resetUnpackState,
+  updateDataTexture,
   withScope,
 } from "./gl";
 import {
@@ -287,19 +288,7 @@ export const fireplace = defineEffect({
         }),
         (t) => gl.deleteTexture(t),
       );
-      const profileData = new Float32Array(HEARTH_PROFILE_COLUMNS);
-      const profileTex = scope.add(
-        createDataTexture(gl, {
-          width: HEARTH_PROFILE_COLUMNS,
-          height: 1,
-          // R16F is filterable in core WebGL2 and accepts FLOAT data.
-          internalFormat: gl.R16F,
-          format: gl.RED,
-          type: gl.FLOAT,
-          data: profileData,
-        }),
-        (t) => gl.deleteTexture(t),
-      );
+      const profile = scope.own(createColumnTable(gl, HEARTH_PROFILE_COLUMNS, 1));
 
       const bgColor = unitRgbMemo();
       const flickerNoise = createNoise(0xf1a3);
@@ -377,20 +366,8 @@ export const fireplace = defineEffect({
         gl.uniform2f(em.uInvResolution, 1 / width, 1 / height);
 
         if (logs) {
-          buildHearthProfile(profileData, refWidth, layout);
-          gl.bindTexture(gl.TEXTURE_2D, profileTex);
-          resetUnpackState(gl);
-          gl.texSubImage2D(
-            gl.TEXTURE_2D,
-            0,
-            0,
-            0,
-            HEARTH_PROFILE_COLUMNS,
-            1,
-            gl.RED,
-            gl.FLOAT,
-            profileData,
-          );
+          buildHearthProfile(profile.data, refWidth, layout);
+          profile.upload();
           gl.bindTexture(gl.TEXTURE_2D, null);
         }
       };
@@ -430,19 +407,7 @@ export const fireplace = defineEffect({
             paletteId = p.palette;
             const pal = getPalette(p.palette);
             buildRamp(pal.ramp, RAMP_SIZE, rampData);
-            gl.bindTexture(gl.TEXTURE_2D, rampTex);
-            resetUnpackState(gl);
-            gl.texSubImage2D(
-              gl.TEXTURE_2D,
-              0,
-              0,
-              0,
-              RAMP_SIZE,
-              1,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              rampData,
-            );
+            updateDataTexture(gl, rampTex, RAMP_SIZE, 1, gl.RGBA, gl.UNSIGNED_BYTE, rampData);
             gl.bindTexture(gl.TEXTURE_2D, null);
             glowRgb = pal.glow;
             emberRgb = pal.ember;
@@ -508,7 +473,7 @@ export const fireplace = defineEffect({
           }
           gl.uniform3f(co.uGlow, glowRgb[0] * glow, glowRgb[1] * glow, glowRgb[2] * glow);
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, profileTex);
+          gl.bindTexture(gl.TEXTURE_2D, profile.texture);
           target.blit(width, height);
 
           // 3. Embers, additive.

@@ -312,3 +312,99 @@ export function createDataTexture(gl: WebGL2RenderingContext, o: DataTextureOpti
   gl.bindTexture(gl.TEXTURE_2D, null);
   return tex;
 }
+
+/**
+ * Replaces the whole of a 2D texture's level 0 with `data` (tightly packed, row 0
+ * at t = 0), for tables rebuilt on the CPU. Binds `texture` to the active texture
+ * unit, resets the unpack state (see `resetUnpackState`) and leaves the texture
+ * bound there, ready to draw with. Allocates nothing, so it is fine per frame.
+ */
+export function updateDataTexture(
+  gl: WebGL2RenderingContext,
+  texture: WebGLTexture,
+  width: number,
+  height: number,
+  format: GLenum,
+  type: GLenum,
+  data: ArrayBufferView,
+): void {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  resetUnpackState(gl);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, format, type, data);
+}
+
+/** Channels per texel of a `ColumnTable`: R, RG or RGBA. */
+export type ColumnTableChannels = 1 | 2 | 4;
+
+export interface ColumnTableOptions {
+  /** Rows of the table (texture height). Defaults to 1. */
+  rows?: number;
+  /** Defaults to `gl.CLAMP_TO_EDGE`; `gl.REPEAT` for tables that tile across. */
+  wrap?: GLenum;
+  /**
+   * Initial contents, `columns * rows * channels` floats, kept as the table's
+   * `data`. Defaults to zeros.
+   */
+  data?: Float32Array;
+}
+
+/**
+ * A small linearly filtered half-float lookup texture, one texel per column (and
+ * row), filled from a `Float32Array` on the CPU: per-column paths, profiles and
+ * the like, which the shader reads with one fetch instead of recomputing per pixel.
+ */
+export interface ColumnTable {
+  readonly texture: WebGLTexture;
+  /** CPU-side contents: write here, then `upload`. */
+  readonly data: Float32Array;
+  readonly columns: number;
+  readonly rows: number;
+  /** Uploads `data`, leaving the texture bound to the active unit (see `updateDataTexture`). */
+  upload(): void;
+  dispose(): void;
+}
+
+/** Sized half-float internal format and pixel format for a table with this many channels. */
+export function columnTableFormat(
+  gl: WebGL2RenderingContext,
+  channels: ColumnTableChannels,
+): { internalFormat: GLenum; format: GLenum } {
+  // Half floats are filterable in core WebGL2 and accept FLOAT data; 32-bit floats aren't.
+  if (channels === 1) return { internalFormat: gl.R16F, format: gl.RED };
+  if (channels === 2) return { internalFormat: gl.RG16F, format: gl.RG };
+  return { internalFormat: gl.RGBA16F, format: gl.RGBA };
+}
+
+export function createColumnTable(
+  gl: WebGL2RenderingContext,
+  columns: number,
+  channels: ColumnTableChannels,
+  options: ColumnTableOptions = {},
+): ColumnTable {
+  const rows = options.rows ?? 1;
+  const length = columns * rows * channels;
+  const data = options.data ?? new Float32Array(length);
+  if (data.length !== length) {
+    throw new Error(
+      `createColumnTable: ${columns}x${rows}x${channels} needs ${length} floats, got ${data.length}`,
+    );
+  }
+  const { internalFormat, format } = columnTableFormat(gl, channels);
+  const texture = createDataTexture(gl, {
+    width: columns,
+    height: rows,
+    internalFormat,
+    format,
+    type: gl.FLOAT,
+    data,
+    wrap: options.wrap,
+  });
+  return {
+    texture,
+    data,
+    columns,
+    rows,
+    upload: () => updateDataTexture(gl, texture, columns, rows, format, gl.FLOAT, data),
+    dispose: () => gl.deleteTexture(texture),
+  };
+}

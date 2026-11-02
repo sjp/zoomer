@@ -1,13 +1,14 @@
 import { hexToUnitRgb, mixRgb, type Rgb } from "./color";
 import {
   beginFrame,
-  createDataTexture,
+  createColumnTable,
   createFullscreenTriangle,
   createProgram,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
   resetUnpackState,
+  updateDataTexture,
   withScope,
 } from "./gl";
 import { defineEffect } from "./types";
@@ -377,17 +378,8 @@ export const synthwave = defineEffect({
         gl.deleteProgram(p),
       );
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const ridgeTex = scope.add(
-        createDataTexture(gl, {
-          width: RIDGE_POINTS,
-          height: 2,
-          // R16F is filterable in core WebGL2 and accepts FLOAT data; R32F is not.
-          internalFormat: gl.R16F,
-          format: gl.RED,
-          type: gl.FLOAT,
-          data: getRidgeData(),
-        }),
-        (t) => gl.deleteTexture(t),
+      const ridge = scope.own(
+        createColumnTable(gl, RIDGE_POINTS, 1, { rows: 2, data: getRidgeData() }),
       );
       const loc = getUniforms(gl, program, [
         "uResolution",
@@ -610,16 +602,16 @@ export const synthwave = defineEffect({
             2;
 
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, rowTex);
-          resetUnpackState(gl);
           if (rowCount !== n) {
             rowCount = n;
+            gl.bindTexture(gl.TEXTURE_2D, rowTex);
+            resetUnpackState(gl);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 3, n, 0, gl.RGBA, gl.FLOAT, rows);
           } else {
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 3, n, gl.RGBA, gl.FLOAT, rows);
+            updateDataTexture(gl, rowTex, 3, n, gl.RGBA, gl.FLOAT, rows);
           }
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, ridgeTex);
+          gl.bindTexture(gl.TEXTURE_2D, ridge.texture);
 
           gl.uniform2f(loc.uResolution, width, height);
           gl.uniform3f(loc.uHorizon, hy, vpx, k);

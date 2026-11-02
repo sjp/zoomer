@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { beginFrame, createScope, glslFloat, withScope } from "./gl";
+import {
+  beginFrame,
+  columnTableFormat,
+  createColumnTable,
+  createScope,
+  glslFloat,
+  withScope,
+} from "./gl";
 
 const ENUMS = {
   FRAMEBUFFER: 0x8d40,
@@ -160,5 +167,92 @@ describe("glslFloat", () => {
   it("rejects values with no literal", () => {
     expect(() => glslFloat(Number.NaN)).toThrow("has no GLSL literal");
     expect(() => glslFloat(Number.POSITIVE_INFINITY)).toThrow("has no GLSL literal");
+  });
+});
+
+/** A fake context that records every call by name, for the texture helpers. */
+function recordingGl() {
+  const calls: { name: string; args: unknown[] }[] = [];
+  const enums: Record<string, number> = {
+    TEXTURE_2D: 1,
+    FLOAT: 2,
+    R16F: 10,
+    RG16F: 11,
+    RGBA16F: 12,
+    RED: 20,
+    RG: 21,
+    RGBA: 22,
+    CLAMP_TO_EDGE: 30,
+    REPEAT: 31,
+    LINEAR: 40,
+  };
+  const texture = { id: "tex" };
+  const gl = new Proxy(enums, {
+    get(target, key: string) {
+      if (key in target) return target[key];
+      if (key === "createTexture") return () => texture;
+      // Any other enum the helpers read (unpack state and so on) is just a number.
+      if (/^[A-Z0-9_]+$/.test(key)) return 0;
+      return (...args: unknown[]) => calls.push({ name: key, args });
+    },
+  });
+  return { gl: gl as unknown as WebGL2RenderingContext, calls, enums, texture };
+}
+
+describe("columnTableFormat", () => {
+  it("picks a filterable half-float format per channel count", () => {
+    const { gl, enums } = recordingGl();
+    expect(columnTableFormat(gl, 1)).toEqual({ internalFormat: enums.R16F, format: enums.RED });
+    expect(columnTableFormat(gl, 2)).toEqual({ internalFormat: enums.RG16F, format: enums.RG });
+    expect(columnTableFormat(gl, 4)).toEqual({
+      internalFormat: enums.RGBA16F,
+      format: enums.RGBA,
+    });
+  });
+});
+
+describe("createColumnTable", () => {
+  it("allocates columns x rows x channels floats and uploads them whole", () => {
+    const { gl, calls, enums, texture } = recordingGl();
+    const table = createColumnTable(gl, 8, 4, { rows: 2 });
+    expect(table.data.length).toBe(64);
+    const image = calls.find((c) => c.name === "texImage2D")!;
+    expect(image.args.slice(2, 8)).toEqual([enums.RGBA16F, 8, 2, 0, enums.RGBA, enums.FLOAT]);
+
+    calls.length = 0;
+    table.upload();
+    expect(calls[0]).toEqual({ name: "bindTexture", args: [enums.TEXTURE_2D, texture] });
+    const sub = calls.find((c) => c.name === "texSubImage2D")!;
+    expect(sub.args).toEqual([
+      enums.TEXTURE_2D,
+      0,
+      0,
+      0,
+      8,
+      2,
+      enums.RGBA,
+      enums.FLOAT,
+      table.data,
+    ]);
+    // Left bound, ready to draw with.
+    expect(calls.some((c) => c.name === "bindTexture" && c.args[1] === null)).toBe(false);
+  });
+
+  it("keeps given data and wrap mode", () => {
+    const { gl, calls, enums } = recordingGl();
+    const data = new Float32Array(6);
+    const table = createColumnTable(gl, 3, 2, { data, wrap: enums.REPEAT });
+    expect(table.data).toBe(data);
+    expect(calls).toContainEqual({
+      name: "texParameteri",
+      args: [enums.TEXTURE_2D, 0, enums.REPEAT],
+    });
+  });
+
+  it("rejects data of the wrong length", () => {
+    const { gl } = recordingGl();
+    expect(() => createColumnTable(gl, 3, 2, { data: new Float32Array(5) })).toThrow(
+      "needs 6 floats",
+    );
   });
 });

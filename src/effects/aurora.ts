@@ -1,13 +1,13 @@
 import { hexToUnitRgb, type Rgb, unitRgbMemo } from "./color";
 import {
   beginFrame,
-  createDataTexture,
+  type ColumnTable,
+  createColumnTable,
   createFullscreenTriangle,
   createProgram,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
-  resetUnpackState,
   withScope,
 } from "./gl";
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
@@ -394,34 +394,12 @@ export const aurora = defineEffect({
       const stars = scope.own(createSpriteBatch(gl, MAX_STARS, [4, 2]));
       gl.useProgram(null);
 
-      const pathData = new Float32Array(PATH_COLS * 2 * 4);
-      const pathTex = scope.add(
-        createDataTexture(gl, {
-          width: PATH_COLS,
-          height: 2,
-          internalFormat: gl.RGBA16F,
-          format: gl.RGBA,
-          type: gl.FLOAT,
-          data: pathData,
-        }),
-        (t) => gl.deleteTexture(t),
+      const path = scope.own(createColumnTable(gl, PATH_COLS, 4, { rows: 2 }));
+      const rays = scope.own(
+        createColumnTable(gl, RAY_COLS, 4, { wrap: gl.REPEAT, data: getRayTable() }),
       );
-      const rayTex = scope.add(
-        createDataTexture(gl, {
-          width: RAY_COLS,
-          height: 1,
-          internalFormat: gl.RGBA16F,
-          format: gl.RGBA,
-          type: gl.FLOAT,
-          data: getRayTable(),
-          wrap: gl.REPEAT,
-        }),
-        (t) => gl.deleteTexture(t),
-      );
-      let horizonTex: WebGLTexture | null = null;
-      scope.defer(() => {
-        if (horizonTex) gl.deleteTexture(horizonTex);
-      });
+      let horizon: ColumnTable | null = null;
+      scope.defer(() => horizon?.dispose());
 
       const noise = createNoise(1337);
       const lowRgb = unitRgbMemo();
@@ -452,15 +430,9 @@ export const aurora = defineEffect({
         const cols = kind === "none" ? 1 : Math.min(2048, Math.max(16, Math.ceil(width / 2)));
         horizonTable = buildHorizonTable(kind, cols, width / height);
         horizonTop = kind === "none" ? -1 : horizonMax(horizonTable) * height + 2;
-        if (horizonTex) gl.deleteTexture(horizonTex);
-        horizonTex = createDataTexture(gl, {
-          width: cols,
-          height: 1,
-          internalFormat: gl.RG16F,
-          format: gl.RG,
-          type: gl.FLOAT,
-          data: horizonTable,
-        });
+        horizon?.dispose();
+        horizon = null; // so a failed create below can't dispose it twice
+        horizon = createColumnTable(gl, cols, 2, { data: horizonTable });
         gl.useProgram(program);
         gl.uniform1f(loc.uHorizonTop, horizonTop);
       };
@@ -526,16 +498,14 @@ export const aurora = defineEffect({
           gl.uniform2f(loc.uResolution, width, height);
           gl.uniform4f(loc.uRayUv, RAY_SCALE_FINE, RAY_SCALE_COARSE, driftFine, driftCoarse);
 
-          buildPathTable(pathData, PATH_COLS, width / height, pathTime, noise);
+          buildPathTable(path.data, PATH_COLS, width / height, pathTime, noise);
 
-          resetUnpackState(gl);
           gl.activeTexture(gl.TEXTURE2);
-          gl.bindTexture(gl.TEXTURE_2D, horizonTex);
+          gl.bindTexture(gl.TEXTURE_2D, horizon?.texture ?? null);
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, rayTex);
+          gl.bindTexture(gl.TEXTURE_2D, rays.texture);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, pathTex);
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PATH_COLS, 2, gl.RGBA, gl.FLOAT, pathData);
+          path.upload();
           triangle.draw();
 
           if (starCount > 0) {

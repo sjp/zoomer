@@ -12,14 +12,13 @@ import {
 } from "./caustics-sim";
 import {
   beginFrame,
-  createDataTexture,
+  createColumnTable,
   createFullscreenTriangle,
   createProgram,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   getUniforms,
   glslFloat,
-  resetUnpackState,
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
@@ -271,19 +270,7 @@ export const caustics = defineEffect({
         }),
       );
 
-      const rayTable = new Float32Array(RAY_COLUMNS);
-      const rayTex = scope.add(
-        createDataTexture(gl, {
-          width: RAY_COLUMNS,
-          height: 1,
-          // R16F is filterable in core WebGL2 and accepts FLOAT data.
-          internalFormat: gl.R16F,
-          format: gl.RED,
-          type: gl.FLOAT,
-          data: rayTable,
-        }),
-        (t) => gl.deleteTexture(t),
-      );
+      const rayTable = scope.own(createColumnTable(gl, RAY_COLUMNS, 1));
       const rng = createRng(0xc0a5);
       const rays = createRays(rng, RAY_COUNT);
 
@@ -466,11 +453,10 @@ export const caustics = defineEffect({
 
           // 2. Ray table (deep water only).
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, rayTex);
+          gl.bindTexture(gl.TEXTURE_2D, rayTable.texture);
           if (deep && p.rays) {
-            fillRayTable(rayTable, rays, clock);
-            resetUnpackState(gl);
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, RAY_COLUMNS, 1, gl.RED, gl.FLOAT, rayTable);
+            fillRayTable(rayTable.data, rays, clock);
+            rayTable.upload();
           }
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, tileTex);
