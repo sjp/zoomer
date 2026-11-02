@@ -18,6 +18,8 @@ import {
   runnerStretch,
   spawnRunner,
   STATIC,
+  STATIC_MAX_R,
+  STATIC_MIN_R,
   stepRainSim,
   TRAIL,
   TRAIL_GRACE,
@@ -153,13 +155,65 @@ describe("wipeCapsule", () => {
     expect(sim.wiped).toBe(1);
   });
 
-  it("only visits nearby cells", () => {
-    const sim = empty();
-    for (let i = 0; i < 100; i++)
-      place(sim, i, 1000 + (i % 10) * 20, 500 + Math.floor(i / 10) * 20);
-    buildGrid(sim);
-    expect(wipeCapsule(sim, 100, 100, 100, 300, 20)).toBe(0);
-    expect(sim.wiped).toBe(0);
+  it("wipes exactly what a brute-force search over every droplet finds", () => {
+    const rng = createRng(77);
+    let wipedTotal = 0;
+    let missedTotal = 0;
+    for (let round = 0; round < 300; round++) {
+      const sim = empty();
+      sim.staticCount = SMALL.maxStatic;
+      const x0 = 200 + rng() * 1500;
+      const y0 = 200 + rng() * 600;
+      const x1 = x0 + (rng() - 0.5) * 200;
+      const y1 = y0 + rng() * 200;
+      const radius = rng() * MAX_RUNNER_R;
+      // Most droplets sit near the edge of the capsule's reach, on either side of it,
+      // where a grid search that misses a cell would show.
+      const near = (r: number): [number, number] => {
+        const t = rng();
+        const a = rng() * Math.PI * 2;
+        const d = (radius + r * 0.5) * (0.8 + 0.4 * rng());
+        return [x0 + (x1 - x0) * t + Math.cos(a) * d, y0 + (y1 - y0) * t + Math.sin(a) * d];
+      };
+      for (let i = 0; i < SMALL.maxStatic; i++) {
+        const r = STATIC_MIN_R + rng() * (STATIC_MAX_R - STATIC_MIN_R);
+        place(sim, i, ...near(r), r);
+      }
+      // Trail droplets up to twice the largest static one, some still in their grace.
+      for (let k = 0; k < SMALL.maxTrails; k++) {
+        const r = 0.5 + rng() * (2 * STATIC_MAX_R - 0.5);
+        emitTrail(sim, ...near(r), r);
+        sim.dAge[SMALL.maxStatic + k] = rng() * 2 * TRAIL_GRACE;
+      }
+
+      // Brute force: every live, wipeable droplet within reach of the segment.
+      const expected: number[] = [];
+      const sx = x1 - x0;
+      const sy = y1 - y0;
+      for (let i = 0; i < sim.dKind.length; i++) {
+        const kind = sim.dKind[i];
+        if (kind === DEAD || (kind === TRAIL && sim.dAge[i] < TRAIL_GRACE)) continue;
+        const px = sim.dx[i] - x0;
+        const py = sim.dy[i] - y0;
+        const t = Math.min(1, Math.max(0, (px * sx + py * sy) / (sx * sx + sy * sy)));
+        if (Math.hypot(px - t * sx, py - t * sy) < radius + sim.dr[i] * 0.5) expected.push(i);
+        else missedTotal++;
+      }
+      const before = { x: sim.dx.slice(), y: sim.dy.slice(), kind: sim.dKind.slice() };
+      buildGrid(sim);
+      wipeCapsule(sim, x0, y0, x1, y1, radius);
+      const wiped: number[] = [];
+      for (let i = 0; i < sim.dKind.length; i++) {
+        const moved = sim.dx[i] !== before.x[i] || sim.dy[i] !== before.y[i];
+        if (moved || sim.dKind[i] !== before.kind[i]) wiped.push(i);
+      }
+      expect(wiped).toEqual(expected);
+      expect(sim.wiped).toBe(expected.length);
+      wipedTotal += expected.length;
+    }
+    // Plenty of droplets on both sides of the reach.
+    expect(wipedTotal).toBeGreaterThan(5000);
+    expect(missedTotal).toBeGreaterThan(5000);
   });
 });
 
@@ -270,15 +324,37 @@ describe("spawning", () => {
     expect(sim.primed).toBe(true);
   });
 
-  it("keeps droplets inside the window", () => {
+  it("keeps droplets, trails and runners in and around the window", () => {
     const sim = make();
-    for (let t = 0; t < 300; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 2 });
-    for (let i = 0; i < sim.staticCount; i++) {
-      expect(sim.dx[i]).toBeGreaterThanOrEqual(0);
-      expect(sim.dx[i]).toBeLessThanOrEqual(1920);
-      expect(sim.dy[i]).toBeGreaterThanOrEqual(0);
-      expect(sim.dy[i]).toBeLessThanOrEqual(1080);
+    const out: string[] = [];
+    let trails = 0;
+    let running = 0;
+    for (let t = 0; t < 600; t++) {
+      stepRainSim(sim, 1 / 30, { rain: 1, speed: 3 });
+      for (let i = 0; i < sim.staticCount; i++) {
+        const { dx, dy } = sim;
+        if (sim.dKind[i] === STATIC && (dx[i] < 0 || dx[i] > 1920 || dy[i] < 0 || dy[i] > 1080)) {
+          out.push(`static ${i} at ${dx[i]}, ${dy[i]}`);
+        }
+      }
+      // Trails are left just above a runner, which may hang off the bottom edge
+      // by up to two radii before it respawns.
+      for (let i = SMALL.maxStatic; i < sim.dKind.length; i++) {
+        if (sim.dKind[i] !== TRAIL) continue;
+        trails++;
+        const { dx, dy } = sim;
+        if (dx[i] < -MAX_RUNNER_R || dx[i] > 1920 + MAX_RUNNER_R) out.push(`trail x ${dx[i]}`);
+        if (dy[i] < -MAX_RUNNER_R || dy[i] > 1080 + 3 * MAX_RUNNER_R) out.push(`trail y ${dy[i]}`);
+      }
+      for (let i = 0; i < sim.runnerCount; i++) {
+        if (sim.rState[i] === RUNNING) running++;
+        if (sim.rx[i] < 0 || sim.rx[i] > 1920) out.push(`runner x ${sim.rx[i]}`);
+        if (sim.ry[i] < 0 || sim.ry[i] > 1080 + 3 * MAX_RUNNER_R) out.push(`runner y ${sim.ry[i]}`);
+      }
     }
+    expect(out).toEqual([]);
+    expect(trails).toBeGreaterThan(1000);
+    expect(running).toBeGreaterThan(100);
   });
 
   it("respawns static droplets when their life ends", () => {
@@ -399,6 +475,34 @@ describe("runners", () => {
     expect(sim.ry[0]).toBeLessThan(1080);
   });
 
+  it("brings a running drop to a halt, and keeps it there, at speed 0", () => {
+    const { sim, params } = oneRunner(500, 100, 14, RUNNING);
+    for (let t = 0; t < 30; t++) stepRainSim(sim, 1 / 60, params);
+    const v = sim.rv[0];
+    expect(v).toBeGreaterThan(10);
+    params.speed = 0;
+    const y0 = sim.ry[0];
+    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 60, params);
+    // The fall eases out at a rate of 4/s, so it coasts at most v / 4 further...
+    expect(sim.ry[0] - y0).toBeLessThanOrEqual(v / 4 + 1e-3);
+    // ...and after that second has all but stopped, never to start again.
+    const y1 = sim.ry[0];
+    const x1 = sim.rx[0];
+    for (let t = 0; t < 600; t++) stepRainSim(sim, 1 / 60, params);
+    expect(sim.ry[0] - y1).toBeLessThan(0.5);
+    expect(Math.abs(sim.rx[0] - x1)).toBeLessThan(0.5);
+    expect(sim.rv[0]).toBeLessThan(0.01);
+  });
+
+  it("does not let a resting drop at speed 0 break loose, even fully grown", () => {
+    const { sim, params } = oneRunner(500, 100, 20, RESTING);
+    sim.rBreak[0] = 12;
+    params.speed = 0;
+    for (let t = 0; t < 100; t++) stepRainSim(sim, 0.1, params);
+    expect(sim.rState[0]).toBe(RESTING);
+    expect(sim.ry[0]).toBe(100);
+  });
+
   it("small runners stop", () => {
     const { sim } = oneRunner(500, 100, 7.05, RUNNING);
     sim.rv[0] = 50;
@@ -406,6 +510,39 @@ describe("runners", () => {
       stepRainSim(sim, 0.05, { rain: 0.125, speed: 1 });
     }
     expect(sim.rState[0]).toBe(RESTING);
+  });
+});
+
+describe("lowering the rain", () => {
+  it("fades the runners it no longer wants out, then stops stepping and drawing them", () => {
+    const sim = make();
+    for (let t = 0; t < 600; t++) stepRainSim(sim, 1 / 30, { rain: 1, speed: 1.5 });
+    expect(sim.runnerCount).toBe(SMALL.maxRunners);
+    const kept = Math.round(0.25 * SMALL.maxRunners);
+    stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
+    // Still simulated while they fade.
+    expect(sim.runnerCount).toBe(SMALL.maxRunners);
+    expect(sim.runnerFade[kept]).toBeLessThan(1);
+    expect(sim.runnerFade[0]).toBe(1);
+    for (let t = 0; t < Math.ceil((FADE_OUT / (1 / 30)) * 1.1); t++) {
+      stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
+    }
+    expect(sim.runnerCount).toBe(kept);
+    // Frozen where they were: no longer stepped.
+    const ry = sim.ry.slice(kept);
+    for (let t = 0; t < 30; t++) stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
+    expect(sim.ry.slice(kept)).toEqual(ry);
+    const out = new Float32Array(instanceCapacity(SMALL) * INSTANCE_STRIDE);
+    writeDropInstances(sim, out, 1);
+    expect(sim.runnersWritten).toBeLessThanOrEqual(kept);
+  });
+
+  it("fades out and drops the static droplets it no longer wants", () => {
+    const sim = make();
+    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, { rain: 1, speed: 1 });
+    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, { rain: 0.5, speed: 1 });
+    expect(sim.staticCount).toBe(SMALL.maxStatic / 2);
+    expect(countKind(sim, STATIC)).toBe(SMALL.maxStatic / 2);
   });
 });
 
@@ -494,6 +631,47 @@ describe("helpers", () => {
     const head = sim.head;
     resizeRainSim(sim, 960, 1080);
     expect(sim.head).toBe(head);
+  });
+
+  it("keeps every drop in bounds across resizes, down to a 1x1 window", () => {
+    const sim = make();
+    const params = { rain: 1, speed: 2 };
+    for (const [w, h] of [
+      [1920, 1080],
+      [800, 1200],
+      [3000, 400],
+      [0, 0],
+      [1, 1],
+      [640, 360],
+    ]) {
+      for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, params);
+      resizeRainSim(sim, w, h);
+      const W = Math.max(1, w);
+      const H = Math.max(1, h);
+      expect([sim.width, sim.height]).toEqual([W, H]);
+      expect(sim.cols).toBe(Math.max(1, Math.ceil(W / SMALL.cellSize)));
+      expect(sim.rows).toBe(Math.max(1, Math.ceil(H / SMALL.cellSize)));
+      expect(sim.head.length).toBe(sim.cols * sim.rows);
+      for (let i = 0; i < sim.staticCount; i++) {
+        expect(sim.dx[i]).toBeGreaterThanOrEqual(0);
+        expect(sim.dx[i]).toBeLessThanOrEqual(W + 1e-3);
+        expect(sim.dy[i]).toBeGreaterThanOrEqual(0);
+        expect(sim.dy[i]).toBeLessThanOrEqual(H + 1e-3);
+      }
+      for (let i = 0; i < sim.runnerCount; i++) {
+        expect(sim.rx[i]).toBeGreaterThanOrEqual(0);
+        expect(sim.rx[i]).toBeLessThanOrEqual(W + 1e-3);
+        expect(sim.rStepX[i]).toBe(0);
+        expect(sim.rStepY[i]).toBe(0);
+      }
+      // The grid still lists every live droplet once.
+      buildGrid(sim);
+      let listed = 0;
+      for (let c = 0; c < sim.head.length; c++) {
+        for (let i = sim.head[c]; i !== -1; i = sim.next[i]) listed++;
+      }
+      expect(listed).toBe(sim.dKind.length - countKind(sim, DEAD));
+    }
   });
 
   it("clamps long steps", () => {
