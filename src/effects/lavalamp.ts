@@ -11,6 +11,7 @@ import {
   withScope,
 } from "./gl";
 import { createRng } from "./noise";
+import { createChangeKey } from "./change-key";
 import { defineEffect } from "./types";
 
 const MAX_BLOBS = 20;
@@ -321,6 +322,15 @@ export const lavalamp = defineEffect({
       let time = 0;
       const blobData = new Float32Array(MAX_BLOBS * 4);
       const blobR2 = new Float32Array(MAX_BLOBS);
+      /** What blobData and blobR2 were last computed from. */
+      const blobInputs = createChangeKey(5);
+      /**
+       * Bumped whenever the blob arrays change. The arrays aren't change-tracked
+       * uniforms, so each program remembers the version it last received, and a
+       * paused lamp uploads nothing.
+       */
+      let blobVersion = 0;
+      const blobVersions = { mask: -1, main: -1 };
 
       // Per-frame values read by uploadField.
       let scaleX = 1;
@@ -328,12 +338,18 @@ export const lavalamp = defineEffect({
       let poolR2 = 0;
       let count = 1;
       /** Uploads the field uniforms shared by both programs. */
-      const uploadField = (fu: Uniforms<(typeof fieldNames)[number]>) => {
+      const uploadField = (
+        fu: Uniforms<(typeof fieldNames)[number]>,
+        which: keyof typeof blobVersions,
+      ) => {
         fu.f2("uResolution", width, height);
         fu.f2("uScale", scaleX, scaleY);
         fu.f1("uPoolR2", poolR2);
-        gl.uniform4fv(fu.loc.uBlobs, blobData);
-        gl.uniform1fv(fu.loc.uBlobR2, blobR2);
+        if (blobVersions[which] !== blobVersion) {
+          blobVersions[which] = blobVersion;
+          gl.uniform4fv(fu.loc.uBlobs, blobData);
+          gl.uniform1fv(fu.loc.uBlobR2, blobR2);
+        }
         fu.i1("uCount", count);
       };
 
@@ -356,7 +372,14 @@ export const lavalamp = defineEffect({
           );
           const n = Math.max(1, Math.min(MAX_BLOBS, Math.round(p.count)));
           const baseR = BASE_RADIUS * p.size * REF_H;
-          for (let i = 0; i < n; i++) {
+          blobInputs.set(0, time);
+          blobInputs.set(1, n);
+          blobInputs.set(2, baseR);
+          blobInputs.set(3, lampW);
+          blobInputs.set(4, p.seed);
+          const blobsChanged = blobInputs.take();
+          if (blobsChanged) blobVersion++;
+          for (let i = 0; blobsChanged && i < n; i++) {
             const b = blobs[i];
             const r = baseR * b.size * (1 + 0.12 * Math.sin(time * b.wr + b.pr));
             // Stay inside the frame horizontally; vertical travel may poke past the edges.
@@ -395,7 +418,7 @@ export const lavalamp = defineEffect({
 
           mask.bind();
           gl.useProgram(maskProgram);
-          uploadField(maskU);
+          uploadField(maskU, "mask");
           // A pixel is pure background once both the halo (from 0.38) and the edge
           // (from 1 - softness) are zero, and pure core once the edge, rim shade and
           // core lift have all saturated. 1% margins absorb float rounding in the bounds.
@@ -409,7 +432,7 @@ export const lavalamp = defineEffect({
           gl.useProgram(program);
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, mask.texture);
-          uploadField(u);
+          uploadField(u, "main");
           u.f1("uInvLampW", 1 / lampW);
           u.f2("uPoolPhase", wrapPhase(time * 0.13), wrapPhase(1.7 - time * 0.21));
           u.f1("uSoftness", p.softness);
