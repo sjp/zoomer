@@ -1,7 +1,13 @@
 import { hexToRgb, mixRgb, type Rgb } from "./color";
-import { createProgram, FULLSCREEN_VERTEX, getUniforms, createFullscreenTriangle } from "./gl";
+import {
+  beginFrame,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+  createFullscreenTriangle,
+} from "./gl";
 import { createNoise, createRng } from "./noise";
-import { createGradientBackground, createSpriteBatch, resetState, unitRgbMemo } from "./sprites";
+import { createGradientBackground, createSpriteBatch, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
 const MAX_FLAKES = 1500;
@@ -238,6 +244,7 @@ export const snow = defineEffect({
         refWidth = newRefWidth;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time += dt;
 
         const n = Math.min(p.count, MAX_FLAKES);
@@ -311,7 +318,6 @@ export const snow = defineEffect({
           }
         }
 
-        resetState(gl, width, height);
         background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
 
         // Source-over with premultiplied output.

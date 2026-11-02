@@ -12,6 +12,7 @@ import {
   wrap01,
 } from "./caustics-sim";
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -20,7 +21,7 @@ import {
   resetUnpackState,
 } from "./gl";
 import { createRng } from "./noise";
-import { createSpriteBatch, polygonStrip, resetState, unitRgbMemo } from "./sprites";
+import { createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect, type ParamSchema, type ParamValues } from "./types";
 
 /** On-screen size of one caustic tile period in reference px at scale 1. */
@@ -421,6 +422,7 @@ export const caustics = defineEffect({
         vpScale = v.scale;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const speed = Math.max(0, p.speed);
         const sdt = dt * speed;
         clock += sdt;
@@ -431,10 +433,6 @@ export const caustics = defineEffect({
         offBy = wrap01(offBy + DRIFT_B[1] * sdt);
         updateStatics(p);
         const deep = p.scene === "deep";
-
-        resetState(gl, width, height);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.disable(gl.BLEND);
 
         // 1. Caustic tile, at most every TILE_INTERVAL while moving.
         tileAge += dt;

@@ -1,4 +1,5 @@
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -29,7 +30,7 @@ import {
 } from "./fireplace-model";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createNoise, createRng } from "./noise";
-import { createSpriteBatch, resetState, unitRgbMemo } from "./sprites";
+import { createSpriteBatch, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
 /** Low-res divisors: fire is soft, so even "high" renders below full resolution. */
@@ -376,6 +377,7 @@ export const fireplace = defineEffect({
         built.width = 0;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const step = dt * p.speed;
         time += step;
 
@@ -454,9 +456,6 @@ export const fireplace = defineEffect({
           data[o + 3] = Math.min(1, a);
           visible++;
         }
-
-        resetState(gl, width, height);
-        gl.disable(gl.BLEND);
 
         // 1. Flames into the low-res target, covering only the fire rectangle.
         target.bind();

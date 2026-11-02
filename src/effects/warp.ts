@@ -1,4 +1,5 @@
 import type { Rgb } from "./color";
+import { beginFrame } from "./gl";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 
@@ -66,6 +67,7 @@ export const warp = defineEffect({
         ({ width, height, scale } = v);
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const cx = width / 2;
         const cy = height / 2;
         const focal = Math.max(width, height) / 2;
@@ -112,10 +114,6 @@ export const warp = defineEffect({
         }
 
         const [br, bg, bb] = backgroundRgb(p.background);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, width, height);
-        gl.disable(gl.SCISSOR_TEST);
-        gl.colorMask(true, true, true, true);
         gl.clearColor(br, bg, bb, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 

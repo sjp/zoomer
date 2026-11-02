@@ -1,5 +1,6 @@
 import { hexToUnitRgb, type Rgb } from "./color";
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -8,7 +9,7 @@ import {
   resetUnpackState,
 } from "./gl";
 import { createNoise, createRng, fbm2, fbmPeriodic2, type Noise } from "./noise";
-import { createSpriteBatch, resetState, unitRgbMemo } from "./sprites";
+import { createSpriteBatch, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
 /*
@@ -453,6 +454,7 @@ export const aurora = defineEffect({
         ({ width, height, scale } = v);
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const speed = p.speed;
         pathTime += dt * speed * 0.05;
         driftFine = (driftFine + dt * speed * 0.004) % 1;
@@ -509,9 +511,6 @@ export const aurora = defineEffect({
 
         buildPathTable(pathData, PATH_COLS, width / height, pathTime, noise);
 
-        resetState(gl, width, height);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.disable(gl.BLEND);
         resetUnpackState(gl);
         gl.activeTexture(gl.TEXTURE2);
         gl.bindTexture(gl.TEXTURE_2D, horizonTex);

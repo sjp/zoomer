@@ -1,7 +1,12 @@
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 import { createLowResTarget, lowResSize } from "./lowres";
 import { hexToUnitRgb } from "./color";
-import { resetState } from "./sprites";
 import { defineEffect } from "./types";
 
 /**
@@ -395,9 +400,8 @@ export const contours = defineEffect({
         sizeDirty = true;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         z += dt * p.speed * Z_RATE;
-        resetState(gl, width, height);
-        gl.disable(gl.BLEND);
 
         if (sizeDirty) {
           target.resize(width, height, fieldDivisor(height));

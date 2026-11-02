@@ -1,5 +1,6 @@
 import { hexToUnitRgb, mixRgb, type Rgb } from "./color";
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -462,14 +463,12 @@ export const synthwave = defineEffect({
         ({ width, height, scale } = v);
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const cell = p.gridSize;
         scroll = (scroll + dt * p.speed * 1.2) % cell;
         stripePhase = (stripePhase + dt * p.speed * 0.06) % 1;
         time += dt;
 
-        gl.viewport(0, 0, width, height);
-        gl.disable(gl.BLEND);
-        gl.disable(gl.DEPTH_TEST);
         gl.useProgram(program);
 
         // Colours only change when the params do, so parse, mix and upload them once.

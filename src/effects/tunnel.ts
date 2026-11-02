@@ -1,5 +1,6 @@
 import { hexToRgb, hexToUnitRgb, mixRgb } from "./color";
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -283,6 +284,7 @@ export const tunnel = defineEffect({
         sizeDirty = true;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time += dt;
         const dv = p.speed * SPEED_TEX * dt;
         vOff = wrap(vOff + dv);
@@ -295,9 +297,6 @@ export const tunnel = defineEffect({
         const ox = amp * Math.sin(time * 0.19) * Math.cos(time * 0.07);
         const oy = amp * 0.75 * Math.sin(time * 0.27 + 1.3);
 
-        gl.viewport(0, 0, width, height);
-        gl.disable(gl.BLEND);
-        gl.disable(gl.DEPTH_TEST);
         gl.useProgram(program);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);

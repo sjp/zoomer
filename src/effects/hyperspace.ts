@@ -1,4 +1,10 @@
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 
@@ -147,6 +153,7 @@ export const hyperspace = defineEffect({
         ({ width, height, scale } = v);
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         cycleTime += dt;
         const target = wantHyperspace(p.mode, p.cycleSeconds) ? 1 : 0;
         // The first frame starts in its target state rather than jumping into it.
@@ -202,18 +209,12 @@ export const hyperspace = defineEffect({
 
         const [br, bg, bb] = backgroundRgb(p.background);
         const glowAlpha = Math.max(0, p.glow) * (0.15 + 0.5 * jump);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, width, height);
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.SCISSOR_TEST);
-        gl.colorMask(true, true, true, true);
         if (glowAlpha === 0 && flashAmount === 0) {
           // A flat 8-bit colour plus sub-LSB dither rounds back to itself, so a
           // (typically fast) clear gives the same pixels as the shader pass.
           gl.clearColor(br, bg, bb, 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
         } else {
-          gl.disable(gl.BLEND);
           gl.useProgram(bgProgram);
           gl.uniform2f(bgLoc.uResolution, width, height);
           gl.uniform3f(bgLoc.uBackground, br, bg, bb);

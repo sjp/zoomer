@@ -1,13 +1,7 @@
 import type { Rgb } from "./color";
-import { createProgram, getUniforms } from "./gl";
+import { beginFrame, createProgram, getUniforms } from "./gl";
 import { createRng } from "./noise";
-import {
-  createGradientBackground,
-  createSpriteBatch,
-  polygonStrip,
-  resetState,
-  unitRgbMemo,
-} from "./sprites";
+import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
 
@@ -324,6 +318,7 @@ export const constellation = defineEffect({
         refWidth = newRefWidth;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time = (time + dt) % 10000;
         const n = Math.min(Math.floor(p.count), MAX_POINTS);
         for (let i = prevCount; i < n; i++) life[i] = 0;
@@ -399,8 +394,6 @@ export const constellation = defineEffect({
         }
 
         // 1. Background.
-        resetState(gl, width, height);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
 
         // 2. Lines, additive (streaks set their own blend state).

@@ -1,14 +1,14 @@
 import type { Rgb } from "./color";
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { createRng } from "./noise";
-import {
-  createGradientBackground,
-  createSpriteBatch,
-  polygonStrip,
-  resetState,
-  unitRgbMemo,
-} from "./sprites";
+import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 import {
   createRainSim,
@@ -451,12 +451,10 @@ export const windowRain = defineEffect({
         bgTimer = Infinity;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         frameNo = (frameNo + 1) >>> 0;
         stepRainSim(sim, dt, p);
         const count = writeDropInstances(sim, drops.data, scale);
-
-        resetState(gl, width, height);
-        gl.blendEquation(gl.FUNC_ADD);
 
         // 1. Background, at a low rate (or at once when its inputs change).
         const prevW = target.width;

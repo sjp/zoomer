@@ -1,5 +1,6 @@
 import { hexToUnitRgb } from "./color";
 import {
+  beginFrame,
   createFullscreenTriangle,
   createProgram,
   FULLSCREEN_VERTEX,
@@ -356,6 +357,7 @@ export const lavalamp = defineEffect({
         sizeDirty = true;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time += dt * p.speed;
         if (p.seed !== seedKey) {
           seedKey = p.seed;
@@ -415,8 +417,6 @@ export const lavalamp = defineEffect({
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, maskFbo);
         gl.viewport(0, 0, tw, th);
-        gl.disable(gl.BLEND);
-        gl.disable(gl.DEPTH_TEST);
         gl.useProgram(maskProgram);
         uploadField(maskLoc);
         if (softChanged) {

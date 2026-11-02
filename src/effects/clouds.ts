@@ -7,6 +7,7 @@ import {
   TIME_OPTIONS,
 } from "./clouds-sky";
 import {
+  beginFrame,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -14,7 +15,6 @@ import {
   getUniforms,
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
-import { resetState } from "./sprites";
 import { defineEffect } from "./types";
 
 /** Noise texture side, in texels. */
@@ -299,6 +299,7 @@ export const clouds = defineEffect({
         sizeDirty = true;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const step = Math.max(0, dt) * p.speed;
         driftNear += step * WIND;
         driftFar += step * WIND * FAR_SPEED;
@@ -306,8 +307,6 @@ export const clouds = defineEffect({
         const layers = p.layers >= 1.5 ? 2 : 1;
         const freq = BASE_FREQ / Math.max(0.1, p.scale);
 
-        resetState(gl, width, height);
-        gl.disable(gl.BLEND);
         target.resize(width, height, qualityDivisor(p.quality));
 
         if (p.time !== lastTime) {

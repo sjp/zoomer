@@ -1,12 +1,6 @@
 import type { Rgb } from "./color";
-import { createProgram, getUniforms } from "./gl";
-import {
-  createGradientBackground,
-  createSpriteBatch,
-  polygonStrip,
-  resetState,
-  unitRgbMemo,
-} from "./sprites";
+import { beginFrame, createProgram, getUniforms } from "./gl";
+import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect } from "./types";
 
 const MAX_LIGHTS = 200;
@@ -215,6 +209,7 @@ export const bokeh = defineEffect({
         refWidth = newRefWidth;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time = (time + dt) % 10000;
 
         const n = Math.min(p.count, MAX_LIGHTS);
@@ -270,7 +265,6 @@ export const bokeh = defineEffect({
           visible++;
         }
 
-        resetState(gl, width, height);
         background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
         if (visible === 0) return;
 

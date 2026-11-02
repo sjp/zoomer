@@ -1,8 +1,13 @@
 import { hexToUnitRgb, type Rgb } from "./color";
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor, type LowResTarget } from "./lowres";
 import { createRng } from "./noise";
-import { resetState } from "./sprites";
 import { defineEffect } from "./types";
 
 export const MAX_BLOBS = 6;
@@ -356,6 +361,7 @@ export const blobs = defineEffect({
         aspect = width / Math.max(1, height);
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time += (Number.isFinite(dt) && dt > 0 ? dt : 0) * p.speed;
         let invalid = false;
 
@@ -407,8 +413,6 @@ export const blobs = defineEffect({
           simAux = Number.NaN;
         }
 
-        resetState(gl, width, height);
-        gl.disable(gl.BLEND);
         const due = advanceKeyframes(clock, dt, KEYFRAME_INTERVAL, invalid);
         if (due === 2) {
           mainIsA = true;

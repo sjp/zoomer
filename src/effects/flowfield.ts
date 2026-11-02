@@ -1,5 +1,11 @@
 import { hexToUnitRgb } from "./color";
-import { createFullscreenTriangle, createProgram, FULLSCREEN_VERTEX, getUniforms } from "./gl";
+import {
+  beginFrame,
+  createFullscreenTriangle,
+  createProgram,
+  FULLSCREEN_VERTEX,
+  getUniforms,
+} from "./gl";
 import { createRng } from "./noise";
 import { defineEffect } from "./types";
 
@@ -504,6 +510,7 @@ export const flowfield = defineEffect({
         lightMode = undefined;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         if (p.seed !== seedKey) {
           seedKey = p.seed;
           reseed(p.seed);
@@ -511,13 +518,6 @@ export const flowfield = defineEffect({
         ensureTargets();
         if (targets.length < 2) return;
 
-        // Shared context: set every piece of state relied on below.
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.STENCIL_TEST);
-        gl.disable(gl.SCISSOR_TEST);
-        gl.disable(gl.CULL_FACE);
-        gl.colorMask(true, true, true, true);
-        gl.viewport(0, 0, width, height);
         gl.activeTexture(gl.TEXTURE0);
 
         const bg = unitColor(p.background);
@@ -538,7 +538,6 @@ export const flowfield = defineEffect({
         gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
         // Every pixel is overwritten below, so the old contents need not be loaded.
         gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-        gl.disable(gl.BLEND);
         gl.useProgram(fadeProgram);
         gl.bindTexture(gl.TEXTURE_2D, src.tex);
         const keep = Math.exp(-dt / tau);

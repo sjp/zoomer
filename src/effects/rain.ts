@@ -1,6 +1,6 @@
 import { hexToRgb, mixRgb, type Rgb } from "./color";
-import { createProgram, getUniforms, resetUnpackState } from "./gl";
-import { createSpriteBatch, resetState, type SpriteBatch } from "./sprites";
+import { beginFrame, createProgram, getUniforms, resetUnpackState } from "./gl";
+import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
 
 const CHARSETS: Record<string, string> = {
@@ -239,6 +239,7 @@ export const rain = defineEffect({
         cell = 0; // force layout on next frame
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         const newCell = Math.max(4, Math.round(p.fontSize * scale));
         if (cell !== newCell) {
           cell = newCell;
@@ -295,9 +296,6 @@ export const rain = defineEffect({
         const bg = hexToRgb(p.background);
         const color = hexToRgb(p.color);
 
-        resetState(gl, width, height);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.disable(gl.BLEND);
         gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
         if (n === 0) return;

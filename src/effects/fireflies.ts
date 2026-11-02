@@ -1,11 +1,10 @@
-import { createProgram, getUniforms } from "./gl";
+import { beginFrame, createProgram, getUniforms } from "./gl";
 import { createNoise } from "./noise";
 import {
   createGradientBackground,
   createSpriteBatch,
   polygonStrip,
   QUAD,
-  resetState,
   unitRgbMemo,
 } from "./sprites";
 import { defineEffect } from "./types";
@@ -327,6 +326,7 @@ export const fireflies = defineEffect({
         refWidth = newRefWidth;
       },
       frame(dt, p) {
+        beginFrame(gl, width, height);
         time = (time + dt) % 10000;
         const dust = p.scene === "dust";
         const n = Math.min(p.count, MAX_SPECKS);
@@ -386,7 +386,6 @@ export const fireflies = defineEffect({
           visible++;
         }
 
-        resetState(gl, width, height);
         background.draw(bgTop(p.topColor), bgBottom(p.bottomColor));
 
         gl.enable(gl.BLEND);
