@@ -41,12 +41,6 @@ export function tileResolution(screenPx: number): number {
   return Math.min(1024, Math.max(256, 2 ** exp));
 }
 
-/** Wraps `v` into [0, 1). */
-export function wrap01(v: number): number {
-  const w = v - Math.floor(v);
-  return w >= 1 ? 0 : w;
-}
-
 /** One god ray: a soft vertical band that sways and pulses slowly. */
 export interface Ray {
   /** Centre in 0..1 across the table. */

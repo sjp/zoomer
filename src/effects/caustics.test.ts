@@ -14,7 +14,6 @@ import {
   spawnBubble,
   stepBubbles,
   tileResolution,
-  wrap01,
 } from "./caustics-sim";
 import { createRng } from "./noise";
 
@@ -48,15 +47,6 @@ describe("tileResolution", () => {
     expect(tileResolution(100)).toBe(256);
     expect(tileResolution(Number.NaN)).toBe(256);
     expect(tileResolution(0)).toBe(256);
-  });
-});
-
-describe("wrap01", () => {
-  it("wraps into [0, 1)", () => {
-    expect(wrap01(1.25)).toBeCloseTo(0.25);
-    expect(wrap01(-0.25)).toBeCloseTo(0.75);
-    expect(wrap01(0)).toBe(0);
-    expect(wrap01(-1e-20)).toBeLessThan(1);
   });
 });
 

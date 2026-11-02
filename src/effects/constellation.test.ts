@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildGrid, createLinkGrid, findLinks, linkFalloff, wrapCoord } from "./constellation";
+import { buildGrid, createLinkGrid, findLinks, linkFalloff } from "./constellation";
 import { createRng } from "./noise";
+import { wrap } from "./math";
 
 function bruteForce(xs: Float32Array, ys: Float32Array, n: number, maxDist: number): Set<string> {
   const out = new Set<string>();
@@ -47,22 +48,11 @@ function randomPoints(seed: number, n: number, minX: number, minY: number, w: nu
   const xs = new Float32Array(n);
   const ys = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    xs[i] = wrapCoord(minX + rng() * w, minX, w);
-    ys[i] = wrapCoord(minY + rng() * h, minY, h);
+    xs[i] = wrap(minX + rng() * w, minX, w);
+    ys[i] = wrap(minY + rng() * h, minY, h);
   }
   return { xs, ys };
 }
-
-describe("wrapCoord", () => {
-  it("wraps into [lo, lo + span)", () => {
-    expect(wrapCoord(5, 0, 10)).toBe(5);
-    expect(wrapCoord(12, 0, 10)).toBe(2);
-    expect(wrapCoord(-1, 0, 10)).toBe(9);
-    expect(wrapCoord(-35, -10, 20)).toBe(5);
-    expect(wrapCoord(10, 0, 10)).toBe(0);
-    expect(wrapCoord(-10, -10, 20)).toBe(-10);
-  });
-});
 
 describe("linkFalloff", () => {
   it("is (1 - t)² and zero beyond the link distance", () => {
@@ -108,7 +98,7 @@ describe("grid neighbour search", () => {
       [0.01, 50],
       [199, -100],
       [201, -99],
-      [wrapCoord(400, minX, spanX), 0], // wraps to the left margin edge
+      [wrap(400, minX, spanX), 0], // wraps to the left margin edge
     ];
     const n = pts.length;
     const xs = new Float32Array(pts.map((p) => p[0]));

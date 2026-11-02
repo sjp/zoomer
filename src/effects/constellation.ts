@@ -4,6 +4,7 @@ import { createRng } from "./noise";
 import { createGradientBackground, createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
+import { wrap } from "./math";
 
 const MAX_POINTS = 400;
 /** Most links drawn per frame; beyond this, the rest are dropped. */
@@ -19,13 +20,6 @@ const TAU = Math.PI * 2;
 // ---------------------------------------------------------------------------
 // Pure logic: wrapping and the uniform-grid neighbour search.
 // ---------------------------------------------------------------------------
-
-/** Wraps `v` into `[lo, lo + span)`, however far outside it is. */
-export function wrapCoord(v: number, lo: number, span: number): number {
-  let t = (v - lo) % span;
-  if (t < 0) t += span;
-  return lo + t;
-}
 
 /** Link opacity for a link of length `t` times the link distance: `(1 - t)²`, 0 beyond 1. */
 export function linkFalloff(t: number): number {
@@ -345,8 +339,8 @@ export const constellation = defineEffect({
             near[i] = k;
             heading[i] += Math.sin(time * turnRate[i] + turnPhase[i]) * dt * 0.25;
             const step = drift * (0.35 + 0.65 * k);
-            xs[i] = wrapCoord(xs[i] + Math.cos(heading[i]) * step, minX, spanX);
-            ys[i] = wrapCoord(ys[i] + Math.sin(heading[i]) * step, minY, spanY);
+            xs[i] = wrap(xs[i] + Math.cos(heading[i]) * step, minX, spanX);
+            ys[i] = wrap(ys[i] + Math.sin(heading[i]) * step, minY, spanY);
             life[i] = Math.min(1, life[i] + fadeStep);
           }
 

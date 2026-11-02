@@ -16,6 +16,7 @@ import {
   unitRgbMemo,
 } from "./sprites";
 import { defineEffect } from "./types";
+import { smoothstep, wrap } from "./math";
 
 const MAX_SPECKS = 300;
 export const MAX_BEAMS = 3;
@@ -31,11 +32,6 @@ const DEFOCUS_SHARE = 0.25;
 /** Base beam brightness (fraction of the light colour at the beam's brightest point). */
 const BEAM_STRENGTH = 0.11;
 const TAU = Math.PI * 2;
-
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
 
 /**
  * Firefly blink curve: a smooth sin² pulse during the first `duty` of the cycle,
@@ -121,13 +117,6 @@ export function layoutBeams(n: number, angleDeg: number, refWidth: number, out: 
     b.intensity = intensity;
   }
   return count;
-}
-
-/** Wraps `x` into [-margin, span + margin] once it leaves, so the jump is off-screen. */
-export function wrap(x: number, span: number, margin: number): number {
-  if (x < -margin) return x + span + margin * 2;
-  if (x > span + margin) return x - span - margin * 2;
-  return x;
 }
 
 /**
@@ -363,12 +352,13 @@ export const fireflies = defineEffect({
             const sp = drift * pace[i] * radiusK[i] ** 0.5;
             const radius = baseRadius * radiusK[i];
             const margin = radius;
-            const x = wrap(xs[i] + Math.cos(heading[i]) * sp * dt, refWidth, margin);
+            // Wrap within a margin of the edges, so the jump is off-screen.
+            const x = wrap(xs[i] + Math.cos(heading[i]) * sp * dt, -margin, refWidth + 2 * margin);
             // Dust also settles very slowly, as it does in still air.
             const y = wrap(
               ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt,
-              1080,
-              margin,
+              -margin,
+              1080 + 2 * margin,
             );
             xs[i] = x;
             ys[i] = y;

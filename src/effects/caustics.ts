@@ -9,7 +9,6 @@ import {
   seedBubbles,
   stepBubbles,
   tileResolution,
-  wrap01,
 } from "./caustics-sim";
 import {
   beginFrame,
@@ -27,6 +26,7 @@ import {
 import { createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, unitRgbMemo } from "./sprites";
 import { defineEffect, type ParamSchema, type ParamValues } from "./types";
+import { wrap } from "./math";
 
 /** On-screen size of one caustic tile period in reference px at scale 1. */
 const TILE_REF_PX = 900;
@@ -443,10 +443,10 @@ export const caustics = defineEffect({
           const sdt = dt * speed;
           clock += sdt;
           advancePhases(phases, sdt * TIME_RATE);
-          offAx = wrap01(offAx + DRIFT_A[0] * sdt);
-          offAy = wrap01(offAy + DRIFT_A[1] * sdt);
-          offBx = wrap01(offBx + DRIFT_B[0] * sdt);
-          offBy = wrap01(offBy + DRIFT_B[1] * sdt);
+          offAx = wrap(offAx + DRIFT_A[0] * sdt, 0, 1);
+          offAy = wrap(offAy + DRIFT_A[1] * sdt, 0, 1);
+          offBx = wrap(offBx + DRIFT_B[0] * sdt, 0, 1);
+          offBy = wrap(offBy + DRIFT_B[1] * sdt, 0, 1);
           updateStatics(p);
           const deep = p.scene === "deep";
 

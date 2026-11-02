@@ -7,7 +7,6 @@ import {
   blink,
   layoutBeams,
   MAX_BEAMS,
-  wrap,
 } from "./fireflies";
 
 const beam = (over: Partial<Beam> = {}): Beam => ({
@@ -127,14 +126,5 @@ describe("layoutBeams", () => {
         expect(b.y1).toBeGreaterThanOrEqual(1000);
       }
     }
-  });
-});
-
-describe("wrap", () => {
-  it("leaves on-screen values alone and wraps beyond the margin", () => {
-    expect(wrap(50, 100, 10)).toBe(50);
-    expect(wrap(-5, 100, 10)).toBe(-5);
-    expect(wrap(-11, 100, 10)).toBe(109);
-    expect(wrap(111, 100, 10)).toBe(-9);
   });
 });

@@ -9,6 +9,7 @@ import {
 } from "./gl";
 import { createRng, hash32, HASH32_GLSL } from "./noise";
 import { defineEffect } from "./types";
+import { smoothstep } from "./math";
 
 const MAX_PARTICLES = 8000;
 /** Reference particle speed in px/s at 1080p for a speed of 1. */
@@ -30,11 +31,6 @@ const CLEAN_RATE = 20 / 255;
 /** Floats per particle segment instance: x0, y0, x1, y1, colour t, alpha. */
 const STRIDE = 6;
 const TAU = Math.PI * 2;
-
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
 
 const F3 = 1 / 3;
 const G3 = 1 / 6;

@@ -9,6 +9,7 @@ import {
 } from "./gl";
 import { createRgbCache, createStreakRenderer, STREAK_FLOATS } from "./streaks";
 import { defineEffect } from "./types";
+import { smoothstep } from "./math";
 
 const MAX_STREAKS = 3000;
 
@@ -39,11 +40,6 @@ void main() {
   outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
-
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
 
 /**
  * Radial light streaks with a jump cycle: drifting stars stretch into a tunnel

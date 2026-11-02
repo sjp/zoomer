@@ -18,6 +18,7 @@ import {
 } from "./gl";
 import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
 import { defineEffect } from "./types";
+import { fract } from "./math";
 
 /** Noise texture side, in texels. */
 const NOISE_SIZE = 256;
@@ -143,7 +144,6 @@ vec4 composite(vec2 uv) {
 /** Floats per layer in each of the three per-layer uniform arrays. */
 const LAYER_FLOATS = 4;
 
-const fract = (x: number) => x - Math.floor(x);
 /** Cheap deterministic hash of a number to [0, 1). */
 const hash = (k: number) => fract(Math.sin(k * 12.9898 + 4.1414) * 43758.5453);
 

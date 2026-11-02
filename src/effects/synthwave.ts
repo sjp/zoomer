@@ -11,6 +11,7 @@ import {
   withScope,
 } from "./gl";
 import { defineEffect } from "./types";
+import { clamp, smoothstep } from "./math";
 
 /** Points per mountain ridge (2^n + 1 for midpoint displacement). */
 const RIDGE_POINTS = 129;
@@ -22,13 +23,6 @@ const MAX_VERTICAL_LINES = 400;
 const SUN_STRIPES = 7;
 const BLACK: Rgb = [0, 0, 0];
 const WHITE: Rgb = [1, 1, 1];
-
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
-
-const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
 /** Length of [a, b] inside the pixel row centred on y. */
 const overlap = (a: number, b: number, y: number) =>

@@ -21,6 +21,7 @@ import {
   stepRainSim,
   writeDropInstances,
 } from "./windowrain-sim";
+import { wrap } from "./math";
 
 const MAX_LIGHTS = 150;
 /** Background divisors: the background is heavily defocused, so it can be very low-res. */
@@ -477,10 +478,7 @@ export const windowRain = defineEffect({
           bgTimer += dt;
           const nLights = Math.min(MAX_LIGHTS, p.lights);
           for (let i = 0; i < nLights; i++) {
-            let x = lx[i] + lDrift[i] * DRIFT_PX * dt;
-            if (x < -200) x += refWidth + 400;
-            else if (x > refWidth + 200) x -= refWidth + 400;
-            lx[i] = x;
+            lx[i] = wrap(lx[i] + lDrift[i] * DRIFT_PX * dt, -200, refWidth + 400);
           }
           if (
             bgTimer >= 1 / BG_RATE ||
