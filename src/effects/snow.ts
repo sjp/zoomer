@@ -14,6 +14,7 @@ import {
 import { createNoise, createRng } from "./noise";
 import { createSpriteBatch } from "./sprites";
 import { defineEffect } from "./types";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 
 const MAX_FLAKES = 1500;
 /** Reference fall speed in px/s at 1080p for the middle layer at a speed of 1. */
@@ -214,7 +215,8 @@ export const snow = defineEffect({
       let refWidth = 1920;
       // Kept unwrapped so sway phases never jump; doubles stay precise for weeks.
       let time = 0;
-      let prevCount = 0;
+      /** Items simulated: the count plus any still fading out after it dropped. */
+      let live = 0;
 
       // Interleave layers by index so any flake count keeps the same proportions.
       const pattern: number[] = [];
@@ -257,10 +259,10 @@ export const snow = defineEffect({
           beginFrame(gl, width, height);
           time += dt;
 
-          const n = Math.min(p.count, MAX_FLAKES);
-          for (let i = prevCount; i < n; i++) life[i] = 0;
-          prevCount = n;
+          const target = Math.min(Math.floor(p.count), MAX_FLAKES);
+          const n = (live = growLive(life, live, target));
           const fadeStep = dt / FADE_IN;
+          const outStep = dt / FADE_OUT;
 
           // One slow, smooth gust signal shared by the whole scene.
           const gust = noise.noise2(time * 0.07, 0.5) * 0.7 + noise.noise2(time * 0.19, 9.3) * 0.3;
@@ -306,8 +308,7 @@ export const snow = defineEffect({
               xs[i] = x;
               ys[i] = y;
 
-              const life01 = Math.min(1, life[i] + fadeStep);
-              life[i] = life01;
+              const life01 = stepLife(life, i, target, fadeStep, outStep);
 
               // Tumbling: the flake turns edge-on now and then, narrowing and dimming.
               const tumble = Math.cos(time * tumbleRate[i] + tumblePhase[i]);
@@ -327,6 +328,8 @@ export const snow = defineEffect({
               visible++;
             }
           }
+
+          live = trimLive(life, live, target);
 
           background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
 
