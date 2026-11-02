@@ -10,7 +10,11 @@ export interface Recording {
   extension: "mp4" | "webm";
 }
 
-/** Records the canvas for `seconds` using MediaRecorder. Prefers MP4 (Zoom accepts it). */
+/**
+ * Records the canvas for `seconds` using MediaRecorder. The stop deadline is a
+ * `setTimeout`, which browsers throttle in background tabs, so a clip recorded while
+ * the tab is hidden can run long; the UI asks the user to keep the tab visible.
+ */
 export function recordCanvas(
   canvas: HTMLCanvasElement,
   seconds: number,
@@ -19,24 +23,53 @@ export function recordCanvas(
   const mimeType = CANDIDATE_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
   if (!mimeType) return Promise.reject(new Error("This browser cannot record video."));
 
-  const stream = canvas.captureStream(fps);
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12_000_000 });
-  const chunks: Blob[] = [];
-
   return new Promise((resolve, reject) => {
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
+    let stream: MediaStream | undefined;
+    let recorder: MediaRecorder | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    const chunks: Blob[] = [];
+
+    /** Releases the capture and the timer, and settles the promise once. */
+    const finish = (err?: unknown) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (recorder && recorder.state !== "inactive") {
+        try {
+          recorder.stop();
+        } catch {
+          // Already stopping; the tracks are stopped below either way.
+        }
+      }
+      if (stream) for (const track of stream.getTracks()) track.stop();
+      if (err !== undefined) reject(err instanceof Error ? err : new Error(String(err)));
+      else
+        resolve({
+          blob: new Blob(chunks, { type: mimeType }),
+          extension: mimeType.startsWith("video/mp4") ? "mp4" : "webm",
+        });
     };
-    recorder.onerror = () => reject(new Error("Recording failed."));
-    recorder.onstop = () => {
-      for (const track of stream.getTracks()) track.stop();
-      resolve({
-        blob: new Blob(chunks, { type: mimeType }),
-        extension: mimeType.startsWith("video/mp4") ? "mp4" : "webm",
+
+    try {
+      stream = canvas.captureStream(fps);
+      recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 12_000_000,
       });
-    };
-    recorder.start(1000);
-    setTimeout(() => recorder.stop(), seconds * 1000);
+      const rec = recorder;
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      rec.onerror = () => finish(new Error("Recording failed."));
+      rec.onstop = () => finish();
+      rec.start(1000);
+      timer = setTimeout(() => {
+        if (rec.state !== "inactive") rec.stop();
+      }, seconds * 1000);
+    } catch (err) {
+      finish(err ?? new Error("Recording failed."));
+    }
   });
 }
 
