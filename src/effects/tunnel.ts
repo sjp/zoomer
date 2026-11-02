@@ -10,11 +10,12 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
+import { wrap } from "./math";
 import { createNoise, fbmPeriodic2 } from "./noise";
 import { defineEffect } from "./types";
 
 /** Tunnel wall texture size in texels (power of two so it tiles with REPEAT). */
-const TEX = 256;
+export const TEX = 256;
 const MASK = TEX - 1;
 /** Texture repeats around the circumference. Must be an integer so u = 0/1 has no seam. */
 const U_REPS = 2;
@@ -37,7 +38,7 @@ const BEND_REACH = 1.05;
 const MIN_DIST = 0.004;
 
 /** Wraps a texel offset into [0, TEX). */
-const wrap = (x: number) => ((x % TEX) + TEX) % TEX;
+export const wrapTexels = (x: number) => wrap(x, 0, TEX);
 
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -129,7 +130,7 @@ void main() {
  * Builds the seamlessly tiling wall texture: domain-warped periodic fBm mixed
  * with ridged strands, normalised to [0, 1]. Runs once per instance.
  */
-const buildTexture = (out: Float32Array, seed: number) => {
+export const buildTexture = (out: Float32Array, seed: number) => {
   const noise = createNoise(seed);
   const P = 4;
   for (let y = 0; y < TEX; y++) {
@@ -349,10 +350,10 @@ export const tunnel = defineEffect({
           beginFrame(gl, width, height);
           time += dt;
           const dv = p.speed * SPEED_TEX * dt;
-          vOff = wrap(vOff + dv);
-          uOff = wrap(uOff + (p.twist / 60) * U_REPS * TEX * dt);
+          vOff = wrapTexels(vOff + dv);
+          uOff = wrapTexels(uOff + (p.twist / 60) * U_REPS * TEX * dt);
           const spk = p.spiral * SPIRAL_K;
-          spiralOff = wrap(spiralOff + spk * dv);
+          spiralOff = wrapTexels(spiralOff + spk * dv);
 
           // Slow lissajous wander of the vanishing point, in frame heights.
           const amp = p.bend * BEND_MAX;
@@ -367,7 +368,7 @@ export const tunnel = defineEffect({
           u.f2("uPixOffset", (-0.5 * width) / h, 0.5);
           u.f2("uBend", ox, oy);
           // Tile units; the atan half-turn and the half-texel centring ride along in u.
-          const su = wrap(uOff + spiralOff + 0.5 + 0.5 * U_REPS * TEX);
+          const su = wrapTexels(uOff + spiralOff + 0.5 + 0.5 * U_REPS * TEX);
           u.f2("uScroll", su / TEX, vOff / TEX);
           u.f1("uSpiral", spk);
           u.f1("uRings", p.rings);
