@@ -285,7 +285,11 @@ const getRidgeMaxStep = () =>
   }) as [number, number]);
 
 interface Palette {
-  key: string;
+  skyTopHex: string;
+  skyBottomHex: string;
+  gridHex: string;
+  sunTopHex: string;
+  sunBottomHex: string;
   skyTop: Rgb;
   skyMid: Rgb;
   skyBottom: Rgb;
@@ -300,7 +304,6 @@ interface Palette {
 }
 
 const buildPalette = (
-  key: string,
   skyTopHex: string,
   skyBottomHex: string,
   gridHex: string,
@@ -315,7 +318,11 @@ const buildPalette = (
   const haze = mixRgb(skyBottom, grid, 0.35);
   const ground = mixRgb(skyTop, BLACK, 0.4);
   return {
-    key,
+    skyTopHex,
+    skyBottomHex,
+    gridHex,
+    sunTopHex,
+    sunBottomHex,
     skyTop,
     skyMid: mixRgb(skyTop, skyBottom, 0.45),
     skyBottom,
@@ -459,9 +466,14 @@ export const synthwave = defineEffect({
           gl.useProgram(program);
 
           // Colours only change when the params do, so parse, mix and upload them once.
-          const key = `${p.skyTop}|${p.skyBottom}|${p.gridColor}|${p.sunTop}|${p.sunBottom}`;
-          if (palette?.key !== key) {
-            palette = buildPalette(key, p.skyTop, p.skyBottom, p.gridColor, p.sunTop, p.sunBottom);
+          if (
+            palette?.skyTopHex !== p.skyTop ||
+            palette.skyBottomHex !== p.skyBottom ||
+            palette.gridHex !== p.gridColor ||
+            palette.sunTopHex !== p.sunTop ||
+            palette.sunBottomHex !== p.sunBottom
+          ) {
+            palette = buildPalette(p.skyTop, p.skyBottom, p.gridColor, p.sunTop, p.sunBottom);
             const pc = palette;
             u.v3("uSunTop", pc.sunTop);
             u.v3("uSunBottom", pc.sunBottom);
