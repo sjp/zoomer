@@ -54,17 +54,20 @@ describe("createRng", () => {
   });
 
   it("returns floats in [0, 1) spread across the range", () => {
+    // Plain comparisons in the hot loop: an expect per draw costs far more than the check.
+    const outside: string[] = [];
     for (const seed of [0, 1, -7, 2 ** 40, NaN]) {
       const rng = createRng(seed);
       const buckets = new Array<number>(10).fill(0);
       for (let i = 0; i < 10000; i++) {
         const v = rng();
-        expect(v).toBeGreaterThanOrEqual(0);
-        expect(v).toBeLessThan(1);
+        if (!(v >= 0 && v < 1) && outside.length < 10)
+          outside.push(`seed ${seed}, draw ${i}: ${v}`);
         buckets[Math.floor(v * 10)]++;
       }
       for (const n of buckets) expect(n).toBeGreaterThan(800);
     }
+    expect(outside).toEqual([]);
   });
 });
 
