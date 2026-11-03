@@ -1,4 +1,5 @@
 import { auroraMeta } from "./aurora.meta";
+import { balloonsMeta } from "./balloons.meta";
 import { beachMeta } from "./beach.meta";
 import { biolumMeta } from "./biolum.meta";
 import { blindsMeta } from "./blinds.meta";
@@ -79,6 +80,7 @@ export const effects: readonly EffectEntry[] = [
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
+  { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
