@@ -69,6 +69,7 @@ import { papercutMeta } from "./papercut.meta";
 import { pendulumMeta } from "./pendulum.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
+import { plasmaMeta } from "./plasma.meta";
 import { porchMeta } from "./porch.meta";
 import { potteryMeta } from "./pottery.meta";
 import { quasiMeta } from "./quasi.meta";
@@ -135,6 +136,7 @@ export const effects: readonly EffectEntry[] = [
   { ...potteryMeta, load: () => import("./pottery").then((m) => m.pottery) },
   { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
+  { ...plasmaMeta, load: () => import("./plasma").then((m) => m.plasma) },
   { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
   { ...splitflapMeta, load: () => import("./splitflap").then((m) => m.splitflap) },
   { ...neonMeta, load: () => import("./neon").then((m) => m.neon) },
