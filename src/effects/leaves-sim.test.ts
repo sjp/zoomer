@@ -136,15 +136,18 @@ describe("gustAt", () => {
     let prev = gustAt(noise, 0);
     let calm = 0;
     let gusty = 0;
+    // Plain comparisons in the hot loop: an expect per sample costs far more than the check.
+    const bad: string[] = [];
     for (let t = 1 / 60; t < 900; t += 1 / 60) {
       const g = gustAt(noise, t);
-      expect(g).toBeGreaterThanOrEqual(0);
-      expect(g).toBeLessThanOrEqual(1);
-      expect(Math.abs(g - prev)).toBeLessThan(0.01);
+      if (!(g >= 0 && g <= 1 && Math.abs(g - prev) < 0.01) && bad.length < 10) {
+        bad.push(`t ${t}: ${prev} -> ${g}`);
+      }
       if (g < 0.1) calm++;
       if (g > 0.4) gusty++;
       prev = g;
     }
+    expect(bad).toEqual([]);
     expect(calm).toBeGreaterThan(0);
     expect(gusty).toBeGreaterThan(0);
   });
