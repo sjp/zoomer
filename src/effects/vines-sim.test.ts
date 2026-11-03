@@ -63,14 +63,18 @@ function run(v: Vines, f: VineFrame, seconds: number, every: number, check: () =
 
 describe("region", () => {
   it("keeps the centre third clear below the top band, for every border", () => {
+    const open: string[] = [];
     for (const border of [0, 0.3, 0.6, 1]) {
       expect(bandWidth(1920, border)).toBeLessThanOrEqual(1920 / 3);
       for (let x = 640; x <= 1280; x += 40) {
         for (let y = bandHeight(border) + 1; y <= 1080; y += 40) {
-          expect(allowed(x, y, 1920, border)).toBe(false);
+          if (allowed(x, y, 1920, border) !== false && open.length < 10) {
+            open.push(`border ${border}: ${x},${y}`);
+          }
         }
       }
     }
+    expect(open).toEqual([]);
   });
 
   it("allows the edges, the corners and the top band", () => {
