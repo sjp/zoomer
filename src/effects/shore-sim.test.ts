@@ -204,7 +204,8 @@ describe("foam", () => {
     expect(createFoamField(ASPECT).density.length).toBe(foamColumns(ASPECT) * 72);
   });
 
-  it("stays bounded under the biggest, most frequent waves", () => {
+  // 24 s of foam simulation with plain checks: the cost is the simulation itself.
+  it("stays bounded under the biggest, most frequent waves", { timeout: 20_000 }, () => {
     const table = rocks("across");
     const s = createShoreScheduler(8);
     const foam = createFoamField(ASPECT);
@@ -224,47 +225,52 @@ describe("foam", () => {
     expect(peak).toBeGreaterThan(0.8);
   });
 
-  it("drains down the rocks and decays to near zero before the next wave breaks", () => {
-    const table = rocks("right");
-    const s = createShoreScheduler(5);
-    const foam = createFoamField(ASPECT);
-    s.step(0, MAX_PERIOD);
-    const first = s.waves[0];
-    // Step until the first wave is done splatting everywhere.
-    const splatEnd = T_STOP + 0.6 + first.peelSpan;
-    let peak = 0;
-    let centreAtEnd = 0;
-    let centreLater = 0;
-    const centre = () => {
-      let m = 0;
-      let my = 0;
-      for (let r = 0; r < foam.rows; r++) {
-        for (let c = 0; c < foam.columns; c++) {
-          const d = foam.density[r * foam.columns + c];
-          m += d;
-          my += d * r;
+  // Up to 40 s of foam simulation with plain checks: the cost is the simulation itself.
+  it(
+    "drains down the rocks and decays to near zero before the next wave breaks",
+    { timeout: 20_000 },
+    () => {
+      const table = rocks("right");
+      const s = createShoreScheduler(5);
+      const foam = createFoamField(ASPECT);
+      s.step(0, MAX_PERIOD);
+      const first = s.waves[0];
+      // Step until the first wave is done splatting everywhere.
+      const splatEnd = T_STOP + 0.6 + first.peelSpan;
+      let peak = 0;
+      let centreAtEnd = 0;
+      let centreLater = 0;
+      const centre = () => {
+        let m = 0;
+        let my = 0;
+        for (let r = 0; r < foam.rows; r++) {
+          for (let c = 0; c < foam.columns; c++) {
+            const d = foam.density[r * foam.columns + c];
+            m += d;
+            my += d * r;
+          }
         }
+        return m > 0 ? my / m : 0;
+      };
+      let nextBreak = Infinity;
+      while (s.time < 40) {
+        s.step(1 / 30, MAX_PERIOD);
+        advanceFoam(foam, s, table, ASPECT, 0.5, 1 / 30);
+        peak = Math.max(peak, maxFoam(foam));
+        if (centreAtEnd === 0 && s.time >= splatEnd) centreAtEnd = centre();
+        if (centreLater === 0 && s.time >= splatEnd + 1.5) centreLater = centre();
+        if (s.spawned > 1 && nextBreak === Infinity) {
+          const w = s.waves[s.count - 1];
+          nextBreak = w.start + T_APPROACH - 0.25;
+        }
+        if (s.time >= nextBreak) break;
       }
-      return m > 0 ? my / m : 0;
-    };
-    let nextBreak = Infinity;
-    while (s.time < 40) {
-      s.step(1 / 30, MAX_PERIOD);
-      advanceFoam(foam, s, table, ASPECT, 0.5, 1 / 30);
-      peak = Math.max(peak, maxFoam(foam));
-      if (centreAtEnd === 0 && s.time >= splatEnd) centreAtEnd = centre();
-      if (centreLater === 0 && s.time >= splatEnd + 1.5) centreLater = centre();
-      if (s.spawned > 1 && nextBreak === Infinity) {
-        const w = s.waves[s.count - 1];
-        nextBreak = w.start + T_APPROACH - 0.25;
-      }
-      if (s.time >= nextBreak) break;
-    }
-    expect(peak).toBeGreaterThan(0.5);
-    expect(centreLater).toBeLessThan(centreAtEnd);
-    expect(Number.isFinite(nextBreak)).toBe(true);
-    expect(maxFoam(foam)).toBeLessThan(0.05);
-  });
+      expect(peak).toBeGreaterThan(0.5);
+      expect(centreLater).toBeLessThan(centreAtEnd);
+      expect(Number.isFinite(nextBreak)).toBe(true);
+      expect(maxFoam(foam)).toBeLessThan(0.05);
+    },
+  );
 });
 
 describe("spray", () => {
