@@ -40,7 +40,7 @@ export const snowWindowMeta = defineEffectMeta({
       step: 0.05,
       default: 0.15,
     },
-    fog: { kind: "number", label: "Condensation", min: 0, max: 1, step: 0.01, default: 0.5 },
+    fog: { kind: "number", label: "Condensation", min: 0, max: 1, step: 0.01, default: 0.55 },
     warmth: { kind: "number", label: "Room light", min: 0, max: 1, step: 0.01, default: 0.6 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 4 },
   },

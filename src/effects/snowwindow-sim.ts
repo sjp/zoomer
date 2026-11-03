@@ -115,28 +115,34 @@ export function condensationSize(aspect: number): { width: number; height: numbe
  * the edge broken up by noise.
  */
 export function fogDensity(p: Rect, x: number, y: number, noise: Noise): number {
-  const [x0, y0, x1, y1] = p;
-  const reach = Math.min(0.34, 0.75 * Math.min(x1 - x0, y1 - y0));
+  const x0 = p[0];
+  const y0 = p[1];
+  const x1 = p[2];
+  const y1 = p[3];
+  const reach = Math.min(0.45, 0.8 * Math.min(x1 - x0, y1 - y0));
   const dl = x - x0;
   const dr = x1 - x;
   const db = y - y0;
   const dt = y1 - y;
-  const corner = 1 - Math.min(Math.hypot(dl, db), Math.hypot(dr, db)) / reach;
+  const dx = Math.min(dl, dr);
+  const corner = 1 - Math.sqrt(dx * dx + db * db) / reach;
   const bottom = 0.55 * (1 - db / (0.4 * reach));
-  const top = 0.6 * (1 - Math.min(Math.hypot(dl, dt), Math.hypot(dr, dt)) / (0.45 * reach));
-  const f = Math.max(corner, bottom, top, 0);
-  const n = fbm2(noise, x * 7, y * 7, 3);
+  const top = 0.6 * (1 - Math.sqrt(dx * dx + dt * dt) / (0.45 * reach));
+  const f = Math.max(corner, bottom, top);
+  // Clear glass away from the corners and edges: no noise to evaluate.
+  if (f <= 0) return 0;
+  const n = fbm2(noise, x * 7, y * 7, 2);
   const g = clamp(f * (1 + 0.45 * n) + 0.08 * n, 0, 1);
   return g * g * (3 - 2 * g);
 }
 
 /** Droplets per unit of pane area, before the fog decides where they stick. */
-const DROPS_PER_AREA = 22;
+const DROPS_PER_AREA = 50;
 /** Droplet radius range, in 1080p px. */
 const DROP_MIN_PX = 6;
 const DROP_MAX_PX = 14;
 /** Fog density a droplet needs to form. */
-const DROP_FOG = 0.45;
+const DROP_FOG = 0.55;
 /**
  * Droplet edge encoding: G = 0.5 + (radius - distance) * texels * DROP_RAMP, so
  * one texel moves G by DROP_RAMP and the shader can find a sharp edge at 0.5.
@@ -164,13 +170,18 @@ export function buildCondensation(
   const sx = aspect / width;
   const sy = 1 / height;
 
-  for (let j = 0; j < height; j++) {
-    const y = (j + 0.5) * sy;
-    for (let i = 0; i < width; i++) {
-      const x = (i + 0.5) * sx;
-      const k = paneAt(panes, x, y);
-      if (k < 0) continue;
-      out[(j * width + i) * 4] = Math.round(fogDensity(panes[k], x, y, noise) * 255);
+  // Each pane's texels: those whose centres lie in it (as `paneAt` decides).
+  for (const p of panes) {
+    const i0 = Math.max(0, Math.ceil(p[0] / sx - 0.5));
+    const i1 = Math.min(width, Math.ceil(p[2] / sx - 0.5));
+    const j0 = Math.max(0, Math.ceil(p[1] / sy - 0.5));
+    const j1 = Math.min(height, Math.ceil(p[3] / sy - 0.5));
+    for (let j = j0; j < j1; j++) {
+      const y = (j + 0.5) * sy;
+      for (let i = i0; i < i1; i++) {
+        const v = fogDensity(p, (i + 0.5) * sx, y, noise);
+        if (v > 0) out[(j * width + i) * 4] = Math.round(v * 255);
+      }
     }
   }
 
