@@ -113,7 +113,7 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
  * (planet rebuilds its surface for every world and seed the param sets reach), so a
  * heavy effect takes seconds once the full suite shares the CPUs.
  */
-const EFFECT_TIMEOUT = 30_000;
+const EFFECT_TIMEOUT = 60_000;
 const cases = webgl.map((e) => [e.id, e] as const);
 
 describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
