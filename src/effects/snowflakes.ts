@@ -18,13 +18,19 @@ import { createSpriteBatch } from "./sprites";
 /**
  * Vertex shader for flakes. Per flake: centre and quad half-size (device px,
  * y down; the x half-size narrows as the flake tumbles), opacity and edge softness.
+ *
+ * With `fadeMask`, each flake's opacity is also scaled by the mask texture's R
+ * channel at its centre (one vertex fetch, so the whole flake fades together).
+ * The mask covers the canvas with row 0 at the top (u = x / width, v = y / height
+ * in device px, y down); bilinear filtering keeps the fade smooth as a flake moves.
+ * Without it the shader is exactly the original.
  */
-const FLAKE_VERTEX = /* glsl */ `#version 300 es
+export const flakeVertex = (fadeMask: boolean) => /* glsl */ `#version 300 es
 layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aRect;
 layout(location = 2) in vec2 aLook;
 uniform vec2 uResolution;
-out vec2 vLocal;
+${fadeMask ? "uniform sampler2D uMask;\n" : ""}out vec2 vLocal;
 flat out float vAlpha;
 flat out float vSoftness;
 ${TO_CLIP_GLSL}
@@ -35,7 +41,7 @@ void main() {
   // spritePad(softness), as in TS.
   float pad = 1.0 + aLook.y + ${glslFloat(PAD_MARGIN)};
   vLocal = aCorner * pad * ext / aRect.zw;
-  vAlpha = aLook.x;
+  vAlpha = aLook.x${fadeMask ? " * textureLod(uMask, aRect.xy / uResolution, 0.0).r" : ""};
   vSoftness = aLook.y;
   gl_Position = pxToClip(px, uResolution);
 }
@@ -77,31 +83,66 @@ export interface FlakeRenderer {
    * Draws flakes `first .. first + count - 1` in `color` on a `width` x `height`
    * canvas. Binds its program; the caller sets blending (premultiplied
    * source-over: `ONE, ONE_MINUS_SRC_ALPHA`).
+   *
+   * With the `fadeMask` option, `mask` is bound to texture unit 0 (left bound,
+   * with unit 0 active) and scales each flake's opacity; see `flakeVertex`.
+   * Without it, `mask` is ignored.
    */
-  draw(first: number, count: number, width: number, height: number, color: Rgb): void;
+  draw(
+    first: number,
+    count: number,
+    width: number,
+    height: number,
+    color: Rgb,
+    mask?: WebGLTexture | null,
+  ): void;
   dispose(): void;
 }
 
-/** A flake renderer for up to `max` flakes. */
-export function createFlakeRenderer(gl: WebGL2RenderingContext, max: number): FlakeRenderer {
-  return withScope((scope) => buildFlakeRenderer(gl, max, scope));
+export interface FlakeRendererOptions {
+  /** Opt in to fading flakes by a mask texture passed to `draw` (default false). */
+  fadeMask?: boolean;
 }
 
-function buildFlakeRenderer(gl: WebGL2RenderingContext, max: number, scope: Scope): FlakeRenderer {
-  const program = scope.add(createProgram(gl, FLAKE_VERTEX, FLAKE_FRAGMENT), (p) =>
+/** A flake renderer for up to `max` flakes. */
+export function createFlakeRenderer(
+  gl: WebGL2RenderingContext,
+  max: number,
+  options: FlakeRendererOptions = {},
+): FlakeRenderer {
+  return withScope((scope) => buildFlakeRenderer(gl, max, options.fadeMask === true, scope));
+}
+
+function buildFlakeRenderer(
+  gl: WebGL2RenderingContext,
+  max: number,
+  fadeMask: boolean,
+  scope: Scope,
+): FlakeRenderer {
+  const program = scope.add(createProgram(gl, flakeVertex(fadeMask), FLAKE_FRAGMENT), (p) =>
     gl.deleteProgram(p),
   );
   const u = createUniforms(gl, program, ["uResolution", "uColor"]);
+  if (fadeMask) {
+    const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+    gl.useProgram(program);
+    gl.uniform1i(gl.getUniformLocation(program, "uMask"), 0);
+    gl.useProgram(prevProgram);
+  }
   // Per flake: centre x, centre y, half-width, half-height, then opacity and softness.
   const batch = scope.own(createSpriteBatch(gl, max, [4, 2]));
   return {
     data: batch.data,
     stride: batch.stride,
     upload: (count) => batch.upload(count),
-    draw(first, count, width, height, color) {
+    draw(first, count, width, height, color, mask) {
       gl.useProgram(program);
       u.f2("uResolution", width, height);
       u.v3("uColor", color);
+      if (fadeMask) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, mask ?? null);
+      }
       batch.draw(first, count);
     },
     dispose: () => scope.dispose(),
