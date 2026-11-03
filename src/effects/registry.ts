@@ -32,6 +32,7 @@ import { fireplaceMeta } from "./fireplace.meta";
 import { flowfieldMeta } from "./flowfield.meta";
 import { frostMeta } from "./frost.meta";
 import { gearsMeta } from "./gears.meta";
+import { geodeMeta } from "./geode.meta";
 import { frostedMeta } from "./frosted.meta";
 import { glassMeta } from "./glass.meta";
 import { globeMeta } from "./globe.meta";
@@ -129,6 +130,7 @@ export const effects: readonly EffectEntry[] = [
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
   { ...lavaMeta, load: () => import("./lava").then((m) => m.lava) },
   { ...icecaveMeta, load: () => import("./icecave").then((m) => m.icecave) },
+  { ...geodeMeta, load: () => import("./geode").then((m) => m.geode) },
   { ...meteorsMeta, load: () => import("./meteors").then((m) => m.meteors) },
   { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
