@@ -19,6 +19,7 @@ import { cloudseaMeta } from "./cloudsea.meta";
 import { constellationMeta } from "./constellation.meta";
 import { contoursMeta } from "./contours.meta";
 import { coralMeta } from "./coral.meta";
+import { cranesMeta } from "./cranes.meta";
 import { dappleMeta } from "./dapple.meta";
 import { daymapMeta } from "./daymap.meta";
 import { desertcampMeta } from "./desertcamp.meta";
@@ -125,6 +126,7 @@ export const effects: readonly EffectEntry[] = [
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
+  { ...cranesMeta, load: () => import("./cranes").then((m) => m.cranes) },
   { ...murmurationMeta, load: () => import("./murmuration").then((m) => m.murmuration) },
   { ...windfarmMeta, load: () => import("./windfarm").then((m) => m.windfarm) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
