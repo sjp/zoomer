@@ -70,6 +70,7 @@ import { truchetMeta } from "./truchet.meta";
 import { tunnelMeta } from "./tunnel.meta";
 import { vinesMeta } from "./vines.meta";
 import { warpMeta } from "./warp.meta";
+import { waterfallMeta } from "./waterfall.meta";
 import { windowRainMeta } from "./windowrain.meta";
 import { zenMeta } from "./zen.meta";
 import { createEffectLoader, type EffectEntry } from "./loader";
@@ -106,6 +107,7 @@ export const effects: readonly EffectEntry[] = [
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
+  { ...waterfallMeta, load: () => import("./waterfall").then((m) => m.waterfall) },
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
