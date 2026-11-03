@@ -1,0 +1,109 @@
+/**
+ * Shared snowflake renderer (Snow, Snowy Window): soft round flakes as instanced
+ * sprites, filled by `createFlakes` in `snow-sim.ts`. Each effect owns its own
+ * renderer, so the uniforms are change-tracked per effect.
+ */
+import type { Rgb } from "./color";
+import {
+  createProgram,
+  createUniforms,
+  glslFloat,
+  type Scope,
+  TO_CLIP_GLSL,
+  withScope,
+} from "./gl";
+import { PAD_MARGIN } from "./snow-sim";
+import { createSpriteBatch } from "./sprites";
+
+/**
+ * Vertex shader for flakes. Per flake: centre and quad half-size (device px,
+ * y down; the x half-size narrows as the flake tumbles), opacity and edge softness.
+ */
+const FLAKE_VERTEX = /* glsl */ `#version 300 es
+layout(location = 0) in vec2 aCorner;
+layout(location = 1) in vec4 aRect;
+layout(location = 2) in vec2 aLook;
+uniform vec2 uResolution;
+out vec2 vLocal;
+flat out float vAlpha;
+flat out float vSoftness;
+${TO_CLIP_GLSL}
+void main() {
+  // Grow the quad by a pixel so the anti-aliased edge of tiny flakes is never clipped.
+  vec2 ext = aRect.zw + 1.0;
+  vec2 px = aRect.xy + aCorner * ext;
+  // spritePad(softness), as in TS.
+  float pad = 1.0 + aLook.y + ${glslFloat(PAD_MARGIN)};
+  vLocal = aCorner * pad * ext / aRect.zw;
+  vAlpha = aLook.x;
+  vSoftness = aLook.y;
+  gl_Position = pxToClip(px, uResolution);
+}
+`;
+
+/**
+ * One soft round flake: a disc whose edge fades over `softness` radii, slightly
+ * whiter in the middle. Output is premultiplied for source-over blending.
+ */
+const FLAKE_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vLocal;
+flat in float vAlpha;
+flat in float vSoftness;
+uniform vec3 uColor;
+out vec4 outColor;
+void main() {
+  float d = length(vLocal);
+  float s = vSoftness;
+  float inner = max(0.0, 1.0 - s);
+  float outer = 1.0 + s;
+  // At least about a pixel of anti-aliasing, as the old bilinear-scaled sprite had.
+  float mid = 0.5 * (inner + outer);
+  float hw = max(0.5 * (outer - inner), 0.5 * fwidth(d));
+  // Blurring spreads the same light wider, so the peak drops a little.
+  float a = (1.0 - smoothstep(mid - hw, mid + hw, d)) / (1.0 + s * 0.6) * vAlpha;
+  vec3 color = mix(uColor, vec3(1.0), 0.35 * max(0.0, 1.0 - d));
+  outColor = vec4(color * a, a);
+}
+`;
+
+export interface FlakeRenderer {
+  /** Instance data for `Flakes.step`: write `stride` floats per flake, then `upload`. */
+  readonly data: Float32Array;
+  readonly stride: number;
+  /** Uploads the first `count` flakes. */
+  upload(count: number): void;
+  /**
+   * Draws flakes `first .. first + count - 1` in `color` on a `width` x `height`
+   * canvas. Binds its program; the caller sets blending (premultiplied
+   * source-over: `ONE, ONE_MINUS_SRC_ALPHA`).
+   */
+  draw(first: number, count: number, width: number, height: number, color: Rgb): void;
+  dispose(): void;
+}
+
+/** A flake renderer for up to `max` flakes. */
+export function createFlakeRenderer(gl: WebGL2RenderingContext, max: number): FlakeRenderer {
+  return withScope((scope) => buildFlakeRenderer(gl, max, scope));
+}
+
+function buildFlakeRenderer(gl: WebGL2RenderingContext, max: number, scope: Scope): FlakeRenderer {
+  const program = scope.add(createProgram(gl, FLAKE_VERTEX, FLAKE_FRAGMENT), (p) =>
+    gl.deleteProgram(p),
+  );
+  const u = createUniforms(gl, program, ["uResolution", "uColor"]);
+  // Per flake: centre x, centre y, half-width, half-height, then opacity and softness.
+  const batch = scope.own(createSpriteBatch(gl, max, [4, 2]));
+  return {
+    data: batch.data,
+    stride: batch.stride,
+    upload: (count) => batch.upload(count),
+    draw(first, count, width, height, color) {
+      gl.useProgram(program);
+      u.f2("uResolution", width, height);
+      u.v3("uColor", color);
+      batch.draw(first, count);
+    },
+    dispose: () => scope.dispose(),
+  };
+}

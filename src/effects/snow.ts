@@ -1,4 +1,4 @@
-import { hexToRgb, mixRgb, type Rgb, unitRgbMemo } from "./color";
+import { hexToRgb, mixRgb, unitRgbMemo } from "./color";
 import {
   beginFrame,
   createFullscreenTriangle,
@@ -7,66 +7,12 @@ import {
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  glslFloat,
-  TO_CLIP_GLSL,
   withScope,
 } from "./gl";
-import { createSpriteBatch } from "./sprites";
 import { snowMeta, MAX_FLAKES } from "./snow.meta";
 import { defineEffect } from "./types";
-import { createFlakes, type FlakeFrame, PAD_MARGIN } from "./snow-sim";
-
-/**
- * Vertex shader for flakes. Per flake: centre and quad half-size (device px,
- * y down; the x half-size narrows as the flake tumbles), opacity and edge softness.
- */
-const FLAKE_VERTEX = /* glsl */ `#version 300 es
-layout(location = 0) in vec2 aCorner;
-layout(location = 1) in vec4 aRect;
-layout(location = 2) in vec2 aLook;
-uniform vec2 uResolution;
-out vec2 vLocal;
-flat out float vAlpha;
-flat out float vSoftness;
-${TO_CLIP_GLSL}
-void main() {
-  // Grow the quad by a pixel so the anti-aliased edge of tiny flakes is never clipped.
-  vec2 ext = aRect.zw + 1.0;
-  vec2 px = aRect.xy + aCorner * ext;
-  // spritePad(softness), as in TS.
-  float pad = 1.0 + aLook.y + ${glslFloat(PAD_MARGIN)};
-  vLocal = aCorner * pad * ext / aRect.zw;
-  vAlpha = aLook.x;
-  vSoftness = aLook.y;
-  gl_Position = pxToClip(px, uResolution);
-}
-`;
-
-/**
- * One soft round flake: a disc whose edge fades over `softness` radii, slightly
- * whiter in the middle. Output is premultiplied for source-over blending.
- */
-const FLAKE_FRAGMENT = /* glsl */ `#version 300 es
-precision highp float;
-in vec2 vLocal;
-flat in float vAlpha;
-flat in float vSoftness;
-uniform vec3 uColor;
-out vec4 outColor;
-void main() {
-  float d = length(vLocal);
-  float s = vSoftness;
-  float inner = max(0.0, 1.0 - s);
-  float outer = 1.0 + s;
-  // At least about a pixel of anti-aliasing, as the old bilinear-scaled sprite had.
-  float mid = 0.5 * (inner + outer);
-  float hw = max(0.5 * (outer - inner), 0.5 * fwidth(d));
-  // Blurring spreads the same light wider, so the peak drops a little.
-  float a = (1.0 - smoothstep(mid - hw, mid + hw, d)) / (1.0 + s * 0.6) * vAlpha;
-  vec3 color = mix(uColor, vec3(1.0), 0.35 * max(0.0, 1.0 - d));
-  outColor = vec4(color * a, a);
-}
-`;
+import { createFlakes, type FlakeFrame } from "./snow-sim";
+import { createFlakeRenderer } from "./snowflakes";
 
 /** Ground mist: the mist colour fading in over the bottom 40% of the frame. */
 const MIST_FRAGMENT = /* glsl */ `#version 300 es
@@ -98,17 +44,12 @@ void main() {
 export const snow = defineEffect(snowMeta, {
   create(gl) {
     return withScope((scope) => {
-      const flakeProgram = scope.add(createProgram(gl, FLAKE_VERTEX, FLAKE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const flakeU = createUniforms(gl, flakeProgram, ["uResolution", "uColor"]);
+      const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_FLAKES));
       const mistProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MIST_FRAGMENT), (p) =>
         gl.deleteProgram(p),
       );
       const mistU = createUniforms(gl, mistProgram, ["uHeight", "uMist", "uAmount"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      // Per flake: centre x, centre y, half-width, half-height, then opacity and softness.
-      const batch = scope.own(createSpriteBatch(gl, MAX_FLAKES, [4, 2]));
       const background = scope.own(createGradientBackground(gl));
       const bgTop = unitRgbMemo();
       const bgBottom = unitRgbMemo();
@@ -137,12 +78,6 @@ export const snow = defineEffect(snowMeta, {
         brightness: 0,
       };
 
-      const bindFlakeProgram = (color: Rgb) => {
-        gl.useProgram(flakeProgram);
-        flakeU.f2("uResolution", width, height);
-        flakeU.v3("uColor", color);
-      };
-
       return {
         resize(v) {
           const newRefWidth = v.width / v.scale;
@@ -161,7 +96,7 @@ export const snow = defineEffect(snowMeta, {
           f.size = p.size;
           f.depthBlur = p.depthBlur;
           f.brightness = p.brightness;
-          const visible = flakes.step(dt, f, batch.data, batch.stride);
+          const visible = flakes.step(dt, f, flakeRenderer.data, flakeRenderer.stride);
           const nearStart = flakes.nearStart;
 
           background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
@@ -170,13 +105,12 @@ export const snow = defineEffect(snowMeta, {
           gl.enable(gl.BLEND);
           gl.blendEquation(gl.FUNC_ADD);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          batch.upload(visible);
+          flakeRenderer.upload(visible);
           const color = flakeColor(p.color);
 
           // Far and mid layers, then the mist, then the near layer in front of it.
           if (nearStart > 0) {
-            bindFlakeProgram(color);
-            batch.draw(0, nearStart);
+            flakeRenderer.draw(0, nearStart, width, height, color);
           }
           if (p.mist > 0) {
             gl.useProgram(mistProgram);
@@ -195,8 +129,7 @@ export const snow = defineEffect(snowMeta, {
             gl.disable(gl.SCISSOR_TEST);
           }
           if (visible > nearStart) {
-            bindFlakeProgram(color);
-            batch.draw(nearStart, visible - nearStart);
+            flakeRenderer.draw(nearStart, visible - nearStart, width, height, color);
           }
           gl.disable(gl.BLEND);
         },
