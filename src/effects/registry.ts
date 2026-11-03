@@ -67,6 +67,7 @@ import { ripplesMeta } from "./ripples.meta";
 import { seaMeta } from "./sea.meta";
 import { silkMeta } from "./silk.meta";
 import { smokeMeta } from "./smoke.meta";
+import { snellMeta } from "./snell.meta";
 import { snowMeta } from "./snow.meta";
 import { spiderwebMeta } from "./spiderweb.meta";
 import { snowWindowMeta } from "./snowwindow.meta";
@@ -128,6 +129,7 @@ export const effects: readonly EffectEntry[] = [
   { ...windfarmMeta, load: () => import("./windfarm").then((m) => m.windfarm) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
+  { ...snellMeta, load: () => import("./snell").then((m) => m.snell) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
   { ...aquariumMeta, load: () => import("./aquarium").then((m) => m.aquarium) },
   { ...coralMeta, load: () => import("./coral").then((m) => m.coral) },
