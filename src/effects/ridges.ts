@@ -12,7 +12,8 @@ import {
 import { createChangeKey } from "./change-key";
 import { createLowResTarget, qualityDivisor } from "./lowres";
 import { clamp, wrap } from "./math";
-import { buildPeriodicNoiseTexture, createRng, HASH32_GLSL } from "./noise";
+import { buildPeriodicNoiseTexture, createRng } from "./noise";
+import { PINE_GLSL } from "./pines";
 import {
   bandSpeed,
   BIRD_FLOATS,
@@ -198,7 +199,7 @@ void main() {
  * pines) over it with a sharp, anti-aliased edge from the same table.
  */
 const COMPOSITE = /* glsl */ `
-${HASH32_GLSL}
+${PINE_GLSL}
 uniform sampler2D uTable;
 /** Nearest layer: table u offset, table row v, 1 / canvas height, canvas height (px). */
 uniform vec4 uNear;
@@ -227,19 +228,14 @@ vec4 composite(vec2 uv) {
     // x in table space (height units); cells repeat every period, like the table.
     float xt = (u - HALF_TEXEL) * SPAN;
     float cell = floor(xt / CELL);
-    uint id = uint(mod(cell, PINE_CELLS));
-    uint hsh = hash32(id * 2654435761u + uint(uPine.y));
-    if (float(hsh & 0xffffu) * (1.0 / 65535.0) < uPine.x) {
-      float r1 = float((hsh >> 16) & 0xffu) * (1.0 / 255.0);
-      float r2 = float(hsh >> 24) * (1.0 / 255.0);
-      float cx = (cell + 0.35 + 0.3 * r1) * CELL;
-      float th = mix(0.45, 1.0, r2) * PINE_MAX;
+    vec3 pine = pineCell(cell, PINE_CELLS, uPine.y, uPine.x);
+    if (pine.x > 0.0) {
+      float cx = (cell + pine.y) * CELL;
+      float th = pine.z * PINE_MAX;
       // Sunk a little, so the trunk meets the slope on both sides.
       float base = textureLod(uTable, vec2(cx * INV_SPAN + HALF_TEXEL, uNear.y), 0.0).r - 0.004;
       float yr = max((p.y - base) / th, 0.0);
-      // A cone with three tiers of branches.
-      float w = th * 0.28 * (1.0 - yr) * (0.72 + 0.28 * fract(yr * 3.0));
-      tree = clamp((w - abs(xt - cx)) * uNear.w + 0.5, 0.0, 1.0);
+      tree = clamp((pineHalfWidth(yr, th) - abs(xt - cx)) * uNear.w + 0.5, 0.0, 1.0);
     }
   }
   vec3 ink = mix(uInk, uFog, FOOT_LIGHTEN * smoothstep(0.0, FOOT_DEPTH, h - p.y));
