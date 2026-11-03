@@ -169,6 +169,51 @@ describe("visibleEffects", () => {
     expect(effectGroup(list[1], { sort: "category", favourites })).toBe("Water");
   });
 
+  it("lists favourites first under every sort, in that sort", () => {
+    const favourites = new Set(["cafe", "koi", "warp"]);
+    // By category: Space (warp), Water (koi), Cosy (cafe), then the rest by category.
+    expect(ids({ sort: "category", favourites })).toEqual([
+      "warp",
+      "koi",
+      "cafe",
+      "nebula",
+      "sea",
+      "blobs",
+    ]);
+    // Lightest: very low (warp), medium (koi), unknown (cafe); then blobs, nebula, sea.
+    expect(ids({ sort: "lightest", favourites })).toEqual([
+      "warp",
+      "koi",
+      "cafe",
+      "blobs",
+      "nebula",
+      "sea",
+    ]);
+    // Within each group, name matches still rank first.
+    expect(ids({ sort: "az", favourites, query: "sea" })).toEqual(["cafe", "sea"]);
+    expect(ids({ sort: "az", favourites, query: "s" })).toEqual([
+      "warp",
+      "cafe",
+      "koi",
+      "sea",
+      "blobs",
+      "nebula",
+    ]);
+    const grouped = (sort: ListOptions["sort"]) =>
+      visibleEffects(list, { sort, favourites }).map((e) => effectGroup(e, { sort, favourites }));
+    for (const sort of ["featured", "az", "lightest"] as const) {
+      expect(grouped(sort)).toEqual([...Array(3).fill("Favourites"), ...Array(3).fill(undefined)]);
+    }
+    expect(grouped("category")).toEqual([
+      "Favourites",
+      "Favourites",
+      "Favourites",
+      "Space",
+      "Water",
+      "Abstract",
+    ]);
+  });
+
   it("returns the registry's effects with the default first when featured", () => {
     const out = visibleEffects(effects, { sort: "featured" });
     expect(out).toEqual(effects);
