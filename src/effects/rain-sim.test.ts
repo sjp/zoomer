@@ -61,23 +61,25 @@ describe("createRainSim", () => {
     const sim = createRainSim(createRng(1));
     sim.layout(50, 30, 0.7, true);
     const data = new Float32Array(100 * stride);
+    // Plain comparisons in the hot loop: an expect per drop costs far more than the check.
+    const bad: string[] = [];
+    const fail = (msg: string) => bad.length < 10 && bad.push(msg);
     for (let f = 0; f < 600; f++) {
       const n = sim.step(1 / 60, 14, 0.7, 1, 1.5, data, stride);
-      expect(n).toBeLessThanOrEqual(100);
+      if (!(n <= 100)) fail(`frame ${f}: ${n} drops`);
       const perColumn = new Map<number, number>();
       for (let i = 0; i < n; i++) {
         const o = i * stride;
         const [c, , rate, , r0, r1] = data.subarray(o, o + stride);
         perColumn.set(c, (perColumn.get(c) ?? 0) + 1);
-        expect(c).toBeGreaterThanOrEqual(0);
-        expect(c).toBeLessThan(50);
-        expect(rate).toBeGreaterThan(0);
-        expect(r0).toBeGreaterThanOrEqual(0);
-        expect(r0).toBeLessThan(r1);
-        expect(r1).toBeLessThanOrEqual(30);
+        if (!(c >= 0 && c < 50 && rate > 0 && r0 >= 0 && r0 < r1 && r1 <= 30)) {
+          fail(`frame ${f}, drop ${i}: column ${c}, rate ${rate}, rows ${r0}..${r1}`);
+        }
       }
-      expect(Math.max(0, ...perColumn.values())).toBeLessThanOrEqual(2);
+      const most = Math.max(0, ...perColumn.values());
+      if (!(most <= 2)) fail(`frame ${f}: ${most} drops in one column`);
     }
+    expect(bad).toEqual([]);
   });
 
   it("keeps a column's two drops from overlapping", () => {
