@@ -1,5 +1,6 @@
-import { stepDecimals } from "../effects/params";
-import type { ParamDef, ParamValue } from "../effects/types";
+import { useState } from "react";
+import { sanitizeText, stepDecimals } from "../effects/params";
+import type { ParamDef, ParamValue, TextParam } from "../effects/types";
 
 interface Props {
   id: string;
@@ -66,5 +67,45 @@ export function ParamControl({ id, def, value, onChange }: Props) {
           </select>
         </div>
       );
+    case "text":
+      return <TextControl inputId={inputId} def={def} value={String(value)} onChange={onChange} />;
   }
+}
+
+interface TextProps {
+  inputId: string;
+  def: TextParam;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+/**
+ * A textarea kept sanitised on every edit. While an input method is composing, the
+ * raw text is held locally, since normalising or truncating it mid-composition
+ * would break the IME; it is sanitised once composition ends.
+ */
+function TextControl({ inputId, def, value, onChange }: TextProps) {
+  const [composing, setComposing] = useState<string | null>(null);
+  return (
+    <div className="control">
+      <label htmlFor={inputId}>{def.label}</label>
+      <textarea
+        id={inputId}
+        rows={def.maxLines}
+        cols={def.maxLength}
+        spellCheck={false}
+        autoComplete="off"
+        value={composing ?? value}
+        onCompositionStart={(e) => setComposing(e.currentTarget.value)}
+        onCompositionEnd={(e) => {
+          setComposing(null);
+          onChange(sanitizeText(def, e.currentTarget.value));
+        }}
+        onChange={(e) => {
+          if (composing !== null) setComposing(e.target.value);
+          else onChange(sanitizeText(def, e.target.value));
+        }}
+      />
+    </div>
+  );
 }

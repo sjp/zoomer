@@ -32,7 +32,22 @@ export interface SelectParam {
   default: string;
 }
 
-export type ParamDef = NumberParam | ColorParam | BooleanParam | SelectParam;
+/**
+ * Free text the effect shows, such as a name or a status. The value is one string
+ * with `\n` between lines, kept sanitised by `sanitizeText` in `params.ts`: NFC,
+ * no control or bidi characters, no emoji, at most `maxLines` lines of at most
+ * `maxLength` code points each (longer lines are truncated, not wrapped).
+ */
+export interface TextParam {
+  kind: "text";
+  label: string;
+  default: string;
+  /** Code points per line. */
+  maxLength: number;
+  maxLines: number;
+}
+
+export type ParamDef = NumberParam | ColorParam | BooleanParam | SelectParam | TextParam;
 export type ParamSchema = Record<string, ParamDef>;
 export type ParamValue = number | string | boolean;
 export type AnyParamValues = Record<string, ParamValue>;

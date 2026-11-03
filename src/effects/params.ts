@@ -5,6 +5,7 @@ import type {
   ParamDef,
   ParamSchema,
   ParamValue,
+  TextParam,
 } from "./types";
 
 export function defaults(schema: ParamSchema): AnyParamValues {
@@ -39,6 +40,37 @@ export function stepDecimals(step: number): number {
   return Math.min(20, Math.max(0, fraction - Number(exponent)));
 }
 
+/**
+ * Characters a text param never keeps: C0/C1 controls (line breaks are handled
+ * before this runs), lone surrogates, bidi embeddings, overrides, isolates and
+ * marks, zero-width joiners, and emoji with their modifiers, variation selectors,
+ * keycap marks, flag letters and tag characters. Plain digits, `#` and `*` are
+ * emoji-capable but not pictographic, so they stay.
+ */
+const TEXT_STRIP =
+  /[\p{Cc}\p{Cs}\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff\p{Variation_Selector}\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u{e0000}-\u{e007f}]|\u20e3/gu;
+
+/**
+ * Makes `raw` a valid value for `def`: NFC-normalised, any line break (`\r\n`,
+ * `\r`, U+2028/2029) turned into `\n`, stripped of `TEXT_STRIP`, then cut to
+ * `maxLines` lines of `maxLength` code points each. Idempotent, so a sanitised
+ * value survives the URL round trip unchanged.
+ */
+export function sanitizeText(def: TextParam, raw: string): string {
+  const lines = raw
+    .normalize("NFC")
+    .replace(/\r\n?|[\u2028\u2029\u0085]/g, "\n")
+    .split("\n");
+  const maxLines = Math.max(1, Math.floor(def.maxLines));
+  const maxLength = Math.max(0, Math.floor(def.maxLength));
+  const out: string[] = [];
+  for (let i = 0; i < lines.length && out.length < maxLines; i++) {
+    out.push(Array.from(lines[i].replace(TEXT_STRIP, "")).slice(0, maxLength).join(""));
+  }
+  // Removing characters can leave a pair that composes, so normalise again.
+  return out.join("\n").normalize("NFC");
+}
+
 /** Converts a raw string (from the URL) to a valid value, or undefined if invalid. */
 export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
   switch (def.kind) {
@@ -57,6 +89,8 @@ export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
       return undefined;
     case "select":
       return def.options.some((o) => o.value === raw) ? raw : undefined;
+    case "text":
+      return sanitizeText(def, raw);
   }
 }
 

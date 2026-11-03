@@ -415,6 +415,19 @@ input[type="color"] {
   background: none;
 }
 
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
 select,
 button {
   font: inherit;

@@ -5,6 +5,7 @@ import {
   defaults,
   encodeHash,
   parseValues,
+  sanitizeText,
   snap,
   stateFromHash,
   stepDecimals,
@@ -25,6 +26,10 @@ const schema = {
     ],
     default: "a",
   },
+} satisfies ParamSchema;
+
+const textSchema = {
+  text: { kind: "text", label: "Text", default: "HELLO", maxLength: 5, maxLines: 2 },
 } satisfies ParamSchema;
 
 describe("coerce", () => {
@@ -71,6 +76,53 @@ describe("coerce", () => {
   });
 });
 
+describe("sanitizeText", () => {
+  const def = textSchema.text;
+  const wide = { ...def, maxLength: 40, maxLines: 6 };
+
+  it("truncates each line to maxLength code points and drops extra lines", () => {
+    expect(sanitizeText(def, "ABCDEFG\nHI\nJKL")).toBe("ABCDE\nHI");
+    // Astral characters count once, not as two UTF-16 units.
+    expect(sanitizeText(def, "𝔸𝔹ℂ𝔻𝔼𝔽")).toBe("𝔸𝔹ℂ𝔻𝔼");
+    expect(sanitizeText(def, "")).toBe("");
+  });
+
+  it("NFC-normalises, so a decomposed accent counts as one character", () => {
+    expect(sanitizeText(def, "Cafe\u0301s")).toBe("Cafés");
+  });
+
+  it("turns any line break into \\n", () => {
+    expect(sanitizeText(wide, "a\r\nb\rc\u2028d")).toBe("a\nb\nc\nd");
+  });
+
+  it("strips control characters and bidi overrides, isolates and marks", () => {
+    expect(sanitizeText(wide, "a\tb\u0000c\u007fd\u009be")).toBe("abcde");
+    expect(sanitizeText(wide, "\u202eevil\u202c \u2066x\u2069\u200f")).toBe("evil x");
+    expect(sanitizeText(wide, "zero\u200bwidth\ufeff")).toBe("zerowidth");
+  });
+
+  it("strips emoji but keeps digits, # and *", () => {
+    expect(sanitizeText(wide, "hi 😀👍🏽 ❤️ 🇬🇧 #1*")).toBe("hi    #1*");
+    expect(sanitizeText(wide, "1\ufe0f\u20e3 👨\u200d👩\u200d👧")).toBe("1 ");
+  });
+
+  it("keeps other scripts and punctuation", () => {
+    expect(sanitizeText(wide, "Zürich – 東京 – Москва!")).toBe("Zürich – 東京 – Москва!");
+  });
+
+  it("is idempotent", () => {
+    const inputs = ["Cafe\u0301\u0301s\nX\r\nY", "a\u202e😀\u0301b", "ABCDEFGHI\n\n\n"];
+    for (const raw of inputs) {
+      const once = sanitizeText(def, raw);
+      expect(sanitizeText(def, once)).toBe(once);
+    }
+  });
+
+  it("is what coerce does for a text param", () => {
+    expect(coerce(def, "abc\u202edefgh")).toBe("abcde");
+  });
+});
+
 describe("hash round trip", () => {
   it("only encodes non-default values and decodes them back", () => {
     const effect = { ...effects[0], params: schema };
@@ -81,6 +133,14 @@ describe("hash round trip", () => {
     const { effectId, raw } = decodeHash(hash);
     expect(effectId).toBe(effect.id);
     expect(parseValues(schema, raw)).toEqual(values);
+  });
+
+  it("leaves default text out and round-trips multi-line text with URL syntax", () => {
+    const effect = { ...effects[0], params: textSchema };
+    expect(encodeHash(effect, { text: "HELLO" })).toBe(`#effect=${effect.id}`);
+    const values = { text: "A&B=#\n%+ ?" };
+    const { raw } = decodeHash(encodeHash(effect, values));
+    expect(parseValues(textSchema, raw)).toEqual(values);
   });
 });
 

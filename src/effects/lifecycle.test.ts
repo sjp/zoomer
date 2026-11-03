@@ -7,7 +7,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl, type FakeGl, type FakeGlOptions } from "../test/fake-gl";
-import { defaults } from "./params";
+import { defaults, sanitizeText } from "./params";
 import { effects } from "./registry";
 import type { AnyParamValues, EffectWebGL2, ParamSchema, Viewport } from "./types";
 
@@ -56,6 +56,11 @@ function paramSets(schema: ParamSchema): AnyParamValues[] {
     } else if (def.kind === "color") {
       atMin[key] = "#000000";
       atMax[key] = "#ffffff";
+    } else if (def.kind === "text") {
+      // Empty, and every line full of mixed characters, some with no glyph.
+      atMin[key] = "";
+      const line = "Wa9 #?\u00e9\u6771".repeat(def.maxLength);
+      atMax[key] = sanitizeText(def, Array(def.maxLines).fill(line).join("\n"));
     } else {
       for (const o of def.options) sets.push({ ...base, [key]: o.value });
     }

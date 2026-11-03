@@ -4,6 +4,9 @@
  * helper into the entry chunk through a runtime import.
  */
 import { describe, expect, it } from "vitest";
+import { sanitizeText } from "./params";
+import { effects } from "./registry";
+import type { TextParam } from "./types";
 
 const sources = (files: Record<string, string>) =>
   Object.entries(files).map(([path, text]) => [path.replace(/^\.\//, ""), text] as const);
@@ -90,5 +93,24 @@ describe("registry", () => {
     expect(lazy.length).toBeGreaterThan(0);
     const metas = new Set(staticImports(registrySource));
     expect(lazy.filter((s) => !metas.has(`${s}.meta`))).toEqual([]);
+  });
+});
+
+const textParams = effects.flatMap((e) =>
+  Object.entries(e.params)
+    .filter((entry): entry is [string, TextParam] => entry[1].kind === "text")
+    .map(([key, def]) => [`${e.id}.${key}`, def] as const),
+);
+
+describe("text params", () => {
+  it("are all found through the registry", () => {
+    const declared = metaFiles.reduce((n, [, src]) => n + src.split('kind: "text"').length - 1, 0);
+    expect(textParams.length).toBe(declared);
+  });
+
+  it.each(textParams)("%s has whole-number limits and a sanitised default", (_, def) => {
+    expect(Number.isInteger(def.maxLength) && def.maxLength > 0).toBe(true);
+    expect(Number.isInteger(def.maxLines) && def.maxLines > 0).toBe(true);
+    expect(sanitizeText(def, def.default)).toBe(def.default);
   });
 });
