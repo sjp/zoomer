@@ -62,6 +62,7 @@ import { mobileMeta } from "./mobile.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
+import { mandelMeta } from "./mandel.meta";
 import { marblerunMeta } from "./marblerun.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { neonMeta } from "./neon.meta";
@@ -185,6 +186,7 @@ export const effects: readonly EffectEntry[] = [
   { ...moireMeta, load: () => import("./moire").then((m) => m.moire) },
   { ...quasiMeta, load: () => import("./quasi").then((m) => m.quasi) },
   { ...kaleidoMeta, load: () => import("./kaleido").then((m) => m.kaleido) },
+  { ...mandelMeta, load: () => import("./mandel").then((m) => m.mandel) },
   { ...ridgesMeta, load: () => import("./ridges").then((m) => m.ridges) },
   { ...candlelightMeta, load: () => import("./candlelight").then((m) => m.candlelight) },
   { ...snowMeta, load: () => import("./snow").then((m) => m.snow) },
