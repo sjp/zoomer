@@ -44,6 +44,7 @@ import { hourglassMeta } from "./hourglass.meta";
 import { hyperspaceMeta } from "./hyperspace.meta";
 import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
+import { kaleidoMeta } from "./kaleido.meta";
 import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
 import { fairylightsMeta } from "./fairylights.meta";
@@ -164,6 +165,7 @@ export const effects: readonly EffectEntry[] = [
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
   { ...moireMeta, load: () => import("./moire").then((m) => m.moire) },
   { ...quasiMeta, load: () => import("./quasi").then((m) => m.quasi) },
+  { ...kaleidoMeta, load: () => import("./kaleido").then((m) => m.kaleido) },
   { ...ridgesMeta, load: () => import("./ridges").then((m) => m.ridges) },
   { ...candlelightMeta, load: () => import("./candlelight").then((m) => m.candlelight) },
   { ...snowMeta, load: () => import("./snow").then((m) => m.snow) },
