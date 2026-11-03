@@ -75,21 +75,34 @@ export interface ContextMap {
 }
 export type ContextKind = keyof ContextMap;
 
-interface EffectBase<S extends ParamSchema> {
+/**
+ * What the app knows about an effect before its code loads: enough to list it, build
+ * its controls and read its params from the URL. Lives in `<id>.meta.ts`, which the
+ * entry chunk imports, so it must not import the implementation or any GL helper.
+ */
+interface EffectMetaBase<S extends ParamSchema> {
   id: string;
   name: string;
   description: string;
   params: S;
 }
 
-export interface Effect2D<S extends ParamSchema = ParamSchema> extends EffectBase<S> {
+export interface EffectMeta2D<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
   /** Defaults to "2d". */
   context?: "2d";
+}
+
+export interface EffectMetaWebGL2<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
+  context: "webgl2";
+}
+
+export type EffectMeta<S extends ParamSchema = ParamSchema> = EffectMeta2D<S> | EffectMetaWebGL2<S>;
+
+export interface Effect2D<S extends ParamSchema = ParamSchema> extends EffectMeta2D<S> {
   create(ctx: CanvasRenderingContext2D): EffectInstance<ParamValues<S>>;
 }
 
-export interface EffectWebGL2<S extends ParamSchema = ParamSchema> extends EffectBase<S> {
-  context: "webgl2";
+export interface EffectWebGL2<S extends ParamSchema = ParamSchema> extends EffectMetaWebGL2<S> {
   /**
    * Called again with the same context after it is lost and restored, so build all
    * GPU resources here. GL state persists across effects sharing a canvas, so set
@@ -98,15 +111,43 @@ export interface EffectWebGL2<S extends ParamSchema = ParamSchema> extends Effec
   create(gl: WebGL2RenderingContext): EffectInstance<ParamValues<S>>;
 }
 
+/** A loaded effect: its metadata plus the `create` from its implementation module. */
 export type EffectDefinition<S extends ParamSchema = ParamSchema> = Effect2D<S> | EffectWebGL2<S>;
 
-export function contextKind(effect: EffectDefinition): ContextKind {
+export function contextKind(effect: EffectMeta): ContextKind {
   return effect.context ?? "2d";
 }
 
-/** Identity helper that infers precise param value types for `frame`. */
+/** Identity helper that keeps the literal param schema, for {@link defineEffect}. */
+export function defineEffectMeta<const S extends ParamSchema>(
+  meta: EffectMeta2D<S>,
+): EffectMeta2D<S>;
+export function defineEffectMeta<const S extends ParamSchema>(
+  meta: EffectMetaWebGL2<S>,
+): EffectMetaWebGL2<S>;
+export function defineEffectMeta<const S extends ParamSchema>(meta: EffectMeta<S>) {
+  return meta;
+}
+
+/**
+ * Joins an effect's metadata with its `create`. The param value types `frame` sees
+ * come from the metadata's schema, so a schema change is a type error in `create`.
+ */
+export function defineEffect<S extends ParamSchema>(
+  meta: EffectMeta2D<S>,
+  impl: Pick<Effect2D<S>, "create">,
+): Effect2D<S>;
+export function defineEffect<S extends ParamSchema>(
+  meta: EffectMetaWebGL2<S>,
+  impl: Pick<EffectWebGL2<S>, "create">,
+): EffectWebGL2<S>;
+/** Single-object form, until every effect has a `.meta.ts`. */
 export function defineEffect<const S extends ParamSchema>(def: Effect2D<S>): Effect2D<S>;
+/** Single-object form, until every effect has a `.meta.ts`. */
 export function defineEffect<const S extends ParamSchema>(def: EffectWebGL2<S>): EffectWebGL2<S>;
-export function defineEffect<const S extends ParamSchema>(def: EffectDefinition<S>) {
-  return def;
+export function defineEffect<S extends ParamSchema>(
+  meta: EffectMeta<S> | EffectDefinition<S>,
+  impl?: { create: EffectDefinition<S>["create"] },
+) {
+  return impl ? { ...meta, create: impl.create } : meta;
 }
