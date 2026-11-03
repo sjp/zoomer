@@ -11,6 +11,7 @@ import { bubblesMeta } from "./bubbles.meta";
 import { candlelightMeta } from "./candlelight.meta";
 import { causticsMeta } from "./caustics.meta";
 import { cellsMeta } from "./cells.meta";
+import { chamberMeta } from "./chamber.meta";
 import { cityMeta } from "./city.meta";
 import { cloudsMeta } from "./clouds.meta";
 import { cloudseaMeta } from "./cloudsea.meta";
@@ -157,6 +158,7 @@ export const effects: readonly EffectEntry[] = [
   { ...papercutMeta, load: () => import("./papercut").then((m) => m.papercut) },
   { ...silkMeta, load: () => import("./silk").then((m) => m.silk) },
   { ...physarumMeta, load: () => import("./physarum").then((m) => m.physarum) },
+  { ...chamberMeta, load: () => import("./chamber").then((m) => m.chamber) },
   { ...cellsMeta, load: () => import("./cells").then((m) => m.cells) },
   { ...beachMeta, load: () => import("./beach").then((m) => m.beach) },
   { ...tunnelMeta, load: () => import("./tunnel").then((m) => m.tunnel) },
