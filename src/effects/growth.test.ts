@@ -46,15 +46,14 @@ describe("growthStateAt", () => {
   });
 
   it("keeps level and melt in [0, 1] and time in [0, period)", () => {
+    const outside: string[] = [];
     for (let t = 0; t < 1000; t += 0.37) {
       const s = growthStateAt(CYCLE, t);
-      expect(s.level).toBeGreaterThanOrEqual(0);
-      expect(s.level).toBeLessThanOrEqual(1);
-      expect(s.melt).toBeGreaterThanOrEqual(0);
-      expect(s.melt).toBeLessThanOrEqual(1);
-      expect(s.time).toBeGreaterThanOrEqual(0);
-      expect(s.time).toBeLessThan(200);
+      const ok =
+        s.level >= 0 && s.level <= 1 && s.melt >= 0 && s.melt <= 1 && s.time >= 0 && s.time < 200;
+      if (!ok && outside.length < 10) outside.push(`t ${t}: ${JSON.stringify(s)}`);
     }
+    expect(outside).toEqual([]);
   });
 
   it("is continuous: coverage changes by little per small step, wrap included", () => {
@@ -62,15 +61,21 @@ describe("growthStateAt", () => {
     const biases = [0, 0.4, MAX_BIAS];
     const a = growthStateAt(CYCLE, 0);
     const b = growthStateAt(CYCLE, 0);
+    // Plain comparisons in the hot loop: an expect per sample costs far more than the check.
+    const jumps: string[] = [];
     for (let t = 0; t < 600; t += 0.05) {
       growthStateAt(CYCLE, t, a);
       growthStateAt(CYCLE, t + 0.05, b);
       for (const arr of arrivals) {
         for (const bias of biases) {
-          expect(Math.abs(cover(a, arr, bias) - cover(b, arr, bias))).toBeLessThan(0.05);
+          const step = Math.abs(cover(a, arr, bias) - cover(b, arr, bias));
+          if (!(step < 0.05) && jumps.length < 10) {
+            jumps.push(`t ${t}, arrival ${arr}, bias ${bias}: ${step}`);
+          }
         }
       }
     }
+    expect(jumps).toEqual([]);
   });
 
   it("shows nothing on either side of the wrap, so a reseed is invisible", () => {
@@ -121,11 +126,13 @@ describe("createGrowthClock", () => {
     const clock = createGrowthClock(CYCLE, 1000 + 170);
     expect(clock.state).toMatchObject({ cycle: 5, phase: "melt" });
     let melt = clock.state.melt;
+    const rising: string[] = [];
     for (let i = 0; i < 200; i++) {
       clock.advance(0.5, 1, false);
-      expect(clock.state.melt).toBeLessThanOrEqual(melt);
+      if (!(clock.state.melt <= melt)) rising.push(`step ${i}: ${melt} -> ${clock.state.melt}`);
       melt = clock.state.melt;
     }
+    expect(rising).toEqual([]);
     expect(clock.state).toMatchObject({ cycle: 5, level: 1, melt: 0 });
     clock.advance(100);
     expect(clock.state).toMatchObject({ cycle: 6, phase: "grow" });
