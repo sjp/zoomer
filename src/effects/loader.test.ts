@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { createEffectLoader, createLatest, type EffectEntry } from "./loader";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createEffectLoader, createLatest, neighbours, whenIdle, type EffectEntry } from "./loader";
 import { defineEffect, defineEffectMeta, type EffectDefinition } from "./types";
 
 const meta = (id: string) =>
@@ -141,5 +141,50 @@ describe("createLatest", () => {
     latest.cancel();
     await new Promise((r) => setTimeout(r));
     expect(results).toEqual([]);
+  });
+});
+
+describe("neighbours", () => {
+  const list = ["a", "b", "c", "d"].map((id) => ({ id }));
+
+  it("gives the next and previous effects, wrapping at the ends", () => {
+    expect(neighbours(list, "b").map((e) => e.id)).toEqual(["c", "a"]);
+    expect(neighbours(list, "a").map((e) => e.id)).toEqual(["b", "d"]);
+    expect(neighbours(list, "d").map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  it("lists a lone neighbour once, and none for a missing id or a single effect", () => {
+    expect(neighbours(list.slice(0, 2), "a").map((e) => e.id)).toEqual(["b"]);
+    expect(neighbours(list, "gone")).toEqual([]);
+    expect(neighbours(list.slice(0, 1), "a")).toEqual([]);
+  });
+});
+
+describe("whenIdle", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to a timeout without requestIdleCallback, and can be cancelled", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestIdleCallback", undefined);
+    const task = vi.fn<() => void>();
+    whenIdle(task);
+    const cancel = whenIdle(task);
+    cancel();
+    vi.runAllTimers();
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses requestIdleCallback where it exists", () => {
+    const request = vi.fn<(cb: () => void) => number>(() => 7);
+    const cancelIdle = vi.fn<(handle: number) => void>();
+    vi.stubGlobal("requestIdleCallback", request);
+    vi.stubGlobal("cancelIdleCallback", cancelIdle);
+    const task = vi.fn<() => void>();
+    whenIdle(task)();
+    expect(request).toHaveBeenCalledWith(task, { timeout: 2000 });
+    expect(cancelIdle).toHaveBeenCalledWith(7);
   });
 });

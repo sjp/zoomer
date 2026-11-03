@@ -150,10 +150,18 @@ body,
 }
 
 .effect-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   margin: 0;
   color: #ff6b6b;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.effect-error p {
+  margin: 0;
 }
 
 /* Appears only if loading takes a moment, so a quick switch doesn't flash it. */

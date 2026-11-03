@@ -3,7 +3,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { defaults, encodeHash, stateFromHash } from "./effects/params";
-import { createLatest, type EffectEntry } from "./effects/loader";
+import { createLatest, neighbours, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
@@ -114,6 +114,19 @@ export function App() {
     [latestLoad, startLoad],
   );
 
+  // The order ← / → step through, and so the order to prefetch in. Issue 120 makes this
+  // the list as the user sees it (sorted, filtered).
+  const order = effects;
+
+  // Once the selected effect runs, fetch its neighbours in idle time so stepping to
+  // them is instant. Failures are dropped from the cache, so a real switch retries.
+  useEffect(() => {
+    if (!ready) return;
+    return whenIdle(() => {
+      for (const entry of neighbours(order, effect.id)) effectLoader.prefetch(entry);
+    });
+  }, [ready, order, effect]);
+
   // Load the first effect, unless it was already cached at the first render. main.tsx
   // has already started its import, so this joins it.
   useEffect(() => {
@@ -175,10 +188,10 @@ export function App() {
   const step = useCallback(
     (dir: number) => {
       if (recording) return;
-      const i = effects.findIndex((e) => e.id === effect.id);
-      selectEffect(effects[(i + dir + effects.length) % effects.length].id);
+      const i = order.findIndex((e) => e.id === effect.id);
+      selectEffect(order[(i + dir + order.length) % order.length].id);
     },
-    [effect, recording, selectEffect],
+    [order, effect, recording, selectEffect],
   );
 
   // A panel hidden under the pointer gets pointer-events: none, so pointerleave may never
@@ -276,6 +289,7 @@ export function App() {
             error={loadError ?? (ready ? effectError : undefined)}
             loading={loading}
             canRecord={ready}
+            onReload={loadError === undefined ? undefined : () => window.location.reload()}
             resolution={resolution}
             frameRate={frameRate}
             stats={statsStore}

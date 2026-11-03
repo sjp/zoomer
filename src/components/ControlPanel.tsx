@@ -28,6 +28,8 @@ interface Props {
   onRecord: (seconds: number) => void;
   onFullscreen: () => void;
   onHide: () => void;
+  /** Shown with the error when the effect's code failed to load, e.g. after a redeploy. */
+  onReload?: () => void;
 }
 
 const DURATIONS = [10, 20, 30, 60];
@@ -65,9 +67,14 @@ export function ControlPanel(props: Props) {
         </p>
       )}
       {props.error && (
-        <p className="effect-error" role="alert">
-          {props.error}
-        </p>
+        <div className="effect-error" role="alert">
+          <p>{props.error}</p>
+          {props.onReload && (
+            <button type="button" onClick={props.onReload}>
+              Reload page
+            </button>
+          )}
+        </div>
       )}
 
       <section className="controls">
