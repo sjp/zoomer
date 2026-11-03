@@ -152,8 +152,12 @@ export interface StreakRendererOptions {
    * width below 0.5 px draws a pixel wide at that fraction of full opacity).
    * Overlapping streaks stack their opacity, so round caps at the joints of a
    * faint polyline show as slightly darker dots. Can't be combined with `chromatic`.
+   * "max" keeps the brightest of the streak and what lies behind it, per channel
+   * (`blendEquation(MAX)`), so the joints of a polyline and crossing or nested
+   * streaks don't stack: draw nested widths at falling brightness for a soft,
+   * stepped profile. The colour is premultiplied as in additive mode.
    */
-  blend?: "additive" | "alpha";
+  blend?: "additive" | "alpha" | "max";
 }
 
 export interface StreakRenderer {
@@ -163,8 +167,10 @@ export interface StreakRenderer {
   upload(count: number): void;
   /**
    * Draws the uploaded streaks, additively unless created with `blend: "alpha"`
-   * (premultiplied source-over). Sets its own program, vertex array and
-   * blending; everything else is as `beginFrame` left it, plus the caller's viewport.
+   * (premultiplied source-over) or `blend: "max"` (the per-channel maximum, after
+   * which the blend equation is reset to `FUNC_ADD`). Sets its own program, vertex
+   * array and blending; everything else is as `beginFrame` left it, plus the
+   * caller's viewport.
    * `zoom` scales each colour channel's positions about the centre (needs the
    * `chromatic` option); omit it to draw unscaled.
    */
@@ -187,6 +193,7 @@ function buildStreakRenderer(
   scope: Scope,
 ): StreakRenderer {
   const alpha = options.blend === "alpha";
+  const maxBlend = options.blend === "max";
   if (alpha && options.chromatic) {
     throw new Error("Streaks: the chromatic option is additive only");
   }
@@ -239,7 +246,7 @@ function buildStreakRenderer(
       const n = clampCount(count);
       if (n <= 0) return;
       gl.enable(gl.BLEND);
-      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendEquation(maxBlend ? gl.MAX : gl.FUNC_ADD);
       gl.blendFunc(gl.ONE, alpha ? gl.ONE_MINUS_SRC_ALPHA : gl.ONE);
       const split = zoom && (zoom[0] !== 1 || zoom[1] !== 1 || zoom[2] !== 1);
       if (split && cu) {
@@ -255,6 +262,7 @@ function buildStreakRenderer(
       gl.bindVertexArray(vao);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
       gl.bindVertexArray(null);
+      if (maxBlend) gl.blendEquation(gl.FUNC_ADD);
     },
     dispose: () => scope.dispose(),
   };

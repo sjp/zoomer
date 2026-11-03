@@ -27,6 +27,16 @@ describe("createStreakRenderer", () => {
     expect(named(calls, "blendFunc")).toEqual([[gl.ONE, gl.ONE_MINUS_SRC_ALPHA]]);
   });
 
+  it("keeps the per-channel maximum in max mode, then restores FUNC_ADD", () => {
+    const { gl, calls } = createFakeGl({ record: true });
+    const streaks = createStreakRenderer(gl, 4, { blend: "max" });
+    const sources = named(calls, "shaderSource").map((a) => String(a[1]));
+    expect(sources.some((s) => s.includes("vFade"))).toBe(false);
+    calls.length = 0;
+    streaks.draw(2, 100, 100);
+    expect(named(calls, "blendEquation")).toEqual([[gl.MAX], [gl.FUNC_ADD]]);
+  });
+
   it("refuses alpha blending with the chromatic program", () => {
     const { gl, live } = createFakeGl();
     expect(() => createStreakRenderer(gl, 4, { blend: "alpha", chromatic: true })).toThrow(
