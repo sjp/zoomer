@@ -1,7 +1,8 @@
 /**
- * Pure JS side of Star Trails (startrails.ts): the ring-and-sector star layout
- * (a JS twin of the shader's cell lookup), the trail profile, the sky rotation,
- * the pole positions and the foreground silhouette. Nothing here touches GL.
+ * Pure JS side of Star Trails (startrails.ts): the trail lookup over the shared
+ * ring-and-sector star layout (`starfield-sim.ts`; a JS twin of the shader's
+ * cell lookup), the trail profile, the pole positions and the foreground
+ * silhouette. Nothing here touches GL.
  *
  * Coordinates: reference pixels of a 1080-tall frame, y up. Around the pole a
  * pixel has radius `r` and a sky angle `phi` (its screen angle minus the sky's
@@ -19,34 +20,24 @@
  */
 import { buildHills, HILL_COLUMNS, type HillShape, hillHeightAt } from "./horizon-sim";
 import { clamp, smoothstep } from "./math";
-import { createRng, hash32 } from "./noise";
+import { createRng } from "./noise";
 import { MAX_LAYERS, MIN_LAYERS } from "./horizon.meta";
-
-export const TAU = Math.PI * 2;
-export const DEG = Math.PI / 180;
+import {
+  cellStar,
+  createStar,
+  EDGE_AA,
+  RING_WIDTH,
+  sectorCount,
+  type Star,
+  TAU,
+} from "./starfield-sim";
 
 // ---------------------------------------------------------------------------
-// Star layout (constants shared with the shader)
+// Trails (the star layout itself is in starfield-sim.ts)
 // ---------------------------------------------------------------------------
 
-/** Ring width, reference px. */
-export const RING_WIDTH = 8;
-/** Trail half-width range, reference px: full widths 1.2 to 2.4 px at 1080. */
-export const HALF_WIDTH_MIN = 0.6;
-export const HALF_WIDTH_RANGE = 0.6;
-/** Half the radial anti-aliasing ramp, reference px. */
-export const EDGE_AA = 0.6;
-/** Gap between a ring's edge and its stars, so trails never reach a neighbouring ring. */
-export const RING_MARGIN = HALF_WIDTH_MIN + HALF_WIDTH_RANGE + EDGE_AA;
-/** Target arc length of a sector near the pole (reference px), where cells are about square. */
-export const CELL_LENGTH = 16;
 /** Sectors a pixel checks: its own and the next ones ahead. */
 export const SECTORS_CHECKED = 3;
-/** Sectors per ring before the cap, per unit of ring index + 0.5. */
-export const SECTORS_PER_RING = (TAU * RING_WIDTH) / CELL_LENGTH;
-/** Brightness = BRIGHT_MIN + (1 - BRIGHT_MIN) * x^BRIGHT_POWER: many faint stars, a few bright. */
-export const BRIGHT_MIN = 0.1;
-export const BRIGHT_POWER = 5;
 /** Arc length (reference px) over which each end of a trail fades in. */
 export const END_TAPER = 1.5;
 /** Comet style: tail weight (fading to 0 at the tail), head boost and its arc length (reference px). */
@@ -62,71 +53,6 @@ export const PROFILE_MAX = COMET_TAIL + COMET_HEAD;
  */
 export function maxSectors(trailLength: number): number {
   return Math.max(1, Math.floor(((SECTORS_CHECKED - 1) * TAU) / trailLength));
-}
-
-/** Sectors in ring `ring` (at least 1), given the cap from `maxSectors`. Matches the shader. */
-export function sectorCount(ring: number, cap: number): number {
-  return clamp(Math.floor((ring + 0.5) * SECTORS_PER_RING), 1, Math.max(1, cap));
-}
-
-/** Per-seed salt mixed into every ring's hash, uploaded as a uint. */
-export const seedSalt = (seed: number) =>
-  hash32((Math.floor(seed) * 0x9e3779b1 + 0x5bd1e995) >>> 0);
-
-/** Hash of a ring, shared by all its cells (once per pixel in the shader). */
-export const ringHash = (ring: number, salt: number) => hash32((ring ^ salt) >>> 0);
-
-export interface Star {
-  occupied: boolean;
-  /** Sky angle of the head, radians, in [k s, (k + 1) s) of its sector (unwrapped past 2π for k >= n). */
-  angle: number;
-  /** Fraction across its sector, 0..1. */
-  u: number;
-  /** Radius, reference px. */
-  radius: number;
-  /** 0..1. */
-  bright: number;
-  /** Half-width, reference px. */
-  halfWidth: number;
-  /** Colour temperature, 0 blue-white to 1 orange. */
-  temp: number;
-}
-
-export const createStar = (): Star => ({
-  occupied: false,
-  angle: 0,
-  u: 0,
-  radius: 0,
-  bright: 0,
-  halfWidth: 0,
-  temp: 0,
-});
-
-/**
- * The star in cell (`ring`, `k mod n`) of a ring with `n` sectors, written into
- * `out`. `density` (0..1) is the share of occupied cells. Deterministic for the
- * same salt; the same bit layout as the shader. `angle` uses `k` unwrapped.
- */
-export function cellStar(
-  ring: number,
-  k: number,
-  n: number,
-  density: number,
-  salt: number,
-  out: Star,
-): Star {
-  const h1 = hash32((ringHash(ring, salt) + (k % n)) >>> 0);
-  out.occupied = (h1 & 0xffff) < density * 65536;
-  out.u = ((h1 >>> 16) + 0.5) / 65536;
-  out.angle = (k + out.u) * (TAU / n);
-  const h2 = hash32(h1);
-  const v = ((h2 & 0xffff) + 0.5) / 65536;
-  const bx = (((h2 >>> 16) & 0xff) + 0.5) / 256;
-  out.temp = ((h2 >>> 24) + 0.5) / 256;
-  out.radius = ring * RING_WIDTH + RING_MARGIN + v * (RING_WIDTH - 2 * RING_MARGIN);
-  out.bright = BRIGHT_MIN + (1 - BRIGHT_MIN) * bx ** BRIGHT_POWER;
-  out.halfWidth = HALF_WIDTH_MIN + HALF_WIDTH_RANGE * out.bright;
-  return out;
 }
 
 /**
@@ -204,18 +130,8 @@ export function trailsAtBruteForce(r: number, phi: number, s: TrailSettings): nu
 }
 
 // ---------------------------------------------------------------------------
-// Rotation and pole
+// Pole
 // ---------------------------------------------------------------------------
-
-/** Advances the unwrapped sky rotation (radians, float64) by `dt` s at `degPerMin`. */
-export const advanceRotation = (rot: number, dt: number, degPerMin: number) =>
-  rot + Math.max(0, dt) * degPerMin * (DEG / 60);
-
-/** `a` wrapped to [0, 2π), for upload: the rotation is periodic, so this never jumps. */
-export function wrapAngle(a: number): number {
-  const w = a - TAU * Math.floor(a / TAU);
-  return w < TAU ? w : 0;
-}
 
 export const POLES = {
   topLeft: [0.14, 0.86],

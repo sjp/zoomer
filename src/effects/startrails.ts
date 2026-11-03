@@ -1,9 +1,7 @@
-import { hexToUnitRgb } from "./color";
 import { createChangeKey } from "./change-key";
 import {
   beginFrame,
   createColumnTable,
-  createDataTexture,
   createFullscreenTriangle,
   createProgram,
   createUniforms,
@@ -13,49 +11,47 @@ import {
   withScope,
 } from "./gl";
 import { clamp } from "./math";
-import { buildPeriodicNoiseTexture, HASH32_GLSL } from "./noise";
+import { HASH32_GLSL } from "./noise";
+import {
+  createMilkyWayNoise,
+  glslColor as C,
+  HAZE_COLOR,
+  HAZE_GAIN,
+  milkyWayGlsl,
+  STAR_TINT_GLSL,
+  TO_SKY_GLSL,
+} from "./starfield";
 import {
   advanceRotation,
   BRIGHT_MIN,
   BRIGHT_POWER,
+  DEG,
+  EDGE_AA,
+  HALF_WIDTH_MIN,
+  HALF_WIDTH_RANGE,
+  RING_MARGIN,
+  RING_WIDTH,
+  SECTORS_PER_RING,
+  seedSalt,
+  wrapAngle,
+} from "./starfield-sim";
+import {
   buildForeground,
   COMET_HEAD,
   COMET_TAIL,
   createLoneTree,
-  DEG,
-  EDGE_AA,
   END_TAPER,
   FG_COLUMNS,
   FOREGROUND_KINDS,
   type ForegroundKind,
-  HALF_WIDTH_MIN,
-  HALF_WIDTH_RANGE,
   HEAD_LENGTH,
   maxSectors,
   polePosition,
-  RING_MARGIN,
-  RING_WIDTH,
   SECTORS_CHECKED,
-  SECTORS_PER_RING,
-  seedSalt,
   TREE_BLOBS,
-  wrapAngle,
 } from "./startrails-sim";
 import { startrailsMeta, TRAIL_LENGTH_MAX, TRAIL_LENGTH_MIN } from "./startrails.meta";
 import { defineEffect } from "./types";
-
-const NOISE_SIZE = 128;
-/** Haze noise tiles every this many reference px of sky. */
-const HAZE_TILE = 760;
-/** Milky Way band: unit normal (sky coordinates), distance from the pole and Gaussian width (reference px). */
-const BAND_ANGLE = 0.7;
-const BAND_OFFSET = 560;
-const BAND_WIDTH = 230;
-
-const C = (hex: string) => {
-  const [r, g, b] = hexToUnitRgb(hex);
-  return `vec3(${glslFloat(r)}, ${glslFloat(g)}, ${glslFloat(b)})`;
-};
 
 /**
  * One full-screen pass: sky gradient and horizon glow, Milky Way haze (one
@@ -92,14 +88,14 @@ uniform vec4 uTreeBox;
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
+${STAR_TINT_GLSL}
+${TO_SKY_GLSL}
+${milkyWayGlsl()}
 const float TAU = 6.283185307179586;
 const float W = ${glslFloat(RING_WIDTH)};
 const float MARGIN = ${glslFloat(RING_MARGIN)};
-const vec3 BLUE = ${C("#b4c8ff")};
-const vec3 WHITE = ${C("#f4f2ec")};
-const vec3 ORANGE = ${C("#ffb070")};
 const vec3 GLOW = ${C("#c06a3c")} * 0.24;
-const vec3 HAZE = ${C("#aab4d6")} * 0.11;
+const vec3 HAZE = ${C(HAZE_COLOR, HAZE_GAIN)};
 const vec3 FG = ${C("#04060a")};
 
 float treeDist(vec2 p) {
@@ -138,14 +134,7 @@ void main() {
 
     // Milky Way haze, in sky coordinates so it turns with the stars.
     if (uTrail.w > 0.0) {
-      vec2 q = vec2(uRot.y * d.x + uRot.z * d.y, uRot.y * d.y - uRot.z * d.x);
-      float across = dot(q, vec2(${glslFloat(Math.cos(BAND_ANGLE))}, ${glslFloat(Math.sin(BAND_ANGLE))})) - ${glslFloat(BAND_OFFSET)};
-      float m = exp2(-across * across * ${glslFloat(1 / (BAND_WIDTH * BAND_WIDTH))});
-      if (m > 0.01) {
-        vec2 n = textureLod(uNoise, q * ${glslFloat(1 / HAZE_TILE)}, 0.0).rg;
-        float h = m * smoothstep(0.3, 0.75, n.r) * (0.5 + n.g);
-        col += HAZE * (h * uTrail.w);
-      }
+      col += HAZE * (milkyWay(uNoise, toSky(d, uRot.yz)) * uTrail.w);
     }
 
     if (r > 0.01) {
@@ -179,8 +168,7 @@ void main() {
         float t = 1.0 - delta / len;
         prof *= mix(1.0, ${glslFloat(COMET_TAIL)} * t * t + ${glslFloat(COMET_HEAD)} * exp2(-arcHead * ${glslFloat(1 / HEAD_LENGTH)}), uTrail.y);
         float temp = (float(h2 >> 24) + 0.5) * ${glslFloat(2 / 256)};
-        vec3 c = temp < 1.0 ? mix(BLUE, WHITE, temp) : mix(WHITE, ORANGE, temp - 1.0);
-        sum += mix(WHITE, c, uTrail.z) * (b * prof * cov);
+        sum += starTint(temp, uTrail.z) * (b * prof * cov);
       }
       col += sum;
     }
@@ -222,21 +210,7 @@ export const startrails = defineEffect(startrailsMeta, {
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ground = scope.own(createColumnTable(gl, FG_COLUMNS, 1));
-      const noiseTex = scope.add(
-        createDataTexture(gl, {
-          width: NOISE_SIZE,
-          height: NOISE_SIZE,
-          internalFormat: gl.RG8,
-          format: gl.RG,
-          type: gl.UNSIGNED_BYTE,
-          data: buildPeriodicNoiseTexture(NOISE_SIZE, [
-            { period: 4, seed: 3611 },
-            { period: 16, seed: 3613 },
-          ]),
-          wrap: gl.REPEAT,
-        }),
-        (t) => gl.deleteTexture(t),
-      );
+      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => gl.deleteTexture(t));
       gl.useProgram(program);
       u.i1("uGround", 0);
       u.i1("uNoise", 1);

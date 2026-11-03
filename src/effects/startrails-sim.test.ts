@@ -1,91 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
-  advanceRotation,
   buildForeground,
-  cellStar,
   createLoneTree,
-  createStar,
-  DEG,
-  EDGE_AA,
   FG_COLUMNS,
   maxSectors,
   polePosition,
   PROFILE_MAX,
-  RING_MARGIN,
-  RING_WIDTH,
   SECTORS_CHECKED,
-  sectorCount,
-  seedSalt,
   tailProfile,
-  TAU,
   trailsAt,
   trailsAtBruteForce,
   TREE_BLOBS,
-  wrapAngle,
 } from "./startrails-sim";
+import { DEG, sectorCount, seedSalt, TAU } from "./starfield-sim";
 import { buildHills, HILL_COLUMNS, hillHeightAt } from "./horizon-sim";
 import { createRng } from "./noise";
 import { TRAIL_LENGTH_MAX, TRAIL_LENGTH_MIN } from "./startrails.meta";
 import { MAX_LAYERS, MIN_LAYERS } from "./horizon.meta";
 
 const LENGTHS = [TRAIL_LENGTH_MIN, 12, 40, 90, 133, TRAIL_LENGTH_MAX].map((d) => d * DEG);
-
-describe("star cells", () => {
-  it("are deterministic for a salt and differ between salts", () => {
-    const a = cellStar(12, 5, 20, 0.7, seedSalt(7), createStar());
-    const b = cellStar(12, 5, 20, 0.7, seedSalt(7), createStar());
-    const c = cellStar(12, 5, 20, 0.7, seedSalt(8), createStar());
-    expect(b).toEqual(a);
-    expect(c).not.toEqual(a);
-  });
-
-  it("keep stars inside their sector and inside the ring margin", () => {
-    const star = createStar();
-    const bad: [number, number][] = [];
-    for (let ring = 0; ring < 300; ring += 7) {
-      const n = sectorCount(ring, maxSectors(30 * DEG));
-      const s = TAU / n;
-      for (let k = 0; k < n; k++) {
-        cellStar(ring, k, n, 1, seedSalt(3), star);
-        const ok =
-          star.angle >= k * s &&
-          star.angle < (k + 1) * s &&
-          star.radius >= ring * RING_WIDTH + RING_MARGIN &&
-          star.radius <= (ring + 1) * RING_WIDTH - RING_MARGIN &&
-          // The whole trail width, anti-aliasing included, stays in the ring.
-          star.radius - star.halfWidth - EDGE_AA >= ring * RING_WIDTH &&
-          star.radius + star.halfWidth + EDGE_AA <= (ring + 1) * RING_WIDTH &&
-          star.bright > 0 &&
-          star.bright <= 1 &&
-          star.temp > 0 &&
-          star.temp < 1;
-        if (!ok) bad.push([ring, k]);
-      }
-    }
-    expect(bad).toEqual([]);
-  });
-
-  it("occupy about `density` of the cells", () => {
-    const star = createStar();
-    let occupied = 0;
-    const total = 20000;
-    for (let i = 0; i < total; i++) {
-      if (cellStar(i >> 6, i & 63, 64, 0.3, seedSalt(1), star).occupied) occupied++;
-    }
-    expect(occupied / total).toBeGreaterThan(0.27);
-    expect(occupied / total).toBeLessThan(0.33);
-  });
-
-  it("have many faint stars and a few bright ones", () => {
-    const star = createStar();
-    let bright = 0;
-    for (let k = 0; k < 4000; k++) {
-      if (cellStar(50, k, 4000, 1, seedSalt(1), star).bright > 0.5) bright++;
-    }
-    expect(bright / 4000).toBeGreaterThan(0.02);
-    expect(bright / 4000).toBeLessThan(0.15);
-  });
-});
 
 describe("sector counts", () => {
   it("are at least 1, grow away from the pole and respect the cap", () => {
@@ -187,30 +120,6 @@ describe("tail profile", () => {
     const tail = tailProfile(0.95 * len, len, 500, true);
     expect(head).toBeGreaterThan(mid);
     expect(mid).toBeGreaterThan(tail);
-  });
-});
-
-describe("rotation", () => {
-  it("advances at the given rate and wraps to [0, 2π) without jumps", () => {
-    expect(advanceRotation(0, 60, 6)).toBeCloseTo(6 * DEG, 12);
-    expect(advanceRotation(1, -1, 6)).toBe(1);
-    let rot = TAU - 0.001;
-    let prev = wrapAngle(rot);
-    for (let i = 0; i < 1000; i++) {
-      rot = advanceRotation(rot, 0.1, 60);
-      const w = wrapAngle(rot);
-      expect(w).toBeGreaterThanOrEqual(0);
-      expect(w).toBeLessThan(TAU);
-      // The step on the circle is the same whether or not it wrapped.
-      let step = w - prev;
-      if (step < 0) step += TAU;
-      expect(step).toBeCloseTo(0.1 * DEG, 9);
-      // A star's screen angle is the same from the wrapped and unwrapped rotation.
-      expect(Math.cos(1.3 + w)).toBeCloseTo(Math.cos(1.3 + rot), 9);
-      prev = w;
-    }
-    expect(wrapAngle(-1e-18)).toBe(0);
-    expect(wrapAngle(TAU)).toBe(0);
   });
 });
 
