@@ -37,6 +37,7 @@ import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
+import { moireMeta } from "./moire.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
@@ -108,6 +109,7 @@ export const effects: readonly EffectEntry[] = [
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
+  { ...moireMeta, load: () => import("./moire").then((m) => m.moire) },
   { ...ridgesMeta, load: () => import("./ridges").then((m) => m.ridges) },
   { ...candlelightMeta, load: () => import("./candlelight").then((m) => m.candlelight) },
   { ...snowMeta, load: () => import("./snow").then((m) => m.snow) },
