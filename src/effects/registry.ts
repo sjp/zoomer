@@ -37,6 +37,7 @@ import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { leavesMeta } from "./leaves.meta";
+import { libraryMeta } from "./library.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { papercutMeta } from "./papercut.meta";
 import { physarumMeta } from "./physarum.meta";
@@ -82,6 +83,7 @@ export const effects: readonly EffectEntry[] = [
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
+  { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
