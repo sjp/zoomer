@@ -64,38 +64,44 @@ describe("presets", () => {
     expect(presetFor("toString")).toBe(PRESETS.coral);
   });
 
-  it.each(presets)("%s grows from a seed and sustains a pattern at the drift extremes", (_, p) => {
-    const w = 40;
-    const h = 40;
-    const fk = new Float64Array(2);
-    for (const phase of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
-      driftedFeedKill(p, 1, phase, fk);
-      let u = new Float32Array(w * h);
-      let b = new Float32Array(w * h);
-      let u2 = new Float32Array(w * h);
-      let b2 = new Float32Array(w * h);
-      for (let y = 17; y < 23; y++) {
-        for (let x = 17; x < 23; x++) {
-          u[y * w + x] = SPOT_U;
-          b[y * w + x] = SPOT_B;
+  // 10,000 Gray-Scott steps per preset: the simulation itself is the cost, so it gets
+  // room for a loaded machine rather than fewer steps.
+  it.each(presets)(
+    "%s grows from a seed and sustains a pattern at the drift extremes",
+    (_, p) => {
+      const w = 40;
+      const h = 40;
+      const fk = new Float64Array(2);
+      for (const phase of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+        driftedFeedKill(p, 1, phase, fk);
+        let u = new Float32Array(w * h);
+        let b = new Float32Array(w * h);
+        let u2 = new Float32Array(w * h);
+        let b2 = new Float32Array(w * h);
+        for (let y = 17; y < 23; y++) {
+          for (let x = 17; x < 23; x++) {
+            u[y * w + x] = SPOT_U;
+            b[y * w + x] = SPOT_B;
+          }
         }
+        for (let s = 0; s < 2500; s++) {
+          grayScottStep(u, b, w, h, fk[0], fk[1], u2, b2);
+          [u, u2] = [u2, u];
+          [b, b2] = [b2, b];
+        }
+        let cells = 0;
+        let max = 0;
+        for (const v of b) {
+          if (v > 0.1) cells++;
+          max = Math.max(max, v);
+        }
+        // Alive (not decayed to the blank state) and spread well past the 36-cell seed.
+        expect(max).toBeGreaterThan(0.25);
+        expect(cells).toBeGreaterThan(60);
       }
-      for (let s = 0; s < 2500; s++) {
-        grayScottStep(u, b, w, h, fk[0], fk[1], u2, b2);
-        [u, u2] = [u2, u];
-        [b, b2] = [b2, b];
-      }
-      let cells = 0;
-      let max = 0;
-      for (const v of b) {
-        if (v > 0.1) cells++;
-        max = Math.max(max, v);
-      }
-      // Alive (not decayed to the blank state) and spread well past the 36-cell seed.
-      expect(max).toBeGreaterThan(0.25);
-      expect(cells).toBeGreaterThan(60);
-    }
-  });
+    },
+    20_000,
+  );
 });
 
 describe("drift path", () => {
