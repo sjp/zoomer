@@ -1,3 +1,4 @@
+import { aquariumMeta } from "./aquarium.meta";
 import { auroraMeta } from "./aurora.meta";
 import { balloonsMeta } from "./balloons.meta";
 import { beachMeta } from "./beach.meta";
@@ -123,6 +124,7 @@ export const effects: readonly EffectEntry[] = [
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
+  { ...aquariumMeta, load: () => import("./aquarium").then((m) => m.aquarium) },
   { ...coralMeta, load: () => import("./coral").then((m) => m.coral) },
   { ...cityMeta, load: () => import("./city").then((m) => m.city) },
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
