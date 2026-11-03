@@ -81,6 +81,7 @@ import { snellMeta } from "./snell.meta";
 import { snowMeta } from "./snow.meta";
 import { spiderwebMeta } from "./spiderweb.meta";
 import { snowWindowMeta } from "./snowwindow.meta";
+import { splitflapMeta } from "./splitflap.meta";
 import { startrailsMeta } from "./startrails.meta";
 import { synthwaveMeta } from "./synthwave.meta";
 import { trainMeta } from "./train.meta";
@@ -130,6 +131,7 @@ export const effects: readonly EffectEntry[] = [
   { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
   { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
+  { ...splitflapMeta, load: () => import("./splitflap").then((m) => m.splitflap) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },

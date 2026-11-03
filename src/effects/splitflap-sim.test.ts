@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sanitizeText } from "./params";
 import {
   boardLayout,
   boardLine,
@@ -19,10 +20,7 @@ import {
   textPages,
   tickClock,
 } from "./splitflap-sim";
-
-/** The board's size in the effect. */
-const BOARD_COLS = 22;
-const MAX_ROWS = 6;
+import { BOARD_COLS, MAX_ROWS, splitflapMeta } from "./splitflap.meta";
 
 const line = (text: string, cols = BOARD_COLS, align: "left" | "centre" = "left") => {
   const out = new Uint8Array(cols);
@@ -59,6 +57,18 @@ describe("textPages", () => {
   it("always has a page", () => {
     expect(textPages("", 3)).toEqual([[]]);
     expect(textPages("\n \n", 3)).toEqual([[]]);
+  });
+
+  it("fits the default text and its limits", () => {
+    const def = splitflapMeta.params.lines;
+    expect(def.maxLength).toBe(BOARD_COLS);
+    for (const l of def.default.split("\n")) expect(line(l).trimEnd()).toBe(l);
+    // Six lines over three text rows (four rows less the clock): two pages.
+    expect(textPages(def.default, 3)).toHaveLength(2);
+    // Longer input is cut to the board, not wrapped.
+    const long = sanitizeText(def, `${"X".repeat(40)}\n`.repeat(9));
+    expect(long.split("\n")).toHaveLength(def.maxLines);
+    expect(long.split("\n")[0]).toHaveLength(BOARD_COLS);
   });
 });
 
