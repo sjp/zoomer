@@ -11,7 +11,7 @@ export const warpMeta = defineEffectMeta({
   cost: "very low",
   context: "webgl2",
   params: {
-    speed: { kind: "number", label: "Speed", min: 0, max: 10, step: 0.1, default: 3 },
+    speed: { kind: "number", label: "Speed", min: 0, max: 10, step: 0.1, default: 0.5 },
     count: { kind: "number", label: "Stars", min: 100, max: MAX_STARS, step: 100, default: 1200 },
     streak: { kind: "number", label: "Streak length", min: 0, max: 1, step: 0.01, default: 0.35 },
     size: { kind: "number", label: "Star size", min: 0.5, max: 6, step: 0.1, default: 2 },
@@ -31,7 +31,7 @@ export const warpMeta = defineEffectMeta({
       min: 0,
       max: 1,
       step: 0.01,
-      default: 0.25,
+      default: 0.15,
     },
     background: { kind: "color", label: "Background", default: "#000008" },
   },
