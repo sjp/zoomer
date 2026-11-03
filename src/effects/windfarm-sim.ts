@@ -39,8 +39,8 @@ export interface HillShape {
 
 /** Gentle, rolling layers: each sits higher, lower and tighter than the one in front. */
 export const HILLS: readonly HillShape[] = [
-  { base: 0.03, amp: 0.16, wavelength: 1.5, haze: 0, turbine: 0.3, smooth: 0.06 },
-  { base: 0.17, amp: 0.12, wavelength: 1, haze: 0.28, turbine: 0.18, smooth: 0.03 },
+  { base: 0.03, amp: 0.16, wavelength: 1.5, haze: 0, turbine: 0.3, smooth: 0.1 },
+  { base: 0.17, amp: 0.12, wavelength: 1, haze: 0.28, turbine: 0.18, smooth: 0.04 },
   { base: 0.27, amp: 0.09, wavelength: 0.7, haze: 0.48, turbine: 0.11, smooth: 0.018 },
   { base: 0.34, amp: 0.07, wavelength: 0.5, haze: 0.64, turbine: 0.07, smooth: 0.012 },
 ];

@@ -60,6 +60,11 @@ const CLOUD_SPEED = 0.0035;
 const SHADOW_ZOOM = [0.55, 0.95, 1.5, 2.2];
 /** Shadows are squashed along the slope, as if seen at a glancing angle. */
 const SHADOW_STRETCH = 2.5;
+/** Shadow edge: density band (unit variance) over which a shadow fades in, below and above the threshold. */
+const SHADOW_SOFT_LO = 0.3;
+const SHADOW_SOFT_HI = 1.8;
+/** Half-width of the nearest ridge's antialiased edge (full-res px). */
+const NEAR_EDGE = 1.25;
 /** Shadow drift at `wind` 1, noise tiles per second. */
 const SHADOW_SPEED = 0.005;
 /** Brightening of a ridge's sunlit crest, and how far down it reaches (height units). */
@@ -159,6 +164,12 @@ const vec4 OCT = vec4(0.5, 0.25, 0.125, 0.0625);
 /** Mean of dot(texel, OCT) for mid-grey texels, and the gain to unit variance. */
 const float MEAN = 0.46875;
 const float NORM = 10.0;
+/** Shadows skip the finest octave and damp the next, so their edges stay soft. */
+const vec4 SHADOW_OCT = vec4(0.62, 0.3, 0.08, 0.0);
+const float SHADOW_MEAN = 0.5;
+const float SHADOW_NORM = 8.3;
+const float SHADOW_SOFT_LO = ${f(SHADOW_SOFT_LO)};
+const float SHADOW_SOFT_HI = ${f(SHADOW_SOFT_HI)};
 const float HORIZON = ${f(HORIZON)};
 const float PERSP = ${f(PERSP)};
 const float CLOUD_X = ${f(CLOUD_X)};
@@ -177,7 +188,8 @@ float density(vec2 q) {
 float shadowAt(vec2 p, int i, float h) {
   float z = ZOOM[i];
   vec2 q = vec2(p.x * z, (h - p.y) * z * SHADOW_STRETCH + float(i) * 0.29) + uShadow.xy;
-  return smoothstep(uCloud.z, uCloud.z + 0.8, density(q)) * uCloud.w;
+  float d = (dot(textureLod(uNoise, q, 0.0), SHADOW_OCT) - SHADOW_MEAN) * SHADOW_NORM;
+  return smoothstep(uCloud.z - SHADOW_SOFT_LO, uCloud.z + SHADOW_SOFT_HI, d) * uCloud.w;
 }
 
 vec3 hill(vec2 p, int i, float h) {
@@ -253,12 +265,13 @@ void main() {
 
 /**
  * Full-res blit: upscales the scene and draws the nearest hill over it with a
- * sharp edge, shaded by the cloud shadow the low-res pass left in alpha.
+ * crisp but softened edge, shaded by the cloud shadow the low-res pass left in alpha.
  */
 const COMPOSITE = /* glsl */ `
 uniform sampler2D uTable;
 /** 1 / canvas height, canvas height (px). */
 uniform vec2 uNear;
+const float NEAR_EDGE = ${f(NEAR_EDGE)};
 uniform vec3 uHill0;
 ${TABLE_GLSL}
 
@@ -266,7 +279,7 @@ vec4 composite(vec2 uv) {
   vec4 c = texture(uLowRes, uv);
   vec2 p = gl_FragCoord.xy * uNear.x;
   float h = ridge(p.x, 0);
-  float cover = clamp((h - p.y) * uNear.y + 0.5, 0.0, 1.0);
+  float cover = smoothstep(-NEAR_EDGE, NEAR_EDGE, (h - p.y) * uNear.y);
   if (cover <= 0.0) return vec4(c.rgb, 1.0);
   vec3 near = uHill0 * crest(h - p.y) * c.a;
   return vec4(mix(c.rgb, near, cover), 1.0);
