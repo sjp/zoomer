@@ -49,6 +49,7 @@ import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
+import { porchMeta } from "./porch.meta";
 import { rainMeta } from "./rain.meta";
 import { reactionMeta } from "./reaction.meta";
 import { ridgesMeta } from "./ridges.meta";
@@ -95,6 +96,7 @@ export const effects: readonly EffectEntry[] = [
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
+  { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
