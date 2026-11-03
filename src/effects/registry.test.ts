@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaults, encodeHash, stateFromHash } from "./params";
 import { defaultEffect, effects } from "./registry";
+import { EFFECT_CATEGORIES, EFFECT_COSTS } from "./types";
 
 describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
   it("loads an implementation that matches its metadata", async () => {
@@ -18,5 +19,12 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
     const state = stateFromHash(encodeHash(entry, values), effects, defaultEffect);
     expect(state.effect).toBe(entry);
     expect(state.values).toEqual(values);
+  });
+
+  it("has a category, a cost and lowercase search tags", () => {
+    expect(EFFECT_CATEGORIES).toContain(entry.category);
+    expect(EFFECT_COSTS).toContain(entry.cost);
+    expect(entry.tags.length).toBeGreaterThan(0);
+    for (const tag of entry.tags) expect(tag).toMatch(/^[a-z0-9][a-z0-9 '-]*$/);
   });
 });

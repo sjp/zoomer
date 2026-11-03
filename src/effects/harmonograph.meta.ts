@@ -4,6 +4,9 @@ export const harmonographMeta = defineEffectMeta({
   id: "harmonograph",
   name: "Harmonograph",
   description: "Glowing pendulum curves that slowly draw themselves, then fade.",
+  category: "Science",
+  tags: ["lissajous", "spirograph", "geometry"],
+  cost: "very low",
   context: "webgl2",
   params: {
     palette: {

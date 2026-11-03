@@ -32,5 +32,8 @@ export const reactionMeta = defineEffectMeta({
     },
     reseed: { kind: "boolean", label: "Reseed (toggle)", default: false },
   },
+  category: "Science",
+  tags: ["biology", "simulation", "organic", "morphogenesis"],
+  cost: "medium",
   context: "webgl2",
 });

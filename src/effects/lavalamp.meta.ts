@@ -23,5 +23,8 @@ export const lavalampMeta = defineEffectMeta({
     bgBottom: { kind: "color", label: "Background (bottom)", default: "#3a0b3d" },
     seed: { kind: "number", label: "Blob layout seed", min: 1, max: 9999, step: 1, default: 1 },
   },
+  category: "Retro",
+  tags: ["70s", "groovy"],
+  cost: "low",
   context: "webgl2",
 });

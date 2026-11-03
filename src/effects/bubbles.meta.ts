@@ -27,5 +27,8 @@ export const bubblesMeta = defineEffectMeta({
     liquidTop: { kind: "color", label: "Liquid top colour", default: "#2a8a9a" },
     liquidBottom: { kind: "color", label: "Liquid bottom colour", default: "#04222f" },
   },
+  category: "Water",
+  tags: ["fizz", "soda", "drink", "underwater"],
+  cost: "very low",
   context: "webgl2",
 });

@@ -49,5 +49,8 @@ export const contoursMeta = defineEffectMeta({
       default: "bspline",
     },
   },
+  category: "Abstract",
+  tags: ["terrain", "cartography", "topo"],
+  cost: "low",
   context: "webgl2",
 });

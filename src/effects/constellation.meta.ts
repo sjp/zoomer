@@ -34,5 +34,8 @@ export const constellationMeta = defineEffectMeta({
     backgroundTop: { kind: "color", label: "Background top colour", default: "#040814" },
     backgroundBottom: { kind: "color", label: "Background bottom colour", default: "#0b1a33" },
   },
+  category: "Abstract",
+  tags: ["nodes", "connections", "web", "dots", "corporate"],
+  cost: "low",
   context: "webgl2",
 });

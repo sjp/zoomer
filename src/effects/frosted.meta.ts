@@ -43,5 +43,8 @@ export const frostedMeta = defineEffectMeta({
     frost: { kind: "number", label: "Frost", min: 0, max: 1, step: 0.01, default: 0.5 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
+  category: "Abstract",
+  tags: ["blur", "minimal", "gradient", "frost"],
+  cost: "very low",
   context: "webgl2",
 });

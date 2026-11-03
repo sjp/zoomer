@@ -9,6 +9,9 @@ export const koiMeta = defineEffectMeta({
   id: "koi",
   name: "Koi Pond",
   description: "Koi gliding beneath lily pads over a pebbled floor, with now-and-then ripples.",
+  category: "Water",
+  tags: ["fish", "japanese", "garden", "carp"],
+  cost: "medium",
   context: "webgl2",
   params: {
     fish: { kind: "number", label: "Fish", min: 3, max: MAX_FISH, step: 1, default: 7 },

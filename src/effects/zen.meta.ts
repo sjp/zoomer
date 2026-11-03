@@ -28,5 +28,8 @@ export const zenMeta = defineEffectMeta({
     rerake: { kind: "boolean", label: "Rerake now and then", default: true },
     seed: { kind: "number", label: "Layout", min: 1, max: 100, step: 1, default: 1 },
   },
+  category: "Cosy",
+  tags: ["japanese", "sand", "calm", "meditation"],
+  cost: "low",
   context: "webgl2",
 });

@@ -55,5 +55,8 @@ export const dunesMeta = defineEffectMeta({
     ripples: { kind: "number", label: "Ripples", min: 0, max: 1, step: 0.01, default: 0.5 },
     seed: { kind: "number", label: "Seed", min: 1, max: 100, step: 1, default: 1 },
   },
+  category: "Nature",
+  tags: ["sahara", "landscape", "dune", "arabia"],
+  cost: "low",
   context: "webgl2",
 });

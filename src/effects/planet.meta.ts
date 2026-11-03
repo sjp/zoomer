@@ -43,5 +43,8 @@ export const planetMeta = defineEffectMeta({
     seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 1 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
+  category: "Space",
+  tags: ["earth", "globe", "world", "astronomy"],
+  cost: "low",
   context: "webgl2",
 });

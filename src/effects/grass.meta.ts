@@ -33,5 +33,8 @@ export const grassMeta = defineEffectMeta({
     wind: { kind: "number", label: "Wind", min: 0, max: 1, step: 0.01, default: 0.45 },
     gusts: { kind: "number", label: "Gusts", min: 0, max: 1, step: 0.01, default: 0.6 },
   },
+  category: "Nature",
+  tags: ["meadow", "summer", "prairie", "lawn", "breeze"],
+  cost: "medium",
   context: "webgl2",
 });

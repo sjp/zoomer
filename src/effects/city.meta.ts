@@ -34,5 +34,8 @@ export const cityMeta = defineEffectMeta({
     aircraft: { kind: "boolean", label: "Aircraft", default: true },
     seed: { kind: "number", label: "Seed", min: 1, max: 999, step: 1, default: 7 },
   },
+  category: "Cosy",
+  tags: ["buildings", "urban", "lights", "skyscrapers", "high-rise"],
+  cost: "very low",
   context: "webgl2",
 });

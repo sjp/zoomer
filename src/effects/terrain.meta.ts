@@ -22,5 +22,8 @@ export const terrainMeta = defineEffectMeta({
     speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
     seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 7 },
   },
+  category: "Nature",
+  tags: ["landscape", "flyover", "polygon", "mountains"],
+  cost: "low",
   context: "webgl2",
 });

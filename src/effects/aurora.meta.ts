@@ -21,5 +21,8 @@ export const auroraMeta = defineEffectMeta({
     stars: { kind: "number", label: "Stars", min: 0, max: 1, step: 0.05, default: 0.5 },
     horizon: { kind: "select", label: "Horizon", options: HORIZON_OPTIONS, default: "pines" },
   },
+  category: "Sky & weather",
+  tags: ["borealis", "arctic"],
+  cost: "low",
   context: "webgl2",
 });

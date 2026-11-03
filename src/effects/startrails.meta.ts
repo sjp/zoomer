@@ -57,5 +57,8 @@ export const startrailsMeta = defineEffectMeta({
     skyBottom: { kind: "color", label: "Sky bottom", default: "#13204a" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
+  category: "Space",
+  tags: ["stars", "astrophotography", "timelapse"],
+  cost: "low",
   context: "webgl2",
 });

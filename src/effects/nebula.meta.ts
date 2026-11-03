@@ -26,5 +26,8 @@ export const nebulaMeta = defineEffectMeta({
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
     seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 1 },
   },
+  category: "Space",
+  tags: ["galaxy", "cosmos", "stars", "astronomy"],
+  cost: "medium",
   context: "webgl2",
 });

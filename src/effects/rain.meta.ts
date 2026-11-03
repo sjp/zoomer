@@ -24,5 +24,8 @@ export const rainMeta = defineEffectMeta({
     brightHead: { kind: "boolean", label: "Bright leading glyph", default: true },
     background: { kind: "color", label: "Background", default: "#000000" },
   },
+  category: "Retro",
+  tags: ["matrix", "code", "hacker", "green", "terminal"],
+  cost: "low",
   context: "webgl2",
 });

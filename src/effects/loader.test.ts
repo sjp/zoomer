@@ -7,6 +7,8 @@ const meta = (id: string) =>
     id,
     name: id,
     description: id,
+    category: "Abstract",
+    tags: ["test"],
     context: "webgl2",
     params: { speed: { kind: "number", label: "Speed", min: 0, max: 1, step: 0.1, default: 0.5 } },
   });

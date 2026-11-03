@@ -45,5 +45,8 @@ export const ridgesMeta = defineEffectMeta({
     seed: { kind: "number", label: "Seed", min: 1, max: 100, step: 1, default: 1 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
+  category: "Nature",
+  tags: ["mountains", "chinese", "landscape", "guilin"],
+  cost: "low",
   context: "webgl2",
 });

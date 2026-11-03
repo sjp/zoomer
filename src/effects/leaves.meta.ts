@@ -38,5 +38,8 @@ export const leavesMeta = defineEffectMeta({
     topColor: { kind: "color", label: "Background top colour", default: "#f1d7ae" },
     bottomColor: { kind: "color", label: "Background bottom colour", default: "#b9774a" },
   },
+  category: "Nature",
+  tags: ["sakura", "spring", "hanami"],
+  cost: "very low",
   context: "webgl2",
 });

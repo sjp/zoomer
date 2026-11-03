@@ -5,6 +5,9 @@ export const inkMeta = defineEffectMeta({
   id: "ink",
   name: "Ink in Water",
   description: "Plumes of ink curling slowly through clear water, or an endless marbled swirl.",
+  category: "Water",
+  tags: ["fluid", "marbling", "dye"],
+  cost: "medium",
   context: "webgl2",
   params: {
     mode: {

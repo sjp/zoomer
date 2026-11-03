@@ -7,6 +7,9 @@ export const hyperspaceMeta = defineEffectMeta({
   name: "Hyperspace",
   description:
     "Stars stretch into a blue-white tunnel of light, with an optional jump in/out cycle.",
+  category: "Space",
+  tags: ["sci-fi", "space travel", "warp"],
+  cost: "low",
   context: "webgl2",
   params: {
     speed: { kind: "number", label: "Speed", min: 0.1, max: 5, step: 0.1, default: 1.5 },

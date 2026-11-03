@@ -29,5 +29,8 @@ export const filmMeta = defineEffectMeta({
     highlight: { kind: "boolean", label: "Window highlight", default: true },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
+  category: "Abstract",
+  tags: ["soap bubble", "rainbow", "holographic"],
+  cost: "very low",
   context: "webgl2",
 });

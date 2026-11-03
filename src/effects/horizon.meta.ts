@@ -63,5 +63,8 @@ export const horizonMeta = defineEffectMeta({
     trees: { kind: "boolean", label: "Trees", default: true },
     seed: { kind: "number", label: "Hill shapes", min: 0, max: 999, step: 1, default: 7 },
   },
+  category: "Sky & weather",
+  tags: ["sunrise", "landscape", "clock"],
+  cost: "very low",
   context: "webgl2",
 });

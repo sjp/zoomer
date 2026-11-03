@@ -36,5 +36,8 @@ export const synthwaveMeta = defineEffectMeta({
     sway: { kind: "number", label: "Camera sway", min: 0, max: 1, step: 0.01, default: 0.15 },
     scanlines: { kind: "boolean", label: "CRT scanlines", default: false },
   },
+  category: "Retro",
+  tags: ["outrun", "vaporwave", "sunset", "eighties", "retrowave"],
+  cost: "low",
   context: "webgl2",
 });

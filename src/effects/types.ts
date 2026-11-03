@@ -76,6 +76,30 @@ export interface ContextMap {
 export type ContextKind = keyof ContextMap;
 
 /**
+ * The categories the effect list groups by, in display order. Add one only when
+ * several effects need it.
+ */
+export const EFFECT_CATEGORIES = [
+  "Space",
+  "Sky & weather",
+  "Water",
+  "Nature",
+  "Cosy",
+  "Abstract",
+  "Science",
+  "Retro",
+] as const;
+export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
+
+/**
+ * Rough GPU cost at 4K with default params, lightest first, for the "Lightest first"
+ * sort. Taken from the "Est. cost at 4K" column of the issue tables ("low–medium"
+ * counts as medium) or, for effects without an estimate, judged from the code.
+ */
+export const EFFECT_COSTS = ["very low", "low", "medium"] as const;
+export type EffectCost = (typeof EFFECT_COSTS)[number];
+
+/**
  * What the app knows about an effect before its code loads: enough to list it, build
  * its controls and read its params from the URL. Lives in `<id>.meta.ts`, which the
  * entry chunk imports, so it must not import the implementation or any GL helper.
@@ -84,6 +108,13 @@ interface EffectMetaBase<S extends ParamSchema> {
   id: string;
   name: string;
   description: string;
+  category: EffectCategory;
+  /**
+   * A few lowercase search words that aren't already in the name or description,
+   * such as "stars" and "sci-fi" for Warp Speed.
+   */
+  tags: readonly string[];
+  cost?: EffectCost;
   params: S;
 }
 

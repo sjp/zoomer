@@ -38,5 +38,8 @@ export const beachMeta = defineEffectMeta({
     sand: { kind: "color", label: "Sand colour", default: "#e4cc9e" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
+  category: "Water",
+  tags: ["ocean", "sea", "surf", "aerial", "coast"],
+  cost: "medium",
   context: "webgl2",
 });
