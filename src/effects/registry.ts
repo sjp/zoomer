@@ -72,6 +72,7 @@ import { tunnelMeta } from "./tunnel.meta";
 import { vinesMeta } from "./vines.meta";
 import { warpMeta } from "./warp.meta";
 import { waterfallMeta } from "./waterfall.meta";
+import { windfarmMeta } from "./windfarm.meta";
 import { windowRainMeta } from "./windowrain.meta";
 import { zenMeta } from "./zen.meta";
 import { createEffectLoader, type EffectEntry } from "./loader";
@@ -113,6 +114,7 @@ export const effects: readonly EffectEntry[] = [
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
   { ...murmurationMeta, load: () => import("./murmuration").then((m) => m.murmuration) },
+  { ...windfarmMeta, load: () => import("./windfarm").then((m) => m.windfarm) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
