@@ -30,6 +30,7 @@ import { firefliesMeta } from "./fireflies.meta";
 import { fireplaceMeta } from "./fireplace.meta";
 import { flowfieldMeta } from "./flowfield.meta";
 import { frostMeta } from "./frost.meta";
+import { gearsMeta } from "./gears.meta";
 import { frostedMeta } from "./frosted.meta";
 import { glassMeta } from "./glass.meta";
 import { globeMeta } from "./globe.meta";
@@ -116,6 +117,7 @@ export const effects: readonly EffectEntry[] = [
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
   { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
+  { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
