@@ -8,21 +8,20 @@
  * disc of radius `JITTER` and the drift a closed path of radius at most `DRIFT_MAX`.
  */
 import { hash32 } from "./noise";
+import {
+  createVoronoiSample,
+  SEARCH_BOUND,
+  type VoronoiOffset,
+  type VoronoiSample,
+  voronoiHash,
+  voronoiSample,
+} from "./voronoi";
 
 /** Largest base jitter of a seed from its cell centre, in cells (Euclidean). */
 export const JITTER = 0.3;
 /** Largest drift of a seed from its jittered position at `drift` = 1, in cells. */
 export const DRIFT_MAX = 0.08;
-/**
- * Largest offset of a seed from its cell centre for which a 3x3 search still finds
- * the nearest and second-nearest seeds exactly. For a point in cell (0, 0), every
- * seed outside the 3x3 block is at least `1.5 - R` away along one axis, while the
- * second-nearest of the 3x3 cell centres is at most `sqrt(1/2)` away (the worst
- * case being a cell corner, where four centres are that close), so F2 is at most
- * `sqrt(1/2) + R`. The search is exact when `sqrt(1/2) + R <= 1.5 - R`. The test
- * checks the bound numerically against a brute-force search.
- */
-export const SEARCH_BOUND = (1.5 - Math.SQRT1_2) / 2;
+export { SEARCH_BOUND };
 /** Seconds per loop of a seed's drift path. */
 export const DRIFT_PERIOD = 45;
 /**
@@ -31,10 +30,8 @@ export const DRIFT_PERIOD = 45;
  */
 export const GRID_ORIGIN = 512;
 
-/** Seed hash of cell (ix, iy): the same bits as the shader's `hash32(key)`. */
-export function seedHash(ix: number, iy: number): number {
-  return hash32((ix & 0xfff) | ((iy & 0xfff) << 12));
-}
+/** Seed hash of cell (ix, iy): the same bits as the shader's `voronoiHash`. */
+export const seedHash = voronoiHash;
 
 /** Second hash of a seed, for its colour, glass kind and texture offset. */
 export function paneHash(h: number): number {
@@ -78,30 +75,15 @@ export function seedOffset(ix: number, iy: number, d: readonly number[], out: nu
   return out;
 }
 
-export interface VoronoiSample {
-  /** Hash of the nearest seed (`seedHash`). */
-  hash: number;
-  /** Nearest and second-nearest seed distances, in cells. */
-  f1: number;
-  f2: number;
-  /** Distance to the edge of the nearest seed's cell (the nearest bisector), in cells. */
-  edge: number;
-}
+export { createVoronoiSample, type VoronoiSample };
 
-export const createVoronoiSample = (): VoronoiSample => ({ hash: 0, f1: 0, f2: 0, edge: 0 });
-
-const sx = new Float64Array(49);
-const sy = new Float64Array(49);
-const sh = new Uint32Array(49);
-const off = [0, 0];
+let sampleDrift: readonly number[] = [0, 0];
+const glassOffset: VoronoiOffset = (_h, ix, iy, out) => seedOffset(ix, iy, sampleDrift, out);
 
 /**
  * Voronoi sample at grid point (gx, gy) for drift uniform `d`, searching the
- * (2r+1)^2 cells around it. r = 1 is what the shader does; the tests compare it
- * with a wider brute-force search. The edge distance is the smallest distance to
- * a bisector between the nearest seed and any other searched seed, which is the
- * exact distance to the cell's boundary (the cell is the intersection of those
- * half-planes).
+ * (2r+1)^2 cells around it: `voronoiSample` with the glass seed offsets. r = 1 is
+ * what the shader does; the tests compare it with a wider brute-force search.
  */
 export function voronoi(
   gx: number,
@@ -110,41 +92,8 @@ export function voronoi(
   out: VoronoiSample,
   r = 1,
 ): VoronoiSample {
-  const cx = Math.floor(gx);
-  const cy = Math.floor(gy);
-  let n = 0;
-  let best = 0;
-  let f1 = Infinity;
-  let f2 = Infinity;
-  for (let j = -r; j <= r; j++) {
-    for (let i = -r; i <= r; i++) {
-      seedOffset(cx + i, cy + j, d, off);
-      sx[n] = cx + i + 0.5 + off[0];
-      sy[n] = cy + j + 0.5 + off[1];
-      sh[n] = seedHash(cx + i, cy + j);
-      const dd = (gx - sx[n]) ** 2 + (gy - sy[n]) ** 2;
-      if (dd < f1) {
-        f2 = f1;
-        f1 = dd;
-        best = n;
-      } else if (dd < f2) {
-        f2 = dd;
-      }
-      n++;
-    }
-  }
-  let edge = Infinity;
-  for (let k = 0; k < n; k++) {
-    if (k === best) continue;
-    const dd = (gx - sx[k]) ** 2 + (gy - sy[k]) ** 2;
-    const e = (dd - f1) / (2 * Math.hypot(sx[k] - sx[best], sy[k] - sy[best]));
-    if (e < edge) edge = e;
-  }
-  out.hash = sh[best];
-  out.f1 = Math.sqrt(f1);
-  out.f2 = Math.sqrt(f2);
-  out.edge = edge;
-  return out;
+  sampleDrift = d;
+  return voronoiSample(gx, gy, glassOffset, out, r);
 }
 
 /** Colours per palette; the shader picks one by the low three bits of `paneHash`. */

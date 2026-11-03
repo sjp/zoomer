@@ -22,6 +22,7 @@ import {
 } from "./gl";
 import { buildPeriodicNoiseTexture, HASH32_GLSL } from "./noise";
 import { glassMeta } from "./glass.meta";
+import { VORONOI_GLSL } from "./voronoi";
 import { defineEffect } from "./types";
 
 /** Glass texture: texels per side, its tile in reference px, and lattice cells per side of each channel. */
@@ -58,8 +59,8 @@ const PALETTE_DATA = new Map<readonly string[], Float32Array>(
 const paletteData = (name: string) => PALETTE_DATA.get(palette(name))!;
 
 /**
- * One full-screen pass: a 3x3 jittered-Voronoi search (the twin of `voronoi` in
- * glass-sim.ts, which proves the search exact), the exact distance to the pane's
+ * One full-screen pass: a 3x3 jittered-Voronoi search (`VORONOI_GLSL`, whose JS
+ * twin the glass-sim tests prove exact), the exact distance to the pane's
  * edge for constant-width anti-aliased lead, one glass-texture fetch, and the
  * analytic sun patch.
  */
@@ -89,53 +90,29 @@ uniform vec3 uPalette[${PALETTE_SIZE}];
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
+/**
+ * Glass seeds: the jitter maps two hash bytes from the square onto a disc, and the
+ * drift rotates the shared path point by the seed's own hash vector.
+ */
+vec2 voronoiOffset(uint h) {
+  vec4 b = vec4(uvec4(h, h >> 8, h >> 16, h >> 24) & 255u) * ${glslFloat(2 / 255)} - 1.0;
+  float sg = (h & 1u) == 1u ? 1.0 : -1.0;
+  vec2 cs = vec2(uDrift.x, uDrift.y * sg);
+  vec2 jit = ${glslFloat(JITTER)} * b.xy * sqrt(1.0 - 0.5 * b.yx * b.yx);
+  return jit + vec2(b.z * cs.x - b.w * cs.y, b.w * cs.x + b.z * cs.y);
+}
+${VORONOI_GLSL}
 void main() {
   vec2 ref = gl_FragCoord.xy * uPix.xy + uPix.zw;
   vec2 g = ref * uGrid.x + uGrid.yz;
-  vec2 cell = floor(g);
-  uvec2 ci = uvec2(cell);
 
-  vec2 seeds[9];
-  int best = 0;
-  float f1 = 1e9;
-  uint bestH = 0u;
-  for (int j = 0; j < 3; j++) {
-    for (int i = 0; i < 3; i++) {
-      uvec2 c = ci + uvec2(i, j) - 1u;
-      uint h = hash32((c.x & 0xfffu) | ((c.y & 0xfffu) << 12));
-      vec4 b = vec4(uvec4(h, h >> 8, h >> 16, h >> 24) & 255u) * ${glslFloat(2 / 255)} - 1.0;
-      float sg = (h & 1u) == 1u ? 1.0 : -1.0;
-      vec2 cs = vec2(uDrift.x, uDrift.y * sg);
-      vec2 jit = ${glslFloat(JITTER)} * b.xy * sqrt(1.0 - 0.5 * b.yx * b.yx);
-      vec2 s = cell + vec2(float(i), float(j)) - 0.5 + jit
-        + vec2(b.z * cs.x - b.w * cs.y, b.w * cs.x + b.z * cs.y);
-      int k = j * 3 + i;
-      seeds[k] = s;
-      vec2 d = g - s;
-      float dd = dot(d, d);
-      if (dd < f1) {
-        f1 = dd;
-        best = k;
-        bestH = h;
-      }
-    }
-  }
-
-  // Exact distance to the pane's edge: the nearest bisector with any other seed.
-  vec2 a = seeds[best];
-  float edge = 1e9;
-  vec2 nrm = vec2(0.0, 1.0);
-  for (int k = 0; k < 9; k++) {
-    if (k == best) continue;
-    vec2 ab = seeds[k] - a;
-    vec2 d = g - seeds[k];
-    float inv = inversesqrt(dot(ab, ab));
-    float e = (dot(d, d) - f1) * 0.5 * inv;
-    if (e < edge) {
-      edge = e;
-      nrm = ab * inv;
-    }
-  }
+  // Pane under this pixel, and the exact distance to its edge.
+  VoronoiCell v = voronoiCell(g);
+  vec2 a = v.seed;
+  float f1 = v.f1;
+  float edge = v.edge;
+  vec2 nrm = v.normal;
+  uint bestH = v.hash;
 
   // Pane: palette colour, old-glass brightness spread, centre glow, texture.
   uint ph = hash32(bestH ^ 0x5bd1e995u);
