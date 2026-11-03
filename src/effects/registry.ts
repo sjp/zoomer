@@ -35,7 +35,6 @@ import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
 import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
-import { lakeMeta } from "./lake.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
@@ -80,7 +79,6 @@ export const effects: readonly EffectEntry[] = [
   { ...synthwaveMeta, load: () => import("./synthwave").then((m) => m.synthwave) },
   { ...cloudsMeta, load: () => import("./clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea").then((m) => m.sea) },
-  { ...lakeMeta, load: () => import("./lake").then((m) => m.lake) },
   { ...cloudseaMeta, load: () => import("./cloudsea").then((m) => m.cloudsea) },
   { ...lighthouseMeta, load: () => import("./lighthouse").then((m) => m.lighthouse) },
   { ...biolumMeta, load: () => import("./biolum").then((m) => m.biolum) },
