@@ -56,6 +56,7 @@ import { papercutMeta } from "./papercut.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
 import { porchMeta } from "./porch.meta";
+import { quasiMeta } from "./quasi.meta";
 import { rainMeta } from "./rain.meta";
 import { reactionMeta } from "./reaction.meta";
 import { ridgesMeta } from "./ridges.meta";
@@ -139,6 +140,7 @@ export const effects: readonly EffectEntry[] = [
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
   { ...moireMeta, load: () => import("./moire").then((m) => m.moire) },
+  { ...quasiMeta, load: () => import("./quasi").then((m) => m.quasi) },
   { ...ridgesMeta, load: () => import("./ridges").then((m) => m.ridges) },
   { ...candlelightMeta, load: () => import("./candlelight").then((m) => m.candlelight) },
   { ...snowMeta, load: () => import("./snow").then((m) => m.snow) },
