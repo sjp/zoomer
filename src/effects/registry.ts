@@ -13,6 +13,7 @@ import { cloudsMeta } from "./clouds.meta";
 import { cloudseaMeta } from "./cloudsea.meta";
 import { constellationMeta } from "./constellation.meta";
 import { contoursMeta } from "./contours.meta";
+import { coralMeta } from "./coral.meta";
 import { dappleMeta } from "./dapple.meta";
 import { daymapMeta } from "./daymap.meta";
 import { dunesMeta } from "./dunes.meta";
@@ -86,6 +87,7 @@ export const effects: readonly EffectEntry[] = [
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
+  { ...coralMeta, load: () => import("./coral").then((m) => m.coral) },
   { ...cityMeta, load: () => import("./city").then((m) => m.city) },
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
   { ...leavesMeta, load: () => import("./leaves").then((m) => m.leaves) },
