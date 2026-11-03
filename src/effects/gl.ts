@@ -180,11 +180,16 @@ export function compileShader(
   return shader;
 }
 
-/** Compiles and links a program. Throws with the shader or link log on failure. */
+/**
+ * Compiles and links a program. Throws with the shader or link log on failure.
+ * `feedbackVaryings`, if given, are captured with transform feedback
+ * (interleaved), declared before linking.
+ */
 export function createProgram(
   gl: WebGL2RenderingContext,
   vertexSource: string,
   fragmentSource: string,
+  feedbackVaryings?: string[],
 ): WebGLProgram {
   const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
   let fs: WebGLShader;
@@ -197,6 +202,9 @@ export function createProgram(
   const program = gl.createProgram();
   gl.attachShader(program, vs);
   gl.attachShader(program, fs);
+  if (feedbackVaryings) {
+    gl.transformFeedbackVaryings(program, feedbackVaryings, gl.INTERLEAVED_ATTRIBS);
+  }
   gl.linkProgram(program);
   // Shaders can be flagged for deletion once linked; the program keeps them alive.
   gl.deleteShader(vs);

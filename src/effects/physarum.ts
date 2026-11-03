@@ -1,6 +1,5 @@
 import {
   beginFrame,
-  compileShader,
   createDataTexture,
   createFullscreenTriangle,
   createProgram,
@@ -194,36 +193,6 @@ void main() {
 }
 `;
 
-/** Like `createProgram`, but declares transform-feedback varyings before linking. */
-function createFeedbackProgram(
-  gl: WebGL2RenderingContext,
-  vertexSource: string,
-  fragmentSource: string,
-  varyings: string[],
-): WebGLProgram {
-  const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource);
-  let fs: WebGLShader;
-  try {
-    fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
-  } catch (err) {
-    gl.deleteShader(vs);
-    throw err;
-  }
-  const program = gl.createProgram();
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.transformFeedbackVaryings(program, varyings, gl.INTERLEAVED_ATTRIBS);
-  gl.linkProgram(program);
-  gl.deleteShader(vs);
-  gl.deleteShader(fs);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
-    const log = gl.getProgramInfoLog(program) ?? "";
-    gl.deleteProgram(program);
-    throw new Error(`WebGL: program failed to link:\n${log}`);
-  }
-  return program;
-}
-
 /**
  * Slime mould: glowing vein networks from a Physarum agent model (Jones 2010).
  *
@@ -268,7 +237,7 @@ export const physarum = defineEffect(physarumMeta, {
       const diffuseProgram = program(DIFFUSE_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);
       const agentProgram = scope.add(
-        createFeedbackProgram(gl, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]),
+        createProgram(gl, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]),
         (p) => gl.deleteProgram(p),
       );
       const diffuse = createUniforms(gl, diffuseProgram, [
