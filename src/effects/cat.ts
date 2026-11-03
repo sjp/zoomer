@@ -216,9 +216,9 @@ const float TIP_FLICK = 1.4;
 const int TAIL_ARC_N = 16;
 const int TAIL_TIP_N = 10;
 /** Where along the tail it leaves the haunch: part of the body before, in front of it after. */
-const vec2 TAIL_OUT = vec2(0.16, 0.3);
+const vec2 TAIL_OUT = vec2(0.2, 0.42);
 /** How far the haunch's outline blends into the tail where it comes out. */
-const float TAIL_FILLET = 0.05;
+const float TAIL_FILLET = 0.07;
 
 float px;
 vec3 colP;
@@ -393,11 +393,17 @@ void main() {
   float tailU = tl.y;
   // 0 where the tail is still part of the haunch, 1 once it is in front.
   float tailOut = smoothstep(TAIL_OUT.x, TAIL_OUT.y, tailU);
-  // Near its root, the haunch's outline flows smoothly into the tail, so it looks attached.
+  // Near its root, the haunch's outline flows smoothly into the tail, so it looks
+  // attached. Only the outline changes: the body keeps its own shading inside its
+  // own outline (\`dOwn\`), and the bulge past it is shaded from the blended
+  // outline's direction, so there is no crease where they meet.
+  float dOwn = dBody;
   float hf = clamp(0.5 + 0.5 * (dTail - dBody) / TAIL_FILLET, 0.0, 1.0);
   float dFillet = mix(dTail, dBody, hf) - TAIL_FILLET * hf * (1.0 - hf);
-  gBody = normalize(mix(gBody, mix(gTail, gBody, hf), 1.0 - tailOut) + vec2(0.0, 1e-6));
   dBody = mix(dFillet, dBody, tailOut);
+  // Screen derivatives, back in the cat frame (x mirrors with the side).
+  vec2 gFillet = normalize(vec2(dFdx(dBody) * uOrigin.z, dFdy(dBody)) + vec2(0.0, 1e-9));
+  gBody = normalize(mix(gBody, gFillet, smoothstep(-0.02, 0.0, dOwn) * (1.0 - tailOut)) + vec2(0.0, 1e-6));
 
   float dCat = min(min(min(dBody, dHead), min(earN.x, earF.x)), min(dPaw, dTail));
   float rim = 1.0 - smoothstep(0.0, 0.03, -dCat);
@@ -431,8 +437,10 @@ void main() {
     float rr = length(r);
     float st = stripes(sin(ra * 15.0 + rr * 6.0 + 0.6 * sin(ra * 4.0)), smoothstep(0.17, 0.3, rr), 0.3);
     float chest = 1.0 - smoothstep(0.6, 1.0, length((qb - vec2(0.2, 0.1)) / vec2(0.13, 0.12)));
-    float occ = min(min(occFrom(dHead), mix(1.0, occFrom(dTail), tailOut)), occFrom(dPaw));
-    over(shade(furAt(st, chest), gBody, dBody, 0.2, rim, occ), cb);
+    // The tail shadows the body only once it is clear of the haunch.
+    float tOcc = mix(1.0, occFrom(dTail), smoothstep(0.35, 0.5, tailU));
+    float occ = min(min(occFrom(dHead), tOcc), occFrom(dPaw));
+    over(shade(furAt(st, chest), gBody, max(dBody, dOwn), 0.2, rim, occ), cb);
   }
   // Ears, far then near, behind the head.
   float ce = cov(earF.x);
@@ -463,12 +471,14 @@ void main() {
   }
   float cp2 = cov(dPaw);
   if (cp2 > 0.0) over(shade(furAt(0.0, 0.55), gPaw, dPaw, 0.04, rim, occFrom(dTail)), cp2);
-  // The root is part of the haunch, and shadowed where it comes out from under it.
-  float ct = cov(dTail) * (1.0 - (1.0 - tailOut) * cov(dBody + 0.004));
+  // The root is part of the haunch. Over the body, the tail fades in with a soft
+  // edge as it comes out, sharpening once it is clear; its stripes fade in too.
+  float tailEdge = cov(dTail);
+  float soft = mix(1.0 - smoothstep(-0.035, 0.0, dTail), tailEdge, smoothstep(0.3, 0.5, tailU));
+  float ct = mix(tailEdge, soft * tailOut, cov(dBody + 0.004));
   if (ct > 0.0) {
-    float st = stripes(sin(tailU * 40.0), 1.0, 0.34);
-    float occ = 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.04, dBody)) * (1.0 - smoothstep(0.12, 0.3, tailU));
-    over(shadeN(furAt(st, 0.0), gTail, tl.z, rim, occ), ct);
+    float st = stripes(sin(tailU * 40.0), smoothstep(0.2, 0.36, tailU), 0.34);
+    over(shadeN(furAt(st, 0.0), gTail, tl.z, rim, 1.0), ct);
   }
   // Same dither as the room's blit, weighted so the blend keeps its sum.
   outColor = vec4(colP + dither8(gl_FragCoord.xy) * alpha, alpha);
