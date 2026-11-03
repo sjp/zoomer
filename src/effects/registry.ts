@@ -60,6 +60,7 @@ import { mobileMeta } from "./mobile.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
+import { marblerunMeta } from "./marblerun.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
@@ -132,6 +133,7 @@ export const effects: readonly EffectEntry[] = [
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
   { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
   { ...splitflapMeta, load: () => import("./splitflap").then((m) => m.splitflap) },
+  { ...marblerunMeta, load: () => import("./marblerun").then((m) => m.marblerun) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
