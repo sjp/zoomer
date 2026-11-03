@@ -1,6 +1,6 @@
 import type {
   AnyParamValues,
-  EffectDefinition,
+  EffectMeta,
   NumberParam,
   ParamDef,
   ParamSchema,
@@ -87,7 +87,7 @@ export function decodeHash(hash: string): { effectId?: string; raw: Record<strin
 }
 
 /** Encodes the effect and its non-default values, e.g. `#effect=warp&speed=5`. */
-export function encodeHash(effect: EffectDefinition, values: AnyParamValues): string {
+export function encodeHash(effect: EffectMeta, values: AnyParamValues): string {
   const params = new URLSearchParams({ effect: effect.id });
   for (const [key, def] of Object.entries(effect.params)) {
     const value = values[key];
@@ -101,11 +101,11 @@ export function encodeHash(effect: EffectDefinition, values: AnyParamValues): st
  * to `fallback` (the default effect) with its defaults, since the hash's params were
  * meant for a different schema.
  */
-export function stateFromHash(
+export function stateFromHash<E extends EffectMeta>(
   hash: string,
-  effects: readonly EffectDefinition[],
-  fallback: EffectDefinition,
-): { effect: EffectDefinition; values: AnyParamValues } {
+  effects: readonly E[],
+  fallback: E,
+): { effect: E; values: AnyParamValues } {
   const { effectId, raw } = decodeHash(hash);
   const effect = effects.find((e) => e.id === effectId);
   if (!effect) return { effect: fallback, values: defaults(fallback.params) };

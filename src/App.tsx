@@ -3,9 +3,11 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { defaults, encodeHash, stateFromHash } from "./effects/params";
-import { defaultEffect, effects, getEffect } from "./effects/registry";
-import type { AnyParamValues, ParamValue } from "./effects/types";
+import { createLatest, type EffectEntry } from "./effects/loader";
+import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
+import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
+import { describeError } from "./lib/errors";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
 import { FRAME_RATES, type FrameRate } from "./lib/frameRate";
 import type { Resolution } from "./lib/resolution";
@@ -26,7 +28,15 @@ const isFormField = (target: EventTarget | null) =>
 
 export function App() {
   const [initial] = useState(initialState);
+  // The selected effect. Its code may still be loading, in which case `running` (what the
+  // canvas draws) is still the previous effect, or nothing on first load.
   const [effectId, setEffectId] = useState(initial.effectId);
+  const [running, setRunning] = useState<EffectDefinition | undefined>(() =>
+    effectLoader.get(initial.effectId),
+  );
+  // Why the selected effect's code failed to load.
+  const [loadError, setLoadError] = useState<string>();
+  const [latestLoad] = useState(() => createLatest<EffectDefinition>());
   const [valuesById, setValuesById] = useState<Record<string, AnyParamValues>>(initial.values);
   const [resolution, setResolution] = useState<Resolution>("window");
   const [frameRate, setFrameRate] = useState<FrameRate>("display");
@@ -65,6 +75,53 @@ export function App() {
     () => valuesById[effect.id] ?? defaults(effect.params),
     [valuesById, effect],
   );
+  // Whether the canvas is running the selected effect, rather than the previous one.
+  const ready = running?.id === effect.id;
+  const loading = !ready && loadError === undefined;
+  // While the next effect loads, the previous one keeps drawing with its own values.
+  const runningValues = useMemo(
+    () => (running ? (valuesById[running.id] ?? defaults(running.params)) : {}),
+    [valuesById, running],
+  );
+
+  /** Loads an effect and runs it, unless another load has started since. */
+  const startLoad = useCallback(
+    (entry: EffectEntry) =>
+      latestLoad.run(effectLoader.load(entry), setRunning, (err) => {
+        console.error(`Failed to load "${entry.name}":`, err);
+        setLoadError(`This effect failed to load: ${describeError(err)}`);
+      }),
+    [latestLoad],
+  );
+  /**
+   * Selects an effect and swaps it onto the canvas once its code has loaded. A cached
+   * effect swaps at once; otherwise only the latest selection starts when loads finish
+   * out of order. Callers keep this from running while recording.
+   */
+  const selectEffect = useCallback(
+    (id: string) => {
+      const entry = getEffect(id) ?? defaultEffect;
+      setEffectId(entry.id);
+      setLoadError(undefined);
+      const loaded = effectLoader.get(entry.id);
+      if (loaded) {
+        latestLoad.cancel();
+        setRunning(loaded);
+      } else {
+        startLoad(entry);
+      }
+    },
+    [latestLoad, startLoad],
+  );
+
+  // Load the first effect, unless it was already cached at the first render. main.tsx
+  // has already started its import, so this joins it.
+  useEffect(() => {
+    const entry = getEffect(initial.effectId) ?? defaultEffect;
+    if (effectLoader.get(entry.id)) return;
+    startLoad(entry);
+    return () => latestLoad.cancel();
+  }, [initial, latestLoad, startLoad]);
 
   // Debounced: dragging a slider changes params on every input event, and each
   // replaceState is an IPC round-trip that browsers throttle when called rapidly.
@@ -93,12 +150,12 @@ export function App() {
         window.history.replaceState(null, "", encodeHash(now.effect, now.values));
         return;
       }
-      setEffectId(next.effect.id);
       setValuesById((prev) => ({ ...prev, [next.effect.id]: next.values }));
+      selectEffect(next.effect.id);
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [selectEffect]);
 
   useEffect(() => {
     if (!toast) return;
@@ -119,9 +176,9 @@ export function App() {
     (dir: number) => {
       if (recording) return;
       const i = effects.findIndex((e) => e.id === effect.id);
-      setEffectId(effects[(i + dir + effects.length) % effects.length].id);
+      selectEffect(effects[(i + dir + effects.length) % effects.length].id);
     },
-    [effect, recording],
+    [effect, recording, selectEffect],
   );
 
   // A panel hidden under the pointer gets pointer-events: none, so pointerleave may never
@@ -168,7 +225,8 @@ export function App() {
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
-    if (!canvas || recording) return;
+    // A pending load would swap the effect mid-recording.
+    if (!canvas || recording || !ready) return;
     setRecordingLeft(seconds);
     const countdown = setInterval(
       () => setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1))),
@@ -196,8 +254,8 @@ export function App() {
     <main className="app" data-idle={idle && !hoveringPanel}>
       <EffectCanvas
         ref={canvasRef}
-        effect={effect}
-        params={values}
+        effect={running}
+        params={runningValues}
         resolution={resolution}
         frameRate={frameRate}
         onStats={statsStore.set}
@@ -215,12 +273,14 @@ export function App() {
             effects={effects}
             effect={effect}
             values={values}
-            error={effectError}
+            error={loadError ?? (ready ? effectError : undefined)}
+            loading={loading}
+            canRecord={ready}
             resolution={resolution}
             frameRate={frameRate}
             stats={statsStore}
             recordingLeft={recordingLeft}
-            onEffectChange={setEffectId}
+            onEffectChange={selectEffect}
             onParamChange={setParam}
             onReset={() =>
               setValuesById((prev) => ({ ...prev, [effect.id]: defaults(effect.params) }))

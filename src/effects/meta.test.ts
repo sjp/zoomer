@@ -19,20 +19,30 @@ const leafFiles = sources(
   }),
 );
 
+const registrySource = Object.values(
+  import.meta.glob<string>("./registry.ts", { query: "?raw", import: "default", eager: true }),
+)[0];
+
 /**
- * Module specifiers a file loads at runtime: static imports and re-exports that aren't
- * type-only, side-effect imports, and dynamic imports. `import type` is erased.
+ * Module specifiers a file imports statically at runtime: imports and re-exports that
+ * aren't type-only, and side-effect imports. `import type` is erased.
  */
-function runtimeImports(source: string): string[] {
+function staticImports(source: string): string[] {
   const out: string[] = [];
   const statement = /^\s*(import|export)\s+(type\s+)?([^;]*?)\s*from\s*["']([^"']+)["']/gm;
   for (const m of source.matchAll(statement)) {
     if (!m[2]) out.push(m[4]);
   }
   for (const m of source.matchAll(/^\s*import\s*["']([^"']+)["']/gm)) out.push(m[1]);
-  for (const m of source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']/g)) out.push(m[1]);
   return out;
 }
+
+/** Module specifiers a file imports with `import()`. */
+function dynamicImports(source: string): string[] {
+  return [...source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']/g)].map((m) => m[1]);
+}
+
+const runtimeImports = (source: string) => [...staticImports(source), ...dynamicImports(source)];
 
 /** What a `.meta.ts` file may import at runtime: types, shared options and other metadata. */
 const META_IMPORT = /^\.\/(types|param-options|[\w-]+\.meta)$/;
@@ -66,5 +76,19 @@ describe("effect metadata modules", () => {
 
   it.each(leafFiles)("%s imports nothing at runtime", (_, source) => {
     expect(runtimeImports(source)).toEqual([]);
+  });
+});
+
+describe("registry", () => {
+  it("imports only metadata up front", () => {
+    const allowed = (s: string) => META_IMPORT.test(s) || s === "./loader";
+    expect(staticImports(registrySource).filter((s) => !allowed(s))).toEqual([]);
+  });
+
+  it("loads each implementation next to its metadata", () => {
+    const lazy = dynamicImports(registrySource);
+    expect(lazy.length).toBeGreaterThan(0);
+    const metas = new Set(staticImports(registrySource));
+    expect(lazy.filter((s) => !metas.has(`${s}.meta`))).toEqual([]);
   });
 });

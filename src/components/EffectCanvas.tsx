@@ -29,7 +29,8 @@ export interface FrameStats {
 const STATS_INTERVAL = 500;
 
 interface Props {
-  effect: EffectDefinition;
+  /** The loaded effect to run; undefined leaves the canvas blank (first load). */
+  effect: EffectDefinition | undefined;
   params: AnyParamValues;
   resolution: Resolution;
   frameRate: FrameRate;
@@ -135,7 +136,7 @@ export function EffectCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !effect) return;
 
     const reportError = (message: string) => onErrorRef.current?.(message);
     onErrorRef.current?.(undefined);
@@ -310,7 +311,7 @@ export function EffectCanvas({
   return (
     <canvas
       // A canvas holds one context type for life, so switching kind needs a new element.
-      key={contextKind(effect)}
+      key={effect && contextKind(effect)}
       className="effect-canvas"
       ref={(node) => {
         canvasRef.current = node;

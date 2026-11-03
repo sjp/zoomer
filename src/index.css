@@ -156,6 +156,20 @@ body,
   overflow-wrap: anywhere;
 }
 
+/* Appears only if loading takes a moment, so a quick switch doesn't flash it. */
+.loading {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  animation: loading-in 0.2s ease-out 0.3s both;
+}
+
+@keyframes loading-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .hint {
   font-size: 12px;
   text-align: center;

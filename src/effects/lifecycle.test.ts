@@ -31,7 +31,8 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-const webgl = effects.filter((e): e is EffectWebGL2 => e.context === "webgl2");
+const loaded = await Promise.all(effects.map((e) => e.load()));
+const webgl = loaded.filter((e): e is EffectWebGL2 => e.context === "webgl2");
 
 const viewport = (width: number, height: number): Viewport => ({
   width,

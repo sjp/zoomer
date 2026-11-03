@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
-import type { AnyParamValues, EffectDefinition, ParamValue } from "../effects/types";
+import type { AnyParamValues, EffectMeta, ParamValue } from "../effects/types";
 import type { FrameStats } from "./EffectCanvas";
 import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
@@ -7,11 +7,15 @@ import type { Store } from "../lib/store";
 import { ParamControl } from "./ParamControl";
 
 interface Props {
-  effects: readonly EffectDefinition[];
-  effect: EffectDefinition;
+  effects: readonly EffectMeta[];
+  effect: EffectMeta;
   values: AnyParamValues;
-  /** Why the current effect failed to start or stopped, if it did. */
+  /** Why the current effect failed to load or start, or stopped, if it did. */
   error?: string;
+  /** Whether the selected effect's code is still loading. */
+  loading: boolean;
+  /** False while the canvas isn't running the selected effect yet. */
+  canRecord: boolean;
   resolution: Resolution;
   frameRate: FrameRate;
   stats: Store<FrameStats | undefined>;
@@ -55,6 +59,11 @@ export function ControlPanel(props: Props) {
         </button>
       </header>
       <p className="description">{effect.description}</p>
+      {props.loading && (
+        <p className="loading" role="status">
+          Loading…
+        </p>
+      )}
       {props.error && (
         <p className="effect-error" role="alert">
           {props.error}
@@ -121,7 +130,7 @@ export function ControlPanel(props: Props) {
           <button
             type="button"
             className="primary"
-            disabled={recording}
+            disabled={recording || !props.canRecord}
             title="Keep this tab visible while recording"
             onClick={() => props.onRecord(duration)}
           >
