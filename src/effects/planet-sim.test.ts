@@ -9,6 +9,7 @@ import {
   cloudShaping,
   discNormal,
   FRAMING_OPTIONS,
+  framingAnchor,
   materialByte,
   mulMat3,
   planetLayout,
@@ -18,6 +19,7 @@ import {
   sphereUv,
   spherePoint,
   sunDirection,
+  sunSide,
   SURFACE_H,
   SURFACE_W,
   WORLD_OPTIONS,
@@ -256,12 +258,60 @@ describe("framing and sun", () => {
     expect(a[1]).toBe(b[1]);
   });
 
+  it("mirrors the edge and top framings", () => {
+    const a = new Float64Array(3);
+    const b = new Float64Array(3);
+    for (const [x, y] of [
+      ["left", "right"],
+      ["bottom", "top"],
+      ["topLeft", "bottomLeft"],
+      ["topRight", "topLeft"],
+    ]) {
+      planetLayout(x, 1.3, 16 / 9, a);
+      planetLayout(y, 1.3, 16 / 9, b);
+      const [ax, ay] = framingAnchor(x);
+      const [bx, by] = framingAnchor(y);
+      expect(ax * a[0] + ay * a[1]).toBeCloseTo(bx * b[0] + by * b[1], 12);
+      expect(a[2]).toBe(b[2]);
+    }
+  });
+
+  it("gives every framing a distinct anchor", () => {
+    const seen = new Set(FRAMING_OPTIONS.map(({ value }) => framingAnchor(value).join()));
+    expect(seen.size).toBe(FRAMING_OPTIONS.length);
+    expect(framingAnchor("nope")).toEqual(framingAnchor("bottomLeft"));
+  });
+
+  it("lights the visible side of the planet", () => {
+    const side = new Float64Array(2);
+    const sun = new Float64Array(3);
+    const signs = FRAMING_OPTIONS.map(({ value }) => {
+      sunSide(value, side);
+      sunDirection(60, side[0], sun, side[1]);
+      return [value, Math.sign(sun[0]), Math.sign(sun[1])];
+    });
+    // Horizontally from the planet's outer side (left when centred); vertically
+    // from the frame's side of the planet.
+    expect(signs).toEqual([
+      ["bottomLeft", -1, 1],
+      ["bottom", -1, 1],
+      ["bottomRight", 1, 1],
+      ["left", -1, 1],
+      ["full", -1, 1],
+      ["right", 1, 1],
+      ["topLeft", -1, -1],
+      ["top", -1, -1],
+      ["topRight", 1, -1],
+    ]);
+  });
+
   it("returns a unit sun vector from the requested side", () => {
     const l = new Float64Array(3);
     sunDirection(90, -1, l);
     expect(Math.hypot(l[0], l[1], l[2])).toBeCloseTo(1, 12);
     expect(l[0]).toBeLessThan(0);
     expect(sunDirection(180, 1, l)[2]).toBeLessThan(0);
+    expect(sunDirection(60, 1, l, -1)[1]).toBeLessThan(0);
   });
 
   it("has a style for every world", () => {

@@ -160,7 +160,8 @@ void main() {
 `;
 
 /**
- * A planet seen from orbit, rising from a corner of the frame and turning slowly:
+ * A planet seen from orbit, rising from a corner or edge of the frame (or whole in
+ * the middle) and turning at an adjustable speed and direction:
  * day side with oceans, land and drifting clouds, night side with city lights, a
  * thin atmosphere glowing at the limb, and stars beyond. The surface and clouds
  * are equirectangular textures built on the CPU when the world or seed changes.
@@ -169,12 +170,19 @@ export const planet = defineEffect({
   id: "planet",
   name: "Planet from orbit",
   description:
-    "A planet filling a corner of the frame, turning slowly, with day and night sides, clouds, city lights and a glowing atmosphere.",
+    "A planet filling a corner or edge of the frame, or whole, turning at an adjustable speed, with day and night sides, clouds, city lights and a glowing atmosphere.",
   params: {
     world: { kind: "select", label: "World", options: WORLD_OPTIONS, default: "earth" },
     framing: { kind: "select", label: "Framing", options: FRAMING_OPTIONS, default: "bottomLeft" },
     size: { kind: "number", label: "Size", min: 0.4, max: 2, step: 0.01, default: 1 },
-    rotation: { kind: "number", label: "Rotation", min: 0, max: 3, step: 0.05, default: 1 },
+    rotation: {
+      kind: "number",
+      label: "Rotation speed",
+      min: -20,
+      max: 20,
+      step: 0.1,
+      default: 1,
+    },
     sunAngle: { kind: "number", label: "Sun angle", min: 0, max: 180, step: 1, default: 60 },
     clouds: { kind: "number", label: "Clouds", min: 0, max: 1, step: 0.01, default: 0.5 },
     cities: { kind: "number", label: "City lights", min: 0, max: 1, step: 0.01, default: 0.7 },
@@ -235,6 +243,7 @@ export const planet = defineEffect({
 
       const layout = new Float64Array(3);
       const sun = new Float64Array(3);
+      const side = new Float64Array(2);
       const sunBody = new Float64Array(3);
       const shaping = new Float64Array(2);
 
@@ -277,13 +286,15 @@ export const planet = defineEffect({
             gl.generateMipmap(gl.TEXTURE_2D);
           }
 
-          const turns = (Math.max(0, dt) * Math.max(0, p.rotation)) / TURN_SECONDS;
+          // Negative speeds spin the planet the other way.
+          const turns = (Math.max(0, dt) * p.rotation) / TURN_SECONDS;
           surfacePhase = advancePhase(surfacePhase, turns);
           cloudPhase = advancePhase(cloudPhase, turns * CLOUD_RATE);
 
           const world = worldStyle(p.world);
           planetLayout(p.framing, p.size, width / height, layout);
-          sunDirection(p.sunAngle, sunSide(p.framing), sun);
+          sunSide(p.framing, side);
+          sunDirection(p.sunAngle, side[0], sun, side[1]);
           mulMat3(BODY, sun[0], sun[1], sun[2], sunBody);
           // Blinn half vector between the sun and the viewer (+z).
           const hz = sun[2] + 1;

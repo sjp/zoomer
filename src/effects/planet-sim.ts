@@ -31,10 +31,43 @@ export type WorldId = (typeof WORLD_OPTIONS)[number]["value"];
 
 export const FRAMING_OPTIONS = [
   { value: "bottomLeft", label: "Bottom left" },
-  { value: "bottomRight", label: "Bottom right" },
   { value: "bottom", label: "Bottom" },
+  { value: "bottomRight", label: "Bottom right" },
+  { value: "left", label: "Left" },
   { value: "full", label: "Full disc" },
+  { value: "right", label: "Right" },
+  { value: "topLeft", label: "Top left" },
+  { value: "top", label: "Top" },
+  { value: "topRight", label: "Top right" },
 ] as const;
+
+/**
+ * The framing's anchor: which side of the frame the planet sits beyond, as
+ * (x, y) in {-1, 0, 1} (y up). (0, 0) is the full disc; unknown framings fall
+ * back to bottom left.
+ */
+export function framingAnchor(framing: string): readonly [number, number] {
+  switch (framing) {
+    case "full":
+      return [0, 0];
+    case "bottom":
+      return [0, -1];
+    case "bottomRight":
+      return [1, -1];
+    case "left":
+      return [-1, 0];
+    case "right":
+      return [1, 0];
+    case "topLeft":
+      return [-1, 1];
+    case "top":
+      return [0, 1];
+    case "topRight":
+      return [1, 1];
+    default:
+      return [-1, -1];
+  }
+}
 
 /** Per-world shading constants: everything the shader needs besides the textures. */
 export interface WorldStyle {
@@ -681,8 +714,9 @@ export function cloudShaping(clouds: number, world: WorldStyle, out: Float64Arra
 /**
  * Disc centre and radius in canvas heights (origin at the canvas centre, y up),
  * written to `out` as [cx, cy, radius]. `size` is the radius relative to the
- * frame height for the corner and bottom framings; the full disc scales it down
- * so the default fits the frame.
+ * frame height for the corner and edge framings; the full disc scales it down
+ * so the default fits the frame. Edge framings show a cap 0.2 heights deep at
+ * size 1; corner framings sit slightly in from the side edge.
  */
 export function planetLayout(
   framing: string,
@@ -692,26 +726,37 @@ export function planetLayout(
 ): Float64Array {
   const s = clamp(size, 0.1, 4);
   const half = aspect / 2;
-  if (framing === "full") {
+  const [ax, ay] = framingAnchor(framing);
+  if (ax === 0 && ay === 0) {
     out[0] = 0;
     out[1] = 0.02;
     out[2] = 0.4 * s;
-  } else if (framing === "bottom") {
+  } else if (ay === 0) {
+    out[0] = ax * (half + 0.8 * s);
+    out[1] = 0;
+    out[2] = s;
+  } else if (ax === 0) {
     out[0] = 0;
-    out[1] = -0.5 - 0.8 * s;
+    out[1] = ay * (0.5 + 0.8 * s);
     out[2] = s;
   } else {
-    const side = framing === "bottomRight" ? 1 : -1;
-    out[0] = side * (half - 0.2 * s);
-    out[1] = -0.5 - 0.75 * s;
+    out[0] = ax * (half - 0.2 * s);
+    out[1] = ay * (0.5 + 0.75 * s);
     out[2] = s;
   }
   return out;
 }
 
-/** The sun's side of the frame: from the planet's outer corner (left unless framed bottom right). */
-export function sunSide(framing: string): number {
-  return framing === "bottomRight" ? 1 : -1;
+/**
+ * The sun's side of the frame as (x, y) signs, written to `out`: horizontally
+ * from the planet's outer side (left when centred), vertically from the frame's
+ * side of the planet (above unless the planet hangs from the top).
+ */
+export function sunSide(framing: string, out: Float64Array): Float64Array {
+  const [ax, ay] = framingAnchor(framing);
+  out[0] = ax === 0 ? -1 : ax;
+  out[1] = ay > 0 ? -1 : 1;
+  return out;
 }
 
 /** Sun elevation above the screen's horizontal plane, so the terminator runs diagonally. */
@@ -721,13 +766,19 @@ const SUN_ELEVATION = 0.42;
  * Unit vector towards the sun in view space (x right, y up, z towards the
  * viewer), written to `out`. `angleDeg` is the angle between the sun and the
  * viewer around the vertical: 0 lights the visible face fully, 90 from the side
- * (`side` -1 left, +1 right), 180 from behind (a thin crescent).
+ * (`side` -1 left, +1 right), 180 from behind (a thin crescent). `above` +1
+ * raises the sun above the horizontal plane, -1 lowers it below.
  */
-export function sunDirection(angleDeg: number, side: number, out: Float64Array): Float64Array {
+export function sunDirection(
+  angleDeg: number,
+  side: number,
+  out: Float64Array,
+  above = 1,
+): Float64Array {
   const a = (clamp(angleDeg, 0, 180) * Math.PI) / 180;
   const ce = Math.cos(SUN_ELEVATION);
   out[0] = side * Math.sin(a) * ce;
-  out[1] = Math.sin(SUN_ELEVATION);
+  out[1] = above * Math.sin(SUN_ELEVATION);
   out[2] = Math.cos(a) * ce;
   return out;
 }
@@ -826,7 +877,7 @@ export function discNormal(dx: number, dy: number, r: number, out: Float64Array)
 // Rotation
 // ---------------------------------------------------------------------------
 
-/** Seconds per turn at rotation speed 1. */
+/** Seconds per turn at rotation speed 1 (7 minutes). */
 export const TURN_SECONDS = 420;
 /** The cloud layer turns this much faster than the surface. */
 export const CLOUD_RATE = 1.15;
