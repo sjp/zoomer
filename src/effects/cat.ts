@@ -163,8 +163,9 @@ void main() {
  * cat-sim.ts), drawn back to front with coverage antialiasing: the cushion's
  * shadow on the sill, the cushion, the body (two smooth-unioned ellipses that
  * swell with each breath), the ears, the head with its closed eyes and nose,
- * the paws, and the tail (a tapering tube from behind the haunch, round the
- * front along an arc of an ellipse, to a tip that curls and flicks). Each shape is shaded as a soft dome from its distance field,
+ * the paws, and the tail (a tapering tube out from under the haunch, which
+ * blends into it, round the front along an arc of an ellipse, to a tip that
+ * curls and flicks). Each shape is shaded as a soft dome from its distance field,
  * lit by the room and the sun, with a rim light where the silhouette faces
  * the window, a contact shadow from the shapes in front of it, and tabby
  * stripes from a 1D pattern along the body's curve.
@@ -199,11 +200,11 @@ const vec2 HAUNCH_R = vec2(0.24, 0.225);
 const float BODY_K = 0.08;
 const vec2 HEAD_C = vec2(0.3, 0.165);
 const vec2 HEAD_R = vec2(0.165, 0.138);
-/** Tail: root (hidden behind the haunch), then an arc of an ellipse, then a curling tip. */
-const vec2 TAIL_ROOT = vec2(-0.34, 0.15);
+/** Tail: root (hidden in the haunch), then an arc of an ellipse, then a curling tip. */
+const vec2 TAIL_ROOT = vec2(-0.26, 0.12);
 const vec2 TAIL_C = vec2(-0.03, 0.2);
 const vec2 TAIL_R = vec2(0.47, 0.185);
-const float TAIL_A0 = -2.7;
+const float TAIL_A0 = -2.35;
 const float TAIL_A1 = -0.95;
 /** Share of the tail's length (0 root, 1 tip) where the arc starts and ends. */
 const float TAIL_ROOT_S = 0.08;
@@ -214,8 +215,10 @@ const float TIP_CURL = 0.55;
 const float TIP_FLICK = 1.4;
 const int TAIL_ARC_N = 16;
 const int TAIL_TIP_N = 10;
-/** Where along the tail it clears the haunch: behind it before, in front after. */
-const vec2 TAIL_OUT = vec2(0.2, 0.32);
+/** Where along the tail it leaves the haunch: part of the body before, in front of it after. */
+const vec2 TAIL_OUT = vec2(0.16, 0.3);
+/** How far the haunch's outline blends into the tail where it comes out. */
+const float TAIL_FILLET = 0.05;
 
 float px;
 vec3 colP;
@@ -383,13 +386,18 @@ void main() {
   float dPaw = min(dP1, dP2);
   vec2 gPaw = dP1 < dP2 ? gEllipse(q - vec2(0.37, 0.03), vec2(0.07, 0.034))
     : gEllipse(q - vec2(0.43, 0.045), vec2(0.055, 0.03));
-  // Tail: from behind the haunch, round the front, to a curling tip.
+  // Tail: out from under the haunch, round the front, to a curling tip.
   vec2 gTail;
   vec3 tl = tail(q, uPose.w, gTail);
   float dTail = tl.x;
   float tailU = tl.y;
-  // 0 where the tail is still behind the haunch, 1 once it is in front.
+  // 0 where the tail is still part of the haunch, 1 once it is in front.
   float tailOut = smoothstep(TAIL_OUT.x, TAIL_OUT.y, tailU);
+  // Near its root, the haunch's outline flows smoothly into the tail, so it looks attached.
+  float hf = clamp(0.5 + 0.5 * (dTail - dBody) / TAIL_FILLET, 0.0, 1.0);
+  float dFillet = mix(dTail, dBody, hf) - TAIL_FILLET * hf * (1.0 - hf);
+  gBody = normalize(mix(gBody, mix(gTail, gBody, hf), 1.0 - tailOut) + vec2(0.0, 1e-6));
+  dBody = mix(dFillet, dBody, tailOut);
 
   float dCat = min(min(min(dBody, dHead), min(earN.x, earF.x)), min(dPaw, dTail));
   float rim = 1.0 - smoothstep(0.0, 0.03, -dCat);
@@ -455,7 +463,7 @@ void main() {
   }
   float cp2 = cov(dPaw);
   if (cp2 > 0.0) over(shade(furAt(0.0, 0.55), gPaw, dPaw, 0.04, rim, occFrom(dTail)), cp2);
-  // The root is hidden behind the haunch, and shadowed where it comes out from under it.
+  // The root is part of the haunch, and shadowed where it comes out from under it.
   float ct = cov(dTail) * (1.0 - (1.0 - tailOut) * cov(dBody + 0.004));
   if (ct > 0.0) {
     float st = stripes(sin(tailU * 40.0), 1.0, 0.34);
