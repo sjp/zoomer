@@ -63,8 +63,9 @@ const HALF_TEXEL = 0.5 / COLUMNS;
 
 /**
  * Low-res pass: sky, the ridges behind the nearest, and the fog bands. y up, in
- * height units. Walks the layers front to back to find the first ridge covering
- * the pixel, then the fog bands in front of it, nearest first.
+ * height units. Walks the layers front to back to find the first ridge touching
+ * the pixel, then shades it through the fog bands in front of it, nearest first.
+ * Its edge is anti-aliased by blending in the layer (or sky) behind it.
  */
 const SCENE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -115,25 +116,22 @@ float ridge(float x, vec4 L) {
   return textureLod(uTable, vec2(x * INV_SPAN + L.x, L.y), 0.0).r;
 }
 
-void main() {
-  vec2 p = gl_FragCoord.xy * uInvLow;
-  // Deep under the nearest ridge, the full-res composite paints over everything.
-  float h0 = ridge(p.x, uLayer[0]);
-  if (p.y < h0 - uMargin) {
-    outColor = vec4(uInk, 1.0);
-    return;
-  }
-  int hit = uCount;
-  float hh = 0.0;
-  for (int i = 1; i < MAX_LAYERS; i++) {
-    if (i >= uCount) break;
-    float h = ridge(p.x, uLayer[i]);
-    if (p.y < h) {
-      hit = i;
-      hh = h;
-      break;
-    }
-  }
+/**
+ * Share of the pixel (side px height units) at p covered by the ridge of layer L,
+ * whose height at p.x is h: the signed distance to the edge, from the height gap
+ * and the local slope, through a one-pixel ramp. Steep flanks would stair-step
+ * on the height gap alone.
+ */
+float coverage(vec2 p, vec4 L, float h, float px) {
+  float gap = h - p.y;
+  // Far from the edge (beyond any slope the table holds), skip the slope fetches.
+  if (abs(gap) > 12.0 * px) return gap > 0.0 ? 1.0 : 0.0;
+  float s = (ridge(p.x + px, L) - ridge(p.x - px, L)) / (2.0 * px);
+  return clamp(gap / (px * sqrt(1.0 + s * s)) + 0.5, 0.0, 1.0);
+}
+
+/** Layer \`hit\` (uCount for the sky) at p, seen through the fog bands in front of it. */
+vec3 shade(vec2 p, int hit, float hh) {
   vec3 col;
   if (hit < uCount) {
     // Atmospheric perspective, and a lighter foot, as in an ink wash.
@@ -151,12 +149,49 @@ void main() {
     float t = (p.y - B.x) * B.y;
     if (t >= 1.0) continue;
     float d = 1.0 - smoothstep(0.0, 1.0, t);
-    vec2 n = texture(uNoise, vec2(p.x * FOG_NX + B.z, p.y * FOG_NY + B.w)).rg;
+    vec2 n = textureLod(uNoise, vec2(p.x * FOG_NX + B.z, p.y * FOG_NY + B.w), 0.0).rg;
     float v = smoothstep(0.2, 0.8, dot(n, vec2(0.65, 0.35)));
     T *= exp(-uFogAmount * d * mix(0.1, 1.9, v));
     if (T < 0.01) break;
   }
-  outColor = vec4(mix(uFog, col, T), 1.0);
+  return mix(uFog, col, T);
+}
+
+void main() {
+  vec2 p = gl_FragCoord.xy * uInvLow;
+  float px = uInvLow.y;
+  // Deep under the nearest ridge, the full-res composite paints over everything.
+  float h0 = ridge(p.x, uLayer[0]);
+  if (p.y < h0 - uMargin) {
+    outColor = vec4(uInk, 1.0);
+    return;
+  }
+  // The first ridge touching the pixel, its coverage, and the first ridge behind
+  // it that covers the pixel's centre (or the sky), which shows through its edge.
+  int hit = uCount;
+  float hh = 0.0;
+  float cover = 1.0;
+  int back = uCount;
+  float bh = 0.0;
+  for (int i = 1; i < MAX_LAYERS; i++) {
+    if (i >= uCount) break;
+    float h = ridge(p.x, uLayer[i]);
+    if (hit == uCount) {
+      float c = coverage(p, uLayer[i], h, px);
+      if (c <= 0.0) continue;
+      hit = i;
+      hh = h;
+      cover = c;
+      if (c >= 1.0) break;
+    } else if (p.y < h) {
+      back = i;
+      bh = h;
+      break;
+    }
+  }
+  vec3 col = shade(p, hit, hh);
+  if (cover < 1.0) col = mix(shade(p, back, bh), col, cover);
+  outColor = vec4(col, 1.0);
 }
 `;
 
