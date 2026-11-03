@@ -36,6 +36,15 @@ function triangles(mesh: Int16Array): [number, number][][] {
   }
   return out;
 }
+/**
+ * Index of the first byte where `a` and `b` differ, or -1 when they match. A plain
+ * loop: `toEqual` on a quarter-million bytes takes most of a second.
+ */
+function firstDiff(a: Uint8Array, b: Uint8Array): number {
+  if (a.length !== b.length) return Math.min(a.length, b.length);
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i;
+  return -1;
+}
 const decode = (code: number) => [(code % 3) - 1, Math.floor(code / 3) - 1];
 /** Twice the signed area in the (x right, z forward) plane: positive when counter-clockwise. */
 const area2 = ([a, b, c]: [number, number][]) =>
@@ -55,10 +64,13 @@ describe("buildMesh", () => {
   });
 
   it("winds every triangle counter-clockwise, as one half of its cell", () => {
-    for (const t of tris) expect(area2(t)).toBe(1);
+    const bad = tris.filter((t) => area2(t) !== 1).slice(0, 10);
+    expect(bad).toEqual([]);
   });
 
   it("gives each vertex its triangle's other corners in winding order", () => {
+    // Plain comparisons in the loop: an expect per vertex costs far more than the check.
+    const wrong: string[] = [];
     for (let v = 0; v < mesh.length; v += 3 * VERTEX_SHORTS) {
       for (let i = 0; i < 3; i++) {
         const o = v + i * VERTEX_SHORTS;
@@ -66,30 +78,38 @@ describe("buildMesh", () => {
         const last = v + ((i + 2) % 3) * VERTEX_SHORTS;
         const [ax, az] = decode(mesh[o + 2]);
         const [bx, bz] = decode(mesh[o + 3]);
-        expect([mesh[o] + ax, mesh[o + 1] + az]).toEqual([mesh[next], mesh[next + 1]]);
-        expect([mesh[o] + bx, mesh[o + 1] + bz]).toEqual([mesh[last], mesh[last + 1]]);
+        const nextOk = mesh[o] + ax === mesh[next] && mesh[o + 1] + az === mesh[next + 1];
+        const lastOk = mesh[o] + bx === mesh[last] && mesh[o + 1] + bz === mesh[last + 1];
+        if (!(nextOk && lastOk) && wrong.length < 10) wrong.push(`triangle at ${v}, corner ${i}`);
       }
     }
+    expect(wrong).toEqual([]);
   });
 
   it("covers each cell exactly once, within the period's width", () => {
     const seen = new Set<string>();
+    const wrong: string[] = [];
+    const fail = (msg: string) => wrong.length < 10 && wrong.push(msg);
     for (let i = 0; i < tris.length; i += 2) {
       const xs = [...tris[i], ...tris[i + 1]].map((p) => p[0]);
       const zs = [...tris[i], ...tris[i + 1]].map((p) => p[1]);
       const key = `${Math.min(...xs)},${Math.min(...zs)}`;
-      expect(seen.has(key)).toBe(false);
+      if (seen.has(key)) fail(`cell ${key} covered twice`);
       seen.add(key);
-      expect(Math.max(...xs) - Math.min(...xs)).toBe(1);
-      expect(Math.max(...zs) - Math.min(...zs)).toBe(1);
+      if (Math.max(...xs) - Math.min(...xs) !== 1) fail(`cell ${key} is not one wide`);
+      if (Math.max(...zs) - Math.min(...zs) !== 1) fail(`cell ${key} is not one deep`);
     }
-    for (const t of tris) for (const [x] of t) expect(Math.abs(x)).toBeLessThan(PERIOD / 2);
+    for (const t of tris) {
+      for (const [x] of t) if (!(Math.abs(x) < PERIOD / 2)) fail(`x ${x} outside the period`);
+    }
+    expect(wrong).toEqual([]);
   });
 
   it("draws back to front, so no later triangle can be hidden by an earlier one", () => {
     // Rows far to near; within a row, columns outside in; within a cell, the far
     // triangle (away from the camera across the diagonal) first.
     let prev = { row: Infinity, dist: Infinity };
+    const wrong: string[] = [];
     for (let i = 0; i < tris.length; i += 2) {
       const far = tris[i];
       const near = tris[i + 1];
@@ -99,7 +119,7 @@ describe("buildMesh", () => {
       const dist = col >= 0 ? col : -col;
       // Lexicographic (row, dist) never increases.
       const descending = row < prev.row || (row === prev.row && dist <= prev.dist);
-      expect(descending, `cell ${col},${row} after ${prev.row}`).toBe(true);
+      if (!descending && wrong.length < 10) wrong.push(`cell ${col},${row} after ${prev.row}`);
       prev = { row, dist };
       // The camera is behind row 0 inside column 0; take a far, sideways sample of it.
       for (const cam of [
@@ -109,9 +129,12 @@ describe("buildMesh", () => {
         const centroid = (t: [number, number][]) =>
           [0, 1].map((k) => (t[0][k] + t[1][k] + t[2][k]) / 3);
         const d = (t: [number, number][]) => Math.hypot(...centroid(t).map((v, k) => v - cam[k]));
-        expect(d(far)).toBeGreaterThan(d(near));
+        if (!(d(far) > d(near)) && wrong.length < 10) {
+          wrong.push(`cell ${col},${row}: far triangle not farther from ${cam}`);
+        }
       }
     }
+    expect(wrong).toEqual([]);
   });
 
   it("reaches past the view's sides from any camera position", () => {
@@ -130,15 +153,19 @@ describe("cameraAt", () => {
   const pose = createPose();
 
   it("stays within its sway bounds, inside column 0", () => {
+    const outside: string[] = [];
     for (let t = 0; t < 4000; t += 0.7) {
       cameraAt(t, pose);
-      expect(Math.abs(pose.x - 0.5)).toBeLessThanOrEqual(SWAY_X + 1e-12);
-      expect(pose.x).toBeGreaterThan(0);
-      expect(pose.x).toBeLessThan(1);
-      expect(Math.abs(pose.y - CAM_HEIGHT)).toBeLessThanOrEqual(SWAY_Y + 1e-12);
-      expect(Math.abs(pose.yaw)).toBeLessThanOrEqual(SWAY_YAW + 1e-12);
-      expect(Math.abs(pose.horizon - HORIZON_NDC)).toBeLessThanOrEqual(SWAY_HORIZON + 1e-12);
+      const ok =
+        Math.abs(pose.x - 0.5) <= SWAY_X + 1e-12 &&
+        pose.x > 0 &&
+        pose.x < 1 &&
+        Math.abs(pose.y - CAM_HEIGHT) <= SWAY_Y + 1e-12 &&
+        Math.abs(pose.yaw) <= SWAY_YAW + 1e-12 &&
+        Math.abs(pose.horizon - HORIZON_NDC) <= SWAY_HORIZON + 1e-12;
+      if (!ok && outside.length < 10) outside.push(`t ${t}: ${JSON.stringify(pose)}`);
     }
+    expect(outside).toEqual([]);
   });
 
   it("is continuous and slow", () => {
@@ -166,15 +193,19 @@ describe("cameraAt", () => {
 describe("cameraMeshZ", () => {
   it("stays behind the mesh and moves forward smoothly across row changes", () => {
     let prevWorld = Math.floor(0) + cameraMeshZ(0) - 0.037;
+    const wrong: string[] = [];
     for (let d = 0; d < 600; d += 0.037) {
       const z = cameraMeshZ(d);
       // Behind row 0 and within the distance rowHalfWidth allows for.
-      expect(z).toBeLessThanOrEqual(-CAM_BACK + 1e-9);
-      expect(z).toBeGreaterThan(-CAM_BACK - 1 - 1e-9);
+      const behind = z <= -CAM_BACK + 1e-9 && z > -CAM_BACK - 1 - 1e-9;
       const world = Math.floor(d) + z;
-      expect(world - prevWorld).toBeCloseTo(0.037, 9);
+      // toBeCloseTo(0.037, 9): within half of 1e-9.
+      const smooth = Math.abs(world - prevWorld - 0.037) < 5e-10;
+      if (!(behind && smooth) && wrong.length < 10)
+        wrong.push(`d ${d}: z ${z}, step ${world - prevWorld}`);
       prevWorld = world;
     }
+    expect(wrong).toEqual([]);
   });
 });
 
@@ -185,21 +216,23 @@ describe("octave ring buffer", () => {
     const ring = buildOctaves(5, start);
     // Fly 300 rows on, streaming each needed row over the oldest one.
     let filledTo = start + PERIOD;
+    const missing: number[] = [];
     for (let row = start; row < start + 300; row++) {
       for (; filledTo < rowsNeeded(row); filledTo++) {
         write(filledTo, ring, ringRow(filledTo) * PERIOD * 4);
       }
       // Every row the mesh reads is in place.
-      expect(filledTo - PERIOD).toBeLessThanOrEqual(row);
+      if (filledTo - PERIOD > row) missing.push(row);
     }
-    expect(ring).toEqual(buildOctaves(5, filledTo - PERIOD));
+    expect(missing).toEqual([]);
+    expect(firstDiff(ring, buildOctaves(5, filledTo - PERIOD))).toBe(-1);
     // Row r and r + PERIOD differ: no tiling along the flight.
     const a = new Uint8Array(PERIOD * 4);
     const b = new Uint8Array(PERIOD * 4);
     for (const r of [0, 17, 4000]) {
       write(r, a);
       write(r + PERIOD, b);
-      expect(b).not.toEqual(a);
+      expect(firstDiff(b, a)).not.toBe(-1);
     }
     expect(ringRow(-1)).toBe(PERIOD - 1);
     expect(ringRow(PERIOD + 3)).toBe(3);
@@ -210,8 +243,8 @@ describe("buildOctaves", () => {
   it("is deterministic per seed, uses the whole byte range and has no lattice zeros", () => {
     const a = buildOctaves(3);
     expect(a).toHaveLength(PERIOD * PERIOD * 4);
-    expect(buildOctaves(3)).toEqual(a);
-    expect(buildOctaves(4)).not.toEqual(a);
+    expect(firstDiff(buildOctaves(3), a)).toBe(-1);
+    expect(firstDiff(buildOctaves(4), a)).not.toBe(-1);
     for (let c = 0; c < 4; c++) {
       let min = 255;
       let max = 0;
