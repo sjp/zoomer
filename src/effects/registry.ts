@@ -62,6 +62,7 @@ import { seaMeta } from "./sea.meta";
 import { silkMeta } from "./silk.meta";
 import { smokeMeta } from "./smoke.meta";
 import { snowMeta } from "./snow.meta";
+import { spiderwebMeta } from "./spiderweb.meta";
 import { snowWindowMeta } from "./snowwindow.meta";
 import { startrailsMeta } from "./startrails.meta";
 import { synthwaveMeta } from "./synthwave.meta";
@@ -123,6 +124,7 @@ export const effects: readonly EffectEntry[] = [
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
   { ...leavesMeta, load: () => import("./leaves").then((m) => m.leaves) },
   { ...blossomMeta, load: () => import("./blossom").then((m) => m.blossom) },
+  { ...spiderwebMeta, load: () => import("./spiderweb").then((m) => m.spiderweb) },
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...orbitsMeta, load: () => import("./orbits").then((m) => m.orbits) },
