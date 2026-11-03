@@ -8,6 +8,7 @@ import { candlelightMeta } from "./candlelight.meta";
 import { causticsMeta } from "./caustics.meta";
 import { cityMeta } from "./city.meta";
 import { cloudsMeta } from "./clouds.meta";
+import { cloudseaMeta } from "./cloudsea.meta";
 import { constellationMeta } from "./constellation.meta";
 import { contoursMeta } from "./contours.meta";
 import { dappleMeta } from "./dapple.meta";
@@ -67,6 +68,7 @@ export const effects: readonly EffectEntry[] = [
   { ...synthwaveMeta, load: () => import("./synthwave").then((m) => m.synthwave) },
   { ...cloudsMeta, load: () => import("./clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea").then((m) => m.sea) },
+  { ...cloudseaMeta, load: () => import("./cloudsea").then((m) => m.cloudsea) },
   { ...lighthouseMeta, load: () => import("./lighthouse").then((m) => m.lighthouse) },
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
