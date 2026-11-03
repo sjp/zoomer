@@ -103,7 +103,15 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
   return { fake, problems, draws };
 }
 
-describe.each(webgl.map((e) => [e.id, e] as const))("%s", (_, effect) => {
+/**
+ * These run each effect's real create and frame code, including CPU texture builds
+ * (planet rebuilds its surface for every world and seed the param sets reach), so a
+ * heavy effect takes seconds once the full suite shares the CPUs.
+ */
+const EFFECT_TIMEOUT = 30_000;
+const cases = webgl.map((e) => [e.id, e] as const);
+
+describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
   it.each([
     ["without", []],
     ["with", ["EXT_color_buffer_float"]],
