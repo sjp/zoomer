@@ -6,12 +6,14 @@ import {
   beamAngle,
   CLIFF_START,
   createBeamProjection,
+  easeTilt,
   flareAt,
   flareTotal,
   headlandHeight,
   HORIZON,
   LAND_END,
   lanternHeight,
+  MAX_TILT,
   projectBeam,
   TOWER_D,
   towerBase,
@@ -83,6 +85,69 @@ describe("projectBeam", () => {
   });
 });
 
+describe("projectBeam with tilt", () => {
+  it("points straight left or right at zero tilt", () => {
+    const b = createBeamProjection();
+    for (let i = 0; i < TURN; i += 37) {
+      projectBeam(angle(i), b, 0);
+      expect(b.dirY).toBeCloseTo(0, 12);
+      expect(Math.abs(b.dirX)).toBeCloseTo(1, 12);
+    }
+  });
+
+  it("points below level, most steeply facing the viewer, and never opens fully round", () => {
+    const b = createBeamProjection();
+    for (const tilt of [5, 15, MAX_TILT]) {
+      projectBeam(0, b, tilt);
+      expect(b.dirX).toBeCloseTo(0);
+      expect(b.dirY).toBeCloseTo(-1);
+      expect(b.roundness).toBeLessThan(1);
+      for (let i = 0; i < TURN; i += 7) {
+        projectBeam(angle(i), b, tilt);
+        expect(b.dirY).toBeLessThan(0);
+        expect(Math.hypot(b.dirX, b.dirY)).toBeCloseTo(1);
+        expect(b.length).toBeGreaterThan(BEAM_MIN_LENGTH);
+      }
+      // Side-on, the beam dips by the tilt itself.
+      projectBeam(Math.PI / 2, b, tilt);
+      expect(Math.atan2(-b.dirY, b.dirX)).toBeCloseTo((tilt * Math.PI) / 180);
+    }
+  });
+
+  it("is continuous through a full turn when tilted", () => {
+    const b = createBeamProjection();
+    for (const tilt of [1, 10, MAX_TILT]) {
+      projectBeam(angle(-1), b, tilt);
+      let prev = { ...b };
+      for (let i = 0; i <= TURN; i++) {
+        projectBeam(angle(i), b, tilt);
+        // The direction only matters as much as the wedge is not round.
+        const open = 1 - b.roundness;
+        expect(Math.abs(b.dirX - prev.dirX) * open).toBeLessThan(0.02);
+        expect(Math.abs(b.dirY - prev.dirY) * open).toBeLessThan(0.02);
+        expect(Math.abs(b.brightness - prev.brightness)).toBeLessThan(0.01);
+        expect(Math.abs(b.length - prev.length)).toBeLessThan(0.01);
+        expect(Math.abs(b.roundness - prev.roundness)).toBeLessThan(0.01);
+        prev = { ...b };
+      }
+    }
+  });
+});
+
+describe("easeTilt", () => {
+  it("starts at the target, then eases toward it slowly and clamps", () => {
+    expect(easeTilt(Number.NaN, 12, 0.016)).toBe(12);
+    expect(easeTilt(Number.NaN, 99, 0.016)).toBe(MAX_TILT);
+    let t = 0;
+    t = easeTilt(t, 20, 1);
+    expect(t).toBeGreaterThan(0);
+    expect(t).toBeLessThan(5);
+    for (let i = 0; i < 600; i++) t = easeTilt(t, 20, 0.1);
+    expect(t).toBe(20);
+    expect(easeTilt(5, Number.NaN, 100)).toBe(0);
+  });
+});
+
 describe("beamAngle", () => {
   it("puts the second beam 180° from the first", () => {
     for (const phase of [0, 0.13, 0.5, 0.99]) {
@@ -120,6 +185,14 @@ describe("flare", () => {
     expect(flareAt(deg(5))).toBeGreaterThan(0.5);
     expect(flareAt(deg(8))).toBeLessThan(0.5);
     expect(flareAt(Math.PI / 2)).toBeLessThan(1e-6);
+  });
+
+  it("dims as the beam tilts below the viewer", () => {
+    expect(flareAt(0, 0)).toBe(1);
+    expect(flareAt(0, 5)).toBeLessThan(1);
+    expect(flareAt(0, 10)).toBeLessThan(flareAt(0, 5));
+    expect(flareAt(0, MAX_TILT)).toBeLessThan(1e-4);
+    expect(flareTotal(0, 2, 5)).toBeCloseTo(flareAt(0, 5));
   });
 });
 
