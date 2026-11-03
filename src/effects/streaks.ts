@@ -27,10 +27,14 @@ flat out vec3 vColor;
 
 ${TO_CLIP_GLSL}`;
 
-/** Single capsule per instance. */
-const VERTEX = /* glsl */ `${VERTEX_HEADER}
+/**
+ * Single capsule per instance. Additive (the default) folds the sub-pixel thinning
+ * into the premultiplied colour; `alpha` keeps the colour straight and passes the
+ * thinning on as `vFade`, for source-over blending.
+ */
+const capsuleVertex = (alpha: boolean) => /* glsl */ `${VERTEX_HEADER}
 flat out float vLength;
-
+${alpha ? "flat out float vFade;\n" : ""}
 void main() {
   vec2 a = aSegment.xy;
   vec2 d = aSegment.zw - a;
@@ -46,19 +50,19 @@ void main() {
   vLocal = vec2(u, v);
   vLength = len;
   vRadius = r;
-  vColor = aStyle.rgb * (aStyle.w / r);
+${alpha ? "  vColor = aStyle.rgb;\n  vFade = aStyle.w / r;" : "  vColor = aStyle.rgb * (aStyle.w / r);"}
   gl_Position = pxToClip(a + dir * u + nrm * v, uResolution);
 }
 `;
 
-const FRAGMENT = /* glsl */ `#version 300 es
+const capsuleFragment = (alpha: boolean) => /* glsl */ `#version 300 es
 precision highp float;
 
 in vec2 vLocal;
 flat in float vLength;
 flat in float vRadius;
 flat in vec3 vColor;
-
+${alpha ? "flat in float vFade;\n" : ""}
 out vec4 outColor;
 
 void main() {
@@ -66,7 +70,7 @@ void main() {
   float dx = vLocal.x - clamp(vLocal.x, 0.0, vLength);
   float dist = length(vec2(dx, vLocal.y));
   float coverage = clamp(vRadius + 0.5 - dist, 0.0, 1.0);
-  outColor = vec4(vColor * coverage, coverage);
+${alpha ? "  float a = coverage * vFade;\n  outColor = vec4(vColor * a, a);" : "  outColor = vec4(vColor * coverage, coverage);"}
 }
 `;
 
@@ -140,6 +144,16 @@ void main() {
 export interface StreakRendererOptions {
   /** Also build the per-channel zoom (chromatic aberration) program. */
   chromatic?: boolean;
+  /**
+   * "additive" (the default) adds each streak's light. "alpha" draws source-over
+   * instead, so streaks can be darker than what lies behind them (wires, threads):
+   * the colour is then straight, not premultiplied, and each streak is opaque
+   * apart from its anti-aliased edge and the thinning of sub-pixel widths (a half
+   * width below 0.5 px draws a pixel wide at that fraction of full opacity).
+   * Overlapping streaks stack their opacity, so round caps at the joints of a
+   * faint polyline show as slightly darker dots. Can't be combined with `chromatic`.
+   */
+  blend?: "additive" | "alpha";
 }
 
 export interface StreakRenderer {
@@ -148,7 +162,8 @@ export interface StreakRenderer {
   /** Uploads the first `count` streaks of `data`. */
   upload(count: number): void;
   /**
-   * Draws the uploaded streaks additively. Sets its own program, vertex array and
+   * Draws the uploaded streaks, additively unless created with `blend: "alpha"`
+   * (premultiplied source-over). Sets its own program, vertex array and
    * blending; everything else is as `beginFrame` left it, plus the caller's viewport.
    * `zoom` scales each colour channel's positions about the centre (needs the
    * `chromatic` option); omit it to draw unscaled.
@@ -171,8 +186,15 @@ function buildStreakRenderer(
   options: StreakRendererOptions,
   scope: Scope,
 ): StreakRenderer {
+  const alpha = options.blend === "alpha";
+  if (alpha && options.chromatic) {
+    throw new Error("Streaks: the chromatic option is additive only");
+  }
   const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
-  const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), deleteProgram);
+  const program = scope.add(
+    createProgram(gl, capsuleVertex(alpha), capsuleFragment(alpha)),
+    deleteProgram,
+  );
   const u = createUniforms(gl, program, ["uResolution"]);
   const chromatic = options.chromatic
     ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
@@ -218,7 +240,7 @@ function buildStreakRenderer(
       if (n <= 0) return;
       gl.enable(gl.BLEND);
       gl.blendEquation(gl.FUNC_ADD);
-      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.blendFunc(gl.ONE, alpha ? gl.ONE_MINUS_SRC_ALPHA : gl.ONE);
       const split = zoom && (zoom[0] !== 1 || zoom[1] !== 1 || zoom[2] !== 1);
       if (split && cu) {
         gl.useProgram(cu.program);
