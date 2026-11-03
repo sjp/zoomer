@@ -28,14 +28,16 @@ describe("glowEnergy", () => {
   it("is continuous, bounded and returns to zero", () => {
     let prev = glowEnergy(-1);
     let peak = 0;
+    const bad: string[] = [];
     for (let t = -1; t < LIFETIME + 2; t += 0.001) {
       const e = glowEnergy(t);
-      expect(e).toBeGreaterThanOrEqual(0);
-      expect(e).toBeLessThanOrEqual(1);
-      expect(Math.abs(e - prev)).toBeLessThan(0.01);
+      if (!(e >= 0 && e <= 1 && Math.abs(e - prev) < 0.01) && bad.length < 10) {
+        bad.push(`t ${t}: ${prev} -> ${e}`);
+      }
       peak = Math.max(peak, e);
       prev = e;
     }
+    expect(bad).toEqual([]);
     expect(peak).toBeGreaterThan(0.9);
     expect(glowEnergy(GLOW_END)).toBe(0);
     expect(glowEnergy(LIFETIME)).toBe(0);
@@ -162,14 +164,19 @@ describe("createBiolumScheduler", () => {
   it("gives waves bounded reach and both peel directions", () => {
     const s = createBiolumScheduler(1);
     const dirs = new Set<number>();
+    // Plain comparisons in the hot loop: an expect per wave costs far more than the check.
+    const bad: string[] = [];
     for (let i = 0; i < 20000; i++) {
       s.step(0.05, 6);
       for (let k = 0; k < s.count; k++) {
-        expect(s.waves[k].reach).toBeLessThan(REACH_MAX);
-        expect(s.waves[k].peelSpan).toBeLessThanOrEqual(PEEL_MAX);
+        const { reach, peelSpan } = s.waves[k];
+        if (!(reach < REACH_MAX && peelSpan <= PEEL_MAX) && bad.length < 10) {
+          bad.push(`step ${i}, wave ${k}: reach ${reach}, peelSpan ${peelSpan}`);
+        }
         dirs.add(s.waves[k].peelDir);
       }
     }
+    expect(bad).toEqual([]);
     expect([...dirs].sort()).toEqual([-1, 1]);
   });
 });
