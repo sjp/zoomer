@@ -48,6 +48,7 @@ import { grass } from "./grass";
 import { papercut } from "./papercut";
 import { vines } from "./vines";
 import { planet } from "./planet";
+import { physarum } from "./physarum";
 
 /** Add new effects here; the UI picks them up automatically. */
 export const effects: readonly EffectDefinition[] = [
@@ -100,6 +101,7 @@ export const effects: readonly EffectDefinition[] = [
   papercut,
   vines,
   planet,
+  physarum,
 ];
 
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
