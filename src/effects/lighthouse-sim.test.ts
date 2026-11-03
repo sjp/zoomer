@@ -116,6 +116,8 @@ describe("projectBeam with tilt", () => {
 
   it("is continuous through a full turn when tilted", () => {
     const b = createBeamProjection();
+    // Plain comparisons in the hot loop: an expect per step costs far more than the check.
+    const jumps: string[] = [];
     for (const tilt of [1, 10, MAX_TILT]) {
       projectBeam(angle(-1), b, tilt);
       let prev = { ...b };
@@ -123,14 +125,19 @@ describe("projectBeam with tilt", () => {
         projectBeam(angle(i), b, tilt);
         // The direction only matters as much as the wedge is not round.
         const open = 1 - b.roundness;
-        expect(Math.abs(b.dirX - prev.dirX) * open).toBeLessThan(0.02);
-        expect(Math.abs(b.dirY - prev.dirY) * open).toBeLessThan(0.02);
-        expect(Math.abs(b.brightness - prev.brightness)).toBeLessThan(0.01);
-        expect(Math.abs(b.length - prev.length)).toBeLessThan(0.01);
-        expect(Math.abs(b.roundness - prev.roundness)).toBeLessThan(0.01);
+        const ok =
+          Math.abs(b.dirX - prev.dirX) * open < 0.02 &&
+          Math.abs(b.dirY - prev.dirY) * open < 0.02 &&
+          Math.abs(b.brightness - prev.brightness) < 0.01 &&
+          Math.abs(b.length - prev.length) < 0.01 &&
+          Math.abs(b.roundness - prev.roundness) < 0.01;
+        if (!ok && jumps.length < 10) {
+          jumps.push(`tilt ${tilt}, step ${i}: ${JSON.stringify(prev)} -> ${JSON.stringify(b)}`);
+        }
         prev = { ...b };
       }
     }
+    expect(jumps).toEqual([]);
   });
 });
 
