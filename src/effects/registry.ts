@@ -56,6 +56,7 @@ import { lavaMeta } from "./lava.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
 import { mugMeta } from "./mug.meta";
+import { catMeta } from "./cat.meta";
 import { murmurationMeta } from "./murmuration.meta";
 import { lorenzMeta } from "./lorenz.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
@@ -140,6 +141,7 @@ export const effects: readonly EffectEntry[] = [
   { ...hotspringMeta, load: () => import("./hotspring").then((m) => m.hotspring) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
+  { ...catMeta, load: () => import("./cat").then((m) => m.cat) },
   { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
   { ...potteryMeta, load: () => import("./pottery").then((m) => m.pottery) },
   { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
