@@ -109,3 +109,13 @@ export const effects: readonly EffectDefinition[] = [
 export function getEffect(id: string | undefined): EffectDefinition | undefined {
   return effects.find((e) => e.id === id);
 }
+
+/** The effect shown when the URL names none, or one that doesn't exist. */
+export const DEFAULT_EFFECT_ID = "warp";
+
+/** Resolves {@link DEFAULT_EFFECT_ID}; throws at load so a rename can't break it silently. */
+export const defaultEffect: EffectDefinition = (() => {
+  const effect = getEffect(DEFAULT_EFFECT_ID);
+  if (!effect) throw new Error(`Default effect "${DEFAULT_EFFECT_ID}" is not in the registry`);
+  return effect;
+})();

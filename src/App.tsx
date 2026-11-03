@@ -3,7 +3,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { defaults, encodeHash, stateFromHash } from "./effects/params";
-import { effects, getEffect } from "./effects/registry";
+import { defaultEffect, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
@@ -12,7 +12,7 @@ import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
 
 function initialState() {
-  const { effect, values } = stateFromHash(window.location.hash, effects);
+  const { effect, values } = stateFromHash(window.location.hash, effects, defaultEffect);
   return { effectId: effect.id, values: { [effect.id]: values } };
 }
 
@@ -60,7 +60,7 @@ export function App() {
   );
   const idle = useIdle(3000);
 
-  const effect = getEffect(effectId) ?? effects[0];
+  const effect = getEffect(effectId) ?? defaultEffect;
   const values = useMemo(
     () => valuesById[effect.id] ?? defaults(effect.params),
     [valuesById, effect],
@@ -87,7 +87,7 @@ export function App() {
       const now = current.current;
       const hash = window.location.hash;
       if (hash === encodeHash(now.effect, now.values)) return;
-      const next = stateFromHash(hash, effects);
+      const next = stateFromHash(hash, effects, defaultEffect);
       if (now.recording && next.effect.id !== now.effect.id) {
         // Switching effect would break the recording; put the current state back.
         window.history.replaceState(null, "", encodeHash(now.effect, now.values));

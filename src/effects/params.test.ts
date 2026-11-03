@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   coerce,
   decodeHash,
+  defaults,
   encodeHash,
   parseValues,
   snap,
   stateFromHash,
   stepDecimals,
 } from "./params";
-import { effects } from "./registry";
+import { DEFAULT_EFFECT_ID, defaultEffect, effects, getEffect } from "./registry";
 import type { ParamDef, ParamSchema } from "./types";
 
 const schema = {
@@ -108,22 +109,45 @@ describe("stateFromHash", () => {
   ];
 
   it("applies the hash's params to the effect it names", () => {
-    const { effect, values } = stateFromHash("#effect=second&speed=5&on=0", list);
+    const { effect, values } = stateFromHash("#effect=second&speed=5&on=0", list, list[0]);
     expect(effect.id).toBe("second");
     expect(values).toEqual({ speed: 5, color: "#ffffff", on: false, mode: "a" });
   });
 
   it.each(["#effect=gone&speed=5", "#speed=5", "", "#"])(
-    "uses the first effect's defaults for %j",
+    "uses the fallback effect's defaults for %j",
     (hash) => {
-      const { effect, values } = stateFromHash(hash, list);
-      expect(effect.id).toBe("first");
+      const { effect, values } = stateFromHash(hash, list, list[1]);
+      expect(effect.id).toBe("second");
       expect(values).toEqual({ speed: 3, color: "#ffffff", on: true, mode: "a" });
     },
   );
+
+  it.each(["", "#", "#speed=5", "#effect=gone&speed=5"])(
+    "gives warp with its defaults for %j",
+    (hash) => {
+      const { effect, values } = stateFromHash(hash, effects, defaultEffect);
+      expect(effect.id).toBe("warp");
+      expect(values).toEqual(defaults(effect.params));
+    },
+  );
+
+  it("doesn't depend on warp being first in the list", () => {
+    const reordered = [...effects.filter((e) => e.id !== "warp"), defaultEffect];
+    expect(reordered[0].id).not.toBe("warp");
+    const { effect, values } = stateFromHash("#effect=gone", reordered, defaultEffect);
+    expect(effect.id).toBe("warp");
+    expect(values).toEqual(defaults(defaultEffect.params));
+  });
 });
 
 describe("registry", () => {
+  it("defaults to warp, which exists in the registry", () => {
+    expect(DEFAULT_EFFECT_ID).toBe("warp");
+    expect(getEffect(DEFAULT_EFFECT_ID)).toBe(defaultEffect);
+    expect(effects).toContain(defaultEffect);
+  });
+
   it("has unique ids", () => {
     const ids = effects.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
