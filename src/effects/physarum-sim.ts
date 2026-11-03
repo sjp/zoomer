@@ -38,6 +38,7 @@
 import { clamp, fract, smoothstep } from "./math";
 import { hexToRgb } from "./color";
 import { createRng, hash32 } from "./noise";
+import type { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
 
 export { type StepClock, takeSteps } from "./reaction-sim";
 
@@ -86,16 +87,12 @@ export const CALM_REPEL = 1.5;
 export const CALM_DECAY = 0.15;
 
 /** Agent count tiers, all powers of two so the agent buffers stay tidy. */
+export type AgentTier = (typeof AGENT_OPTIONS)[number]["value"];
 export const AGENT_TIERS = {
-  low: { label: "Low", count: 65536 },
-  medium: { label: "Medium", count: 131072 },
-  high: { label: "High", count: 262144 },
-} as const;
-export type AgentTier = keyof typeof AGENT_TIERS;
-export const AGENT_OPTIONS = Object.entries(AGENT_TIERS).map(([value, t]) => ({
-  value,
-  label: t.label,
-}));
+  low: { count: 65536 },
+  medium: { count: 131072 },
+  high: { count: 262144 },
+} as const satisfies Record<AgentTier, { count: number }>;
 /** Agent count for a select value; unknown values fall back to medium. */
 export function agentCount(id: string): number {
   return Object.hasOwn(AGENT_TIERS, id)
@@ -117,10 +114,11 @@ export function depositAmount(decay: number, cells: number, agents: number): num
   return agents > 0 ? (MEAN_TRAIL * decay * cells) / agents : 0;
 }
 
+export type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
+
 /** Palettes as colour stops from the background (t = 0) to the brightest node (t = 1). */
 export const PALETTES = {
   gold: {
-    label: "Gold",
     stops: [
       [0, "#060508"],
       [0.3, "#2e1c07"],
@@ -129,7 +127,6 @@ export const PALETTES = {
     ],
   },
   bioluminescent: {
-    label: "Bioluminescent",
     stops: [
       [0, "#02060e"],
       [0.3, "#062a36"],
@@ -138,7 +135,6 @@ export const PALETTES = {
     ],
   },
   ember: {
-    label: "Ember",
     stops: [
       [0, "#070304"],
       [0.3, "#360a0b"],
@@ -147,7 +143,6 @@ export const PALETTES = {
     ],
   },
   mono: {
-    label: "Mono",
     stops: [
       [0, "#050506"],
       [0.35, "#26272c"],
@@ -155,15 +150,7 @@ export const PALETTES = {
       [1, "#f4f5f8"],
     ],
   },
-} as const satisfies Record<
-  string,
-  { label: string; stops: readonly (readonly [number, string])[] }
->;
-export type PaletteId = keyof typeof PALETTES;
-export const PALETTE_OPTIONS = Object.entries(PALETTES).map(([value, p]) => ({
-  value,
-  label: p.label,
-}));
+} as const satisfies Record<PaletteId, { stops: readonly (readonly [number, string])[] }>;
 
 /** Texels in the palette lookup table. */
 export const LUT_SIZE = 256;

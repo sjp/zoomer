@@ -41,6 +41,7 @@ import {
 } from "./grass-sim";
 import { buildPeriodicNoiseTexture } from "./noise";
 import { createSpriteBatch } from "./sprites";
+import { grassMeta } from "./grass.meta";
 import { defineEffect } from "./types";
 
 /** Blade layout seed: the field is the same every time. */
@@ -247,19 +248,6 @@ void main() {
 }
 `;
 
-const FIELD_OPTIONS = [
-  { value: "meadow", label: "Meadow" },
-  { value: "wheat", label: "Wheat" },
-  { value: "dry", label: "Dry grass" },
-  { value: "lavender", label: "Lavender" },
-] as const satisfies readonly { value: FieldId; label: string }[];
-
-const SUN_OPTIONS = [
-  { value: "midday", label: "Midday" },
-  { value: "golden", label: "Golden hour" },
-  { value: "overcast", label: "Overcast" },
-] as const satisfies readonly { value: SunId; label: string }[];
-
 const mulInto = (out: Rgb, a: Rgb, b: Rgb, k = 1) => {
   out[0] = a[0] * b[0] * k;
   out[1] = a[1] * b[1] * k;
@@ -271,26 +259,7 @@ const mulInto = (out: Rgb, a: Rgb, b: Rgb, k = 1) => {
  * Instanced blades (built once per count, sorted back to front) bent in the
  * vertex shader, over one full-screen pass of sky and a wind-shaded distance band.
  */
-export const grass = defineEffect({
-  id: "grass",
-  name: "Grass Field",
-  description: "Tall grass under a soft sky, with slow gusts of wind rolling across the field.",
-  params: {
-    field: { kind: "select", label: "Field", options: FIELD_OPTIONS, default: "meadow" },
-    sun: { kind: "select", label: "Light", options: SUN_OPTIONS, default: "golden" },
-    density: { kind: "number", label: "Density", min: 0.25, max: 2, step: 0.05, default: 1 },
-    height: {
-      kind: "number",
-      label: "Grass height",
-      min: 0.3,
-      max: 0.55,
-      step: 0.01,
-      default: 0.42,
-    },
-    wind: { kind: "number", label: "Wind", min: 0, max: 1, step: 0.01, default: 0.45 },
-    gusts: { kind: "number", label: "Gusts", min: 0, max: 1, step: 0.01, default: 0.6 },
-  },
-  context: "webgl2",
+export const grass = defineEffect(grassMeta, {
   create(gl) {
     return withScope((scope) => {
       const bg = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) =>

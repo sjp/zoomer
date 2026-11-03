@@ -10,7 +10,6 @@ import {
   KIND_TENDRIL,
   leafGrow,
   MAX_FALLING,
-  MAX_PLANTS,
   MAX_SPRITES,
   MAX_STEP,
   OFF_FRAME,
@@ -29,6 +28,7 @@ import {
   type Vines,
   witherCurve,
 } from "./vines-sim";
+import { MAX_PLANTS } from "./vines.meta";
 
 const frame = (over: Partial<VineFrame> = {}): VineFrame => ({
   refWidth: 1920,

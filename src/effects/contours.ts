@@ -9,6 +9,7 @@ import {
 } from "./gl";
 import { createLowResTarget } from "./lowres";
 import { wrap } from "./math";
+import { contoursMeta } from "./contours.meta";
 import { defineEffect } from "./types";
 
 /**
@@ -360,56 +361,7 @@ vec4 composite(vec2 uv) {
  * field. The field renders into a ~270-row texture; the full-res pass samples it
  * with a 4-tap B-spline (C2, so lines have no kinks) and draws lines from it.
  */
-export const contours = defineEffect({
-  id: "contours",
-  name: "Topographic Contours",
-  description:
-    "A calm topographic map whose contour lines slowly breathe and drift, with optional elevation tint.",
-  params: {
-    lineColor: { kind: "color", label: "Line colour", default: "#8fbac6" },
-    background: { kind: "color", label: "Background", default: "#0e1b21" },
-    fill: {
-      kind: "select",
-      label: "Elevation fill",
-      options: [
-        { value: "none", label: "None" },
-        { value: "bands", label: "Bands" },
-        { value: "smooth", label: "Smooth" },
-      ],
-      default: "smooth",
-    },
-    lowColor: { kind: "color", label: "Low colour", default: "#0c1a20" },
-    highColor: { kind: "color", label: "High colour", default: "#22414b" },
-    levels: { kind: "number", label: "Contour levels", min: 4, max: 40, step: 1, default: 16 },
-    lineWidth: {
-      kind: "number",
-      label: "Line width (px at 1080p)",
-      min: 0.5,
-      max: 4,
-      step: 0.1,
-      default: 1.2,
-    },
-    indexEvery: {
-      kind: "number",
-      label: "Index contour every (0 = off)",
-      min: 0,
-      max: 10,
-      step: 1,
-      default: 5,
-    },
-    scale: { kind: "number", label: "Terrain size", min: 0.2, max: 2, step: 0.05, default: 0.8 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 0.5 },
-    sampling: {
-      kind: "select",
-      label: "Line smoothing",
-      options: [
-        { value: "bspline", label: "Smooth (B-spline)" },
-        { value: "bilinear", label: "Fast (bilinear)" },
-      ],
-      default: "bspline",
-    },
-  },
-  context: "webgl2",
+export const contours = defineEffect(contoursMeta, {
   create(gl) {
     return withScope((scope) => {
       const noiseProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NOISE_FRAGMENT), (p) =>

@@ -5,15 +5,12 @@ import {
   fillStoneLayout,
   GAP,
   inCentre,
-  MAX_STONES,
   placeStones,
   rakePhase,
   RERAKE_DURATION,
   RERAKE_INTERVAL,
   RING_STEEP,
   ringRadius,
-  SPACING_MAX,
-  SPACING_MIN,
   STONE_FLOATS,
   STONE_PAD,
   stepRerake,
@@ -27,6 +24,7 @@ import {
   WAVE_SLOPE,
   waveLayout,
 } from "./zen-sim";
+import { SPACING_MIN, MAX_STONES, SPACING_MAX } from "./zen.meta";
 
 const size = MAX_STONES * STONE_FLOATS;
 

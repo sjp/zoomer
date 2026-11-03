@@ -7,12 +7,6 @@ import { clamp } from "./math";
 
 export type FilmMode = "soap" | "oil" | "pearl";
 
-export const MODE_OPTIONS = [
-  { value: "soap", label: "Soap film" },
-  { value: "oil", label: "Oil slick" },
-  { value: "pearl", label: "Pearl" },
-] as const;
-
 /** Unknown values fall back to soap. */
 export function filmMode(mode: string): FilmMode {
   return mode === "oil" || mode === "pearl" ? mode : "soap";

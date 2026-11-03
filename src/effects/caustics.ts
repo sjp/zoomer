@@ -28,7 +28,8 @@ import {
 } from "./gl";
 import { createRng } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
-import { defineEffect, type ParamSchema, type ParamValues } from "./types";
+import { causticsMeta, MAX_BUBBLES } from "./caustics.meta";
+import { defineEffect, type ParamValues } from "./types";
 import { wrap } from "./math";
 import { growLive, trimLive } from "./fade";
 
@@ -49,7 +50,6 @@ const TILE_INTERVAL = 1 / 60;
 const RAY_COLUMNS = 256;
 const RAY_COUNT = 7;
 const RAY_STRENGTH = 0.22;
-const MAX_BUBBLES = 40;
 
 /**
  * One period of the iterated sine-warp caustic (after Dave Hoskins' tileable water
@@ -197,54 +197,13 @@ const MAIN_UNIFORMS = [
   "uRayColor",
 ] as const;
 
-const PARAMS = {
-  scene: {
-    kind: "select",
-    label: "Scene",
-    options: [
-      { value: "pool", label: "Pool floor" },
-      { value: "deep", label: "Deep water" },
-    ],
-    default: "pool",
-  },
-  waterColor: { kind: "color", label: "Water colour", default: "#1a7896" },
-  lightColor: { kind: "color", label: "Light colour", default: "#e6fbff" },
-  intensity: { kind: "number", label: "Intensity", min: 0, max: 2, step: 0.05, default: 1 },
-  scale: { kind: "number", label: "Cell size", min: 0.5, max: 2, step: 0.05, default: 1 },
-  speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-  chromatic: {
-    kind: "number",
-    label: "Chromatic split (0 = off)",
-    min: 0,
-    max: 1,
-    step: 0.01,
-    default: 0.3,
-  },
-  tiles: { kind: "boolean", label: "Pool tiles (pool floor only)", default: true },
-  rays: { kind: "boolean", label: "God rays (deep water only)", default: true },
-  bubbles: {
-    kind: "number",
-    label: "Bubbles (deep water only)",
-    min: 0,
-    max: MAX_BUBBLES,
-    step: 1,
-    default: 12,
-  },
-} as const satisfies ParamSchema;
-
 /**
  * Rippling caustic light, like sunlight through waves: either a top-down pool
  * floor or a deep-water view with a depth gradient, god rays and bubbles. One
  * small tileable caustic texture is rendered (at most 60 Hz) and sampled twice
  * per pixel with REPEAT.
  */
-export const caustics = defineEffect({
-  id: "caustics",
-  name: "Underwater Caustics",
-  description:
-    "Rippling networks of light on a pool floor, or deep water with god rays and rising bubbles.",
-  context: "webgl2",
-  params: PARAMS,
+export const caustics = defineEffect(causticsMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
@@ -341,7 +300,7 @@ export const caustics = defineEffect({
       };
 
       /** Recomputes the static uniforms if any input changed; returns true if so. */
-      const updateStatics = (p: ParamValues<typeof PARAMS>) => {
+      const updateStatics = (p: ParamValues<typeof causticsMeta.params>) => {
         if (
           last.scene === p.scene &&
           last.water === p.waterColor &&

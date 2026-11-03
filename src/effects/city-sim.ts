@@ -27,8 +27,6 @@ export const FADE_SLOTS = 64;
 export const FADE_SECONDS = 0.5;
 /** Fades starting this close together share a slot: well under a frame's worth of difference. */
 const JOIN_SECONDS = FADE_SECONDS / (FADE_SLOTS - 4);
-/** Top of the activity slider, in toggles per second. */
-export const MAX_TOGGLE_RATE = 1000;
 /** Most toggles started in one frame, so a long hitch doesn't start a burst. */
 const MAX_TOGGLES_PER_FRAME = 48;
 /** Windows one slot can carry: a frame's worth of toggles. */

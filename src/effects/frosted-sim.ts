@@ -4,8 +4,8 @@
  * Nothing here touches GL, so it is all unit-tested.
  */
 import { buildPeriodicNoiseTexture, createRng, hash32 } from "./noise";
+import { MAX_SHAPES } from "./frosted.meta";
 
-export const MAX_SHAPES = 5;
 const TAU = Math.PI * 2;
 
 // ---------------------------------------------------------------------------
@@ -18,15 +18,6 @@ export const PALETTES = {
   ember: ["#ff6a3d", "#ffcc33", "#d6246e"],
   slate: ["#7d8aa8", "#b7c3d9", "#4f5d7a"],
 } as const satisfies Record<string, readonly string[]>;
-
-export const PALETTE_OPTIONS = [
-  { value: "dusk", label: "Dusk" },
-  { value: "lagoon", label: "Lagoon" },
-  { value: "orchid", label: "Orchid" },
-  { value: "ember", label: "Ember" },
-  { value: "slate", label: "Slate" },
-  { value: "custom", label: "Custom" },
-] as const;
 
 /**
  * Hex colour of shape `index`: colours repeat every three shapes. "custom" uses
@@ -63,12 +54,6 @@ export const GLASS = {
   reeded: { blur: 0.6, grain: 0.35, sheen: 0.035, flute: 1, milk: 0.015 },
   clear: { blur: 0.35, grain: 0.2, sheen: 0.03, flute: 0, milk: 0 },
 } as const satisfies Record<string, GlassPreset>;
-
-export const GLASS_OPTIONS = [
-  { value: "frosted", label: "Frosted" },
-  { value: "reeded", label: "Reeded" },
-  { value: "clear", label: "Clear-ish" },
-] as const;
 
 /** The preset for a `glass` select value; unknown values fall back to "frosted". */
 export function glassPreset(name: string): GlassPreset {

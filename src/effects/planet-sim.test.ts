@@ -8,7 +8,6 @@ import {
   CLOUD_W,
   cloudShaping,
   discNormal,
-  FRAMING_OPTIONS,
   framingAnchor,
   materialByte,
   mulMat3,
@@ -22,10 +21,10 @@ import {
   sunSide,
   SURFACE_H,
   SURFACE_W,
-  WORLD_OPTIONS,
   WORLDS,
   worldStyle,
 } from "./planet-sim";
+import { FRAMING_OPTIONS, WORLD_OPTIONS } from "./planet.meta";
 
 /** Mean absolute byte difference between columns a and b over all rows and RGB. */
 function columnDiff(data: Uint8Array, w: number, h: number, a: number, b: number): number {

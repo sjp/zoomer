@@ -21,15 +21,12 @@
 import { hexToUnitRgb, type Rgb } from "./color";
 import { clamp, wrap } from "./math";
 import { createRng } from "./noise";
+import { SCENE_IDS, MIN_LAYERS, MAX_LAYERS, PALETTE_IDS } from "./papercut.meta";
 
 const TAU = Math.PI * 2;
 
-export const SCENE_IDS = ["hills", "ocean", "forest", "night"] as const;
 export type SceneId = (typeof SCENE_IDS)[number];
 
-/** Range of the `layers` param: the scenery layers, not counting sun, clouds and the like. */
-export const MIN_LAYERS = 5;
-export const MAX_LAYERS = 8;
 /** Most stack slots any scene uses: scenery plus up to two decor layers (sun, clouds, boat). */
 export const MAX_STACK = 10;
 export const MAX_SHAPES = 4;
@@ -412,8 +409,6 @@ export interface Palette {
   cloud: string;
   boat: string;
 }
-
-export const PALETTE_IDS = ["scene", "sunset", "pastel", "autumn", "mono"] as const;
 
 export const SCENE_PALETTES: Record<SceneId, Palette> = {
   hills: {

@@ -6,6 +6,7 @@
 import { hexToUnitRgb, type Rgb } from "./color";
 import { clamp, fract, smoothstep } from "./math";
 import { createRng } from "./noise";
+import { MIN_LAYERS, MAX_LAYERS } from "./horizon.meta";
 
 const TAU = Math.PI * 2;
 
@@ -238,8 +239,6 @@ export function moonTerminator(phase: number, out: Terminator): Terminator {
 // Hills
 // ---------------------------------------------------------------------------
 
-export const MIN_LAYERS = 3;
-export const MAX_LAYERS = 5;
 /** Profile samples across the width, per layer. */
 export const HILL_COLUMNS = 257;
 /** Baseline height (fraction of the canvas height from the bottom) of the back and front layers. */

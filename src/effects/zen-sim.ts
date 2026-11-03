@@ -37,16 +37,12 @@
  */
 import { createRng, hash32 } from "./noise";
 import { clamp } from "./math";
+import { MAX_STONES, SPACING_MAX } from "./zen.meta";
 
 const TAU = Math.PI * 2;
 
-export const MAX_STONES = 5;
 /** Floats per stone in the stone and layout arrays (shader `vec4`s). */
 export const STONE_FLOATS = 4;
-
-/** Rake line spacing range in reference px. */
-export const SPACING_MIN = 12;
-export const SPACING_MAX = 24;
 
 /** Stone radius ranges (reference px): the first stone is the big one. */
 export const BIG_STONE: readonly [number, number] = [56, 74];

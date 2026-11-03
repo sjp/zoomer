@@ -18,15 +18,15 @@ import {
   seedSalt,
   tailProfile,
   TAU,
-  TRAIL_LENGTH_MAX,
-  TRAIL_LENGTH_MIN,
   trailsAt,
   trailsAtBruteForce,
   TREE_BLOBS,
   wrapAngle,
 } from "./startrails-sim";
-import { buildHills, HILL_COLUMNS, hillHeightAt, MAX_LAYERS, MIN_LAYERS } from "./horizon-sim";
+import { buildHills, HILL_COLUMNS, hillHeightAt } from "./horizon-sim";
 import { createRng } from "./noise";
+import { TRAIL_LENGTH_MAX, TRAIL_LENGTH_MIN } from "./startrails.meta";
+import { MAX_LAYERS, MIN_LAYERS } from "./horizon.meta";
 
 const LENGTHS = [TRAIL_LENGTH_MIN, 12, 40, 90, 133, TRAIL_LENGTH_MAX].map((d) => d * DEG);
 

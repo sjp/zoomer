@@ -11,10 +11,10 @@ import {
   withScope,
 } from "./gl";
 import { createSpriteBatch, SPRITE_SPIN_GLSL } from "./sprites";
+import { vinesMeta, MAX_PLANTS } from "./vines.meta";
 import { defineEffect } from "./types";
 import {
   createVines,
-  MAX_PLANTS,
   MAX_SPRITES,
   PLANT_FLOATS,
   PLANT_SEGS,
@@ -203,53 +203,7 @@ void main() {
  * unfolding leaves and flowers, then withering and dropping their leaves while
  * new shoots start elsewhere. They stay in a border region around the speaker.
  */
-export const vines = defineEffect({
-  id: "vines",
-  name: "Creeping Vines",
-  description:
-    "Leafy vines that slowly grow in from the edges, flower, then wither and drop their leaves.",
-  params: {
-    plant: {
-      kind: "select",
-      label: "Plant",
-      options: [
-        { value: "ivy", label: "Ivy" },
-        { value: "morningGlory", label: "Morning glory" },
-        { value: "wisteria", label: "Wisteria" },
-      ],
-      default: "ivy",
-    },
-    growth: { kind: "number", label: "Growth speed", min: 0.25, max: 3, step: 0.05, default: 1 },
-    density: {
-      kind: "number",
-      label: "Vines at once",
-      min: 1,
-      max: MAX_PLANTS,
-      step: 1,
-      default: 5,
-    },
-    border: {
-      kind: "number",
-      label: "Reach in from the edges",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.6,
-    },
-    flowers: { kind: "number", label: "Flowers", min: 0, max: 1, step: 0.01, default: 0.4 },
-    wall: {
-      kind: "select",
-      label: "Wall",
-      options: [
-        { value: "painted", label: "Painted" },
-        { value: "wood", label: "Wood panels" },
-        { value: "dark", label: "Dark" },
-      ],
-      default: "painted",
-    },
-    background: { kind: "color", label: "Wall colour", default: "#d8cdb9" },
-  },
-  context: "webgl2",
+export const vines = defineEffect(vinesMeta, {
   create(gl) {
     return withScope((scope) => {
       // Stems: a corner strip plus one instance per segment.

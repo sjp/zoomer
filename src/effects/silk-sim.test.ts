@@ -7,9 +7,6 @@ import {
   LAYOUT_WAVES,
   layoutWaves,
   lightVectors,
-  MAX_BREEZE,
-  MAX_FOLDS,
-  MIN_FOLDS,
   REF_ASPECT,
   SILK_LAYOUTS,
   silkField,
@@ -20,6 +17,7 @@ import {
   WAVE_FLOATS,
   WAVES,
 } from "./silk-sim";
+import { MAX_BREEZE, MAX_FOLDS, MIN_FOLDS } from "./silk.meta";
 
 const TAU = Math.PI * 2;
 

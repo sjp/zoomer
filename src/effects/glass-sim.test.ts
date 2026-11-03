@@ -8,7 +8,6 @@ import {
   GRID_ORIGIN,
   JITTER,
   palette,
-  PALETTE_OPTIONS,
   PALETTE_SIZE,
   PALETTES,
   paneColorIndex,
@@ -20,6 +19,7 @@ import {
   voronoi,
 } from "./glass-sim";
 import { createRng } from "./noise";
+import { PALETTE_OPTIONS } from "./glass.meta";
 
 describe("search bound", () => {
   it("is the analytic bound, and jitter plus drift stays inside it", () => {

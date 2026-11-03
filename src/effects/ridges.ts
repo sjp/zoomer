@@ -10,7 +10,7 @@ import {
   withScope,
 } from "./gl";
 import { createChangeKey } from "./change-key";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { clamp, wrap } from "./math";
 import { buildPeriodicNoiseTexture, createRng, HASH32_GLSL } from "./noise";
 import {
@@ -24,9 +24,6 @@ import {
   LAYER_FLOATS,
   layerCount,
   MAX_BIRDS,
-  MAX_LAYERS,
-  MIN_LAYERS,
-  PALETTE_OPTIONS,
   paletteFor,
   PAN_SPEED,
   parallax,
@@ -35,6 +32,7 @@ import {
   writeBirds,
 } from "./ridges-sim";
 import { createSpriteBatch } from "./sprites";
+import { ridgesMeta, MAX_LAYERS } from "./ridges.meta";
 import { defineEffect } from "./types";
 
 /** Low-res divisors: everything but the nearest ridge edge is soft. */
@@ -291,39 +289,7 @@ const BIRD_STRIP = [-1, -0.5, 0, 0.5, 1].flatMap((x) => [x, 1, x, -1]);
  * resolution, and the blit draws the nearest ridge and its pines sharp at full
  * resolution. A few birds glide across now and then.
  */
-export const ridges = defineEffect({
-  id: "ridges",
-  name: "Misty Ridges",
-  description:
-    "Steep mountain ridges fading into the distance like an ink-wash painting, with banks of fog drifting between them.",
-  params: {
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "ink" },
-    layers: {
-      kind: "number",
-      label: "Layers",
-      min: MIN_LAYERS,
-      max: MAX_LAYERS,
-      step: 1,
-      default: 6,
-    },
-    peaks: {
-      kind: "number",
-      label: "Peaks (rolling to jagged)",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.7,
-    },
-    fog: { kind: "number", label: "Fog", min: 0, max: 1, step: 0.01, default: 0.6 },
-    drift: { kind: "number", label: "Fog drift", min: 0, max: 3, step: 0.05, default: 1 },
-    pan: { kind: "number", label: "Pan", min: 0, max: 3, step: 0.05, default: 0.3 },
-    sun: { kind: "boolean", label: "Sun or moon", default: true },
-    pines: { kind: "boolean", label: "Pines", default: true },
-    birds: { kind: "boolean", label: "Birds", default: true },
-    seed: { kind: "number", label: "Seed", min: 1, max: 100, step: 1, default: 1 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const ridges = defineEffect(ridgesMeta, {
   create(gl) {
     return withScope((scope) => {
       const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>

@@ -5,12 +5,9 @@ import {
   buildShapeTable,
   createWaveScheduler,
   foamStrength,
-  LAYOUT_OPTIONS,
   layoutAxes,
   LIFETIME,
-  MAX_WAVE_TIME,
   MAX_WAVES,
-  MIN_WAVE_TIME,
   maxReach,
   packWaves,
   SHAPE_COLUMNS,
@@ -23,6 +20,7 @@ import {
   waveFront,
   waveWetness,
 } from "./beach-sim";
+import { LAYOUT_OPTIONS, MAX_WAVE_TIME, MIN_WAVE_TIME } from "./beach.meta";
 
 describe("waveFront", () => {
   const reach = 0.12;

@@ -11,7 +11,6 @@ import {
   hillHeightAt,
   localDayPhase,
   lunarPhase,
-  MAX_LAYERS,
   moonTerminator,
   nightAmount,
   placeTrees,
@@ -20,6 +19,7 @@ import {
   type SkyState,
   TREE_FLOATS,
 } from "./horizon-sim";
+import { MAX_LAYERS } from "./horizon.meta";
 
 const MEADOW = { amp: 1, ridge: 0, freq: 1 };
 const MOUNTAINS = { amp: 1.9, ridge: 0.8, freq: 1.3 };

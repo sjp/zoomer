@@ -15,7 +15,6 @@ const REF_HEIGHT = 1080;
 
 // --- Fish -------------------------------------------------------------------
 
-export const MAX_FISH = 15;
 /** Points along each fish's spine, head first. */
 export const SPINE_POINTS = 10;
 /** Strip rows along the body: every spine point plus a Catmull-Rom midpoint between each pair. */
@@ -584,7 +583,6 @@ export function writeRipples(r: Ripples, scale: number, strength: number, out: F
 
 // --- Lily pads --------------------------------------------------------------
 
-export const MAX_PADS = 20;
 /** Notch half-angle of a lily pad, in radians. */
 export const NOTCH = 0.2;
 

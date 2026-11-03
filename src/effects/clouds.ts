@@ -9,7 +9,6 @@ import {
   P,
   presetIndex,
   STRETCH_X,
-  TIME_OPTIONS,
 } from "./clouds-sky";
 import {
   beginFrame,
@@ -21,7 +20,8 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
+import { cloudsMeta } from "./clouds.meta";
 import { defineEffect } from "./types";
 import { approach } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
@@ -154,19 +154,7 @@ vec4 composite(vec2 uv) {
  * clouds render at reduced resolution from a precomputed tileable noise texture
  * (four octaves per fetch); the sky is composited analytically while upscaling.
  */
-export const clouds = defineEffect({
-  id: "clouds",
-  name: "Time-lapse Clouds",
-  description: "Fluffy clouds drifting and evolving across a day, golden hour, dusk or night sky.",
-  params: {
-    time: { kind: "select", label: "Time of day", options: TIME_OPTIONS, default: "day" },
-    coverage: { kind: "number", label: "Cloud cover", min: 0, max: 1, step: 0.01, default: 0.5 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    scale: { kind: "number", label: "Cloud size", min: 0.5, max: 2, step: 0.05, default: 1 },
-    layers: { kind: "number", label: "Layers", min: 1, max: 2, step: 1, default: 2 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const clouds = defineEffect(cloudsMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));

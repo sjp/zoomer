@@ -11,7 +11,6 @@ import {
   GRAIN_SIZE,
   MAIN_PERIOD,
   makeShapePaths,
-  MAX_SHAPES,
   PALETTES,
   ROTATE_PERIOD,
   SHAPE_OPACITY,
@@ -21,6 +20,7 @@ import {
   WOBBLE_PERIOD,
   writeShapeUniforms,
 } from "./frosted-sim";
+import { MAX_SHAPES } from "./frosted.meta";
 
 describe("shapeColor", () => {
   it("looks up presets and repeats every three shapes", () => {

@@ -8,13 +8,13 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { createRng } from "./noise";
+import { blobsMeta, MAX_BLOBS } from "./blobs.meta";
 import { defineEffect } from "./types";
 import { growLive, stepLife, trimLive } from "./fade";
 import { smoothstep } from "./math";
 
-export const MAX_BLOBS = 6;
 const TAU = Math.PI * 2;
 /** Weight of the background colour in the normalised blend; a blob centre weighs 1. */
 const BASE_WEIGHT = 0.3;
@@ -39,15 +39,6 @@ export const PALETTES = {
   candy: ["#ff8fc7", "#ffd36e", "#8fd3ff", "#c79bff"],
   mono: ["#5a6274", "#8b93a6", "#3a4050", "#b8bfcc"],
 } as const satisfies Record<string, readonly string[]>;
-
-const PALETTE_OPTIONS = [
-  { value: "dusk", label: "Dusk" },
-  { value: "ocean", label: "Ocean" },
-  { value: "mint", label: "Mint" },
-  { value: "candy", label: "Candy" },
-  { value: "mono", label: "Mono" },
-  { value: "custom", label: "Custom" },
-] as const;
 
 /**
  * The hex colour of blob `index` (colours repeat when there are more blobs than
@@ -337,24 +328,7 @@ vec4 composite(vec2 uv) {
  * (by default) at ~30 Hz into two cached keyframes, which the full-res blit
  * cross-fades every frame so the motion never steps.
  */
-export const blobs = defineEffect({
-  id: "blobs",
-  name: "Gradient Blobs",
-  description: "Large, soft colour fields that slowly drift and merge. Very low power.",
-  params: {
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "dusk" },
-    color1: { kind: "color", label: "Colour 1 (custom)", default: "#ff6f61" },
-    color2: { kind: "color", label: "Colour 2 (custom)", default: "#b34fd1" },
-    color3: { kind: "color", label: "Colour 3 (custom)", default: "#4a58d9" },
-    color4: { kind: "color", label: "Colour 4 (custom)", default: "#ffb36b" },
-    background: { kind: "color", label: "Background", default: "#140f2a" },
-    blobs: { kind: "number", label: "Blobs", min: 3, max: MAX_BLOBS, step: 1, default: 5 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 2, step: 0.05, default: 0.3 },
-    softness: { kind: "number", label: "Softness", min: 0.5, max: 1.6, step: 0.05, default: 1 },
-    grain: { kind: "number", label: "Grain", min: 0, max: 1, step: 0.01, default: 0.15 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "low" },
-  },
-  context: "webgl2",
+export const blobs = defineEffect(blobsMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT), (p) =>

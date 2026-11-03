@@ -14,15 +14,13 @@ import {
   fillWaveUniforms,
   layoutWaves,
   lightVectors,
-  MAX_BREEZE,
-  MAX_FOLDS,
-  MIN_FOLDS,
   slopeScale,
   WARP_WAVES,
   WARPS,
   WAVE_FLOATS,
   WAVES,
 } from "./silk-sim";
+import { silkMeta, MAX_BREEZE } from "./silk.meta";
 import { defineEffect } from "./types";
 
 /** Ambient light and Lambert gain: creases facing away from the light fall to AMBIENT. */
@@ -112,46 +110,7 @@ void main() {
  * satin sheen sliding across them and optional shot-silk colour shift. One
  * analytic full-screen pass.
  */
-export const silk = defineEffect({
-  id: "silk",
-  name: "Silk drapery",
-  description:
-    "Deep folds of satin rippling slowly in a breeze, with a sheen that slides along the crests.",
-  params: {
-    layout: {
-      kind: "select",
-      label: "Layout",
-      options: [
-        { value: "hanging", label: "Hanging" },
-        { value: "flowing", label: "Flowing" },
-        { value: "billowing", label: "Billowing" },
-      ],
-      default: "hanging",
-    },
-    color: { kind: "color", label: "Colour", default: "#7a1a36" },
-    shotColor: { kind: "color", label: "Shot colour", default: "#c7862c" },
-    shot: { kind: "number", label: "Shot", min: 0, max: 1, step: 0.01, default: 0.35 },
-    sheen: { kind: "number", label: "Sheen", min: 0, max: 1, step: 0.01, default: 0.6 },
-    folds: {
-      kind: "number",
-      label: "Folds",
-      min: MIN_FOLDS,
-      max: MAX_FOLDS,
-      step: 0.5,
-      default: 6,
-    },
-    depth: { kind: "number", label: "Fold depth", min: 0, max: 2, step: 0.05, default: 1 },
-    breeze: { kind: "number", label: "Breeze", min: 0, max: MAX_BREEZE, step: 0.05, default: 1 },
-    lightAngle: {
-      kind: "number",
-      label: "Light angle (degrees)",
-      min: 0,
-      max: 360,
-      step: 1,
-      default: 120,
-    },
-  },
-  context: "webgl2",
+export const silk = defineEffect(silkMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

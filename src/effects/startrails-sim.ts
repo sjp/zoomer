@@ -17,16 +17,10 @@
  * their half-width plus anti-aliasing, so no trail crosses into another ring, and
  * a pixel checks only its own ring.
  */
-import {
-  buildHills,
-  HILL_COLUMNS,
-  type HillShape,
-  hillHeightAt,
-  MAX_LAYERS,
-  MIN_LAYERS,
-} from "./horizon-sim";
+import { buildHills, HILL_COLUMNS, type HillShape, hillHeightAt } from "./horizon-sim";
 import { clamp, smoothstep } from "./math";
 import { createRng, hash32 } from "./noise";
+import { MAX_LAYERS, MIN_LAYERS } from "./horizon.meta";
 
 export const TAU = Math.PI * 2;
 export const DEG = Math.PI / 180;
@@ -61,9 +55,6 @@ export const COMET_HEAD = 1.2;
 export const HEAD_LENGTH = 8;
 /** Upper bound of `tailProfile`. */
 export const PROFILE_MAX = COMET_TAIL + COMET_HEAD;
-
-export const TRAIL_LENGTH_MIN = 5;
-export const TRAIL_LENGTH_MAX = 180;
 
 /**
  * Most sectors a ring may have for trails `trailLength` radians long: sectors

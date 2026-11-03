@@ -14,7 +14,6 @@ import {
   NOISE_PERIOD,
   NOISE_SEEDS,
   NOISE_SIZE,
-  POSITION_OPTIONS,
   REGION_SOFT,
   regionMask,
   softnessWidth,
@@ -24,6 +23,7 @@ import {
 } from "./dapple-sim";
 import { smoothstep } from "./math";
 import { buildPeriodicNoiseTexture, createNoise } from "./noise";
+import { POSITION_OPTIONS } from "./dapple.meta";
 
 const noise = createNoise(35);
 

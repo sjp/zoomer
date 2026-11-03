@@ -10,7 +10,7 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import {
   BASE_RGB,
   buildStars,
@@ -39,7 +39,6 @@ import {
   OCT,
   OFFSET_FLOATS,
   offsetsAt,
-  PALETTE_OPTIONS,
   paletteColor,
   PATCH_LO,
   PATCH_SPAN,
@@ -50,6 +49,7 @@ import {
   WARP_FREQ,
 } from "./nebula-sim";
 import { createSpriteBatch, polygonStrip } from "./sprites";
+import { nebulaMeta } from "./nebula.meta";
 import { defineEffect } from "./types";
 
 /** Low-res divisors: the gas has no fine detail, so balanced renders at 1/16 of the pixels. */
@@ -196,25 +196,7 @@ const CROSS: readonly number[] = [
  * carved by darker dust lanes, over a fixed starfield. The gas evolves (the warp
  * moves, not the clouds) and the whole field turns about a degree a minute.
  */
-export const nebula = defineEffect({
-  id: "nebula",
-  name: "Nebula",
-  description:
-    "Glowing clouds of interstellar gas with dark dust lanes and a still starfield, slowly swirling.",
-  params: {
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "orion" },
-    color1: { kind: "color", label: "Colour 1", default: "#29c4b4" },
-    color2: { kind: "color", label: "Colour 2", default: "#d6409f" },
-    color3: { kind: "color", label: "Colour 3", default: "#f0b440" },
-    density: { kind: "number", label: "Gas density", min: 0, max: 1, step: 0.01, default: 0.55 },
-    dust: { kind: "number", label: "Dust lanes", min: 0, max: 1, step: 0.01, default: 0.6 },
-    stars: { kind: "number", label: "Stars", min: 0, max: 1, step: 0.01, default: 0.5 },
-    spikes: { kind: "boolean", label: "Diffraction spikes", default: true },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-    seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 1 },
-  },
-  context: "webgl2",
+export const nebula = defineEffect(nebulaMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half floats keep the dark gradients smooth until the dithered blit.

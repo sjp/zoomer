@@ -22,8 +22,6 @@ import {
   layerDepth,
   localDayPhase,
   lunarPhase,
-  MAX_LAYERS,
-  MIN_LAYERS,
   moonTerminator,
   nightAmount,
   placeTrees,
@@ -34,6 +32,7 @@ import {
 import { clamp, smoothstep, wrap } from "./math";
 import { createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "./sprites";
+import { horizonMeta, MAX_LAYERS, MIN_LAYERS } from "./horizon.meta";
 import { defineEffect } from "./types";
 
 /** Height of the sun and moon arcs above the horizon at their peak, as a fraction of the height. */
@@ -312,66 +311,7 @@ void main() {
  * A stylised landscape of silhouetted hill layers under a sky that follows the
  * time of day, from dawn through day and sunset to a starry night with a moon.
  */
-export const horizon = defineEffect({
-  id: "horizon",
-  name: "Day–Night Horizon",
-  description:
-    "Layered hills under a sky that follows the time of day: dawn, day, sunset, dusk and a starry, moonlit night.",
-  params: {
-    time: {
-      kind: "select",
-      label: "Time",
-      options: [
-        { value: "local", label: "Local clock" },
-        { value: "cycle", label: "Cycle" },
-        { value: "fixed", label: "Fixed" },
-      ],
-      default: "local",
-    },
-    cycleMins: {
-      kind: "number",
-      label: "Minutes per day (cycle)",
-      min: 2,
-      max: 60,
-      step: 1,
-      default: 10,
-    },
-    hour: { kind: "number", label: "Hour (fixed)", min: 0, max: 24, step: 0.25, default: 18 },
-    palette: {
-      kind: "select",
-      label: "Landscape",
-      options: [
-        { value: "meadow", label: "Meadow" },
-        { value: "desert", label: "Desert" },
-        { value: "mountains", label: "Mountains" },
-        { value: "coast", label: "Coast" },
-      ],
-      default: "meadow",
-    },
-    layers: {
-      kind: "number",
-      label: "Hill layers",
-      min: MIN_LAYERS,
-      max: MAX_LAYERS,
-      step: 1,
-      default: 4,
-    },
-    clouds: { kind: "number", label: "Clouds", min: 0, max: 1, step: 0.05, default: 0.3 },
-    stars: { kind: "boolean", label: "Stars", default: true },
-    moon: {
-      kind: "select",
-      label: "Moon",
-      options: [
-        { value: "real", label: "Today's phase" },
-        { value: "full", label: "Full" },
-        { value: "off", label: "Off" },
-      ],
-      default: "real",
-    },
-    trees: { kind: "boolean", label: "Trees", default: true },
-    seed: { kind: "number", label: "Hill shapes", min: 0, max: 999, step: 1, default: 7 },
-  },
-  context: "webgl2",
+export const horizon = defineEffect(horizonMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = (vs: string, fs: string) =>

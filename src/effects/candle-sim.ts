@@ -8,8 +8,8 @@
  */
 import { clamp, smoothstep } from "./math";
 import { createRng, type Noise } from "./noise";
+import { LAYOUT_OPTIONS, MAX_CANDLES } from "./candlelight.meta";
 
-export const MAX_CANDLES = 7;
 export const REF_HEIGHT = 1080;
 /** Where the table top meets the wall, reference px from the bottom. */
 export const SURFACE_Y = 240;
@@ -43,13 +43,6 @@ export const FLAME_W = 7.5;
 export const FLAME_L = 36;
 /** The flame's light sits this fraction of the way up the flame. */
 export const FLAME_CENTRE = 0.4;
-
-export const LAYOUT_OPTIONS = [
-  { value: "left", label: "Left" },
-  { value: "right", label: "Right" },
-  { value: "both", label: "Both sides" },
-  { value: "row", label: "Row" },
-] as const;
 
 /** Candle positions and sizes, `count` used of `MAX_CANDLES` slots. */
 export interface CandleLayout {

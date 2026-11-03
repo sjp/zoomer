@@ -141,13 +141,9 @@ export function defineEffect<S extends ParamSchema>(
   meta: EffectMetaWebGL2<S>,
   impl: Pick<EffectWebGL2<S>, "create">,
 ): EffectWebGL2<S>;
-/** Single-object form, until every effect has a `.meta.ts`. */
-export function defineEffect<const S extends ParamSchema>(def: Effect2D<S>): Effect2D<S>;
-/** Single-object form, until every effect has a `.meta.ts`. */
-export function defineEffect<const S extends ParamSchema>(def: EffectWebGL2<S>): EffectWebGL2<S>;
 export function defineEffect<S extends ParamSchema>(
-  meta: EffectMeta<S> | EffectDefinition<S>,
-  impl?: { create: EffectDefinition<S>["create"] },
+  meta: EffectMeta<S>,
+  impl: { create: EffectDefinition<S>["create"] },
 ) {
-  return impl ? { ...meta, create: impl.create } : meta;
+  return { ...meta, create: impl.create };
 }

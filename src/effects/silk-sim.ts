@@ -13,6 +13,7 @@
  * J = I + dW/dp.
  */
 import { wrap } from "./math";
+import { MIN_FOLDS, MAX_FOLDS } from "./silk.meta";
 
 const TAU = Math.PI * 2;
 
@@ -27,10 +28,6 @@ export const WAVE_FLOATS = 4;
 
 /** Folds are counted across a 16:9 frame whatever the canvas shape, so the cloth doesn't rescale with aspect. */
 export const REF_ASPECT = 16 / 9;
-export const MIN_FOLDS = 3;
-export const MAX_FOLDS = 12;
-/** Top of the breeze slider: the fastest wave then still takes a few seconds per cycle. */
-export const MAX_BREEZE = 2;
 
 /**
  * The warp's amplitude as a fraction of the base wavelength: enough to bend the

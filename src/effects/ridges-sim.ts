@@ -9,9 +9,8 @@
 import { hexToUnitRgb, type Rgb } from "./color";
 import { clamp, wrap } from "./math";
 import { createNoise, MAX_PERIOD, type Noise } from "./noise";
+import { MIN_LAYERS, MAX_LAYERS } from "./ridges.meta";
 
-export const MIN_LAYERS = 4;
-export const MAX_LAYERS = 7;
 /**
  * Width of one period of the ridge table, in height units: wider than any
  * common screen (16:9 is 1.78), so the pan can wrap without a visible repeat.
@@ -80,13 +79,6 @@ export const PALETTES = {
 } as const satisfies Record<string, RidgePalette>;
 
 export type PaletteId = keyof typeof PALETTES;
-
-export const PALETTE_OPTIONS = [
-  { value: "ink", label: "Ink wash" },
-  { value: "blue", label: "Blue hour" },
-  { value: "jade", label: "Jade" },
-  { value: "dawn", label: "Dawn" },
-] as const satisfies readonly { value: PaletteId; label: string }[];
 
 /** The palette for a select value; unknown values fall back to ink wash. */
 export function paletteFor(id: string): RidgePalette {

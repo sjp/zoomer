@@ -2,18 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildScene,
   fillLayerColors,
-  MAX_LAYERS,
   MAX_SHAPES,
   MAX_STACK,
-  MIN_LAYERS,
   MOTION_AMP,
   NONE,
-  PALETTE_IDS,
   parallaxOffset,
   pineHalfWidth,
   placeShape,
   resolvePalette,
-  SCENE_IDS,
   SCENE_PALETTES,
   sampleRow,
   sceneId,
@@ -25,6 +21,7 @@ import {
   TABLE_ROWS,
   yAt,
 } from "./papercut-sim";
+import { MAX_LAYERS, MIN_LAYERS, PALETTE_IDS, SCENE_IDS } from "./papercut.meta";
 
 const newTable = () => new Float32Array(TABLE_ROWS * TABLE_COLUMNS * TABLE_CHANNELS);
 const at = (table: Float32Array, row: number, col: number, ch: number) =>

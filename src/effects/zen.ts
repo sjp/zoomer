@@ -29,18 +29,16 @@ import {
 import { createChangeKey } from "./change-key";
 import { clamp, fract } from "./math";
 import { buildPeriodicNoiseTexture, createNoise } from "./noise";
+import { zenMeta, SPACING_MIN, MAX_STONES, SPACING_MAX } from "./zen.meta";
 import { defineEffect } from "./types";
 import {
   BOX_N,
   createRerake,
   fillStoneLayout,
   GAP,
-  MAX_STONES,
   placeStones,
   RERAKE_BAND,
   RING_STEEP,
-  SPACING_MAX,
-  SPACING_MIN,
   STONE_FLOATS,
   stepRerake,
   sweepX,
@@ -257,28 +255,7 @@ void main() {
  * gradient; one grain fetch, plus two canopy fetches in the shadow region and one
  * moss fetch near stones.
  */
-export const zen = defineEffect({
-  id: "zen",
-  name: "Zen garden",
-  description:
-    "A raked gravel garden from above: rake lines ringing mossy stones, soft leaf shadows, and a slow rake now and then. Low power.",
-  params: {
-    gravel: { kind: "color", label: "Gravel colour", default: "#d6d0c2" },
-    stones: { kind: "number", label: "Stones", min: 0, max: MAX_STONES, step: 1, default: 3 },
-    spacing: {
-      kind: "number",
-      label: "Line spacing",
-      min: SPACING_MIN,
-      max: SPACING_MAX,
-      step: 1,
-      default: 16,
-    },
-    waviness: { kind: "number", label: "Waviness", min: 0, max: 1, step: 0.01, default: 0.4 },
-    shadows: { kind: "number", label: "Leaf shadows", min: 0, max: 1, step: 0.01, default: 0.5 },
-    rerake: { kind: "boolean", label: "Rerake now and then", default: true },
-    seed: { kind: "number", label: "Layout", min: 1, max: 100, step: 1, default: 1 },
-  },
-  context: "webgl2",
+export const zen = defineEffect(zenMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

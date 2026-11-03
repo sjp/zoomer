@@ -15,6 +15,7 @@
  */
 import { clamp, smoothstep, wrap } from "./math";
 import { type StepClock, takeSteps } from "./reaction-sim";
+import type { SOURCE_OPTIONS } from "./smoke.meta";
 
 /** Simulation steps per second, and the fixed step length. */
 export const SIM_RATE = 60;
@@ -178,7 +179,6 @@ export function wispFactor(x: number, k: number, phase: number, amount: number):
 }
 
 export interface SourcePreset {
-  label: string;
   /**
    * Emitters as (x offset from `sourceX` in height units, pointing away from the
    * canvas centre; tip height). One or two.
@@ -198,9 +198,10 @@ export interface SourcePreset {
   prop: "sticks" | "cup";
 }
 
+export type SourceId = (typeof SOURCE_OPTIONS)[number]["value"];
+
 export const SOURCES = {
   incense: {
-    label: "Incense",
     emitters: [[0, 0.36]],
     halfWidth: 0,
     radius: 0.0035,
@@ -210,7 +211,6 @@ export const SOURCES = {
     prop: "sticks",
   },
   two: {
-    label: "Two sticks",
     emitters: [
       [0, 0.36],
       [0.045, 0.31],
@@ -223,7 +223,6 @@ export const SOURCES = {
     prop: "sticks",
   },
   tea: {
-    label: "Tea steam",
     emitters: [[0, 0.215]],
     halfWidth: 0.04,
     radius: 0.006,
@@ -232,14 +231,7 @@ export const SOURCES = {
     wisp: 0.85,
     prop: "cup",
   },
-} as const satisfies Record<string, SourcePreset>;
-
-export type SourceId = keyof typeof SOURCES;
-
-export const SOURCE_OPTIONS = Object.entries(SOURCES).map(([value, s]) => ({
-  value,
-  label: s.label,
-}));
+} as const satisfies Record<SourceId, SourcePreset>;
 
 /** The preset for a select value; unknown values fall back to incense. */
 export function sourceFor(id: string): SourcePreset {

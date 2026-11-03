@@ -4,7 +4,6 @@ import {
   DRAIN_TOP,
   filmMode,
   MAX_THICKNESS,
-  MODE_OPTIONS,
   TABLE_SIZE,
   type FilmMode,
 } from "./film-sim";
@@ -20,9 +19,10 @@ import {
   updateDataTexture,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { clamp, wrap } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
+import { filmMeta } from "./film.meta";
 import { defineEffect } from "./types";
 
 /** Noise texture side in texels. RG: a vector octave (period 4); B, A: scalar octaves (periods 4, 8). */
@@ -145,29 +145,7 @@ vec4 composite(vec2 uv) {
  * the upscaling blit turns thickness into colour with one fetch of a lookup table
  * built in JS from the real interference optics (see `film-sim.ts`).
  */
-export const film = defineEffect({
-  id: "film",
-  name: "Iridescent Film",
-  description: "Slow interference colours of a soap film, oil slick or pearl. Very low power.",
-  params: {
-    mode: { kind: "select", label: "Mode", options: MODE_OPTIONS, default: "soap" },
-    thickness: {
-      kind: "number",
-      label: "Thickness (nm)",
-      min: 200,
-      max: 900,
-      step: 10,
-      default: 420,
-    },
-    range: { kind: "number", label: "Range (nm)", min: 40, max: 450, step: 10, default: 200 },
-    swirl: { kind: "number", label: "Swirl", min: 0, max: 3, step: 0.05, default: 1 },
-    saturation: { kind: "number", label: "Saturation", min: 0, max: 1, step: 0.01, default: 0.85 },
-    background: { kind: "color", label: "Background", default: "#07080c" },
-    pearlBackground: { kind: "color", label: "Background (pearl)", default: "#e6e1e8" },
-    highlight: { kind: "boolean", label: "Window highlight", default: true },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const film = defineEffect(filmMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, THICKNESS_FRAGMENT), (p) =>

@@ -65,12 +65,6 @@ export const PALETTES = {
 
 export type PaletteId = keyof typeof PALETTES;
 
-export const PALETTE_OPTIONS = [
-  { value: "wood", label: "Wood fire" },
-  { value: "gas", label: "Gas (blue)" },
-  { value: "magic", label: "Magic (green/purple)" },
-] as const;
-
 /** Looks up a palette by select value; unknown values fall back to wood. */
 export function getPalette(id: string): FirePalette {
   return id === "gas" || id === "magic" ? PALETTES[id] : PALETTES.wood;

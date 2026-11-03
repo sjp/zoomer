@@ -14,24 +14,21 @@ import {
   BREAK,
   buildShapeTable,
   createWaveScheduler,
-  LAYOUT_OPTIONS,
   layoutAxes,
-  MAX_WAVE_TIME,
   MAX_WAVES,
-  MIN_WAVE_TIME,
   packWaves,
   SHAPE_COLUMNS,
   SHAPE_SPAN,
   SHORE_WEIGHTS,
   T_DRAIN,
   T_DRY,
-  WATER_OPTIONS,
   WAVE_FLOATS,
   waterPalette,
 } from "./beach-sim";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { buildPeriodicNoiseTexture, HASH32_GLSL } from "./noise";
 import { fract } from "./math";
+import { beachMeta } from "./beach.meta";
 import { defineEffect } from "./types";
 
 /** Side of the RGBA8 noise texture: foam (R, G) and caustic (B, A) channels. */
@@ -212,27 +209,7 @@ vec4 composite(vec2 uv) {
  * analytic front (no simulation texture); one low-res pass shades water, sand and
  * foam density, and the blit thresholds the foam against full-res noise.
  */
-export const beach = defineEffect({
-  id: "beach",
-  name: "Beach from Above",
-  description: "A drone's-eye view of gentle waves washing up a sandy beach and draining back.",
-  params: {
-    layout: { kind: "select", label: "Layout", options: LAYOUT_OPTIONS, default: "diagonal" },
-    waveTime: {
-      kind: "number",
-      label: "Seconds between waves",
-      min: MIN_WAVE_TIME,
-      max: MAX_WAVE_TIME,
-      step: 0.5,
-      default: 9,
-    },
-    reach: { kind: "number", label: "Wave reach", min: 0.04, max: 0.25, step: 0.01, default: 0.12 },
-    foam: { kind: "number", label: "Foam", min: 0, max: 1, step: 0.01, default: 0.75 },
-    water: { kind: "select", label: "Water", options: WATER_OPTIONS, default: "tropical" },
-    sand: { kind: "color", label: "Sand colour", default: "#e4cc9e" },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const beach = defineEffect(beachMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));

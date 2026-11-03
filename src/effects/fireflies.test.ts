@@ -8,10 +8,10 @@ import {
   beamMembership,
   blink,
   layoutBeams,
-  MAX_BEAMS,
   writeBeamInstance,
 } from "./fireflies";
 import { createRng } from "./noise";
+import { MAX_BEAMS } from "./fireflies.meta";
 
 const beam = (over: Partial<Beam> = {}): Beam => ({
   x0: 500,

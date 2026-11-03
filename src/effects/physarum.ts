@@ -16,7 +16,6 @@ import {
 import { HASH32_GLSL } from "./noise";
 import {
   AGENT_FLOATS,
-  AGENT_OPTIONS,
   agentCount,
   BASE_CELL,
   buildPaletteLut,
@@ -31,7 +30,6 @@ import {
   JITTER,
   LUT_SIZE,
   MAX_STEPS,
-  PALETTE_OPTIONS,
   SENSOR_ANGLE,
   SENSOR_DISTANCE,
   seedAgents,
@@ -42,6 +40,7 @@ import {
   TRAIL_MAX,
   TURN_ANGLE,
 } from "./physarum-sim";
+import { physarumMeta } from "./physarum.meta";
 import { defineEffect } from "./types";
 
 /** Offset of the four glow taps from the centre tap, in trail cells (diagonally). */
@@ -245,21 +244,7 @@ function createFeedbackProgram(
  * lookup with a glow. A resize, scale change or agent-tier change reseeds the
  * network rather than resampling it.
  */
-export const physarum = defineEffect({
-  id: "physarum",
-  name: "Slime Mould",
-  description:
-    "Glowing vein networks grow, branch and slowly re-route, like a slime mould foraging.",
-  params: {
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "gold" },
-    agents: { kind: "select", label: "Agents", options: AGENT_OPTIONS, default: "medium" },
-    scale: { kind: "number", label: "Network scale", min: 0.75, max: 2, step: 0.05, default: 1.25 },
-    speed: { kind: "number", label: "Agent speed", min: 0.1, max: 1.5, step: 0.05, default: 0.5 },
-    decay: { kind: "number", label: "Trail decay", min: 0.08, max: 0.3, step: 0.01, default: 0.15 },
-    food: { kind: "boolean", label: "Drifting food sources", default: true },
-    calmCentre: { kind: "boolean", label: "Calm centre", default: true },
-  },
-  context: "webgl2",
+export const physarum = defineEffect(physarumMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float trail if it's renderable (and so blendable) here, else R8.

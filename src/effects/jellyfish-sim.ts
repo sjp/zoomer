@@ -9,8 +9,8 @@ import { hexToUnitRgb, type Rgb } from "./color";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { clamp, wrap } from "./math";
 import { createNoise } from "./noise";
+import { MAX_JELLIES } from "./jellyfish.meta";
 
-export const MAX_JELLIES = 20;
 export const MAX_TENTACLES = 8;
 export const MAX_ARMS = 4;
 export const CHAINS_PER_JELLY = MAX_TENTACLES + MAX_ARMS;

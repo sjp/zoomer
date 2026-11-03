@@ -10,7 +10,6 @@ import {
   updateDataTexture,
   withScope,
 } from "./gl";
-import { QUALITY_OPTIONS } from "./lowres";
 import { HASH32_GLSL } from "./noise";
 import {
   advancePhase,
@@ -22,7 +21,6 @@ import {
   CLOUD_SOFT,
   CLOUD_W,
   cloudShaping,
-  FRAMING_OPTIONS,
   mulMat3,
   planetLayout,
   sunDirection,
@@ -30,9 +28,9 @@ import {
   SURFACE_H,
   SURFACE_W,
   TURN_SECONDS,
-  WORLD_OPTIONS,
   worldStyle,
 } from "./planet-sim";
+import { planetMeta } from "./planet.meta";
 import { defineEffect } from "./types";
 
 const f = glslFloat;
@@ -166,30 +164,7 @@ void main() {
  * thin atmosphere glowing at the limb, and stars beyond. The surface and clouds
  * are equirectangular textures built on the CPU when the world or seed changes.
  */
-export const planet = defineEffect({
-  id: "planet",
-  name: "Planet from orbit",
-  description:
-    "A planet filling a corner or edge of the frame, or whole, turning at an adjustable speed, with day and night sides, clouds, city lights and a glowing atmosphere.",
-  params: {
-    world: { kind: "select", label: "World", options: WORLD_OPTIONS, default: "earth" },
-    framing: { kind: "select", label: "Framing", options: FRAMING_OPTIONS, default: "bottomLeft" },
-    size: { kind: "number", label: "Size", min: 0.4, max: 2, step: 0.01, default: 1 },
-    rotation: {
-      kind: "number",
-      label: "Rotation speed",
-      min: -20,
-      max: 20,
-      step: 0.1,
-      default: 1,
-    },
-    sunAngle: { kind: "number", label: "Sun angle", min: 0, max: 180, step: 1, default: 60 },
-    clouds: { kind: "number", label: "Clouds", min: 0, max: 1, step: 0.01, default: 0.5 },
-    cities: { kind: "number", label: "City lights", min: 0, max: 1, step: 0.01, default: 0.7 },
-    seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 1 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const planet = defineEffect(planetMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

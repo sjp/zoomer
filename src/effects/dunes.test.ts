@@ -8,9 +8,6 @@ import {
   HORIZON,
   horizonAngles,
   LAYOUT_FLOATS,
-  MAX_CREST_SOFTNESS,
-  MAX_RIDGES,
-  MIN_RIDGES,
   ridgeShape,
   startPhase,
   SUN_AZIMUTH_HIGH,
@@ -22,6 +19,7 @@ import {
   TABLE_CHANNELS,
   TABLE_COLUMNS,
 } from "./dunes-sim";
+import { MAX_RIDGES, MIN_RIDGES, MAX_CREST_SOFTNESS } from "./dunes.meta";
 
 const tableSize = TABLE_COLUMNS * MAX_RIDGES * TABLE_CHANNELS;
 const buildTable = (count: number, aspect: number, seed: number) => {

@@ -28,7 +28,6 @@ import {
   LAP_EDGE,
   makeSpots,
   pack16,
-  PATTERN_OPTIONS,
   type Preset,
   PRESETS,
   presetFor,
@@ -39,6 +38,7 @@ import {
   takeSteps,
   unpack16,
 } from "./reaction-sim";
+import { PATTERN_OPTIONS } from "./reaction.meta";
 
 const presets = Object.entries(PRESETS) as [string, Preset][];
 

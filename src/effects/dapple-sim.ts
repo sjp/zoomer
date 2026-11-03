@@ -148,14 +148,6 @@ export const REGIONS = {
 } as const;
 export type Region = keyof typeof REGIONS;
 
-export const POSITION_OPTIONS = [
-  { value: "topRight", label: "Top right" },
-  { value: "topLeft", label: "Top left" },
-  { value: "right", label: "Right" },
-  { value: "left", label: "Left" },
-  { value: "full", label: "Full" },
-] as const;
-
 /** Half-width of the region's soft edge in reference px. */
 export const REGION_SOFT = 150;
 

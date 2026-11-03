@@ -8,13 +8,11 @@ import {
   FLAME_W,
   flameAt,
   flameBaseY,
-  LAYOUT_OPTIONS,
   layoutCandles,
   LIGHT_R,
   LIGHT_TINT,
   lightGain,
   lightY,
-  MAX_CANDLES,
   SURF_GAIN,
   SURF_SQUASH,
   SURFACE_Y,
@@ -34,6 +32,7 @@ import { createLowResTarget } from "./lowres";
 import { approach } from "./math";
 import { createNoise } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
+import { candlelightMeta, MAX_CANDLES } from "./candlelight.meta";
 import { defineEffect } from "./types";
 
 /** Low-res lighting pass: about 2 reference px per texel (divisor 4 at 4K). */
@@ -272,21 +271,7 @@ void main() {
  * swaying teardrop flames, wax glowing near the top, and warm light pooling on
  * the wall and table, with soft reflections.
  */
-export const candlelight = defineEffect({
-  id: "candlelight",
-  name: "Candlelight",
-  description: "A few candles in a dark room, their flames swaying gently and warm light pooling.",
-  params: {
-    candles: { kind: "number", label: "Candles", min: 1, max: MAX_CANDLES, step: 1, default: 5 },
-    layout: { kind: "select", label: "Layout", options: LAYOUT_OPTIONS, default: "both" },
-    waxColor: { kind: "color", label: "Wax colour", default: "#f2e4c8" },
-    wallColor: { kind: "color", label: "Wall colour", default: "#3a2a22" },
-    flicker: { kind: "number", label: "Flicker", min: 0, max: 1, step: 0.01, default: 0.5 },
-    draft: { kind: "number", label: "Draft", min: 0, max: 1, step: 0.01, default: 0.3 },
-    glow: { kind: "number", label: "Glow", min: 0, max: 1, step: 0.01, default: 0.6 },
-    reflection: { kind: "boolean", label: "Reflections", default: true },
-  },
-  context: "webgl2",
+export const candlelight = defineEffect(candlelightMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));

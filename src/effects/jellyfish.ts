@@ -15,7 +15,6 @@ import {
   CHAINS_PER_JELLY,
   createSwarm,
   DOME_H,
-  MAX_JELLIES,
   paletteFor,
   QUAD_BOTTOM,
   RIM_E,
@@ -27,9 +26,9 @@ import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { wrap } from "./math";
 import { createNoise, createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, SPRITE_SPIN_GLSL } from "./sprites";
+import { jellyfishMeta, MAX_JELLIES, MAX_SNOW } from "./jellyfish.meta";
 import { defineEffect } from "./types";
 
-const MAX_SNOW = 200;
 const SHAFTS = 3;
 /** Shaft colour times strength; pale aquarium light from above. */
 const SHAFT_COLOR: Rgb = [0.05, 0.085, 0.11];
@@ -174,46 +173,7 @@ void main() {
  * additive over a gradient: one instanced draw for the bells, one strip for every
  * tentacle, one for the motes.
  */
-export const jellyfish = defineEffect({
-  id: "jellyfish",
-  name: "Jellyfish",
-  description:
-    "Translucent jellyfish pulsing slowly through deep blue water, trailing soft tentacles.",
-  params: {
-    count: { kind: "number", label: "Jellyfish", min: 1, max: MAX_JELLIES, step: 1, default: 7 },
-    size: { kind: "number", label: "Size", min: 20, max: 140, step: 1, default: 60 },
-    palette: {
-      kind: "select",
-      label: "Palette",
-      options: [
-        { value: "moon", label: "Moon" },
-        { value: "violet", label: "Violet" },
-        { value: "sunset", label: "Sunset" },
-        { value: "mixed", label: "Mixed" },
-      ],
-      default: "mixed",
-    },
-    pulse: { kind: "number", label: "Pulse rate", min: 0.25, max: 2.5, step: 0.05, default: 1 },
-    tentacles: {
-      kind: "number",
-      label: "Tentacle length",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.7,
-    },
-    glow: { kind: "number", label: "Glow", min: 0, max: 1, step: 0.01, default: 0.5 },
-    particles: {
-      kind: "number",
-      label: "Marine snow",
-      min: 0,
-      max: MAX_SNOW,
-      step: 1,
-      default: 80,
-    },
-    water: { kind: "color", label: "Water colour", default: "#0a2c52" },
-  },
-  context: "webgl2",
+export const jellyfish = defineEffect(jellyfishMeta, {
   create(gl) {
     return withScope((scope) => {
       const bellBatch = scope.own(

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   AGENT_FLOATS,
-  AGENT_OPTIONS,
   AGENT_TIERS,
   agentCount,
   buildPaletteLut,
@@ -14,7 +13,6 @@ import {
   MAX_GRID,
   MAX_STEPS,
   MEAN_TRAIL,
-  PALETTE_OPTIONS,
   PALETTES,
   physarumStep,
   seedAgents,
@@ -28,6 +26,7 @@ import {
   TURN_ANGLE,
   JITTER,
 } from "./physarum-sim";
+import { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
 
 const W = 48;
 const H = 27;

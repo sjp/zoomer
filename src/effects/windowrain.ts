@@ -12,9 +12,10 @@ import {
   TO_CLIP_GLSL,
   withScope,
 } from "./gl";
-import { createLowResTarget, lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, lowResSize, qualityDivisor } from "./lowres";
 import { createRng, hash32, HASH32_GLSL } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
+import { windowRainMeta, MAX_LIGHTS } from "./windowrain.meta";
 import { defineEffect } from "./types";
 import {
   createRainSim,
@@ -30,7 +31,6 @@ import { wrap } from "./math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
-const MAX_LIGHTS = 150;
 /** Background divisors: the background is heavily defocused, so it can be very low-res. */
 const BG_DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
 /** The background only drifts, so it is re-rendered at this rate (Hz). */
@@ -249,29 +249,7 @@ vec4 composite(vec2 uv) {
  * (3) with fog, a tiny R8 ping-pong refog step plus runner wipes (MIN blend);
  * (4) the full-res composite as the low-res target's blit.
  */
-export const windowRain = defineEffect({
-  id: "windowrain",
-  name: "Rain on a Window",
-  description: "Raindrops run down a night window in front of blurred city lights.",
-  params: {
-    rain: { kind: "number", label: "Rain", min: 0, max: 1, step: 0.01, default: 0.5 },
-    speed: { kind: "number", label: "Runner speed", min: 0, max: 3, step: 0.05, default: 1 },
-    lights: {
-      kind: "number",
-      label: "Background lights",
-      min: 0,
-      max: MAX_LIGHTS,
-      step: 1,
-      default: 60,
-    },
-    blur: { kind: "number", label: "Background blur", min: 0, max: 1, step: 0.01, default: 0.6 },
-    lightColor1: { kind: "color", label: "Light colour 1", default: "#ffb05c" },
-    lightColor2: { kind: "color", label: "Light colour 2", default: "#5cb8ff" },
-    background: { kind: "color", label: "Background", default: "#0b1020" },
-    fog: { kind: "boolean", label: "Fogged glass", default: false },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const windowRain = defineEffect(windowRainMeta, {
   create(gl) {
     return withScope((scope) => {
       const rng = createRng(Math.random() * 0xffffffff);

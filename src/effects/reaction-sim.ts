@@ -10,6 +10,7 @@
  */
 import { createRng } from "./noise";
 import { wrap } from "./math";
+import type { PATTERN_OPTIONS } from "./reaction.meta";
 
 /** Diffusion rates of A and B, and the time step per simulation step (Karl Sims' units). */
 export const DA = 1;
@@ -24,7 +25,6 @@ export const LAP_EDGE = 0.2;
 export const LAP_CORNER = 0.05;
 
 export interface Preset {
-  label: string;
   /** Feed rate F and kill rate k at the centre of the drift path. */
   feed: number;
   kill: number;
@@ -33,21 +33,16 @@ export interface Preset {
   driftKill: number;
 }
 
+export type PatternId = (typeof PATTERN_OPTIONS)[number]["value"];
+
 /** Pattern families, as (F, k) pairs for DA = 1, DB = 0.5 and the stencil above. */
 export const PRESETS = {
-  coral: { label: "Coral", feed: 0.0545, kill: 0.062, driftFeed: 0.003, driftKill: 0.0006 },
-  spots: { label: "Spots", feed: 0.035, kill: 0.065, driftFeed: 0.001, driftKill: 0.0006 },
-  stripes: { label: "Stripes", feed: 0.037, kill: 0.06, driftFeed: 0.002, driftKill: 0.0008 },
-  labyrinth: { label: "Labyrinth", feed: 0.03, kill: 0.057, driftFeed: 0.0012, driftKill: 0.0008 },
-  mitosis: { label: "Mitosis", feed: 0.0367, kill: 0.0649, driftFeed: 0.0015, driftKill: 0.0004 },
-} as const satisfies Record<string, Preset>;
-
-export type PatternId = keyof typeof PRESETS;
-
-export const PATTERN_OPTIONS = Object.entries(PRESETS).map(([value, p]) => ({
-  value,
-  label: p.label,
-}));
+  coral: { feed: 0.0545, kill: 0.062, driftFeed: 0.003, driftKill: 0.0006 },
+  spots: { feed: 0.035, kill: 0.065, driftFeed: 0.001, driftKill: 0.0006 },
+  stripes: { feed: 0.037, kill: 0.06, driftFeed: 0.002, driftKill: 0.0008 },
+  labyrinth: { feed: 0.03, kill: 0.057, driftFeed: 0.0012, driftKill: 0.0008 },
+  mitosis: { feed: 0.0367, kill: 0.0649, driftFeed: 0.0015, driftKill: 0.0004 },
+} as const satisfies Record<PatternId, Preset>;
 
 /** The preset for a select value; unknown values fall back to coral. */
 export function presetFor(id: string): Preset {

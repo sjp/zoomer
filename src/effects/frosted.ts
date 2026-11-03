@@ -4,11 +4,8 @@ import {
   blurWidth,
   buildGrainTexture,
   FLUTE_SQUASH,
-  GLASS_OPTIONS,
   glassPreset,
   GRAIN_SIZE,
-  MAX_SHAPES,
-  PALETTE_OPTIONS,
   shapeColor,
   writeShapeUniforms,
   type GlassPreset,
@@ -23,8 +20,9 @@ import {
   glslFloat,
   withScope,
 } from "./gl";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { smoothstep } from "./math";
+import { frostedMeta, MAX_SHAPES } from "./frosted.meta";
 import { defineEffect } from "./types";
 
 /** Gamma used to mix in (approximately) linear light; the shader re-encodes with 1/GAMMA. */
@@ -137,32 +135,7 @@ vec4 composite(vec2 uv) {
  * texture, a soft diagonal sheen, and for reeded glass a per-flute lens offset of
  * the single shapes fetch plus a thin edge highlight.
  */
-export const frosted = defineEffect({
-  id: "frosted",
-  name: "Frosted Glass",
-  description: "Soft colour shapes drifting behind frosted or reeded glass. Very low power.",
-  params: {
-    glass: { kind: "select", label: "Glass", options: GLASS_OPTIONS, default: "frosted" },
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "dusk" },
-    color1: { kind: "color", label: "Colour 1 (custom)", default: "#ff5e7a" },
-    color2: { kind: "color", label: "Colour 2 (custom)", default: "#7b4dff" },
-    color3: { kind: "color", label: "Colour 3 (custom)", default: "#ffb347" },
-    background: { kind: "color", label: "Background", default: "#120e24" },
-    shapes: { kind: "number", label: "Shapes", min: 2, max: MAX_SHAPES, step: 1, default: 4 },
-    blur: { kind: "number", label: "Blur", min: 0, max: 1, step: 0.01, default: 0.55 },
-    fluteWidth: {
-      kind: "number",
-      label: "Flute width (reeded)",
-      min: 30,
-      max: 60,
-      step: 1,
-      default: 42,
-    },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    frost: { kind: "number", label: "Frost", min: 0, max: 1, step: 0.01, default: 0.5 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const frosted = defineEffect(frostedMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SHAPE_FRAGMENT), (p) =>

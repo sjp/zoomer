@@ -9,12 +9,12 @@ import {
 import { createRng } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "./streaks";
+import { constellationMeta, MAX_POINTS } from "./constellation.meta";
 import { defineEffect } from "./types";
 import { wrap } from "./math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
-const MAX_POINTS = 400;
 /** Most links drawn per frame; beyond this, the rest are dropped. */
 export const LINK_CAP = 8192;
 /** Reference drift speed in px/s at 1080p for a speed of 1. */
@@ -297,39 +297,7 @@ void main() {
  * "Plexus" network: dots drift slowly and hairlines join every pair closer than the
  * link distance, fading as `(1 - d/maxDist)²` so links appear and vanish smoothly.
  */
-export const constellation = defineEffect({
-  id: "constellation",
-  name: "Constellation Network",
-  description:
-    "Slowly drifting points joined by fine lines that fade in and out with distance, the classic plexus tech background.",
-  params: {
-    count: { kind: "number", label: "Points", min: 50, max: MAX_POINTS, step: 1, default: 140 },
-    linkDistance: {
-      kind: "number",
-      label: "Link distance (fraction of height)",
-      min: 0.05,
-      max: 0.3,
-      step: 0.005,
-      default: 0.17,
-    },
-    speed: { kind: "number", label: "Drift speed", min: 0, max: 4, step: 0.05, default: 0.8 },
-    depth: { kind: "number", label: "Depth", min: 0, max: 1, step: 0.01, default: 0.6 },
-    pointSize: { kind: "number", label: "Point size", min: 0.5, max: 6, step: 0.1, default: 2.2 },
-    lineWidth: { kind: "number", label: "Line width", min: 0.25, max: 3, step: 0.05, default: 1 },
-    lineOpacity: {
-      kind: "number",
-      label: "Line opacity",
-      min: 0.05,
-      max: 1,
-      step: 0.01,
-      default: 0.6,
-    },
-    pointColor: { kind: "color", label: "Point colour", default: "#d6ecff" },
-    lineColor: { kind: "color", label: "Line colour", default: "#5aa9ff" },
-    backgroundTop: { kind: "color", label: "Background top colour", default: "#040814" },
-    backgroundBottom: { kind: "color", label: "Background bottom colour", default: "#0b1a33" },
-  },
-  context: "webgl2",
+export const constellation = defineEffect(constellationMeta, {
   create(gl) {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));

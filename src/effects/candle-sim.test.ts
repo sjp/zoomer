@@ -8,17 +8,16 @@ import {
   FLAME_L,
   flameAt,
   flameBaseY,
-  LAYOUT_OPTIONS,
   layoutCandles,
   LIGHT_TINT,
   lightAt,
   lightGain,
-  MAX_CANDLES,
   REF_HEIGHT,
   SWAY_RANGE,
   TARGET_PEAK,
 } from "./candle-sim";
 import { createNoise } from "./noise";
+import { LAYOUT_OPTIONS, MAX_CANDLES } from "./candlelight.meta";
 
 const WIDTHS = [1440, 1920, 2520];
 

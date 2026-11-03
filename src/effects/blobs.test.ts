@@ -10,12 +10,12 @@ import {
   KEYFRAME_INTERVAL,
   keyframeMix,
   makeBlobPaths,
-  MAX_BLOBS,
   PALETTES,
   paletteColor,
   writeBlobUniforms,
   type KeyframeClock,
 } from "./blobs";
+import { MAX_BLOBS } from "./blobs.meta";
 
 describe("paletteColor", () => {
   it("looks up presets and wraps the index", () => {

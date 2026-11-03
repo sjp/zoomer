@@ -168,12 +168,6 @@ export const PALETTES = {
 
 export type PaletteName = keyof typeof PALETTES;
 
-export const PALETTE_OPTIONS = [
-  { value: "cathedral", label: "Cathedral" },
-  { value: "tiffany", label: "Tiffany" },
-  { value: "modern", label: "Modern" },
-] as const satisfies readonly { value: PaletteName; label: string }[];
-
 /** The palette for a param value, falling back to cathedral. */
 export function palette(name: string): readonly string[] {
   return Object.hasOwn(PALETTES, name) ? PALETTES[name as PaletteName] : PALETTES.cathedral;

@@ -12,7 +12,8 @@
  * target.blit();                          // upscale + dither to the default framebuffer
  * ```
  *
- * Quality param pattern. Use these labels so every effect reads the same:
+ * Quality param pattern. Use these labels so every effect reads the same (the
+ * options come from `param-options.ts`, which `.meta.ts` files may import):
  *
  * ```ts
  * quality: {
@@ -41,13 +42,6 @@ import {
 } from "./gl";
 
 export type LowResQuality = "high" | "balanced" | "low";
-
-/** Options for a `quality` select param. */
-export const QUALITY_OPTIONS = [
-  { value: "high", label: "High" },
-  { value: "balanced", label: "Balanced" },
-  { value: "low", label: "Low (saves power)" },
-] as const;
 
 /** Default divisors for each quality label. */
 export const QUALITY_DIVISORS: Readonly<Record<LowResQuality, number>> = {

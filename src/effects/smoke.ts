@@ -11,7 +11,7 @@ import {
   type RenderTarget,
   withScope,
 } from "./gl";
-import { lowResSize, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { lowResSize, qualityDivisor } from "./lowres";
 import { wrap } from "./math";
 import { hash32, HASH32_GLSL } from "./noise";
 import type { StepClock } from "./reaction-sim";
@@ -22,7 +22,6 @@ import {
   SIM_DT,
   simSteps,
   SMOKE_DIVISORS,
-  SOURCE_OPTIONS,
   sourceFor,
   SPLAT_CUTOFF,
   turbulenceFlow,
@@ -31,6 +30,7 @@ import {
   WAVES,
   wavePhases,
 } from "./smoke-sim";
+import { smokeMeta } from "./smoke.meta";
 import { defineEffect } from "./types";
 
 /** Density fades this many times faster at the top of the canvas than at the bottom. */
@@ -243,22 +243,7 @@ void main() {
  * background with a lit edge facing the light. Resizes and quality changes clear
  * the field rather than resampling it.
  */
-export const smoke = defineEffect({
-  id: "smoke",
-  name: "Incense Smoke",
-  description:
-    "Thin wisps of smoke rise from incense or a cup of tea, curl and fade, lit from one side.",
-  params: {
-    source: { kind: "select", label: "Source", options: SOURCE_OPTIONS, default: "incense" },
-    sourceX: { kind: "number", label: "Source position", min: 0, max: 1, step: 0.01, default: 0.2 },
-    density: { kind: "number", label: "Density", min: 0.2, max: 1, step: 0.05, default: 0.7 },
-    turbulence: { kind: "number", label: "Turbulence", min: 0, max: 1, step: 0.05, default: 0.5 },
-    draft: { kind: "number", label: "Draft", min: -1, max: 1, step: 0.05, default: 0.15 },
-    smokeColor: { kind: "color", label: "Smoke colour", default: "#93a4ba" },
-    background: { kind: "color", label: "Background", default: "#1a1311" },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const smoke = defineEffect(smokeMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float density if it's renderable here, else 8-bit with stochastic rounding.

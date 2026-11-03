@@ -16,16 +16,12 @@ import { buildPeriodicNoiseTexture, HASH32_GLSL } from "./noise";
 import {
   buildScene,
   fillLayerColors,
-  MAX_LAYERS,
   MAX_SHAPES,
   MAX_STACK,
-  MIN_LAYERS,
-  PALETTE_IDS,
   parallaxOffset,
   placeShape,
   resolvePalette,
   type Scene,
-  SCENE_IDS,
   sceneId,
   seatBoat,
   slotDepth,
@@ -34,6 +30,7 @@ import {
   TABLE_PERIOD,
   TABLE_ROWS,
 } from "./papercut-sim";
+import { papercutMeta, MAX_LAYERS, MIN_LAYERS, SCENE_IDS } from "./papercut.meta";
 import { defineEffect } from "./types";
 
 /** Layer spacing at depth 1, height units: sets the shadow offset and blur. */
@@ -57,20 +54,6 @@ const PAPER_TEXEL_PX = 1.25;
 const STAR_CELL = 0.07;
 const STAR_FLOOR = 0.4;
 const STAR_CHANCE = 0.4;
-
-const SCENE_LABELS: Record<(typeof SCENE_IDS)[number], string> = {
-  hills: "Hills",
-  ocean: "Ocean",
-  forest: "Forest",
-  night: "Night",
-};
-const PALETTE_LABELS: Record<(typeof PALETTE_IDS)[number], string> = {
-  scene: "Scene default",
-  sunset: "Sunset",
-  pastel: "Pastel",
-  autumn: "Autumn",
-  mono: "Monochrome",
-};
 
 /*
  * One full-screen pass. Coordinates are height units, y up (p = gl_FragCoord / height).
@@ -244,38 +227,7 @@ void main() {
  * one full-screen pass walks the layers front to back and stops at the first
  * opaque one. The layers drift on a slow parallax path as if the box breathes.
  */
-export const papercut = defineEffect({
-  id: "papercut",
-  name: "Paper-cut Layers",
-  description:
-    "A layered paper-cut shadow box of hills, waves or forest, with soft shadows between the sheets.",
-  params: {
-    scene: {
-      kind: "select",
-      label: "Scene",
-      options: SCENE_IDS.map((value) => ({ value, label: SCENE_LABELS[value] })),
-      default: "hills",
-    },
-    palette: {
-      kind: "select",
-      label: "Palette",
-      options: PALETTE_IDS.map((value) => ({ value, label: PALETTE_LABELS[value] })),
-      default: "scene",
-    },
-    layers: {
-      kind: "number",
-      label: "Layers",
-      min: MIN_LAYERS,
-      max: MAX_LAYERS,
-      step: 1,
-      default: 6,
-    },
-    shadow: { kind: "number", label: "Shadow", min: 0, max: 1, step: 0.01, default: 0.6 },
-    depth: { kind: "number", label: "Layer depth", min: 0.25, max: 2, step: 0.01, default: 1 },
-    motion: { kind: "number", label: "Motion", min: 0, max: 1, step: 0.01, default: 0.5 },
-    texture: { kind: "number", label: "Paper texture", min: 0, max: 1, step: 0.01, default: 0.5 },
-  },
-  context: "webgl2",
+export const papercut = defineEffect(papercutMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

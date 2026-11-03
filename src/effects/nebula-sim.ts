@@ -21,13 +21,6 @@ export const PALETTES = {
   veil: ["#22d3c5", "#c23cff", "#4a6cff"],
 } as const satisfies Record<string, readonly [string, string, string]>;
 
-export const PALETTE_OPTIONS = [
-  { value: "orion", label: "Orion" },
-  { value: "carina", label: "Carina" },
-  { value: "veil", label: "Veil" },
-  { value: "custom", label: "Custom" },
-] as const;
-
 /**
  * Emission colour `index` (0..2) of `palette`. "custom" picks c1..c3; unknown
  * palettes fall back to Orion. Allocates nothing, so it is safe per frame.

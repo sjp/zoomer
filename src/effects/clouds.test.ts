@@ -14,10 +14,10 @@ import {
   PRESET_STRIDE,
   PRESETS,
   presetIndex,
-  TIME_OPTIONS,
   transitionWeight,
 } from "./clouds-sky";
 import { buildPeriodicNoiseTexture } from "./noise";
+import { TIME_OPTIONS } from "./clouds.meta";
 
 const buildNoiseTexture = (size: number, seed: number) =>
   buildPeriodicNoiseTexture(size, cloudNoiseChannels(seed));

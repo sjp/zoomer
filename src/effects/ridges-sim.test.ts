@@ -13,9 +13,6 @@ import {
   layerCount,
   layerShape,
   MAX_BIRDS,
-  MAX_LAYERS,
-  MIN_LAYERS,
-  PALETTE_OPTIONS,
   PALETTES,
   paletteFor,
   parallax,
@@ -25,6 +22,7 @@ import {
   stepFlock,
   writeBirds,
 } from "./ridges-sim";
+import { PALETTE_OPTIONS, MAX_LAYERS, MIN_LAYERS } from "./ridges.meta";
 
 const buildTable = (count: number, seed: number, peaks: number) => {
   const out = new Float32Array(MAX_LAYERS * COLUMNS);

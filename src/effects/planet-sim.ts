@@ -16,30 +16,13 @@
  */
 import { clamp, fract, smoothstep } from "./math";
 import { createNoise, fbm3, hash32, type Noise } from "./noise";
+import { WORLD_OPTIONS } from "./planet.meta";
 
 // ---------------------------------------------------------------------------
 // Presets and options
 // ---------------------------------------------------------------------------
 
-export const WORLD_OPTIONS = [
-  { value: "earth", label: "Earth-like" },
-  { value: "ice", label: "Ice moon" },
-  { value: "desert", label: "Desert world" },
-  { value: "gas", label: "Gas giant" },
-] as const;
 export type WorldId = (typeof WORLD_OPTIONS)[number]["value"];
-
-export const FRAMING_OPTIONS = [
-  { value: "bottomLeft", label: "Bottom left" },
-  { value: "bottom", label: "Bottom" },
-  { value: "bottomRight", label: "Bottom right" },
-  { value: "left", label: "Left" },
-  { value: "full", label: "Full disc" },
-  { value: "right", label: "Right" },
-  { value: "topLeft", label: "Top left" },
-  { value: "top", label: "Top" },
-  { value: "topRight", label: "Top right" },
-] as const;
 
 /**
  * The framing's anchor: which side of the frame the planet sits beyond, as

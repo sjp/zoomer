@@ -9,13 +9,13 @@ import {
   generateCity,
   LAYERS,
   MAX_QUADS,
-  MAX_TOGGLE_RATE,
   MAX_WINDOWS,
   QUAD_STRIDE,
   REF_HEIGHT,
   STAR_STRIDE,
   strobe,
 } from "./city-sim";
+import { MAX_TOGGLE_RATE } from "./city.meta";
 
 describe("generateCity", () => {
   it("is deterministic for a seed", () => {

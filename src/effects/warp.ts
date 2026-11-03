@@ -1,46 +1,16 @@
 import type { Rgb } from "./color";
 import { beginFrame, withScope } from "./gl";
 import { createStreakRenderer } from "./streaks";
+import { warpMeta, MAX_STARS } from "./warp.meta";
 import { defineEffect } from "./types";
 import { unitRgbMemo } from "./color";
 import { createStarfield, type StarFrame } from "./warp-sim";
-
-const MAX_STARS = 4000;
 
 /**
  * Classic 3D starfield: stars stream past the camera and stretch into streaks.
  * Simulated on the CPU; drawn in WebGL2 as instanced, additively blended capsules.
  */
-export const warp = defineEffect({
-  id: "warp",
-  name: "Warp Speed",
-  description: "A starfield where stars stretch into streaks at faster-than-light speed.",
-  context: "webgl2",
-  params: {
-    speed: { kind: "number", label: "Speed", min: 0, max: 10, step: 0.1, default: 3 },
-    count: { kind: "number", label: "Stars", min: 100, max: MAX_STARS, step: 100, default: 1200 },
-    streak: { kind: "number", label: "Streak length", min: 0, max: 1, step: 0.01, default: 0.35 },
-    size: { kind: "number", label: "Star size", min: 0.5, max: 6, step: 0.1, default: 2 },
-    starColor: { kind: "color", label: "Star colour", default: "#ffffff" },
-    tint: { kind: "color", label: "Tint colour", default: "#8fb8ff" },
-    tintAmount: {
-      kind: "number",
-      label: "Tint variation",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.5,
-    },
-    aberration: {
-      kind: "number",
-      label: "Chromatic aberration",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.25,
-    },
-    background: { kind: "color", label: "Background", default: "#000008" },
-  },
+export const warp = defineEffect(warpMeta, {
   create(gl) {
     return withScope((scope) => {
       const streaks = scope.own(createStreakRenderer(gl, MAX_STARS, { chromatic: true }));

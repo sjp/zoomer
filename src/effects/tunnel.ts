@@ -12,6 +12,7 @@ import {
 } from "./gl";
 import { wrap } from "./math";
 import { createNoise, fbmPeriodic2 } from "./noise";
+import { tunnelMeta } from "./tunnel.meta";
 import { defineEffect } from "./types";
 
 /** Tunnel wall texture size in texels (power of two so it tiles with REPEAT). */
@@ -223,52 +224,7 @@ const getTextureLevels = () => {
  * and 1/distance lookups into a tiling energy texture, scrolled for forward flight and rotated for twist,
  * with a wandering vanishing point and depth fog towards the core.
  */
-export const tunnel = defineEffect({
-  id: "tunnel",
-  name: "Wormhole Tunnel",
-  description: "Fly forward through an endless, gently bending tunnel of glowing, swirling energy.",
-  params: {
-    speed: { kind: "number", label: "Forward speed", min: 0, max: 4, step: 0.05, default: 1 },
-    twist: {
-      kind: "number",
-      label: "Twist (turns per minute)",
-      min: -30,
-      max: 30,
-      step: 0.5,
-      default: 4,
-    },
-    spiral: {
-      kind: "number",
-      label: "Spiral (corkscrew)",
-      min: -2,
-      max: 2,
-      step: 0.05,
-      default: 0.6,
-    },
-    bend: {
-      kind: "number",
-      label: "Bend (centre wander)",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.5,
-    },
-    color1: { kind: "color", label: "Colour 1 (dim)", default: "#0b0640" },
-    color2: { kind: "color", label: "Colour 2 (mid)", default: "#7a2cff" },
-    color3: { kind: "color", label: "Colour 3 (bright)", default: "#46e8ff" },
-    rings: { kind: "number", label: "Ring bands", min: 0, max: 1, step: 0.01, default: 0.35 },
-    core: {
-      kind: "select",
-      label: "Tunnel core",
-      options: [
-        { value: "bright", label: "Bright light" },
-        { value: "dark", label: "Dark void" },
-      ],
-      default: "bright",
-    },
-    brightness: { kind: "number", label: "Brightness", min: 0.2, max: 2, step: 0.05, default: 1 },
-  },
-  context: "webgl2",
+export const tunnel = defineEffect(tunnelMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

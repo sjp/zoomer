@@ -30,9 +30,9 @@ import {
 import { approach, wrap } from "./math";
 import { buildPeriodicNoiseTexture, createNoise, createRng } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
+import { blindsMeta, MAX_MOTES } from "./blinds.meta";
 import { defineEffect } from "./types";
 
-const MAX_MOTES = 80;
 /** Plaster noise texture: texels per side, lattice cells per side, and its tile size in reference px. */
 const PLASTER_SIZE = 128;
 const PLASTER_PERIOD = 8;
@@ -141,41 +141,7 @@ void main() {
  * wall, dimmed now and then by a passing cloud, with a few dust motes glinting in
  * the lit stripes. One analytic full-screen pass plus up to 80 small sprites.
  */
-export const blinds = defineEffect({
-  id: "blinds",
-  name: "Light through blinds",
-  description:
-    "Soft stripes of late-afternoon sun through venetian blinds on a plain wall, with passing clouds and drifting dust.",
-  params: {
-    wallColor: { kind: "color", label: "Wall colour", default: "#d6cab8" },
-    lightColor: { kind: "color", label: "Sunlight colour", default: "#ffd9a0" },
-    angle: {
-      kind: "number",
-      label: "Stripe angle (degrees)",
-      min: 0,
-      max: 60,
-      step: 1,
-      default: 25,
-    },
-    slats: { kind: "number", label: "Slats", min: 6, max: 20, step: 1, default: 11 },
-    softness: { kind: "number", label: "Softness", min: 0, max: 1, step: 0.01, default: 0.35 },
-    position: {
-      kind: "select",
-      label: "Window position",
-      options: [
-        { value: "topRight", label: "Top right" },
-        { value: "topLeft", label: "Top left" },
-        { value: "right", label: "Right" },
-        { value: "left", label: "Left" },
-      ],
-      default: "topRight",
-    },
-    clouds: { kind: "number", label: "Clouds", min: 0, max: 1, step: 0.01, default: 0.4 },
-    dust: { kind: "number", label: "Dust motes", min: 0, max: MAX_MOTES, step: 1, default: 30 },
-    plaster: { kind: "number", label: "Plaster texture", min: 0, max: 1, step: 0.01, default: 0.3 },
-    sunDrift: { kind: "boolean", label: "Sun drift", default: true },
-  },
-  context: "webgl2",
+export const blinds = defineEffect(blindsMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>

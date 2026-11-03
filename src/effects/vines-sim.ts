@@ -33,13 +33,12 @@ import {
 } from "./leaves-sim";
 import { clamp, smoothstep } from "./math";
 import { createNoise, createRng } from "./noise";
+import { MAX_PLANTS } from "./vines.meta";
 
 const TAU = Math.PI * 2;
 
 // --- Pools ------------------------------------------------------------------
 
-/** Plants (vines) alive at once; also the density param's maximum. */
-export const MAX_PLANTS = 10;
 /** Stem segments per plant. */
 export const PLANT_SEGS = 512;
 /** Strands (main stem, branches, tendrils) per plant. */

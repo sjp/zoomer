@@ -10,13 +10,12 @@ import {
 } from "./gl";
 import { createNoise, createRng } from "./noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "./sprites";
+import { firefliesMeta, MAX_SPECKS, MAX_BEAMS } from "./fireflies.meta";
 import { defineEffect } from "./types";
 import { clamp, smoothstep, wrap } from "./math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { unitRgbMemo } from "./color";
 
-const MAX_SPECKS = 300;
-export const MAX_BEAMS = 3;
 /** Sprite extent (where the halo reaches zero) relative to the `size` param. */
 const HALO_EXTENT = 6;
 /** Dust motes are smaller than fireflies. */
@@ -225,47 +224,7 @@ void main() {
  * in a dark room. Specks are one instanced draw of small octagons; beams are one
  * additive quad each.
  */
-export const fireflies = defineEffect({
-  id: "fireflies",
-  name: "Fireflies",
-  description:
-    "Glowing fireflies blinking over a dusky gradient, or dust motes drifting through soft beams of light.",
-  params: {
-    scene: {
-      kind: "select",
-      label: "Scene",
-      options: [
-        { value: "fireflies", label: "Fireflies" },
-        { value: "dust", label: "Dust in light" },
-      ],
-      default: "fireflies",
-    },
-    count: { kind: "number", label: "Specks", min: 5, max: MAX_SPECKS, step: 1, default: 70 },
-    size: { kind: "number", label: "Speck size", min: 1, max: 10, step: 0.1, default: 3 },
-    speed: { kind: "number", label: "Drift speed", min: 0, max: 4, step: 0.05, default: 1 },
-    brightness: {
-      kind: "number",
-      label: "Brightness",
-      min: 0.2,
-      max: 2,
-      step: 0.05,
-      default: 1,
-    },
-    glowColor: { kind: "color", label: "Firefly colour", default: "#d8ff6a" },
-    lightColor: { kind: "color", label: "Light colour (dust)", default: "#ffe6bf" },
-    topColor: { kind: "color", label: "Background top colour", default: "#0c1a26" },
-    bottomColor: { kind: "color", label: "Background bottom colour", default: "#050c08" },
-    beams: { kind: "number", label: "Beams (dust)", min: 1, max: MAX_BEAMS, step: 1, default: 2 },
-    beamAngle: {
-      kind: "number",
-      label: "Beam angle (dust, degrees)",
-      min: -45,
-      max: 45,
-      step: 1,
-      default: 24,
-    },
-  },
-  context: "webgl2",
+export const fireflies = defineEffect(firefliesMeta, {
   create(gl) {
     return withScope((scope) => {
       const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) =>

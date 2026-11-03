@@ -34,6 +34,7 @@ import {
   TAN_V,
   VERTEX_SHORTS,
 } from "./terrain-sim";
+import { terrainMeta } from "./terrain.meta";
 import { defineEffect } from "./types";
 
 /** Valley along the flight path: height scale at its floor, and where its walls start and end. */
@@ -166,33 +167,12 @@ void main() {
 }
 `;
 
-const PALETTE_OPTIONS = [
-  { value: "alpine", label: "Alpine" },
-  { value: "desert", label: "Desert" },
-  { value: "autumn", label: "Autumn" },
-  { value: "alien", label: "Alien" },
-] as const satisfies readonly { value: PaletteId; label: string }[];
-
 /**
  * A slow glide along a valley of flat-shaded, low-poly hills under a gradient sky,
  * fading into fog. A static mesh drawn in painter's order (no depth buffer), with
  * heights from a tiling noise texture fetched in the vertex shader.
  */
-export const terrain = defineEffect({
-  id: "terrain",
-  name: "Low-Poly Terrain",
-  description: "A slow flight over faceted low-poly hills and lakes, fading into the haze.",
-  params: {
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "alpine" },
-    skyTop: { kind: "color", label: "Sky colour", default: "#4a7fc1" },
-    fog: { kind: "color", label: "Horizon and fog colour", default: "#cfdbe6" },
-    fogDensity: { kind: "number", label: "Fog density", min: 0, max: 1, step: 0.01, default: 0.35 },
-    roughness: { kind: "number", label: "Roughness", min: 0, max: 1, step: 0.01, default: 0.5 },
-    water: { kind: "number", label: "Water level", min: 0, max: 1, step: 0.01, default: 0.35 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    seed: { kind: "number", label: "Seed", min: 0, max: 999, step: 1, default: 7 },
-  },
-  context: "webgl2",
+export const terrain = defineEffect(terrainMeta, {
   create(gl) {
     return withScope((scope) => {
       const sky = scope.own(createGradientBackground(gl));

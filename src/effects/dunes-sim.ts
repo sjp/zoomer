@@ -8,9 +8,8 @@
  */
 import { hash32, createRng } from "./noise";
 import { clamp, fract, smoothstep } from "./math";
+import { MAX_CREST_SOFTNESS } from "./dunes.meta";
 
-export const MIN_RIDGES = 3;
-export const MAX_RIDGES = 5;
 /** Columns in the ridge table, spread across the canvas width. */
 export const TABLE_COLUMNS = 2048;
 /** Floats per table texel: relative height, slope, left and right horizon angles. */
@@ -69,8 +68,6 @@ export function fillLayout(out: Float32Array, count: number, ripples: number): v
   }
 }
 
-/** Largest crest softness (see `duneShape` and `fillRidgeTable`). */
-export const MAX_CREST_SOFTNESS = 4;
 /**
  * Softness up to this rounds the crest with the smooth minimum in `duneShape`
  * (rounding = softness times the dune's height). Any wider and the blend would

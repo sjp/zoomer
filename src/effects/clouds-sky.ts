@@ -7,6 +7,7 @@
 import { hexToUnitRgb } from "./color";
 import type { NoiseChannel } from "./noise";
 import { fract, smoothstep } from "./math";
+import { TIME_OPTIONS } from "./clouds.meta";
 
 // ---------------------------------------------------------------------------
 // Noise texture
@@ -162,13 +163,6 @@ export interface SkyPreset {
   lightX: number;
   lightY: number;
 }
-
-export const TIME_OPTIONS = [
-  { value: "day", label: "Day" },
-  { value: "golden", label: "Golden hour" },
-  { value: "dusk", label: "Dusk" },
-  { value: "night", label: "Night (moonlit)" },
-] as const;
 
 export type TimeOfDay = (typeof TIME_OPTIONS)[number]["value"];
 

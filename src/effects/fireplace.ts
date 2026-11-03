@@ -27,13 +27,13 @@ import {
   hearthMaxHeight,
   NOISE_PERIOD,
   NOISE_SIZE,
-  PALETTE_OPTIONS,
   RAMP_SIZE,
   stepEmbers,
 } from "./fireplace-model";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { buildPeriodicNoiseTexture, createNoise, createRng } from "./noise";
 import { createSpriteBatch } from "./sprites";
+import { fireplaceMeta } from "./fireplace.meta";
 import { defineEffect } from "./types";
 import { unitRgbMemo } from "./color";
 
@@ -189,36 +189,7 @@ const EMBER_HALF = 2.2 * 3;
  * rendered at reduced resolution over just the fire's rectangle, a flickering
  * analytic glow, rising embers and a dark log-and-hearth silhouette.
  */
-export const fireplace = defineEffect({
-  id: "fireplace",
-  name: "Fireplace",
-  description: "A cosy fire with flickering flames, rising embers and a warm glow.",
-  params: {
-    height: {
-      kind: "number",
-      label: "Flame height",
-      min: 0.15,
-      max: 0.75,
-      step: 0.01,
-      default: 0.42,
-    },
-    intensity: { kind: "number", label: "Intensity", min: 0.3, max: 1.6, step: 0.01, default: 1 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "wood" },
-    embers: {
-      kind: "number",
-      label: "Embers (0 = off)",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      default: 0.35,
-    },
-    glow: { kind: "number", label: "Glow", min: 0, max: 1.5, step: 0.01, default: 0.7 },
-    logs: { kind: "boolean", label: "Logs and hearth", default: true },
-    background: { kind: "color", label: "Background", default: "#0a0604" },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
-  context: "webgl2",
+export const fireplace = defineEffect(fireplaceMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));

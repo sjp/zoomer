@@ -6,6 +6,7 @@
  */
 import { createNoise, createRng } from "./noise";
 import { clamp, smoothstep } from "./math";
+import { MIN_WAVE_TIME, MAX_WAVE_TIME } from "./beach.meta";
 
 /** Seconds a swell line takes to roll in from APPROACH_DIST out to the break point. */
 export const T_APPROACH = 4;
@@ -33,8 +34,6 @@ const APPROACH_SPEED = (APPROACH_DIST - BREAK) / T_APPROACH;
 
 /** Fixed number of wave slots. LIFETIME / (MIN_WAVE_TIME * SPACING_MIN) must not exceed it. */
 export const MAX_WAVES = 4;
-export const MIN_WAVE_TIME = 6;
-export const MAX_WAVE_TIME = 15;
 /** Each spacing is waveTime times a factor in [SPACING_MIN, SPACING_MAX). */
 export const SPACING_MIN = 0.85;
 export const SPACING_MAX = 1.15;
@@ -255,13 +254,6 @@ export function packWaves(
 
 export type BeachLayout = "left" | "right" | "bottom" | "diagonal";
 
-export const LAYOUT_OPTIONS = [
-  { value: "left", label: "Left" },
-  { value: "right", label: "Right" },
-  { value: "bottom", label: "Bottom" },
-  { value: "diagonal", label: "Diagonal" },
-] as const;
-
 /**
  * Shore axes for a layout at `aspect` (width / height): n = dot(p, (x, y)) - c and
  * s = dot(p, (-y, x)), with p in height units (origin bottom-left, y up). Writes
@@ -330,12 +322,6 @@ export interface WaterPalette {
   shallow: string;
   foam: string;
 }
-
-export const WATER_OPTIONS = [
-  { value: "tropical", label: "Tropical" },
-  { value: "atlantic", label: "Atlantic" },
-  { value: "dusk", label: "Dusk" },
-] as const;
 
 const TROPICAL: WaterPalette = {
   deep: "#0a4f8c",

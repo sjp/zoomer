@@ -9,7 +9,6 @@ import {
   placeEmitters,
   SIM_DT,
   simSteps,
-  SOURCE_OPTIONS,
   SOURCES,
   sourceFor,
   splat,
@@ -22,6 +21,7 @@ import {
   wavePhases,
   wispFactor,
 } from "./smoke-sim";
+import { SOURCE_OPTIONS } from "./smoke.meta";
 
 const flowFor = (turbulence: number, draft = 0.05): Flow => {
   const f: Flow = { rise: 0.13, draft, curl: 0, onset0: 0, onset1: 1 };

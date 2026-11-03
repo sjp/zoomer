@@ -4,7 +4,6 @@ import {
   CHAIN_POINTS,
   CHAINS_PER_JELLY,
   createSwarm,
-  MAX_JELLIES,
   PALETTES,
   paletteFor,
   pulseCurve,
@@ -19,6 +18,7 @@ import {
   writeStrip,
 } from "./jellyfish-sim";
 import { createRng } from "./noise";
+import { MAX_JELLIES } from "./jellyfish.meta";
 
 const segLengths = (pos: Float32Array, c: number, n: number) => {
   const out: number[] = [];

@@ -21,8 +21,6 @@ import {
   createStripScratch,
   fishLength,
   HALF_WIDTH,
-  MAX_FISH,
-  MAX_PADS,
   MAX_RIPPLES,
   padOutline,
   rescaleFish,
@@ -41,10 +39,11 @@ import {
   type FishFrame,
 } from "./koi-sim";
 import { fanStrip } from "./leaves-sim";
-import { createLowResTarget, QUALITY_OPTIONS, qualityDivisor } from "./lowres";
+import { createLowResTarget, qualityDivisor } from "./lowres";
 import { wrap } from "./math";
 import { createNoise, createRng, HASH32_GLSL } from "./noise";
 import { createSpriteBatch, polygonStrip, SPRITE_SPIN_GLSL } from "./sprites";
+import { koiMeta, MAX_FISH, MAX_PADS } from "./koi.meta";
 import { defineEffect } from "./types";
 
 /** Pebble texture: texels per side, pebbles per side, and its on-screen period in reference px. */
@@ -329,32 +328,7 @@ const FLOWER_COLORS = [
  * caustics, their shadows following them, beneath drifting lily pads. Fish
  * near the surface now and then send out a ring ripple.
  */
-export const koi = defineEffect({
-  id: "koi",
-  name: "Koi Pond",
-  description: "Koi gliding beneath lily pads over a pebbled floor, with now-and-then ripples.",
-  context: "webgl2",
-  params: {
-    fish: { kind: "number", label: "Fish", min: 3, max: MAX_FISH, step: 1, default: 7 },
-    size: { kind: "number", label: "Fish size", min: 60, max: 220, step: 1, default: 130 },
-    speed: { kind: "number", label: "Speed", min: 0, max: 3, step: 0.05, default: 1 },
-    varieties: {
-      kind: "select",
-      label: "Varieties",
-      options: [
-        { value: "mixed", label: "Mixed" },
-        { value: "kohaku", label: "Kohaku" },
-        { value: "ogon", label: "Ogon" },
-        { value: "showa", label: "Showa" },
-      ],
-      default: "mixed",
-    },
-    lilyPads: { kind: "number", label: "Lily pads", min: 0, max: MAX_PADS, step: 1, default: 7 },
-    ripples: { kind: "boolean", label: "Ripples", default: true },
-    water: { kind: "color", label: "Water colour", default: "#2c4a38" },
-    caustics: { kind: "number", label: "Caustics", min: 0, max: 1, step: 0.01, default: 0.45 },
-    quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
-  },
+export const koi = defineEffect(koiMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
