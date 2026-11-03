@@ -44,6 +44,7 @@ import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
 import { fairylightsMeta } from "./fairylights.meta";
 import { lanternsMeta } from "./lanterns.meta";
+import { lavaMeta } from "./lava.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
 import { mugMeta } from "./mug.meta";
@@ -107,6 +108,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
+  { ...lavaMeta, load: () => import("./lava").then((m) => m.lava) },
   { ...meteorsMeta, load: () => import("./meteors").then((m) => m.meteors) },
   { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
