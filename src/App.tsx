@@ -268,6 +268,8 @@ export function App() {
     // A pending load would swap the effect mid-recording.
     if (!canvas || recording || !ready) return;
     setRecordingLeft(seconds);
+    // The list is locked while recording; don't bring it back when the recording ends.
+    setListOpen(false);
     const countdown = setInterval(
       () => setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1))),
       1000,
