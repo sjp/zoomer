@@ -1,13 +1,31 @@
 /**
  * Shared night-sky pieces for Star Trails (036) and the effects that reuse its
- * sky: the star colours, the Milky Way haze (GLSL plus its noise texture) and
- * the sky rotation in GLSL. The pure layout, rotation and band geometry are in
- * `starfield-sim.ts`.
+ * sky: the star colours, the Milky Way haze (GLSL plus its noise texture), the
+ * sky rotation in GLSL, and `createStarSprites`, which draws the same stars as
+ * crisp, slowly twinkling points. The pure layout, rotation and band geometry
+ * are in `starfield-sim.ts`.
  */
 import { hexToUnitRgb } from "./color";
-import { createDataTexture, glslFloat } from "./gl";
+import { createDataTexture, createProgram, createUniforms, glslFloat, withScope } from "./gl";
+import { clamp } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
-import { DEFAULT_BAND, HAZE_TILE, type MilkyWayBand } from "./starfield-sim";
+import { createSpriteBatch, QUAD } from "./sprites";
+import {
+  DEFAULT_BAND,
+  fillStars,
+  HAZE_TILE,
+  type MilkyWayBand,
+  STAR_ENERGY,
+  STAR_FLOATS,
+  STAR_MIN_RADIUS_PX,
+  STAR_RADIUS,
+  type StarfieldLayout,
+  TWINKLE_AMP,
+  TWINKLE_FROM,
+  TWINKLE_FULL,
+  TWINKLE_PERIOD,
+  twinkleTime,
+} from "./starfield-sim";
 
 /** Star colours: hot blue-white, white and cool orange. */
 export const STAR_BLUE = "#b4c8ff";
@@ -96,5 +114,142 @@ export function createMilkyWayNoise(gl: WebGL2RenderingContext): WebGLTexture {
       { period: 16, seed: 3613 },
     ]),
     wrap: gl.REPEAT,
+  });
+}
+
+const STAR_VERTEX = /* glsl */ `#version 300 es
+layout(location = 0) in vec2 aCorner;
+/** Sky x, y (reference px from the pole), brightness, 2 x temperature. */
+layout(location = 1) in vec4 aStar;
+/** Twinkle cycles per period, phase. */
+layout(location = 2) in vec2 aTwinkle;
+/** Pole (reference px, y up), and the rotation's cosine and sine. */
+uniform vec4 uPole;
+/** Reference px -> device px, 2 / width, 2 / height. */
+uniform vec3 uFrame;
+/** Colour spread, light gain, twinkle amount, wrapped time (s). */
+uniform vec4 uLook;
+out vec2 vLocal;
+flat out vec3 vColor;
+${STAR_TINT_GLSL}
+const float TAU = 6.283185307179586;
+void main() {
+  vec2 q = aStar.xy;
+  vec2 d = vec2(uPole.z * q.x - uPole.w * q.y, uPole.w * q.x + uPole.z * q.y);
+  vec2 px = (uPole.xy + d) * uFrame.x;
+  float b = aStar.z;
+  float r = max((${glslFloat(STAR_RADIUS[0])} + ${glslFloat(STAR_RADIUS[1])} * b) * uFrame.x, ${glslFloat(STAR_MIN_RADIUS_PX)});
+  float tw = 1.0 + ${glslFloat(TWINKLE_AMP)} * uLook.z * smoothstep(${glslFloat(TWINKLE_FROM)}, ${glslFloat(TWINKLE_FULL)}, b)
+    * sin(TAU * (aTwinkle.x * uLook.w * ${glslFloat(1 / TWINKLE_PERIOD)} + aTwinkle.y));
+  // Same light at every sprite size: the (1 - d^2)^2 profile integrates to pi r^2 / 3.
+  float peak = b * ${glslFloat((STAR_ENERGY * 3) / Math.PI)} * uFrame.x * uFrame.x / (r * r);
+  vColor = starTint(aStar.w, uLook.x) * (peak * tw * uLook.y);
+  vLocal = aCorner;
+  gl_Position = vec4((px + aCorner * r) * uFrame.yz - 1.0, 0.0, 1.0);
+}
+`;
+
+const STAR_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 vLocal;
+flat in vec3 vColor;
+out vec4 outColor;
+void main() {
+  float f = max(0.0, 1.0 - dot(vLocal, vLocal));
+  outColor = vec4(vColor * (f * f), 0.0);
+}
+`;
+
+/** Per-frame inputs of `StarSprites.draw`. Keep one and update it, so a frame allocates nothing. */
+export interface StarDraw {
+  /** Canvas size, device px. */
+  width: number;
+  height: number;
+  /** Device px per reference px (`Viewport.scale`). */
+  scale: number;
+  /** Pole, reference px, y up (the one the stars were built for). */
+  pole: readonly [number, number];
+  /** Sky rotation, radians (any range; see `advanceRotation`). */
+  rotation: number;
+  /** Time, s, unwrapped float64 (wrapped here to the twinkle period). */
+  time: number;
+  /** Colour spread 0..1 (0 plain white). */
+  colorful: number;
+  /** Overall light, 1 = default. */
+  gain: number;
+  /** Twinkle amount 0..1. */
+  twinkle: number;
+}
+
+export const createStarDraw = (): StarDraw => ({
+  width: 1,
+  height: 1,
+  scale: 1,
+  pole: [0, 0],
+  rotation: 0,
+  time: 0,
+  colorful: 0.6,
+  gain: 1,
+  twinkle: 1,
+});
+
+/** Point stars of the shared layout as additive sprites. */
+export interface StarSprites {
+  /** Lists and uploads the stars for `layout`; returns the count. Call on resize or when the layout changes. */
+  build(layout: StarfieldLayout): number;
+  /** Stars from the last `build`. */
+  readonly count: number;
+  /**
+   * Draws the stars additively (ONE, ONE) into the bound framebuffer and
+   * viewport, then disables blending. Sets its own program.
+   */
+  draw(d: StarDraw): void;
+  dispose(): void;
+}
+
+/**
+ * Point stars from the shared layout: one small quad each, placed and turned
+ * about the pole in the vertex shader (the CPU builds the list only on
+ * `build`), with a soft round profile at least `STAR_MIN_RADIUS_PX` wide so
+ * slow rotation doesn't shimmer, and a very slow twinkle on the bright ones.
+ * `maxStars` bounds the list (see `fillStars`).
+ */
+export function createStarSprites(gl: WebGL2RenderingContext, maxStars: number): StarSprites {
+  return withScope((scope) => {
+    const program = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) =>
+      gl.deleteProgram(p),
+    );
+    const u = createUniforms(gl, program, ["uPole", "uFrame", "uLook"]);
+    const batch = scope.own(createSpriteBatch(gl, maxStars, [4, 2], [QUAD]));
+    if (batch.stride !== STAR_FLOATS) throw new Error("createStarSprites: layout mismatch");
+    let count = 0;
+    return {
+      build(layout) {
+        count = fillStars(batch.data, maxStars, layout);
+        batch.upload(count);
+        return count;
+      },
+      get count() {
+        return count;
+      },
+      draw(d) {
+        if (count <= 0) return;
+        gl.useProgram(program);
+        u.f4("uPole", d.pole[0], d.pole[1], Math.cos(d.rotation), Math.sin(d.rotation));
+        u.f3("uFrame", d.scale, 2 / d.width, 2 / d.height);
+        u.f4(
+          "uLook",
+          clamp(d.colorful, 0, 1),
+          Math.max(0, d.gain),
+          clamp(d.twinkle, 0, 1),
+          twinkleTime(d.time),
+        );
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        batch.draw(0, count);
+        gl.disable(gl.BLEND);
+      },
+      dispose: () => scope.dispose(),
+    };
   });
 }

@@ -12,7 +12,7 @@
  * inside their ring with a margin (`RING_MARGIN`) wider than a trail's
  * half-width plus anti-aliasing.
  */
-import { clamp } from "./math";
+import { clamp, smoothstep } from "./math";
 import { hash32 } from "./noise";
 
 export const TAU = Math.PI * 2;
@@ -180,4 +180,149 @@ export function bandThrough(
   const angle = direction + Math.PI / 2;
   const offset = (x - pole[0]) * Math.cos(angle) + (y - pole[1]) * Math.sin(angle);
   return { angle, offset, width };
+}
+
+// ---------------------------------------------------------------------------
+// Point stars (sprites)
+// ---------------------------------------------------------------------------
+
+/** Floats per star in `fillStars`' output: sky x, sky y, brightness, 2 x temperature, twinkle rate, twinkle phase. */
+export const STAR_FLOATS = 6;
+/** Twinkle rates are whole cycles per `TWINKLE_PERIOD` seconds, so time can wrap at it. */
+export const TWINKLE_PERIOD = 60;
+/** Fewest and most cycles per period: 0.05 to 0.12 Hz, a very slow swell. */
+export const TWINKLE_CYCLES = [3, 7] as const;
+/** Twinkle depth at full strength, and the brightness range over which stars start to twinkle. */
+export const TWINKLE_AMP = 0.22;
+export const TWINKLE_FROM = 0.3;
+export const TWINKLE_FULL = 0.7;
+
+/** Which stars `fillStars` lists. */
+export interface StarfieldLayout {
+  salt: number;
+  /** Share of occupied cells, 0..1 (about 1 star per 128 reference px² at 1). */
+  density: number;
+  /** Pole (centre of rotation), reference px, y up. */
+  pole: readonly [number, number];
+  /** Frame size, reference px. */
+  refWidth: number;
+  refHeight: number;
+  /**
+   * True if the sky turns: every star that can ever cross the frame is listed
+   * (whole rings). False for a still sky: only the stars inside the frame at
+   * rotation 0 are listed.
+   */
+  rotates: boolean;
+  /** Extra frame margin, reference px (covers the sprite radius). */
+  margin: number;
+}
+
+/**
+ * Radii (reference px) between which stars can reach the frame (grown by
+ * `margin`) as the sky turns about `pole`: the distance to the nearest point of
+ * the frame (0 inside it) and to its farthest corner.
+ */
+export function visibleRadii(l: StarfieldLayout, out: [number, number]): [number, number] {
+  const [px, py] = l.pole;
+  const x0 = -l.margin;
+  const y0 = -l.margin;
+  const x1 = l.refWidth + l.margin;
+  const y1 = l.refHeight + l.margin;
+  const dx = Math.max(x0 - px, 0, px - x1);
+  const dy = Math.max(y0 - py, 0, py - y1);
+  out[0] = Math.hypot(dx, dy);
+  out[1] = Math.hypot(Math.max(px - x0, x1 - px), Math.max(py - y0, y1 - py));
+  return out;
+}
+
+const starScratch = createStar();
+const radiiScratch: [number, number] = [0, 0];
+
+/**
+ * Lists the point stars of the shared layout (the same cells as Star Trails,
+ * uncapped) into `out`, `STAR_FLOATS` floats each, ring by ring outward from the
+ * pole, and returns how many it wrote: at most `max` (outer rings are dropped
+ * past that). Deterministic for the same layout.
+ */
+export function fillStars(out: Float32Array, max: number, l: StarfieldLayout): number {
+  const limit = Math.min(max, Math.floor(out.length / STAR_FLOATS));
+  const [rMin, rMax] = visibleRadii(l, radiiScratch);
+  const density = clamp(l.density, 0, 1);
+  const ring0 = Math.max(0, Math.floor(rMin / RING_WIDTH));
+  const ring1 = Math.ceil(rMax / RING_WIDTH);
+  const [px, py] = l.pole;
+  const x0 = -l.margin;
+  const y0 = -l.margin;
+  const x1 = l.refWidth + l.margin;
+  const y1 = l.refHeight + l.margin;
+  const span = TWINKLE_CYCLES[1] - TWINKLE_CYCLES[0] + 1;
+  let count = 0;
+  for (let ring = ring0; ring <= ring1; ring++) {
+    const n = sectorCount(ring, Infinity);
+    for (let k = 0; k < n; k++) {
+      const star = cellStar(ring, k, n, density, l.salt, starScratch);
+      if (!star.occupied || star.radius < rMin || star.radius > rMax) continue;
+      const qx = star.radius * Math.cos(star.angle);
+      const qy = star.radius * Math.sin(star.angle);
+      if (!l.rotates) {
+        const x = px + qx;
+        const y = py + qy;
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+      }
+      if (count >= limit) return count;
+      const o = count * STAR_FLOATS;
+      out[o] = qx;
+      out[o + 1] = qy;
+      out[o + 2] = star.bright;
+      out[o + 3] = star.temp * 2;
+      // The cell hash's spare bits pick the twinkle; star.u is already uniform.
+      const h = hash32((ring * 0x9e3779b1 + k + l.salt) >>> 0);
+      out[o + 4] = TWINKLE_CYCLES[0] + (h % span);
+      out[o + 5] = (h >>> 8) / 16777216;
+      count++;
+    }
+  }
+  return count;
+}
+
+/** `t` (s, float64) wrapped to the twinkle period, for upload. */
+export const twinkleTime = (t: number) => t - TWINKLE_PERIOD * Math.floor(t / TWINKLE_PERIOD);
+
+/**
+ * Brightness factor of a star twinkling `cycles` times per `TWINKLE_PERIOD` at
+ * `phase`, time `t` s, `amount` 0..1. Only bright stars twinkle. The shader's twin.
+ */
+export function twinkleFactor(
+  bright: number,
+  cycles: number,
+  phase: number,
+  t: number,
+  amount: number,
+): number {
+  const w = smoothstep(TWINKLE_FROM, TWINKLE_FULL, bright);
+  return (
+    1 +
+    TWINKLE_AMP * clamp(amount, 0, 1) * w * Math.sin(TAU * ((cycles * t) / TWINKLE_PERIOD + phase))
+  );
+}
+
+/** Point-star radius (reference px) at brightness `b`, before the device-pixel floor. */
+export const STAR_RADIUS = [1, 1.4] as const;
+/** Smallest sprite radius in device px, so stars moving across the pixel grid don't shimmer. */
+export const STAR_MIN_RADIUS_PX = 1.6;
+/** Light per star at brightness 1 (peak x sprite area factor), at 1080. */
+export const STAR_ENERGY = 6;
+
+/** Sprite radius in device px for brightness `b` at `scale`. */
+export const starRadiusPx = (b: number, scale: number) =>
+  Math.max((STAR_RADIUS[0] + STAR_RADIUS[1] * b) * scale, STAR_MIN_RADIUS_PX);
+
+/**
+ * Peak sprite brightness for a star of brightness `b` at `scale`: the light
+ * (`b * STAR_ENERGY * scale²`) spread over the sprite's (1 - d²)² profile,
+ * whose integral is π r² / 3, so a star gives the same light at every size.
+ */
+export function starPeak(b: number, scale: number): number {
+  const r = starRadiusPx(b, scale);
+  return (b * STAR_ENERGY * scale * scale * 3) / (Math.PI * r * r);
 }
