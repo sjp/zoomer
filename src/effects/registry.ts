@@ -20,6 +20,7 @@ import { dappleMeta } from "./dapple.meta";
 import { daymapMeta } from "./daymap.meta";
 import { desertcampMeta } from "./desertcamp.meta";
 import { dunesMeta } from "./dunes.meta";
+import { ferroMeta } from "./ferro.meta";
 import { filmMeta } from "./film.meta";
 import { firefliesMeta } from "./fireflies.meta";
 import { fireplaceMeta } from "./fireplace.meta";
@@ -111,6 +112,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...orbitsMeta, load: () => import("./orbits").then((m) => m.orbits) },
+  { ...ferroMeta, load: () => import("./ferro").then((m) => m.ferro) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
