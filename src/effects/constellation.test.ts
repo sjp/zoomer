@@ -161,7 +161,8 @@ describe("linkFalloff", () => {
 });
 
 describe("grid neighbour search", () => {
-  it("matches brute force on random data", () => {
+  // Twenty brute-force searches over up to 390 points: the cost is the search itself.
+  it("matches brute force on random data", { timeout: 20_000 }, () => {
     for (let seed = 1; seed <= 20; seed++) {
       const n = 50 + seed * 17;
       const maxDist = 40 + seed * 9;
@@ -175,7 +176,7 @@ describe("grid neighbour search", () => {
       const expected = bruteForce(xs, ys, n, maxDist);
       expect(count).toBe(expected.size);
       expect(new Set(pairs).size).toBe(count);
-      for (const pair of pairs) expect(expected.has(pair)).toBe(true);
+      expect(pairs.filter((pair) => !expected.has(pair)).slice(0, 10)).toEqual([]);
     }
   });
 
