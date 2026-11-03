@@ -69,6 +69,7 @@ import { pendulumMeta } from "./pendulum.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
 import { porchMeta } from "./porch.meta";
+import { potteryMeta } from "./pottery.meta";
 import { quasiMeta } from "./quasi.meta";
 import { radarMeta } from "./radar.meta";
 import { rainMeta } from "./rain.meta";
@@ -130,6 +131,7 @@ export const effects: readonly EffectEntry[] = [
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
   { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
+  { ...potteryMeta, load: () => import("./pottery").then((m) => m.pottery) },
   { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
   { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
