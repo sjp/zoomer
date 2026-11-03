@@ -38,6 +38,7 @@ import { grassMeta } from "./grass.meta";
 import { greenhouseMeta } from "./greenhouse.meta";
 import { harmonographMeta } from "./harmonograph.meta";
 import { horizonMeta } from "./horizon.meta";
+import { hourglassMeta } from "./hourglass.meta";
 import { hyperspaceMeta } from "./hyperspace.meta";
 import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
@@ -119,6 +120,7 @@ export const effects: readonly EffectEntry[] = [
   { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
   { ...gearsMeta, load: () => import("./gears").then((m) => m.gears) },
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
+  { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
