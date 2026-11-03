@@ -20,6 +20,7 @@ import { filmMeta } from "./film.meta";
 import { firefliesMeta } from "./fireflies.meta";
 import { fireplaceMeta } from "./fireplace.meta";
 import { flowfieldMeta } from "./flowfield.meta";
+import { frostMeta } from "./frost.meta";
 import { frostedMeta } from "./frosted.meta";
 import { glassMeta } from "./glass.meta";
 import { grassMeta } from "./grass.meta";
@@ -76,6 +77,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
+  { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
