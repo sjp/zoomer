@@ -69,6 +69,7 @@ import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
 import { pendulumMeta } from "./pendulum.meta";
 import { physarumMeta } from "./physarum.meta";
+import { phyllotaxisMeta } from "./phyllotaxis.meta";
 import { planetMeta } from "./planet.meta";
 import { plasmaMeta } from "./plasma.meta";
 import { porchMeta } from "./porch.meta";
@@ -168,6 +169,7 @@ export const effects: readonly EffectEntry[] = [
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
   { ...leavesMeta, load: () => import("./leaves").then((m) => m.leaves) },
   { ...blossomMeta, load: () => import("./blossom").then((m) => m.blossom) },
+  { ...phyllotaxisMeta, load: () => import("./phyllotaxis").then((m) => m.phyllotaxis) },
   { ...spiderwebMeta, load: () => import("./spiderweb").then((m) => m.spiderweb) },
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
