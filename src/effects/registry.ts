@@ -1,6 +1,7 @@
 import { aquariumMeta } from "./aquarium.meta";
 import { auroraMeta } from "./aurora.meta";
 import { balloonsMeta } from "./balloons.meta";
+import { bambooMeta } from "./bamboo.meta";
 import { beachMeta } from "./beach.meta";
 import { biolumMeta } from "./biolum.meta";
 import { blindsMeta } from "./blinds.meta";
@@ -117,6 +118,7 @@ export const effects: readonly EffectEntry[] = [
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
+  { ...bambooMeta, load: () => import("./bamboo").then((m) => m.bamboo) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
   { ...waterfallMeta, load: () => import("./waterfall").then((m) => m.waterfall) },
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
