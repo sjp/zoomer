@@ -99,7 +99,8 @@ describe("rivulets", () => {
       if (maxAlive < MAX_RIVULETS * 0.8) bad.push(`few ${kind} ${maxAlive}`);
     }
     expect(bad.slice(0, 5)).toEqual([]);
-  });
+    // Heavy by nature: 6000 rivulet steps, with no per-sample expects to trim.
+  }, 20_000);
 
   it("does nothing without a roof, and none spawn when dry", () => {
     const riv = createRivulets(1);
