@@ -92,19 +92,25 @@ describe("buildReef", () => {
   });
 
   it("stays within the frame and under the height envelope", () => {
-    for (const reef of reefs) {
+    // Plain comparisons over every instance: an expect per sample dominates the runtime.
+    const outside: string[] = [];
+    reefs.forEach((reef, n) => {
       for (let i = 0; i < reef.count; i++) {
         for (const [x, y, r] of [
           [field(reef, i, 0), field(reef, i, 1), field(reef, i, 4)],
           [field(reef, i, 2), field(reef, i, 3), field(reef, i, 5)],
         ]) {
-          expect(x - r).toBeGreaterThanOrEqual(-1e-6);
-          expect(x + r).toBeLessThanOrEqual(ASPECT + 1e-6);
-          expect(y).toBeGreaterThanOrEqual(0);
-          expect(y + r).toBeLessThanOrEqual(heightAt(x, ASPECT, HEIGHT) + 1e-6);
+          const ok =
+            x - r >= -1e-6 &&
+            x + r <= ASPECT + 1e-6 &&
+            y >= 0 &&
+            y + r <= heightAt(x, ASPECT, HEIGHT) + 1e-6;
+          if (!ok && outside.length < 10)
+            outside.push(`reef ${n}, instance ${i}: ${x}, ${y}, r ${r}`);
         }
       }
-    }
+    });
+    expect(outside).toEqual([]);
   });
 
   it("keeps the region above the bottom centre clear", () => {
@@ -123,38 +129,48 @@ describe("buildReef", () => {
   });
 
   it("keeps arrivals ordered and in range", () => {
-    for (const reef of reefs) {
+    const wrong: string[] = [];
+    reefs.forEach((reef, n) => {
       for (let i = 0; i < reef.count; i++) {
         const t0 = field(reef, i, 6);
         const t1 = field(reef, i, 7);
-        expect(t0).toBeGreaterThanOrEqual(0);
-        expect(t1).toBeGreaterThanOrEqual(t0);
-        expect(t1).toBeLessThanOrEqual(LAST_ARRIVAL + 1e-6);
         const kind = field(reef, i, 9);
-        expect([KIND_CAPSULE, KIND_DISC]).toContain(kind);
-        // A disc grows over a span; a zero-span disc would pop in.
-        expect(kind === KIND_CAPSULE || t1 > t0).toBe(true);
+        const ok =
+          t0 >= 0 &&
+          t1 >= t0 &&
+          t1 <= LAST_ARRIVAL + 1e-6 &&
+          (kind === KIND_CAPSULE || kind === KIND_DISC) &&
+          // A disc grows over a span; a zero-span disc would pop in.
+          (kind === KIND_CAPSULE || t1 > t0);
+        if (!ok && wrong.length < 10)
+          wrong.push(`reef ${n}, instance ${i}: ${t0}..${t1}, kind ${kind}`);
       }
-    }
+    });
+    expect(wrong).toEqual([]);
   });
 
   it("never shows a child before its parent's end, and tapers along each branch", () => {
     let children = 0;
-    for (const reef of reefs) {
+    const wrong: string[] = [];
+    reefs.forEach((reef, n) => {
       for (let i = 0; i < reef.count; i++) {
-        expect(field(reef, i, 5)).toBeLessThanOrEqual(field(reef, i, 4) + 1e-9);
+        const tapers = field(reef, i, 5) <= field(reef, i, 4) + 1e-9;
+        if (!tapers && wrong.length < 10) wrong.push(`reef ${n}, instance ${i} widens`);
         const p = reef.parent[i];
         if (p < 0) continue;
         children++;
-        expect(p).toBeLessThan(i);
-        expect(reef.colony[p]).toBe(reef.colony[i]);
-        expect(field(reef, i, 6)).toBeGreaterThanOrEqual(field(reef, p, 7));
-        expect(field(reef, i, 4)).toBeLessThanOrEqual(field(reef, p, 5) + 1e-9);
-        // A child starts at its parent's end point.
-        expect(field(reef, i, 0)).toBeCloseTo(field(reef, p, 2), 6);
-        expect(field(reef, i, 1)).toBeCloseTo(field(reef, p, 3), 6);
+        const ok =
+          p < i &&
+          Object.is(reef.colony[p], reef.colony[i]) &&
+          field(reef, i, 6) >= field(reef, p, 7) &&
+          field(reef, i, 4) <= field(reef, p, 5) + 1e-9 &&
+          // A child starts at its parent's end point (toBeCloseTo(_, 6): within half of 1e-6).
+          Math.abs(field(reef, i, 0) - field(reef, p, 2)) < 5e-7 &&
+          Math.abs(field(reef, i, 1) - field(reef, p, 3)) < 5e-7;
+        if (!ok && wrong.length < 10) wrong.push(`reef ${n}, instance ${i}, parent ${p}`);
       }
-    }
+    });
+    expect(wrong).toEqual([]);
     expect(children).toBeGreaterThan(100);
   });
 
