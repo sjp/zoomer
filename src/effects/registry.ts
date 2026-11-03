@@ -41,6 +41,7 @@ import { fairylightsMeta } from "./fairylights.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
+import { mugMeta } from "./mug.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { meteorsMeta } from "./meteors.meta";
 import { leavesMeta } from "./leaves.meta";
@@ -98,6 +99,7 @@ export const effects: readonly EffectEntry[] = [
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
+  { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
