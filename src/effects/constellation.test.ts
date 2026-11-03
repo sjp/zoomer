@@ -115,19 +115,26 @@ describe("driftPoint wrapping", () => {
       const dy = (rng() - 0.5) * 7;
       const xs = new Float32Array([rng() * 1920]);
       const ys = new Float32Array([rng() * 1080]);
+      // Float32 storage may round a point up onto the far edge, never past it.
+      const loX = Math.fround(minX);
+      const hiX = Math.fround(minX + spanX);
+      const loY = Math.fround(minY);
+      const hiY = Math.fround(minY + spanY);
       let flagged = 0;
       let crossings = 0;
+      // Plain comparisons in the hot loop: an expect per step dominates the runtime.
+      const outside: string[] = [];
       for (let step = 0; step < 5000; step++) {
         const x = xs[0] + dx;
         const y = ys[0] + dy;
         if (x < minX || x >= minX + spanX || y < minY || y >= minY + spanY) crossings++;
         if (driftPoint(xs, ys, 0, dx, dy, minX, minY, spanX, spanY)) flagged++;
-        // Float32 storage may round a point up onto the far edge, never past it.
-        expect(xs[0]).toBeGreaterThanOrEqual(Math.fround(minX));
-        expect(xs[0]).toBeLessThanOrEqual(Math.fround(minX + spanX));
-        expect(ys[0]).toBeGreaterThanOrEqual(Math.fround(minY));
-        expect(ys[0]).toBeLessThanOrEqual(Math.fround(minY + spanY));
+        const inside = xs[0] >= loX && xs[0] <= hiX && ys[0] >= loY && ys[0] <= hiY;
+        if (!inside && outside.length < 10) {
+          outside.push(`domain ${k}, step ${step}: (${xs[0]}, ${ys[0]})`);
+        }
       }
+      expect(outside).toEqual([]);
       expect(flagged).toBe(crossings);
       expect(crossings).toBeGreaterThan(0);
     }
