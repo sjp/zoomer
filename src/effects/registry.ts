@@ -101,7 +101,6 @@ import { turntableMeta } from "./turntable.meta";
 import { tunnelMeta } from "./tunnel.meta";
 import { vinesMeta } from "./vines.meta";
 import { warpMeta } from "./warp.meta";
-import { waterfallMeta } from "./waterfall.meta";
 import { windfarmMeta } from "./windfarm.meta";
 import { windowRainMeta } from "./windowrain.meta";
 import { zenMeta } from "./zen.meta";
@@ -152,7 +151,6 @@ export const effects: readonly EffectEntry[] = [
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
   { ...bambooMeta, load: () => import("./bamboo").then((m) => m.bamboo) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
-  { ...waterfallMeta, load: () => import("./waterfall").then((m) => m.waterfall) },
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
