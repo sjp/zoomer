@@ -25,6 +25,7 @@ import { horizonMeta } from "./horizon.meta";
 import { hyperspaceMeta } from "./hyperspace.meta";
 import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
+import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
@@ -74,6 +75,7 @@ export const effects: readonly EffectEntry[] = [
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
+  { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
   { ...cityMeta, load: () => import("./city").then((m) => m.city) },
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
   { ...leavesMeta, load: () => import("./leaves").then((m) => m.leaves) },
