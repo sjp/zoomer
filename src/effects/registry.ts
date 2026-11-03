@@ -55,6 +55,7 @@ import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
 import { mugMeta } from "./mug.meta";
 import { murmurationMeta } from "./murmuration.meta";
+import { lorenzMeta } from "./lorenz.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { meteorsMeta } from "./meteors.meta";
 import { mobileMeta } from "./mobile.meta";
@@ -172,6 +173,7 @@ export const effects: readonly EffectEntry[] = [
   { ...orbitsMeta, load: () => import("./orbits").then((m) => m.orbits) },
   { ...pendulumMeta, load: () => import("./pendulum").then((m) => m.pendulum) },
   { ...cradleMeta, load: () => import("./cradle").then((m) => m.cradle) },
+  { ...lorenzMeta, load: () => import("./lorenz").then((m) => m.lorenz) },
   { ...ferroMeta, load: () => import("./ferro").then((m) => m.ferro) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
