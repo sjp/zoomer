@@ -48,6 +48,7 @@ import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
 import { kaleidoMeta } from "./kaleido.meta";
 import { kelpMeta } from "./kelp.meta";
+import { kiteMeta } from "./kite.meta";
 import { koiMeta } from "./koi.meta";
 import { fairylightsMeta } from "./fairylights.meta";
 import { lanternsMeta } from "./lanterns.meta";
@@ -159,6 +160,7 @@ export const effects: readonly EffectEntry[] = [
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
+  { ...kiteMeta, load: () => import("./kite").then((m) => m.kite) },
   { ...cranesMeta, load: () => import("./cranes").then((m) => m.cranes) },
   { ...mobileMeta, load: () => import("./mobile").then((m) => m.mobile) },
   { ...murmurationMeta, load: () => import("./murmuration").then((m) => m.murmuration) },
