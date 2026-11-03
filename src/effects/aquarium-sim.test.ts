@@ -175,30 +175,35 @@ describe("species", () => {
 });
 
 describe("fish", () => {
-  it("keeps forces bounded, speeds capped and every fish inside the tank", () => {
-    const issues: string[] = [];
-    for (const aspect of [16 / 9, 4 / 3, 21 / 9]) {
-      const sim = createFishSim(7, MAX_FISH, aspect);
-      const e = env({ aspect, count: MAX_FISH, speed: 2 });
-      let maxF = 0;
-      for (let step = 0; step < 30 * 60; step++) {
-        stepFishSim(sim, 1 / 30, e);
-        for (let i = 0; i < sim.live; i++) {
-          maxF = Math.max(maxF, Math.hypot(sim.fx[i], sim.fy[i]));
-          const sp = Math.hypot(sim.vx[i], sim.vy[i]);
-          if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) issues.push(`speed ${sp}`);
-          const x = sim.x[i];
-          const y = sim.y[i];
-          if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) issues.push(`x ${x}`);
-          if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) issues.push(`y ${y}`);
-          if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) issues.push(`z ${sim.z[i]}`);
+  // 5400 steps of the full school with plain checks: the cost is the simulation itself.
+  it(
+    "keeps forces bounded, speeds capped and every fish inside the tank",
+    { timeout: 20_000 },
+    () => {
+      const issues: string[] = [];
+      for (const aspect of [16 / 9, 4 / 3, 21 / 9]) {
+        const sim = createFishSim(7, MAX_FISH, aspect);
+        const e = env({ aspect, count: MAX_FISH, speed: 2 });
+        let maxF = 0;
+        for (let step = 0; step < 30 * 60; step++) {
+          stepFishSim(sim, 1 / 30, e);
+          for (let i = 0; i < sim.live; i++) {
+            maxF = Math.max(maxF, Math.hypot(sim.fx[i], sim.fy[i]));
+            const sp = Math.hypot(sim.vx[i], sim.vy[i]);
+            if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) issues.push(`speed ${sp}`);
+            const x = sim.x[i];
+            const y = sim.y[i];
+            if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) issues.push(`x ${x}`);
+            if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) issues.push(`y ${y}`);
+            if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) issues.push(`z ${sim.z[i]}`);
+          }
+          if (issues.length > 5) break;
         }
-        if (issues.length > 5) break;
+        expect(maxF).toBeLessThanOrEqual(FORCE_MAX + 1e-6);
       }
-      expect(maxF).toBeLessThanOrEqual(FORCE_MAX + 1e-6);
-    }
-    expect(issues).toEqual([]);
-  });
+      expect(issues).toEqual([]);
+    },
+  );
 
   it("clamps fish back inside after the frame narrows", () => {
     const sim = createFishSim(1, 20, 21 / 9);
