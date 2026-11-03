@@ -281,10 +281,12 @@ void main() {
     * (0.45 + 0.65 * smoothstep(0.7, -0.9, p.y));
   vec3 col = bg * mix(tint, tint * tint * 0.7, fres);
 
-  // The core, magnified a little, turning with the spin.
+  // The core, magnified a little, turning with the spin. Sampling through the
+  // inverse rotation turns the pattern by +spin (counter-clockwise, y up), so a
+  // marble rolling right (negative spin) turns clockwise and rolls forwards.
   float cs = cos(vPos.z);
   float sn = sin(vPos.z);
-  vec2 q = mat2(cs, sn, -sn, cs) * p / 0.85;
+  vec2 q = mat2(cs, -sn, sn, cs) * p / 0.85;
   float ql = length(q);
   float depth = 1.0 - smoothstep(0.62, 0.95, ql);
   float band;
