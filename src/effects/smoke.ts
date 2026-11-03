@@ -3,31 +3,25 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createProgram,
-  createRenderTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   withScope,
 } from "./gl";
 import { lowResSize, qualityDivisor } from "./lowres";
 import { wrap } from "./math";
-import { hash32, HASH32_GLSL } from "./noise";
 import type { StepClock } from "./reaction-sim";
+import { createSmokeField } from "./smoke-field";
 import {
   draftAt,
   type Flow,
   placeEmitters,
-  SIM_DT,
   simSteps,
   SMOKE_DIVISORS,
   sourceFor,
-  SPLAT_CUTOFF,
   turbulenceFlow,
   WAVE_COUNT,
-  waveAmp,
-  WAVES,
   wavePhases,
 } from "./smoke-sim";
 import { smokeMeta } from "./smoke.meta";
@@ -53,96 +47,6 @@ const POOL_FALLOFF = 2;
 /** Light direction (towards the light, for the side the light is on) before normalising. */
 const LIGHT_DIR_X = 0.9;
 const LIGHT_DIR_Y = 0.44;
-
-const vec4Of = (f: (i: number) => number) =>
-  `vec4(${Array.from({ length: WAVE_COUNT }, (_, i) => glslFloat(f(i))).join(", ")})`;
-
-/**
- * GLSL twin of `velocity` in smoke-sim.ts: the curl of a four-wave stream
- * function scaled by a smoothstep in height, plus the draft (growing with height)
- * and buoyancy. ALU only: four sines and four cosines.
- */
-const VELOCITY_GLSL = /* glsl */ `
-/** Wave numbers, and amplitudes (c / |k|) of the stream function's waves. */
-const vec4 KX = ${vec4Of((i) => WAVES[i].kx)};
-const vec4 KY = ${vec4Of((i) => WAVES[i].ky)};
-const vec4 AMP = ${vec4Of(waveAmp)};
-/** Phases of the waves, wrapped on the CPU. */
-uniform vec4 uPhase;
-/** Rise, draft at the top, curl strength. */
-uniform vec3 uFlow;
-/** Curl onset height and 1 / onset span. */
-uniform vec2 uOnset;
-vec2 velocity(vec2 p) {
-  vec4 th = KX * p.x + KY * p.y + uPhase;
-  vec4 s = AMP * sin(th);
-  vec4 c = AMP * cos(th);
-  float t = clamp((p.y - uOnset.x) * uOnset.y, 0.0, 1.0);
-  float sv = uFlow.z * t * t * (3.0 - 2.0 * t);
-  float ds = uFlow.z * 6.0 * t * (1.0 - t) * uOnset.y;
-  float psiY = sv * dot(c, KY) + ds * (s.x + s.y + s.z + s.w);
-  float psiX = sv * dot(c, KX);
-  return vec2(psiY + uFlow.y * p.y, uFlow.x - psiX);
-}
-`;
-
-const CUT = Math.exp(-0.5 * SPLAT_CUTOFF * SPLAT_CUTOFF);
-
-/**
- * One fixed simulation step per cell: semi-Lagrangian advection of the density
- * along the velocity (midpoint backtrace, one bilinear fetch), a height-dependent
- * fade, and the source splats (`max`, so a source holds its density rather than
- * piling it up). `quantise` adds stochastic rounding for the 8-bit fallback,
- * whose slow fade would otherwise stall at a few LSBs above zero.
- */
-const advectFragment = (quantise: boolean) => /* glsl */ `#version 300 es
-precision highp float;
-precision highp int;
-precision highp sampler2D;
-uniform sampler2D uField;
-/** Canvas width / height: uv.x * aspect is x in height units. */
-uniform float uAspect;
-/** Emitters: x, y (height units), segment half-width, strength (0: off). */
-uniform vec4 uEmit0;
-uniform vec4 uEmit1;
-/** 1 / splat radius^2. */
-uniform float uInvR2;
-/** Wisps along a wide source: wave number, phase, amount. */
-uniform vec3 uWisp;
-/** Fade rate near the bottom, 1/s. */
-uniform float uDecay;
-${quantise ? "uniform uint uSeed;" : ""}
-in vec2 vUv;
-out vec4 outColor;
-${VELOCITY_GLSL}
-${quantise ? HASH32_GLSL : ""}
-const float DT = ${glslFloat(SIM_DT)};
-float splat(vec2 d, vec4 e) {
-  float ex = max(abs(d.x) - e.z, 0.0);
-  float q = (ex * ex + d.y * d.y) * uInvR2;
-  float s = max(exp(-0.5 * q) - ${glslFloat(CUT)}, 0.0) * ${glslFloat(1 / (1 - CUT))};
-  return s * e.w * (1.0 - uWisp.z * (0.5 + 0.5 * sin(uWisp.x * (d.x + e.x) + uWisp.y)));
-}
-void main() {
-  vec2 p = vec2(vUv.x * uAspect, vUv.y);
-  vec2 v1 = velocity(p);
-  vec2 back = p - DT * velocity(p - 0.5 * DT * v1);
-  vec2 uv = vec2(back.x / uAspect, back.y);
-  // Air drawn in from beyond the sides or the bottom is clear.
-  float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y);
-  float d = texture(uField, uv).r * inside;
-  d *= exp(-DT * uDecay * (1.0 + ${glslFloat(HEIGHT_DECAY)} * p.y));
-  d = max(d, max(splat(p - uEmit0.xy, uEmit0), splat(p - uEmit1.xy, uEmit1)));
-${
-  quantise
-    ? `  uvec2 c = uvec2(gl_FragCoord.xy);
-  uint h = hash32((c.x + (c.y << 16)) ^ uSeed);
-  d += (float(h) * ${glslFloat(1 / 4294967296)} - 0.5) * ${glslFloat(1 / 255)};`
-    : ""
-}
-  outColor = vec4(clamp(d, 0.0, 1.0), 0.0, 0.0, 1.0);
-}
-`;
 
 /**
  * Full-resolution composite: background with a soft pool of light, the source
@@ -246,37 +150,12 @@ void main() {
 export const smoke = defineEffect(smokeMeta, {
   create(gl) {
     return withScope((scope) => {
-      // Half-float density if it's renderable here, else 8-bit with stochastic rounding.
-      const floatExt =
-        gl.getExtension("EXT_color_buffer_float") !== null ||
-        gl.getExtension("EXT_color_buffer_half_float") !== null;
-      let quantise = true;
-      if (floatExt) {
-        const probe = createRenderTarget(gl, 1, 1, gl.R16F);
-        if (probe) {
-          quantise = false;
-          probe.dispose();
-        }
-      }
-      const format = quantise ? gl.R8 : gl.R16F;
-
-      const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => gl.deleteProgram(p));
-      const advectProgram = program(advectFragment(quantise));
-      const compositeProgram = program(COMPOSITE_FRAGMENT);
-      const adv = createUniforms(gl, advectProgram, [
-        "uField",
-        "uAspect",
-        "uPhase",
-        "uFlow",
-        "uOnset",
-        "uEmit0",
-        "uEmit1",
-        "uInvR2",
-        "uWisp",
-        "uDecay",
-        "uSeed",
-      ]);
+      const field = createSmokeField(gl, scope, "smoke");
+      const adv = field.uniforms;
+      const compositeProgram = scope.add(
+        createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT),
+        (p) => gl.deleteProgram(p),
+      );
       const comp = createUniforms(gl, compositeProgram, [
         "uField",
         "uAspect",
@@ -289,50 +168,19 @@ export const smoke = defineEffect(smokeMeta, {
         "uTip1",
         "uCup",
       ]);
-      gl.useProgram(advectProgram);
-      adv.i1("uField", 0);
       gl.useProgram(compositeProgram);
       comp.i1("uField", 0);
       gl.useProgram(null);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      /** The ping-pong pair; empty until the first frame, or if allocation failed. */
-      let targets: RenderTarget[] = [];
-      let current = 0;
-      let gridW = 0;
-      let gridH = 0;
-      const deleteTargets = () => {
-        for (const t of targets) t.dispose();
-        targets = [];
-      };
-      scope.defer(deleteTargets);
-
-      /** Replaces the field with a clear `w` x `h` one (a failed allocation leaves none). */
-      const regrid = (w: number, h: number) => {
-        deleteTargets();
-        gridW = w;
-        gridH = h;
-        const a = createRenderTarget(gl, w, h, format);
-        const b = a && createRenderTarget(gl, w, h, format);
-        if (!a || !b) {
-          a?.dispose();
-          console.warn(`smoke: can't allocate a ${w}x${h} density field`);
-          return;
-        }
-        targets = [a, b];
-        current = 0;
-      };
-
       let width = 1;
       let height = 1;
       /** Seconds since create, unwrapped (float64); only wrapped phases reach the GPU. */
       let time = 0;
-      let stepNo = 0;
       const clock: StepClock = { acc: 0 };
       const phases = new Float32Array(WAVE_COUNT);
       const emit = new Float64Array(4);
       const flow: Flow = { rise: 0, draft: 0, curl: 0, onset0: 0, onset1: 1 };
-      const INVALIDATE = [gl.COLOR_ATTACHMENT0];
       const background = unitRgbMemo();
 
       return {
@@ -345,8 +193,7 @@ export const smoke = defineEffect(smokeMeta, {
           const divisor = qualityDivisor(p.quality, SMOKE_DIVISORS);
           const w = lowResSize(width, divisor);
           const h = lowResSize(height, divisor);
-          if (w !== gridW || h !== gridH) regrid(w, h);
-          if (targets.length < 2) {
+          if (!field.resize(w, h)) {
             const c = background(p.background);
             gl.clearColor(c[0], c[1], c[2], 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -363,13 +210,13 @@ export const smoke = defineEffect(smokeMeta, {
 
           const n = simSteps(clock, dt);
           if (n > 0) {
-            gl.useProgram(advectProgram);
+            gl.useProgram(field.program);
             wavePhases(time, phases);
             flow.rise = preset.rise;
             flow.draft = draftAt(p.draft, time);
             turbulenceFlow(p.turbulence, emit[1], flow);
             const radius = Math.max(preset.radius, MIN_RADIUS_CELLS / h);
-            adv.f1("uAspect", aspect);
+            adv.f4("uRegion", 0, 0, aspect, 1);
             adv.f4("uPhase", phases[0], phases[1], phases[2], phases[3]);
             adv.f3("uFlow", flow.rise, flow.draft, flow.curl);
             adv.f2("uOnset", flow.onset0, 1 / (flow.onset1 - flow.onset0));
@@ -377,24 +224,13 @@ export const smoke = defineEffect(smokeMeta, {
             adv.f4("uEmit1", emit[2], emit[3], preset.halfWidth, second ? strength : 0);
             adv.f1("uInvR2", 1 / (radius * radius));
             adv.f3("uWisp", WISP_K, wrap(time * WISP_SPEED, 0, Math.PI * 2), preset.wisp);
-            adv.f1("uDecay", 1 / preset.life);
-            for (let i = 0; i < n; i++) {
-              const src = targets[current];
-              current ^= 1;
-              const dst = targets[current];
-              dst.bind();
-              // Every cell is overwritten, so tiled GPUs need not load the old contents.
-              gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-              if (quantise) adv.u1("uSeed", hash32(++stepNo));
-              gl.bindTexture(gl.TEXTURE_2D, src.texture);
-              triangle.draw();
-            }
+            adv.f2("uDecay", 1 / preset.life, HEIGHT_DECAY);
+            field.advance(n);
           }
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.viewport(0, 0, width, height);
           gl.useProgram(compositeProgram);
-          const field = targets[current];
           gl.bindTexture(gl.TEXTURE_2D, field.texture);
           // The light is on the outer side of the source, away from the speaker.
           const side = p.sourceX < 0.5 ? -1 : 1;
