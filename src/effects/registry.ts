@@ -26,6 +26,7 @@ import { frostMeta } from "./frost.meta";
 import { frostedMeta } from "./frosted.meta";
 import { glassMeta } from "./glass.meta";
 import { grassMeta } from "./grass.meta";
+import { greenhouseMeta } from "./greenhouse.meta";
 import { harmonographMeta } from "./harmonograph.meta";
 import { horizonMeta } from "./horizon.meta";
 import { hyperspaceMeta } from "./hyperspace.meta";
@@ -84,6 +85,7 @@ export const effects: readonly EffectEntry[] = [
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
+  { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
