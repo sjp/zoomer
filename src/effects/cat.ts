@@ -163,8 +163,8 @@ void main() {
  * cat-sim.ts), drawn back to front with coverage antialiasing: the cushion's
  * shadow on the sill, the cushion, the body (two smooth-unioned ellipses that
  * swell with each breath), the ears, the head with its closed eyes and nose,
- * the paws, and the tail (an arc of an ellipse round the front, plus a tip
- * that flicks). Each shape is shaded as a soft dome from its distance field,
+ * the paws, and the tail (a tapering tube from behind the haunch, round the
+ * front along an arc of an ellipse, to a tip that curls and flicks). Each shape is shaded as a soft dome from its distance field,
  * lit by the room and the sun, with a rim light where the silhouette faces
  * the window, a contact shadow from the shapes in front of it, and tabby
  * stripes from a 1D pattern along the body's curve.
@@ -199,14 +199,23 @@ const vec2 HAUNCH_R = vec2(0.24, 0.225);
 const float BODY_K = 0.08;
 const vec2 HEAD_C = vec2(0.3, 0.165);
 const vec2 HEAD_R = vec2(0.165, 0.138);
+/** Tail: root (hidden behind the haunch), then an arc of an ellipse, then a curling tip. */
+const vec2 TAIL_ROOT = vec2(-0.34, 0.15);
 const vec2 TAIL_C = vec2(-0.03, 0.2);
 const vec2 TAIL_R = vec2(0.47, 0.185);
-const float TAIL_A0 = -2.8;
+const float TAIL_A0 = -2.7;
 const float TAIL_A1 = -0.95;
-const float TAIL_W0 = 0.05;
-const float TAIL_W1 = 0.042;
-const float TIP_W = 0.03;
-const float TIP_LEN = 0.13;
+/** Share of the tail's length (0 root, 1 tip) where the arc starts and ends. */
+const float TAIL_ROOT_S = 0.08;
+const float TAIL_ARC_S = 0.78;
+/** Tip length, its resting curl (rad) and how far the flick adds to it. */
+const float TIP_LEN = 0.17;
+const float TIP_CURL = 0.55;
+const float TIP_FLICK = 1.4;
+const int TAIL_ARC_N = 16;
+const int TAIL_TIP_N = 10;
+/** Where along the tail it clears the haunch: behind it before, in front after. */
+const vec2 TAIL_OUT = vec2(0.2, 0.32);
 
 float px;
 vec3 colP;
@@ -240,6 +249,56 @@ float sdTri(vec2 p, vec2 p0, vec2 p1, vec2 p2) {
     vec2(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
     vec2(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
   return -sqrt(d.x) * sign(d.y);
+}
+/** Tail radius at s along it (0 root, 1 tip): thick at the root, slimming to a rounded tip. */
+float tailWidth(float s) {
+  if (s <= TAIL_ARC_S) return mix(0.056, 0.044, s / TAIL_ARC_S);
+  float u = (s - TAIL_ARC_S) / (1.0 - TAIL_ARC_S);
+  return 0.044 - 0.023 * pow(u, 1.6);
+}
+/**
+ * The tail as a chain of tapered segments, tip lifted by \`flick\` (rad). x:
+ * signed distance; y: s along it (0..1); z: distance from its axis as a share
+ * of its radius. \`g\` gets the outward direction from the axis.
+ */
+vec3 tail(vec2 q, float flick, out vec2 g) {
+  vec3 best = vec3(1e9, 0.0, 1.0);
+  g = vec2(0.0, 1.0);
+  vec2 a = TAIL_ROOT;
+  float sa = 0.0;
+  float phi1 = atan(TAIL_R.y * cos(TAIL_A1), -TAIL_R.x * sin(TAIL_A1));
+  for (int i = 0; i <= TAIL_ARC_N + TAIL_TIP_N; i++) {
+    vec2 b;
+    float sb;
+    if (i <= TAIL_ARC_N) {
+      float k = float(i) / float(TAIL_ARC_N);
+      float an = mix(TAIL_A0, TAIL_A1, k);
+      b = TAIL_C + TAIL_R * vec2(cos(an), sin(an));
+      sb = mix(TAIL_ROOT_S, TAIL_ARC_S, k);
+    } else {
+      // The tip bends more toward its end: resting curl plus the flick.
+      float k = float(i - TAIL_ARC_N);
+      float u = (k - 0.5) / float(TAIL_TIP_N);
+      float phi = phi1 + (TIP_CURL + TIP_FLICK * flick) * u * u;
+      b = a + vec2(cos(phi), sin(phi)) * (TIP_LEN / float(TAIL_TIP_N));
+      sb = mix(TAIL_ARC_S, 1.0, k / float(TAIL_TIP_N));
+    }
+    vec2 e = b - a;
+    vec2 v = q - a;
+    float h = clamp(dot(v, e) / max(dot(e, e), 1e-9), 0.0, 1.0);
+    vec2 c = v - e * h;
+    float s = mix(sa, sb, h);
+    float w = tailWidth(s);
+    float r = length(c);
+    if (r - w < best.x) {
+      best = vec3(r - w, s, min(r / w, 1.0));
+      g = c;
+    }
+    a = b;
+    sa = sb;
+  }
+  g = normalize(g + vec2(0.0, 1e-6));
+  return best;
 }
 vec2 rot(vec2 v, float a) {
   float c = cos(a);
@@ -324,35 +383,13 @@ void main() {
   float dPaw = min(dP1, dP2);
   vec2 gPaw = dP1 < dP2 ? gEllipse(q - vec2(0.37, 0.03), vec2(0.07, 0.034))
     : gEllipse(q - vec2(0.43, 0.045), vec2(0.055, 0.03));
-  // Tail: an arc of an ellipse round the front...
-  vec2 t = q - TAIL_C;
-  float th = atan(t.y / TAIL_R.y, t.x / TAIL_R.x);
-  float ta = clamp((th - TAIL_A0) / (TAIL_A1 - TAIL_A0), 0.0, 1.0);
-  vec2 e0 = TAIL_C + TAIL_R * vec2(cos(TAIL_A0), sin(TAIL_A0));
-  vec2 e1 = TAIL_C + TAIL_R * vec2(cos(TAIL_A1), sin(TAIL_A1));
-  float dArc;
-  vec2 gArc;
-  if (th >= TAIL_A0 && th <= TAIL_A1) {
-    float de = sdEllipse(t, TAIL_R);
-    dArc = abs(de) - mix(TAIL_W0, TAIL_W1, ta);
-    gArc = gEllipse(t, TAIL_R) * (de < 0.0 ? -1.0 : 1.0);
-  } else {
-    float l0 = length(q - e0) - TAIL_W0;
-    float l1 = length(q - e1) - TAIL_W1;
-    dArc = min(l0, l1);
-    gArc = normalize((l0 < l1 ? q - e0 : q - e1) + vec2(0.0, 1e-6));
-  }
-  // ...then a tapered tip along its tangent, lifted by the flick.
-  vec2 td = rot(normalize(vec2(-TAIL_R.x * sin(TAIL_A1), TAIL_R.y * cos(TAIL_A1))), uPose.w);
-  vec2 tp = q - e1;
-  float h = clamp(dot(tp, td) / TIP_LEN, 0.0, 1.0);
-  vec2 cp = tp - td * (TIP_LEN * h);
-  float dTip = length(cp) - mix(TAIL_W1, TIP_W, h);
-  vec2 gTip = normalize(cp + vec2(0.0, 1e-6));
-  float ht = clamp(0.5 + 0.5 * (dTip - dArc) / 0.03, 0.0, 1.0);
-  float dTail = mix(dTip, dArc, ht) - 0.03 * ht * (1.0 - ht);
-  vec2 gTail = normalize(mix(gTip, gArc, ht) + vec2(0.0, 1e-6));
-  float tailU = ht * ta * 0.85 + (1.0 - ht) * (0.85 + 0.15 * h);
+  // Tail: from behind the haunch, round the front, to a curling tip.
+  vec2 gTail;
+  vec3 tl = tail(q, uPose.w, gTail);
+  float dTail = tl.x;
+  float tailU = tl.y;
+  // 0 where the tail is still behind the haunch, 1 once it is in front.
+  float tailOut = smoothstep(TAIL_OUT.x, TAIL_OUT.y, tailU);
 
   float dCat = min(min(min(dBody, dHead), min(earN.x, earF.x)), min(dPaw, dTail));
   float rim = 1.0 - smoothstep(0.0, 0.03, -dCat);
@@ -386,7 +423,7 @@ void main() {
     float rr = length(r);
     float st = stripes(sin(ra * 15.0 + rr * 6.0 + 0.6 * sin(ra * 4.0)), smoothstep(0.17, 0.3, rr), 0.3);
     float chest = 1.0 - smoothstep(0.6, 1.0, length((qb - vec2(0.2, 0.1)) / vec2(0.13, 0.12)));
-    float occ = min(min(occFrom(dHead), occFrom(dTail)), occFrom(dPaw));
+    float occ = min(min(occFrom(dHead), mix(1.0, occFrom(dTail), tailOut)), occFrom(dPaw));
     over(shade(furAt(st, chest), gBody, dBody, 0.2, rim, occ), cb);
   }
   // Ears, far then near, behind the head.
@@ -418,10 +455,12 @@ void main() {
   }
   float cp2 = cov(dPaw);
   if (cp2 > 0.0) over(shade(furAt(0.0, 0.55), gPaw, dPaw, 0.04, rim, occFrom(dTail)), cp2);
-  float ct = cov(dTail);
+  // The root is hidden behind the haunch, and shadowed where it comes out from under it.
+  float ct = cov(dTail) * (1.0 - (1.0 - tailOut) * cov(dBody + 0.004));
   if (ct > 0.0) {
     float st = stripes(sin(tailU * 40.0), 1.0, 0.34);
-    over(shade(furAt(st, 0.0), gTail, dTail, 0.05, rim, 1.0), ct);
+    float occ = 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.04, dBody)) * (1.0 - smoothstep(0.12, 0.3, tailU));
+    over(shadeN(furAt(st, 0.0), gTail, tl.z, rim, occ), ct);
   }
   // Same dither as the room's blit, weighted so the blend keeps its sum.
   outColor = vec4(colP + dither8(gl_FragCoord.xy) * alpha, alpha);
