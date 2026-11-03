@@ -87,14 +87,15 @@ float sideWeight(float x) {
 }
 
 /**
- * A row of pines in cells \`cellW\` wide, standing on the hill or the ground line
- * (sunk by \`sink\`): their coverage, and how snowy the pixel is. \`bias\` thins
- * the trees toward the middle. Trees can overhang the next cell, so three are tested.
+ * A row of spruces in cells \`cellW\` wide, standing on the hill or the ground line
+ * (sunk by \`sink\`), with \`tiers\` (min, max) of branches: their coverage, how
+ * snowy the pixel is and how shaded. \`bias\` thins the trees toward the middle.
+ * Trees can overhang the next cell, so three are tested.
  */
-vec2 pineRow(vec2 p, float cellW, float tallest, float density, float bias, bool onHill,
-             float sink, float salt, float px) {
+vec3 pineRow(vec2 p, float cellW, float tallest, float density, float bias, bool onHill,
+             float sink, float salt, vec2 tiers, float px) {
   float cell0 = floor(p.x / cellW);
-  vec2 best = vec2(0.0);
+  vec3 best = vec3(0.0);
   for (int k = -1; k <= 1; k++) {
     float cell = cell0 + float(k);
     float dens = density * mix(1.0, sideWeight((cell + 0.5) * cellW), bias);
@@ -105,10 +106,17 @@ vec2 pineRow(vec2 p, float cellW, float tallest, float density, float bias, bool
     float base = (onHill ? hillLine(cx) : groundLine(cx)) - sink;
     float yr = (p.y - base) / th;
     if (yr < 0.0 || yr > 1.0) continue;
-    float c = clamp((pineHalfWidth(yr, th) - abs(p.x - cx)) / px + 0.5, 0.0, 1.0);
-    if (c > best.x) best = vec2(c, smoothstep(0.55, 0.95, fract(yr * 3.0)));
+    float r = fract(pine.y * 7.31 + pine.z * 3.77);
+    vec3 s = pineSpruce(vec2(p.x - cx, yr), th, floor(mix(tiers.x, tiers.y + 0.99, r)), r);
+    float c = clamp(s.x / px + 0.5, 0.0, 1.0);
+    if (c > best.x) best = vec3(c, s.yz);
   }
   return best;
+}
+
+/** A spruce's colour from its row sample (coverage, snow, shade): needles, shaded under each tier, with snow. */
+vec3 spruceColor(vec3 needles, vec3 s, float snow) {
+  return mix(needles * (1.0 - 0.45 * s.z), PINE_SNOW, snow * s.y);
 }
 
 /** A warm point of light with a soft halo. */
@@ -158,7 +166,7 @@ void main() {
   vec3 haze = mix(PINE, SKY_LOW, 0.6);
   col = mix(col, haze, clamp((hillLine(p.x) - p.y) / px + 0.5, 0.0, 1.0));
   if (uScene != 2) {
-    vec2 far = pineRow(p, 0.02, 0.035, 0.75, 0.0, true, 0.004, 11.0, px);
+    vec3 far = pineRow(p, 0.02, 0.035, 0.75, 0.0, true, 0.004, 11.0, vec2(4.0, 5.0), px);
     col = mix(col, mix(PINE, SKY_LOW, 0.5), far.x);
   }
 
@@ -169,15 +177,15 @@ void main() {
   col = mix(col, snow, clamp((g - p.y) / px + 0.5, 0.0, 1.0));
 
   if (uScene == 0) {
-    vec2 mid = pineRow(p, 0.09, 0.11, 0.85, 0.8, false, 0.004, 23.0, px);
-    col = mix(col, mix(mix(PINE, SKY_LOW, 0.25), PINE_SNOW, 0.55 * mid.y), mid.x);
-    vec2 near = pineRow(p, 0.22, 0.42, 0.9, 1.0, false, 0.06, 37.0, px);
-    col = mix(col, mix(PINE, PINE_SNOW, 0.6 * near.y), near.x);
+    vec3 mid = pineRow(p, 0.09, 0.11, 0.85, 0.8, false, 0.004, 23.0, vec2(5.0, 7.0), px);
+    col = mix(col, spruceColor(mix(PINE, SKY_LOW, 0.25), mid, 0.55), mid.x);
+    vec3 near = pineRow(p, 0.22, 0.42, 0.9, 1.0, false, 0.06, 37.0, vec2(7.0, 9.0), px);
+    col = mix(col, spruceColor(PINE, near, 0.75), near.x);
     // A cabin window among the far trees.
     col += glow(p, vec2(uAspect * 0.8, hillLine(uAspect * 0.8) + 0.004), 0.0035, 0.03, 0.8);
   } else if (uScene == 1) {
-    vec2 mid = pineRow(p, 0.09, 0.1, 0.35, 0.8, false, 0.004, 23.0, px);
-    col = mix(col, mix(mix(PINE, SKY_LOW, 0.25), PINE_SNOW, 0.55 * mid.y), mid.x);
+    vec3 mid = pineRow(p, 0.09, 0.1, 0.35, 0.8, false, 0.004, 23.0, vec2(5.0, 7.0), px);
+    col = mix(col, spruceColor(mix(PINE, SKY_LOW, 0.25), mid, 0.55), mid.x);
     col = houses(p, col, px);
     // A street lamp on the left, with a pool of light on the snow.
     float lx = uAspect * 0.14;
