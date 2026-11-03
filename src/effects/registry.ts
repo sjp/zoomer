@@ -41,6 +41,7 @@ import { moireMeta } from "./moire.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
+import { marbleMeta } from "./marble.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { papercutMeta } from "./papercut.meta";
 import { physarumMeta } from "./physarum.meta";
@@ -108,6 +109,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
+  { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
   { ...moireMeta, load: () => import("./moire").then((m) => m.moire) },
   { ...ridgesMeta, load: () => import("./ridges").then((m) => m.ridges) },
