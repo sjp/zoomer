@@ -1,13 +1,20 @@
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import type { AnyParamValues, EffectMeta, ParamValue } from "../effects/types";
 import type { FrameStats } from "./EffectCanvas";
 import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 import type { Store } from "../lib/store";
+import { EffectList, type EffectListProps } from "./EffectList";
 import { ParamControl } from "./ParamControl";
 
+/** The effect list's state, owned by the app because ← / → follow it too. */
+export type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose"> & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
 interface Props {
-  effects: readonly EffectMeta[];
+  list: EffectListState;
   effect: EffectMeta;
   values: AnyParamValues;
   /** Why the current effect failed to load or start, or stopped, if it did. */
@@ -35,31 +42,49 @@ interface Props {
 const DURATIONS = [10, 20, 30, 60];
 
 export function ControlPanel(props: Props) {
-  const { effect, values, recordingLeft } = props;
+  const { effect, values, recordingLeft, list } = props;
   const recording = recordingLeft !== undefined;
   const [duration, setDuration] = useState(20);
+  const pickerRef = useRef<HTMLButtonElement>(null);
+  const listOpen = list.open && !recording;
+  const closeList = () => {
+    list.onOpenChange(false);
+    pickerRef.current?.focus();
+  };
 
   return (
     <aside className="panel">
       <header className="panel-header">
-        <select
-          className="effect-select"
-          aria-label="Effect"
-          value={effect.id}
+        <button
+          ref={pickerRef}
+          type="button"
+          className="effect-picker"
+          aria-expanded={listOpen}
           disabled={recording}
-          title={recording ? "Locked while recording" : undefined}
-          onChange={(e) => props.onEffectChange(e.target.value)}
+          title={recording ? "Locked while recording" : "Choose an effect (/)"}
+          onClick={() => list.onOpenChange(!list.open)}
         >
-          {props.effects.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
+          <span className="sr-only">Effect: </span>
+          {effect.name}
+          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
         <button type="button" onClick={props.onHide} title="Hide controls (H)">
           Hide
         </button>
       </header>
+      {listOpen && (
+        <EffectList
+          {...list}
+          currentId={effect.id}
+          onSelect={(id) => {
+            props.onEffectChange(id);
+            closeList();
+          }}
+          onClose={closeList}
+        />
+      )}
       <p className="description">{effect.description}</p>
       {props.loading && (
         <p className="loading" role="status">
@@ -159,7 +184,7 @@ export function ControlPanel(props: Props) {
           Fullscreen
         </button>
       </footer>
-      <p className="hint">H hide · F fullscreen · ← → switch effect</p>
+      <p className="hint">/ search · H hide · F fullscreen · ← → switch effect</p>
     </aside>
   );
 }

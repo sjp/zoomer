@@ -3,6 +3,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { defaults, encodeHash, stateFromHash } from "./effects/params";
+import { visibleEffects, type EffectSort } from "./effects/list";
 import { createLatest, neighbours, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
@@ -10,6 +11,7 @@ import { useIdle } from "./hooks/useIdle";
 import { describeError } from "./lib/errors";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
 import { FRAME_RATES, type FrameRate } from "./lib/frameRate";
+import { loadSort, saveSort } from "./lib/preferences";
 import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
 
@@ -69,6 +71,22 @@ export function App() {
     [frameListeners],
   );
   const idle = useIdle(3000);
+  // The effect list: its sort is remembered, its search isn't. The search stays while
+  // the list is closed, because ← / → follow the filtered list.
+  const [listOpen, setListOpen] = useState(false);
+  const [listFocus, setListFocus] = useState(0);
+  const [sort, setSort] = useState<EffectSort>(loadSort);
+  const [query, setQuery] = useState("");
+  const listOptions = useMemo(() => ({ sort, query }), [sort, query]);
+  const visible = useMemo(() => visibleEffects(effects, listOptions), [listOptions]);
+  const changeSort = useCallback((next: EffectSort) => {
+    setSort(next);
+    saveSort(next);
+  }, []);
+  const prefetch = useCallback((id: string) => {
+    const entry = getEffect(id);
+    if (entry) effectLoader.prefetch(entry);
+  }, []);
 
   const effect = getEffect(effectId) ?? defaultEffect;
   const values = useMemo(
@@ -208,6 +226,13 @@ export function App() {
     setPanelHidden(false);
     setHoveringPanel(false);
   }, []);
+  /** Shows the panel and the effect list, and focuses its search box. */
+  const openList = useCallback(() => {
+    if (recording) return;
+    setPanelHidden(false);
+    setListOpen(true);
+    setListFocus((n) => n + 1);
+  }, [recording]);
 
   // Fullscreen can be refused (in an iframe, without a user gesture, or on iPhone,
   // which lacks the API); say so briefly rather than failing silently.
@@ -227,14 +252,17 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) return;
-      if (e.key === "h" || e.key === "H") togglePanel();
+      if (e.key === "/") {
+        e.preventDefault();
+        openList();
+      } else if (e.key === "h" || e.key === "H") togglePanel();
       else if (e.key === "f" || e.key === "F") toggleFullscreen();
       else if (e.key === "ArrowRight") step(1);
       else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, togglePanel, toggleFullscreen]);
+  }, [step, togglePanel, toggleFullscreen, openList]);
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
@@ -261,7 +289,8 @@ export function App() {
     }
   };
 
-  const showPanel = !panelHidden && (!idle || hoveringPanel || recording);
+  // An open effect list keeps the panel up, so it doesn't fade out mid-search.
+  const showPanel = !panelHidden && (!idle || hoveringPanel || recording || listOpen);
 
   return (
     <main className="app" data-idle={idle && !hoveringPanel}>
@@ -283,7 +312,16 @@ export function App() {
       >
         <PanelErrorBoundary>
           <ControlPanel
-            effects={effects}
+            list={{
+              effects: visible,
+              options: listOptions,
+              focusRequest: listFocus,
+              open: listOpen,
+              onOpenChange: setListOpen,
+              onQueryChange: setQuery,
+              onSortChange: changeSort,
+              onPrefetch: prefetch,
+            }}
             effect={effect}
             values={values}
             error={loadError ?? (ready ? effectError : undefined)}
