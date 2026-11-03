@@ -63,6 +63,7 @@ import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
 import { marblerunMeta } from "./marblerun.meta";
 import { nebulaMeta } from "./nebula.meta";
+import { neonMeta } from "./neon.meta";
 import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
 import { pendulumMeta } from "./pendulum.meta";
@@ -136,6 +137,7 @@ export const effects: readonly EffectEntry[] = [
   { ...globeMeta, load: () => import("./globe").then((m) => m.globe) },
   { ...hourglassMeta, load: () => import("./hourglass").then((m) => m.hourglass) },
   { ...splitflapMeta, load: () => import("./splitflap").then((m) => m.splitflap) },
+  { ...neonMeta, load: () => import("./neon").then((m) => m.neon) },
   { ...marblerunMeta, load: () => import("./marblerun").then((m) => m.marblerun) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
