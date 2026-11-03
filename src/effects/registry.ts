@@ -42,6 +42,7 @@ import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
 import { mugMeta } from "./mug.meta";
+import { murmurationMeta } from "./murmuration.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { meteorsMeta } from "./meteors.meta";
 import { leavesMeta } from "./leaves.meta";
@@ -111,6 +112,7 @@ export const effects: readonly EffectEntry[] = [
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
+  { ...murmurationMeta, load: () => import("./murmuration").then((m) => m.murmuration) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
   { ...kelpMeta, load: () => import("./kelp").then((m) => m.kelp) },
