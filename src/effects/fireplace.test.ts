@@ -245,10 +245,17 @@ describe("stepEmbers", () => {
   it("keeps live embers packed after removals", () => {
     const s = createEmberState(100);
     const rng = createRng(4);
+    // Plain comparisons in the hot loop: an expect per ember costs far more than the check.
+    const stale: string[] = [];
     for (let i = 0; i < 600; i++) {
       stepEmbers(s, 1 / 60, env(30), rng, noCurl);
-      for (let k = 0; k < s.count; k++) expect(s.age[k]).toBeLessThan(s.life[k]);
+      for (let k = 0; k < s.count; k++) {
+        if (!(s.age[k] < s.life[k]) && stale.length < 10) {
+          stale.push(`step ${i}, ember ${k}: age ${s.age[k]}, life ${s.life[k]}`);
+        }
+      }
     }
+    expect(stale).toEqual([]);
     expect(s.count).toBeGreaterThan(0);
   });
 });
@@ -264,12 +271,14 @@ describe("emberAlpha", () => {
   it("stays within [0, 1] for any age, seed and time", () => {
     const rng = createRng(8);
     let hi = 0;
+    const negative: string[] = [];
     for (let i = 0; i < 20_000; i++) {
       const life = 0.1 + rng() * 5;
       const a = emberAlpha(rng() * 1.2 * life, life, rng() * 7, rng() * 1000);
-      expect(a).toBeGreaterThanOrEqual(0);
+      if (!(a >= 0) && negative.length < 10) negative.push(`sample ${i}: ${a}`);
       hi = Math.max(hi, a);
     }
+    expect(negative).toEqual([]);
     expect(hi).toBeLessThanOrEqual(1);
     expect(hi).toBeGreaterThan(0.5);
     expect(emberAlpha(1, 0, 0, 0)).toBe(0);
