@@ -39,6 +39,7 @@ import { greenhouseMeta } from "./greenhouse.meta";
 import { icecaveMeta } from "./icecave.meta";
 import { harmonographMeta } from "./harmonograph.meta";
 import { horizonMeta } from "./horizon.meta";
+import { hotspringMeta } from "./hotspring.meta";
 import { hourglassMeta } from "./hourglass.meta";
 import { hyperspaceMeta } from "./hyperspace.meta";
 import { inkMeta } from "./ink.meta";
@@ -120,6 +121,7 @@ export const effects: readonly EffectEntry[] = [
   { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
+  { ...hotspringMeta, load: () => import("./hotspring").then((m) => m.hotspring) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
   { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
