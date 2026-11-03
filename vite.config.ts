@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import type { Plugin } from "vite";
+import { configDefaults, defineConfig } from "vitest/config";
 
 /**
  * Content-Security-Policy for the built site. GitHub Pages can't send headers, so it
@@ -42,4 +43,6 @@ export default defineConfig({
   // project subpath (https://<user>.github.io/<repo>/).
   base: "./",
   plugins: [react(), contentSecurityPolicy()],
+  // Agent worktrees live under .claude/; keep their copies of the tests out of the run.
+  test: { exclude: [...configDefaults.exclude, "**/.claude/**"] },
 });
