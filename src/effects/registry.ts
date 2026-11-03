@@ -4,6 +4,7 @@ import { beachMeta } from "./beach.meta";
 import { biolumMeta } from "./biolum.meta";
 import { blindsMeta } from "./blinds.meta";
 import { blobsMeta } from "./blobs.meta";
+import { blossomMeta } from "./blossom.meta";
 import { bokehMeta } from "./bokeh.meta";
 import { bubblesMeta } from "./bubbles.meta";
 import { candlelightMeta } from "./candlelight.meta";
@@ -94,6 +95,7 @@ export const effects: readonly EffectEntry[] = [
   { ...cityMeta, load: () => import("./city").then((m) => m.city) },
   { ...jellyfishMeta, load: () => import("./jellyfish").then((m) => m.jellyfish) },
   { ...leavesMeta, load: () => import("./leaves").then((m) => m.leaves) },
+  { ...blossomMeta, load: () => import("./blossom").then((m) => m.blossom) },
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
