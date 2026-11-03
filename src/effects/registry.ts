@@ -29,6 +29,7 @@ import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
+import { lighthouseMeta } from "./lighthouse.meta";
 import { leavesMeta } from "./leaves.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { papercutMeta } from "./papercut.meta";
@@ -66,6 +67,7 @@ export const effects: readonly EffectEntry[] = [
   { ...synthwaveMeta, load: () => import("./synthwave").then((m) => m.synthwave) },
   { ...cloudsMeta, load: () => import("./clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea").then((m) => m.sea) },
+  { ...lighthouseMeta, load: () => import("./lighthouse").then((m) => m.lighthouse) },
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
