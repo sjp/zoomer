@@ -419,3 +419,20 @@ select:disabled {
 .fps-meter[data-level="bad"] {
   color: #ff6b6b;
 }
+
+.filter-hint {
+  text-align: left;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.link-button:hover:not(:disabled) {
+  background: none;
+}

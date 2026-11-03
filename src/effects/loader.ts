@@ -90,15 +90,3 @@ export function whenIdle(task: () => void): () => void {
   const handle = setTimeout(task, 200);
   return () => clearTimeout(handle);
 }
-
-/**
- * The effects worth prefetching from `id`: the next and previous ones in `order`,
- * which is the order ← / → step through.
- */
-export function neighbours<T extends { id: string }>(order: readonly T[], id: string): T[] {
-  const i = order.findIndex((e) => e.id === id);
-  if (i < 0 || order.length < 2) return [];
-  const next = order[(i + 1) % order.length];
-  const prev = order[(i - 1 + order.length) % order.length];
-  return next === prev ? [next] : [next, prev];
-}

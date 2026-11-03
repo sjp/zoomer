@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createEffectLoader, createLatest, neighbours, whenIdle, type EffectEntry } from "./loader";
+import { createEffectLoader, createLatest, whenIdle, type EffectEntry } from "./loader";
 import { defineEffect, defineEffectMeta, type EffectDefinition } from "./types";
 
 const meta = (id: string) =>
@@ -143,22 +143,6 @@ describe("createLatest", () => {
     latest.cancel();
     await new Promise((r) => setTimeout(r));
     expect(results).toEqual([]);
-  });
-});
-
-describe("neighbours", () => {
-  const list = ["a", "b", "c", "d"].map((id) => ({ id }));
-
-  it("gives the next and previous effects, wrapping at the ends", () => {
-    expect(neighbours(list, "b").map((e) => e.id)).toEqual(["c", "a"]);
-    expect(neighbours(list, "a").map((e) => e.id)).toEqual(["b", "d"]);
-    expect(neighbours(list, "d").map((e) => e.id)).toEqual(["a", "c"]);
-  });
-
-  it("lists a lone neighbour once, and none for a missing id or a single effect", () => {
-    expect(neighbours(list.slice(0, 2), "a").map((e) => e.id)).toEqual(["b"]);
-    expect(neighbours(list, "gone")).toEqual([]);
-    expect(neighbours(list.slice(0, 1), "a")).toEqual([]);
   });
 });
 

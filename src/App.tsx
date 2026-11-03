@@ -3,8 +3,8 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { defaults, encodeHash, stateFromHash } from "./effects/params";
-import { visibleEffects, type EffectSort } from "./effects/list";
-import { createLatest, neighbours, whenIdle, type EffectEntry } from "./effects/loader";
+import { adjacentEffects, stepEffect, visibleEffects, type EffectSort } from "./effects/list";
+import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
@@ -132,18 +132,16 @@ export function App() {
     [latestLoad, startLoad],
   );
 
-  // The order ← / → step through, and so the order to prefetch in. Issue 120 makes this
-  // the list as the user sees it (sorted, filtered).
-  const order = effects;
-
-  // Once the selected effect runs, fetch its neighbours in idle time so stepping to
-  // them is instant. Failures are dropped from the cache, so a real switch retries.
+  // Once the selected effect runs, fetch the effects ← / → lead to (in the list as the
+  // user sees it) in idle time so stepping to them is instant. Failures are dropped from the cache, so a real switch retries.
   useEffect(() => {
     if (!ready) return;
     return whenIdle(() => {
-      for (const entry of neighbours(order, effect.id)) effectLoader.prefetch(entry);
+      for (const entry of adjacentEffects(effects, listOptions, effect.id)) {
+        effectLoader.prefetch(entry);
+      }
     });
-  }, [ready, order, effect]);
+  }, [ready, listOptions, effect]);
 
   // Load the first effect, unless it was already cached at the first render. main.tsx
   // has already started its import, so this joins it.
@@ -204,12 +202,13 @@ export function App() {
   );
 
   const step = useCallback(
-    (dir: number) => {
+    (dir: 1 | -1) => {
       if (recording) return;
-      const i = order.findIndex((e) => e.id === effect.id);
-      selectEffect(order[(i + dir + order.length) % order.length].id);
+      // The list as the user sees it: sorted and filtered by the search, even closed.
+      const next = stepEffect(effects, listOptions, effect.id, dir);
+      if (next) selectEffect(next.id);
     },
-    [order, effect, recording, selectEffect],
+    [listOptions, effect, recording, selectEffect],
   );
 
   // A panel hidden under the pointer gets pointer-events: none, so pointerleave may never

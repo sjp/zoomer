@@ -47,6 +47,8 @@ export function ControlPanel(props: Props) {
   const [duration, setDuration] = useState(20);
   const pickerRef = useRef<HTMLButtonElement>(null);
   const listOpen = list.open && !recording;
+  // The search stays applied after the list closes, because ← / → follow it.
+  const filter = list.options.query.trim();
   const closeList = () => {
     list.onOpenChange(false);
     pickerRef.current?.focus();
@@ -84,6 +86,15 @@ export function ControlPanel(props: Props) {
           }}
           onClose={closeList}
         />
+      )}
+      {!listOpen && filter && (
+        <p className="hint filter-hint">
+          ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}{" "}
+          for “{filter}”{" "}
+          <button type="button" className="link-button" onClick={() => list.onQueryChange("")}>
+            Clear
+          </button>
+        </p>
       )}
       <p className="description">{effect.description}</p>
       {props.loading && (
