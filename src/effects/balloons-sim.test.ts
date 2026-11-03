@@ -216,13 +216,19 @@ describe("balloons", () => {
 
   it("stay within their altitude band", () => {
     const b = createBalloons(5, ASPECT);
+    // Plain comparisons in the hot loop: an expect per sample costs ~10× the simulation.
+    const outside: string[] = [];
     for (let s = 0; s < 30000; s++) {
       stepBalloons(b, DT, ASPECT, 1, 6);
       for (let i = 0; i < MAX_BALLOONS; i++) {
-        expect(b.y[i]).toBeGreaterThanOrEqual(altitudeLow(b.depth[i]) - 1e-12);
-        expect(b.y[i]).toBeLessThanOrEqual(altitudeHigh(b.depth[i]) + 1e-12);
+        const lo = altitudeLow(b.depth[i]) - 1e-12;
+        const hi = altitudeHigh(b.depth[i]) + 1e-12;
+        if (!(b.y[i] >= lo && b.y[i] <= hi) && outside.length < 10) {
+          outside.push(`step ${s}, balloon ${i}: y ${b.y[i]} outside [${lo}, ${hi}]`);
+        }
       }
     }
+    expect(outside).toEqual([]);
   });
 
   it("actually rise and sink over time", () => {
@@ -244,15 +250,19 @@ describe("balloons", () => {
   it("burner timers stay bounded and every balloon fires", () => {
     const b = createBalloons(9, ASPECT);
     const fired = new Uint8Array(MAX_BALLOONS);
+    const unbounded: string[] = [];
     for (let s = 0; s < 6000; s++) {
       stepBalloons(b, DT, ASPECT, 1, 6);
       for (let i = 0; i < MAX_BALLOONS; i++) {
-        expect(b.burnTimer[i]).toBeLessThanOrEqual(BURN_GAP_MAX);
-        expect(b.burnAge[i]).toBeLessThan(BURN_MAX);
-        expect(b.burnAge[i]).toBeGreaterThanOrEqual(-1);
-        if (b.burnAge[i] >= 0) fired[i] = 1;
+        const timer = b.burnTimer[i];
+        const age = b.burnAge[i];
+        if (!(timer <= BURN_GAP_MAX && age < BURN_MAX && age >= -1) && unbounded.length < 10) {
+          unbounded.push(`step ${s}, balloon ${i}: burnTimer ${timer}, burnAge ${age}`);
+        }
+        if (age >= 0) fired[i] = 1;
       }
     }
+    expect(unbounded).toEqual([]);
     expect([...fired].every((f) => f === 1)).toBe(true);
   });
 
