@@ -17,6 +17,7 @@ import { contoursMeta } from "./contours.meta";
 import { coralMeta } from "./coral.meta";
 import { dappleMeta } from "./dapple.meta";
 import { daymapMeta } from "./daymap.meta";
+import { desertcampMeta } from "./desertcamp.meta";
 import { dunesMeta } from "./dunes.meta";
 import { filmMeta } from "./film.meta";
 import { firefliesMeta } from "./fireflies.meta";
@@ -82,6 +83,7 @@ export const effects: readonly EffectEntry[] = [
   { ...biolumMeta, load: () => import("./biolum").then((m) => m.biolum) },
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
+  { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },

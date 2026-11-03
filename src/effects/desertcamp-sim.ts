@@ -45,9 +45,6 @@ export function skyPole(refWidth: number, out: [number, number]): [number, numbe
  */
 export const BAND: MilkyWayBand = bandThrough([POLE_DX, POLE_Y], -450, 700, -0.62, 190);
 
-/** Lowest star the dunes can uncover, reference px: stars below it are never listed. */
-export const SKY_FLOOR = 120;
-
 /** Share of star cells occupied at a "Stars" setting of 1. */
 export const DENSITY_MAX = 0.6;
 

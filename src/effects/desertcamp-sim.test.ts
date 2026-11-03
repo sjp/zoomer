@@ -23,7 +23,6 @@ import {
   POLE_Y,
   REF_HEIGHT,
   sandLight,
-  SKY_FLOOR,
   skyPole,
   sparkGlow,
   stepMeteors,
@@ -89,9 +88,8 @@ describe("sky", () => {
     let same = true;
     for (let i = 0; i < n * STAR_FLOATS; i++) same &&= a[i] === b[i];
     expect(same).toBe(true);
-    // Under the cap at the default density, even with the floor ignored.
+    // Under the cap at the default density.
     expect(n).toBeLessThan(64000);
-    expect(SKY_FLOOR).toBeLessThan(DUNE_TOP * REF_HEIGHT);
   });
 
   it("rotates continuously through a full wrap", () => {
