@@ -43,15 +43,18 @@ describe("buildRidgeData", () => {
     const data = getRidgeData();
     expect(data).toHaveLength(RIDGE_POINTS * 2);
     const ridge = new Float32Array(RIDGE_POINTS);
+    const wrong: string[] = [];
     [150405, 57466].forEach((seed, row) => {
       generateRidge(ridge, seed, row === 0 ? 0.55 : 0.5);
       for (let i = 0; i <= last; i++) {
         const v = data[row * RIDGE_POINTS + i];
-        expect(v).toBeCloseTo(ridge[i] * ridgeEnvelope(i / last), 6);
-        expect(v).toBeGreaterThanOrEqual(0);
-        expect(v).toBeLessThanOrEqual(ridgeEnvelope(i / last) + 1e-6);
+        const env = ridgeEnvelope(i / last);
+        // toBeCloseTo(_, 6): within half of 1e-6.
+        const ok = Math.abs(v - ridge[i] * env) < 5e-7 && v >= 0 && v <= env + 1e-6;
+        if (!ok && wrong.length < 10) wrong.push(`ridge ${row}, point ${i}: ${v}`);
       }
     });
+    expect(wrong).toEqual([]);
   });
 
   it("has an envelope of 0.2 in the middle rising to 1 at the sides", () => {
@@ -148,19 +151,23 @@ describe("fillRows", () => {
   const yOf = (height: number, row: number) => height - row - 0.5;
 
   it("keeps coverages and masks within [0, 1]", () => {
+    const wrong: string[] = [];
     for (const stripes of [true, false]) {
       for (const scanlines of [true, false]) {
         const { rows, height } = scene(stripes, scanlines);
         for (let row = 0; row < height; row++) {
           const o = row * ROW_FLOATS;
           for (const i of [3, 7, 11]) {
-            expect(rows[o + i]).toBeGreaterThanOrEqual(0);
-            expect(rows[o + i]).toBeLessThanOrEqual(1);
+            const v = rows[o + i];
+            if (!(v >= 0 && v <= 1) && wrong.length < 10) {
+              wrong.push(`stripes ${stripes}, scanlines ${scanlines}, row ${row}[${i}]: ${v}`);
+            }
           }
-          expect(rows.every(Number.isFinite)).toBe(true);
         }
+        expect(rows.every(Number.isFinite)).toBe(true);
       }
     }
+    expect(wrong).toEqual([]);
   });
 
   it("covers the whole sun with the stripes off", () => {
@@ -207,10 +214,16 @@ describe("fillRows", () => {
   it("darkens every other pair of rows with the scanlines on", () => {
     const plain = scene(true, false).rows;
     const { rows, height } = scene(true, true);
+    const wrong: string[] = [];
     for (let row = 0; row < height; row++) {
       const o = row * ROW_FLOATS + 7;
       const dark = Math.floor(yOf(height, row)) % 4 < 2;
-      expect(rows[o]).toBeCloseTo(plain[o] * (dark ? 0.84 : 1), 6);
+      const want = plain[o] * (dark ? 0.84 : 1);
+      // toBeCloseTo(_, 6): within half of 1e-6.
+      if (!(Math.abs(rows[o] - want) < 5e-7) && wrong.length < 10) {
+        wrong.push(`row ${row}: ${rows[o]}, want ${want}`);
+      }
     }
+    expect(wrong).toEqual([]);
   });
 });
