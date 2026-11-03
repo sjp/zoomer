@@ -69,6 +69,7 @@ import { reactionMeta } from "./reaction.meta";
 import { ridgesMeta } from "./ridges.meta";
 import { ripplesMeta } from "./ripples.meta";
 import { seaMeta } from "./sea.meta";
+import { shoreMeta } from "./shore.meta";
 import { silkMeta } from "./silk.meta";
 import { smokeMeta } from "./smoke.meta";
 import { snellMeta } from "./snell.meta";
@@ -107,6 +108,7 @@ export const effects: readonly EffectEntry[] = [
   { ...cloudseaMeta, load: () => import("./cloudsea").then((m) => m.cloudsea) },
   { ...lighthouseMeta, load: () => import("./lighthouse").then((m) => m.lighthouse) },
   { ...biolumMeta, load: () => import("./biolum").then((m) => m.biolum) },
+  { ...shoreMeta, load: () => import("./shore").then((m) => m.shore) },
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
