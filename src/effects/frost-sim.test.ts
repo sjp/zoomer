@@ -21,6 +21,17 @@ import {
 import { SCENE_OPTIONS } from "./frost.meta";
 
 const { width: W, height: H } = fieldSize(16 / 9);
+
+/**
+ * Index of the first element where `a` and `b` differ (by Object.is, as `toEqual`
+ * compares numbers), or -1 when they match. A plain loop: `toEqual` on the
+ * half-million floats of a field takes most of a second.
+ */
+function firstDiff(a: Float32Array, b: Float32Array): number {
+  if (a.length !== b.length) return Math.min(a.length, b.length);
+  for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return i;
+  return -1;
+}
 const field = buildFrostField(1234, W, H);
 
 describe("fieldSize", () => {
@@ -88,9 +99,9 @@ describe("buildFrostField", () => {
   // Two full-size field builds: seconds of CPU once the full suite shares the cores.
   it("is deterministic per seed", { timeout: 20_000 }, () => {
     const again = buildFrostField(1234, W, H);
-    expect(again.data).toEqual(field.data);
+    expect(firstDiff(again.data, field.data)).toBe(-1);
     const other = buildFrostField(4321, W, H);
-    expect(other.data).not.toEqual(field.data);
+    expect(firstDiff(other.data, field.data)).not.toBe(-1);
   });
 
   it("holds finite arrivals in [0, NEVER] and the edge metric", () => {
@@ -132,7 +143,8 @@ describe("buildFrostField", () => {
     expect(edgeSum / edgeN).toBeLessThan(innerSum / innerN - 0.15);
   });
 
-  it("never covers the centre third, even at full coverage", () => {
+  // Two more full-size field builds, like the determinism test.
+  it("never covers the centre third, even at full coverage", { timeout: 20_000 }, () => {
     for (const seed of [1, 2, 3]) {
       const f = seed === 1 ? field : buildFrostField(seed, W, H);
       let covered = 0;
@@ -160,21 +172,28 @@ describe("growFrost", () => {
 
   it("starts each child at its parent's arrival at the branch point, and never earlier", () => {
     let children = 0;
-    for (const b of skeleton.branches) {
+    // Plain comparisons over every branch point: an expect per point dominates the runtime.
+    const wrong: string[] = [];
+    const fail = (msg: string) => wrong.length < 10 && wrong.push(msg);
+    skeleton.branches.forEach((b, k) => {
       const p = b.points;
-      expect(p[2]).toBe(b.parentArrival);
-      for (let i = 5; i < p.length; i += 3) expect(p[i]).toBeGreaterThanOrEqual(p[i - 3]);
-      if (b.parent < 0) continue;
+      if (!Object.is(p[2], b.parentArrival))
+        fail(`branch ${k} starts at ${p[2]}, not ${b.parentArrival}`);
+      for (let i = 5; i < p.length; i += 3) {
+        if (!(p[i] >= p[i - 3])) fail(`branch ${k}, point ${(i - 2) / 3} arrives earlier`);
+      }
+      if (b.parent < 0) return;
       children++;
       const parent = skeleton.branches[b.parent];
-      expect(parent.depth).toBeLessThanOrEqual(b.depth);
+      if (!(parent.depth <= b.depth)) fail(`branch ${k} is shallower than its parent`);
       let found = false;
       const q = parent.points;
       for (let i = 0; i < q.length; i += 3) {
         if (q[i] === p[0] && q[i + 1] === p[1] && q[i + 2] === p[2]) found = true;
       }
-      expect(found).toBe(true);
-    }
+      if (!found) fail(`branch ${k} does not start on its parent`);
+    });
+    expect(wrong).toEqual([]);
     expect(children).toBeGreaterThan(100);
   });
 
