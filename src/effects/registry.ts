@@ -36,6 +36,7 @@ import { glassMeta } from "./glass.meta";
 import { globeMeta } from "./globe.meta";
 import { grassMeta } from "./grass.meta";
 import { greenhouseMeta } from "./greenhouse.meta";
+import { icecaveMeta } from "./icecave.meta";
 import { harmonographMeta } from "./harmonograph.meta";
 import { horizonMeta } from "./horizon.meta";
 import { hourglassMeta } from "./hourglass.meta";
@@ -113,6 +114,7 @@ export const effects: readonly EffectEntry[] = [
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
   { ...lavaMeta, load: () => import("./lava").then((m) => m.lava) },
+  { ...icecaveMeta, load: () => import("./icecave").then((m) => m.icecave) },
   { ...meteorsMeta, load: () => import("./meteors").then((m) => m.meteors) },
   { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
