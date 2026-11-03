@@ -20,6 +20,7 @@ import {
   CLIFF_END,
   CLIFF_START,
   createBeamProjection,
+  easeTilt,
   flareTotal,
   FOG_LAYERS,
   GALLERY_HEIGHT,
@@ -100,10 +101,10 @@ uniform sampler2D uNoise;
 uniform vec2 uInvLow;
 /** Lantern centre, height units. */
 uniform vec2 uLantern;
-/** Per beam: direction x (+-1), cosine of the half-angle, 1 / length, brightness (0 = off). */
+/** Per beam: on-screen direction (unit, y up), cosine of the half-angle, 1 / length. */
 uniform vec4 uBeam[2];
-/** Per beam: how far the wedge has opened into a round glow. */
-uniform float uRound[2];
+/** Per beam: brightness (0 = off), and how far the wedge has opened into a round glow. */
+uniform vec2 uBeamGain[2];
 /** Per fog layer: noise u and v offsets. */
 uniform vec2 uFogOff[3];
 uniform float uFogAmount;
@@ -131,26 +132,32 @@ const vec3 LAYER_INV = vec3(${FOG_LAYERS.map((l) => f(1 / l[1])).join(", ")});
 const vec3 LAYER_GAIN = vec3(${FOG_LAYERS.map((l) => f(l[2])).join(", ")});
 /** Beam light added in clear air, and in fog (times the fog's lumpiness). */
 const float HAZE = 0.07;
+/** Beam light caught by the sea glints, where a tilted beam reaches the water. */
+const float SEA_LIT = 0.6;
 const float FOG_LIT = 0.55;
 
 /** Light from the beams at p: a soft wedge from the lantern per beam, fading with distance. */
 float beamLight(vec2 p) {
   vec2 d = p - uLantern;
   float r = length(d);
-  float nx = d.x / max(r, 1e-4);
+  vec2 n = d / max(r, 1e-4);
   float sum = 0.0;
   for (int i = 0; i < 2; i++) {
     vec4 B = uBeam[i];
-    if (B.w <= 0.0) continue;
-    float w = smoothstep(B.y, mix(B.y, 1.0, 0.6), nx * B.x);
-    w = mix(w, 1.0, uRound[i]);
-    sum += B.w * w * exp(-r * B.z);
+    vec2 G = uBeamGain[i];
+    if (G.x <= 0.0) continue;
+    float w = smoothstep(B.z, mix(B.z, 1.0, 0.6), dot(n, B.xy));
+    w = mix(w, 1.0, G.y);
+    sum += G.x * w * exp(-r * B.w);
   }
   return sum;
 }
 
 void main() {
   vec2 p = gl_FragCoord.xy * uInvLow;
+  float lb = beamLight(p);
+  /** The beam lights the air; over the water it shows mostly in the glints. */
+  float air = 1.0;
   vec3 col;
   if (p.y >= HORIZON) {
     col = mix(SKY_HORIZON, SKY_TOP, smoothstep(HORIZON, 1.0, p.y));
@@ -166,10 +173,10 @@ void main() {
     float w = 0.012 + 0.2 * max(Y_WATER - p.y, 0.0);
     float dx = (p.x - uLantern.x) / w;
     float refl = below * exp(-dx * dx) * uLamp;
-    col += glint * (GLINT * (1.0 - 0.6 * k) + uBeamColor * (0.3 * refl)) + uBeamColor * (0.03 * refl);
+    col += glint * (GLINT * (1.0 - 0.6 * k) + uBeamColor * (0.3 * refl + SEA_LIT * lb)) + uBeamColor * (0.03 * refl);
+    air = mix(0.3, 1.0, smoothstep(HORIZON - 0.12, HORIZON, p.y));
   }
-  float lb = beamLight(p);
-  col += uBeamColor * (lb * HAZE);
+  col += uBeamColor * (lb * HAZE * air);
   float T = 1.0;
   vec3 fogCol = FOG * (1.0 + uGlow);
   for (int k = 0; k < 3; k++) {
@@ -356,7 +363,7 @@ export const lighthouse = defineEffect(lighthouseMeta, {
         "uInvLow",
         "uLantern",
         "uBeam",
-        "uRound",
+        "uBeamGain",
         "uFogOff",
         "uFogAmount",
         "uGlow",
@@ -380,7 +387,7 @@ export const lighthouse = defineEffect(lighthouseMeta, {
 
       const beamColor = unitRgbMemo();
       const beamData = new Float32Array(8);
-      const roundData = new Float32Array(2);
+      const gainData = new Float32Array(4);
       const fogOff = new Float32Array(6);
       /** Fog and sea noise offsets, wrapped to the noise's period (1). */
       const fogU = new Float64Array(FOG_LAYERS.length);
@@ -389,6 +396,8 @@ export const lighthouse = defineEffect(lighthouseMeta, {
       let seaV = 0;
       /** Rotation, in turns; starts side-on. */
       let phase = 0.25;
+      /** Drawn tilt, degrees below level: eases toward the param. NaN until the first frame. */
+      let tilt = Number.NaN;
       const proj = createBeamProjection();
       const sizeKey = createChangeKey(3);
 
@@ -410,24 +419,26 @@ export const lighthouse = defineEffect(lighthouseMeta, {
           if (sizeKey.take()) target.resize(width, height, divisor);
 
           phase = advancePhase(phase, dt, clamp(p.period, 1, 600));
+          tilt = easeTilt(tilt, p.tilt, dt);
           const beams = p.beams === "two" ? 2 : 1;
           const left = p.side === "left";
           const lanternX = left ? TOWER_D : aspect - TOWER_D;
           for (let i = 0; i < 2; i++) {
             const o = i * 4;
             if (i < beams) {
-              projectBeam(beamAngle(phase, i), proj);
+              projectBeam(beamAngle(phase, i), proj, tilt);
               beamData[o] = proj.dirX;
-              beamData[o + 1] = proj.cosHalf;
-              beamData[o + 2] = 1 / proj.length;
-              beamData[o + 3] = proj.brightness;
-              roundData[i] = proj.roundness;
+              beamData[o + 1] = proj.dirY;
+              beamData[o + 2] = proj.cosHalf;
+              beamData[o + 3] = 1 / proj.length;
+              gainData[i * 2] = proj.brightness;
+              gainData[i * 2 + 1] = proj.roundness;
             } else {
               beamData.fill(0, o, o + 4);
-              roundData[i] = 0;
+              gainData.fill(0, i * 2, i * 2 + 2);
             }
           }
-          const facing = flareTotal(phase, beams);
+          const facing = flareTotal(phase, beams, tilt);
           const flare = facing * clamp(p.flare, 0, 1);
           const lamp = LAMP_REST + LAMP_FLARE * facing;
           const color = beamColor(p.beamColor);
@@ -447,7 +458,7 @@ export const lighthouse = defineEffect(lighthouseMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
           gl.uniform4fv(u.loc.uBeam, beamData);
-          gl.uniform1fv(u.loc.uRound, roundData);
+          gl.uniform2fv(u.loc.uBeamGain, gainData);
           gl.uniform2fv(u.loc.uFogOff, fogOff);
           u.f2("uInvLow", aspect / target.width, 1 / target.height);
           u.f2("uLantern", lanternX, LANTERN_Y);
