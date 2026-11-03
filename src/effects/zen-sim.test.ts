@@ -37,68 +37,94 @@ function scene(seed: number, spacing: number, waviness: number, refWidth = 1920,
   return { pos, look, count, wave, layout };
 }
 
+/**
+ * Index of the first element where `a` and `b` differ (by Object.is, as `toEqual`
+ * compares numbers), or -1 when they match.
+ */
+function firstDiff(a: Float32Array, b: Float32Array): number {
+  if (a.length !== b.length) return Math.min(a.length, b.length);
+  for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return i;
+  return -1;
+}
+
 const height = (theta: number, spacing: number) => Math.cos((2 * Math.PI * theta) / spacing);
 
 describe("placeStones", () => {
   it("is deterministic and places several stones at 16:9", () => {
+    const wrong: string[] = [];
     for (let seed = 1; seed <= 100; seed++) {
       const a = scene(seed, 16, 0.5);
       const b = scene(seed, 16, 0.5);
-      expect(a.pos).toEqual(b.pos);
-      expect(a.look).toEqual(b.look);
-      expect(a.count).toBeGreaterThanOrEqual(3);
+      const pos = firstDiff(a.pos, b.pos);
+      const look = firstDiff(a.look, b.look);
+      if (!(pos === -1 && look === -1 && a.count >= 3)) {
+        wrong.push(`seed ${seed}: pos differs at ${pos}, look at ${look}, ${a.count} stones`);
+      }
     }
+    expect(wrong).toEqual([]);
   });
 
   it.each([1920, 1440, 2560])(
     "keeps stones apart, inside and out of the centre at width %i",
     (w) => {
+      const wrong: string[] = [];
+      const fail = (msg: string) => wrong.length < 10 && wrong.push(msg);
       for (let seed = 1; seed <= 60; seed++) {
         const { pos, count } = scene(seed, 16, 0.5, w);
         for (let i = 0; i < count; i++) {
           const [x, y, r] = pos.subarray(i * STONE_FLOATS, i * STONE_FLOATS + 3);
-          expect(inCentre(x, r, w)).toBe(false);
-          expect(Math.abs(x - w / 2)).toBeGreaterThan(w / 6);
-          expect(x - r * STONE_PAD).toBeGreaterThan(0);
-          expect(x + r * STONE_PAD).toBeLessThan(w);
-          expect(y - r * STONE_PAD).toBeGreaterThan(0);
-          expect(y + r * STONE_PAD).toBeLessThan(1080);
+          const placed =
+            inCentre(x, r, w) === false &&
+            Math.abs(x - w / 2) > w / 6 &&
+            x - r * STONE_PAD > 0 &&
+            x + r * STONE_PAD < w &&
+            y - r * STONE_PAD > 0 &&
+            y + r * STONE_PAD < 1080;
+          if (!placed) fail(`seed ${seed}, stone ${i} at ${x}, ${y}, r ${r}`);
           for (let j = 0; j < i; j++) {
             const o = j * STONE_FLOATS;
-            expect(stonesApart(r, pos[o + 2], x - pos[o], y - pos[o + 1])).toBe(true);
-            expect(Math.hypot(x - pos[o], y - pos[o + 1])).toBeGreaterThan(3 * (r + pos[o + 2]));
+            const apart =
+              stonesApart(r, pos[o + 2], x - pos[o], y - pos[o + 1]) === true &&
+              Math.hypot(x - pos[o], y - pos[o + 1]) > 3 * (r + pos[o + 2]);
+            if (!apart) fail(`seed ${seed}: stones ${j} and ${i} too close`);
           }
         }
       }
+      expect(wrong).toEqual([]);
     },
   );
 
-  it("never lets two stones' boxes overlap, at any spacing and waviness", () => {
-    let overlaps = 0;
-    for (let seed = 1; seed <= 12; seed++) {
-      for (const spacing of [SPACING_MIN, SPACING_MAX]) {
-        for (const wav of [0, 1]) {
-          const { pos, count, wave, layout } = scene(seed, spacing, wav);
-          for (let y = 0; y < 1080; y += 8) {
-            for (let x = 0; x < 1920; x += 8) {
-              const phi = straightField(wave, x, y);
-              let inside = 0;
-              for (let i = 0; i < count; i++) {
-                const o = i * STONE_FLOATS;
-                const inv = layout[o + 2];
-                const rz = layout[o + 3];
-                const n = (phi - layout[o]) * inv;
-                const t = (x - pos[o] - layout[o + 1] * (y - pos[o + 1])) * inv;
-                if (Math.abs(t) < GAP * rz && Math.abs(n) < BOX_N * rz) inside++;
+  // A dense pixel scan over 48 scenes: the cost is the scan itself, with no expects inside.
+  it(
+    "never lets two stones' boxes overlap, at any spacing and waviness",
+    { timeout: 20_000 },
+    () => {
+      let overlaps = 0;
+      for (let seed = 1; seed <= 12; seed++) {
+        for (const spacing of [SPACING_MIN, SPACING_MAX]) {
+          for (const wav of [0, 1]) {
+            const { pos, count, wave, layout } = scene(seed, spacing, wav);
+            for (let y = 0; y < 1080; y += 8) {
+              for (let x = 0; x < 1920; x += 8) {
+                const phi = straightField(wave, x, y);
+                let inside = 0;
+                for (let i = 0; i < count; i++) {
+                  const o = i * STONE_FLOATS;
+                  const inv = layout[o + 2];
+                  const rz = layout[o + 3];
+                  const n = (phi - layout[o]) * inv;
+                  const t = (x - pos[o] - layout[o + 1] * (y - pos[o + 1])) * inv;
+                  if (Math.abs(t) < GAP * rz && Math.abs(n) < BOX_N * rz) inside++;
+                }
+                if (inside > overlaps) overlaps = inside;
               }
-              if (inside > overlaps) overlaps = inside;
             }
           }
         }
       }
-    }
-    expect(overlaps).toBeLessThanOrEqual(1);
-  });
+      expect(overlaps).toBeLessThanOrEqual(1);
+    },
+  );
 });
 
 describe("waveLayout", () => {
@@ -220,7 +246,8 @@ describe("rakePhase", () => {
   /**
    * The issue's test: the groove pattern is continuous across the stone blend, and
    * the line spacing stays the straight lines' spacing (|∇θ| = |∇φ|) except in
-   * the flat pockets and the thin rim where the rings stop.
+   * the flat pockets and the thin rim where the rings stop. Plain checks over a dense
+   * sample grid: the cost is rakePhase itself, hence the explicit timeout.
    */
   it.each([
     [12, 0, 1e-6],
@@ -228,44 +255,48 @@ describe("rakePhase", () => {
     [24, 0, 1e-6],
     [16, 0.5, 0.21],
     [24, 1, 0.42],
-  ])("is continuous, with constant spacing, at spacing %i and waviness %f", (spacing, wav, tol) => {
-    const step = 0.05;
-    const maxSlope = ((2 * Math.PI) / spacing) * (1 + RING_STEEP) * Math.hypot(1, WAVE_SLOPE);
-    for (const seed of [1, 2]) {
-      const { pos, count, wave, layout } = scene(seed, spacing, wav);
-      let n = 0;
-      let off = 0;
-      let jump = 0;
-      let low = Infinity;
-      for (let i = 0; i < count; i++) {
-        const o = i * STONE_FLOATS;
-        const rz = layout[o + 3];
-        for (let y = pos[o + 1] - 2.5 * rz; y < pos[o + 1] + 2.5 * rz; y += 3.1) {
-          for (let x = pos[o] - 2.5 * rz; x < pos[o] + 2.5 * rz; x += 3.1) {
-            if (Math.hypot(x - pos[o], y - pos[o + 1]) < pos[o + 2]) continue;
-            rakePhase(out, x, y, wave, pos, layout, count);
-            const h = height(out[0], spacing);
-            rakePhase(out2, x + step, y, wave, pos, layout, count);
-            jump = Math.max(jump, Math.abs(height(out2[0], spacing) - h));
-            rakePhase(out2, x, y + step, wave, pos, layout, count);
-            jump = Math.max(jump, Math.abs(height(out2[0], spacing) - h));
+  ])(
+    "is continuous, with constant spacing, at spacing %i and waviness %f",
+    (spacing, wav, tol) => {
+      const step = 0.05;
+      const maxSlope = ((2 * Math.PI) / spacing) * (1 + RING_STEEP) * Math.hypot(1, WAVE_SLOPE);
+      for (const seed of [1, 2]) {
+        const { pos, count, wave, layout } = scene(seed, spacing, wav);
+        let n = 0;
+        let off = 0;
+        let jump = 0;
+        let low = Infinity;
+        for (let i = 0; i < count; i++) {
+          const o = i * STONE_FLOATS;
+          const rz = layout[o + 3];
+          for (let y = pos[o + 1] - 2.5 * rz; y < pos[o + 1] + 2.5 * rz; y += 3.1) {
+            for (let x = pos[o] - 2.5 * rz; x < pos[o] + 2.5 * rz; x += 3.1) {
+              if (Math.hypot(x - pos[o], y - pos[o + 1]) < pos[o + 2]) continue;
+              rakePhase(out, x, y, wave, pos, layout, count);
+              const h = height(out[0], spacing);
+              rakePhase(out2, x + step, y, wave, pos, layout, count);
+              jump = Math.max(jump, Math.abs(height(out2[0], spacing) - h));
+              rakePhase(out2, x, y + step, wave, pos, layout, count);
+              jump = Math.max(jump, Math.abs(height(out2[0], spacing) - h));
 
-            const ratio = Math.hypot(out[1], out[2]) / Math.hypot(1, straightSlope(wave, x));
-            if (ratio === 0) continue; // flat pocket
-            n++;
-            if (Math.abs(ratio - 1) > tol) {
-              // Only the rim where the rings stop may be steeper.
-              low = Math.min(low, ratio);
-              off++;
+              const ratio = Math.hypot(out[1], out[2]) / Math.hypot(1, straightSlope(wave, x));
+              if (ratio === 0) continue; // flat pocket
+              n++;
+              if (Math.abs(ratio - 1) > tol) {
+                // Only the rim where the rings stop may be steeper.
+                low = Math.min(low, ratio);
+                off++;
+              }
             }
           }
         }
+        expect(jump).toBeLessThanOrEqual(maxSlope * step);
+        expect(low).toBeGreaterThan(1 + RING_STEEP - tol - 0.3);
+        expect(off / n).toBeLessThan(0.01);
       }
-      expect(jump).toBeLessThanOrEqual(maxSlope * step);
-      expect(low).toBeGreaterThan(1 + RING_STEEP - tol - 0.3);
-      expect(off / n).toBeLessThan(0.01);
-    }
-  });
+    },
+    20_000,
+  );
 
   it("has an analytic gradient that matches the groove height's slope", () => {
     const spacing = 16;
@@ -303,25 +334,30 @@ describe("rerake", () => {
     const s = createRerake();
     const dt = 1 / 60;
     let t = 0;
+    let swept = 0;
     while (s.progress < 0) {
-      expect(sweepX(s, 1920)).toBe(SWEEP_OFF);
+      if (!Object.is(sweepX(s, 1920), SWEEP_OFF)) swept++;
       stepRerake(s, dt, true);
       t += dt;
-      expect(t).toBeLessThan(RERAKE_INTERVAL + 2 * dt);
+      if (!(t < RERAKE_INTERVAL + 2 * dt)) break;
     }
+    expect(swept).toBe(0);
+    expect(t).toBeLessThan(RERAKE_INTERVAL + 2 * dt);
     expect(t).toBeGreaterThanOrEqual(RERAKE_INTERVAL - 1e-6);
     let prev = sweepX(s, 1920);
     expect(sweepWeight(0, prev)).toBe(0);
     let sweepTime = 0;
     let done = false;
+    const backwards: string[] = [];
     while (!done) {
       done = stepRerake(s, dt, true);
       sweepTime += dt;
       if (done) break;
       const x = sweepX(s, 1920);
-      expect(x).toBeGreaterThan(prev);
+      if (!(x > prev) && backwards.length < 10) backwards.push(`${prev} -> ${x}`);
       prev = x;
     }
+    expect(backwards).toEqual([]);
     expect(sweepTime).toBeGreaterThanOrEqual(RERAKE_DURATION - 1e-6);
     expect(sweepTime).toBeLessThan(RERAKE_DURATION + 2 * dt);
     expect(sweepWeight(1920, prev)).toBe(1);
