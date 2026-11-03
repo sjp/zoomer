@@ -1,5 +1,6 @@
 import { auroraMeta } from "./aurora.meta";
 import { beachMeta } from "./beach.meta";
+import { biolumMeta } from "./biolum.meta";
 import { blindsMeta } from "./blinds.meta";
 import { blobsMeta } from "./blobs.meta";
 import { bokehMeta } from "./bokeh.meta";
@@ -70,6 +71,7 @@ export const effects: readonly EffectEntry[] = [
   { ...seaMeta, load: () => import("./sea").then((m) => m.sea) },
   { ...cloudseaMeta, load: () => import("./cloudsea").then((m) => m.cloudsea) },
   { ...lighthouseMeta, load: () => import("./lighthouse").then((m) => m.lighthouse) },
+  { ...biolumMeta, load: () => import("./biolum").then((m) => m.biolum) },
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
