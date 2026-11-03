@@ -68,6 +68,7 @@ import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
 import { porchMeta } from "./porch.meta";
 import { quasiMeta } from "./quasi.meta";
+import { radarMeta } from "./radar.meta";
 import { rainMeta } from "./rain.meta";
 import { reactionMeta } from "./reaction.meta";
 import { ridgesMeta } from "./ridges.meta";
@@ -187,6 +188,7 @@ export const effects: readonly EffectEntry[] = [
   { ...glassMeta, load: () => import("./glass").then((m) => m.glass) },
   { ...smokeMeta, load: () => import("./smoke").then((m) => m.smoke) },
   { ...daymapMeta, load: () => import("./daymap").then((m) => m.daymap) },
+  { ...radarMeta, load: () => import("./radar").then((m) => m.radar) },
   { ...lavalampMeta, load: () => import("./lavalamp").then((m) => m.lavalamp) },
   { ...reactionMeta, load: () => import("./reaction").then((m) => m.reaction) },
   { ...firefliesMeta, load: () => import("./fireflies").then((m) => m.fireflies) },
