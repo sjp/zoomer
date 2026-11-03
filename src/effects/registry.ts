@@ -42,6 +42,7 @@ import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
+import { meteorsMeta } from "./meteors.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
@@ -92,6 +93,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
+  { ...meteorsMeta, load: () => import("./meteors").then((m) => m.meteors) },
   { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
