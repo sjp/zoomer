@@ -70,6 +70,7 @@ import { neonMeta } from "./neon.meta";
 import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
 import { pendulumMeta } from "./pendulum.meta";
+import { leniaMeta } from "./lenia.meta";
 import { physarumMeta } from "./physarum.meta";
 import { phyllotaxisMeta } from "./phyllotaxis.meta";
 import { planetMeta } from "./planet.meta";
@@ -203,6 +204,7 @@ export const effects: readonly EffectEntry[] = [
   { ...papercutMeta, load: () => import("./papercut").then((m) => m.papercut) },
   { ...silkMeta, load: () => import("./silk").then((m) => m.silk) },
   { ...physarumMeta, load: () => import("./physarum").then((m) => m.physarum) },
+  { ...leniaMeta, load: () => import("./lenia").then((m) => m.lenia) },
   { ...chamberMeta, load: () => import("./chamber").then((m) => m.chamber) },
   { ...cellsMeta, load: () => import("./cells").then((m) => m.cells) },
   { ...beachMeta, load: () => import("./beach").then((m) => m.beach) },
