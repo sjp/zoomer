@@ -32,7 +32,8 @@ export function voronoiHash(ix: number, iy: number): number {
 /**
  * GLSL for `VoronoiCell voronoiCell(vec2 g)`: the nearest seed to grid point `g`
  * among the 3x3 cells around it, and the exact distance to that seed's cell
- * boundary (the nearest bisector with any other searched seed).
+ * boundary (the nearest bisector with any other searched seed), plus the
+ * second-nearest bisector (for facets that meet along the cell's medial axis).
  *
  * Needs `HASH32_GLSL` before it, and the including shader must define, also before
  * it, `vec2 voronoiOffset(uint h)`: the offset from its cell centre of the seed of
@@ -53,6 +54,9 @@ struct VoronoiCell {
   float edge;
   /** Unit vector from the seed toward the neighbour across the nearest edge. */
   vec2 normal;
+  /** Distance to the second-nearest bisector, and its unit vector (as normal). */
+  float edge2;
+  vec2 normal2;
   /** voronoiHash of the nearest seed's cell, and of the neighbour across the nearest edge. */
   uint hash;
   uint edgeHash;
@@ -90,6 +94,8 @@ VoronoiCell voronoiCell(vec2 g) {
   v.hash = hashes[best];
   v.edge = 1e9;
   v.normal = vec2(0.0, 1.0);
+  v.edge2 = 1e9;
+  v.normal2 = vec2(0.0, -1.0);
   v.edgeHash = 0u;
   for (int k = 0; k < 9; k++) {
     if (k == best) continue;
@@ -98,9 +104,14 @@ VoronoiCell voronoiCell(vec2 g) {
     float inv = inversesqrt(dot(ab, ab));
     float e = (dot(d, d) - f1) * 0.5 * inv;
     if (e < v.edge) {
+      v.edge2 = v.edge;
+      v.normal2 = v.normal;
       v.edge = e;
       v.normal = ab * inv;
       v.edgeHash = hashes[k];
+    } else if (e < v.edge2) {
+      v.edge2 = e;
+      v.normal2 = ab * inv;
     }
   }
   return v;
@@ -117,6 +128,13 @@ export interface VoronoiSample {
   edge: number;
   /** Hash of the neighbour across that edge. */
   edgeHash: number;
+  /** Unit vector from the nearest seed toward that neighbour. */
+  nx: number;
+  ny: number;
+  /** Distance to the second-nearest bisector, in cells, and its unit vector (as nx, ny). */
+  edge2: number;
+  n2x: number;
+  n2y: number;
 }
 
 export const createVoronoiSample = (): VoronoiSample => ({
@@ -125,6 +143,11 @@ export const createVoronoiSample = (): VoronoiSample => ({
   f2: 0,
   edge: 0,
   edgeHash: 0,
+  nx: 0,
+  ny: 1,
+  edge2: 0,
+  n2x: 0,
+  n2y: -1,
 });
 
 /** Seed offset of the cell with hash `h` (and indices ix, iy), written to `out`. */
@@ -141,7 +164,7 @@ const off = [0, 0];
  * does; the tests compare it with a wider brute-force search. The edge distance
  * is the smallest distance to a bisector between the nearest seed and any other
  * searched seed, which is the exact distance to the cell's boundary (the cell is
- * the intersection of those half-planes).
+ * the intersection of those half-planes). The second-nearest bisector comes too.
  */
 export function voronoiSample(
   gx: number,
@@ -176,13 +199,28 @@ export function voronoiSample(
   }
   let edge = Infinity;
   let edgeHash = 0;
+  let nx = 0;
+  let ny = 1;
+  let edge2 = Infinity;
+  let n2x = 0;
+  let n2y = -1;
   for (let k = 0; k < n; k++) {
     if (k === best) continue;
     const dd = (gx - sx[k]) ** 2 + (gy - sy[k]) ** 2;
-    const e = (dd - f1) / (2 * Math.hypot(sx[k] - sx[best], sy[k] - sy[best]));
+    const len = Math.hypot(sx[k] - sx[best], sy[k] - sy[best]);
+    const e = (dd - f1) / (2 * len);
     if (e < edge) {
+      edge2 = edge;
+      n2x = nx;
+      n2y = ny;
       edge = e;
       edgeHash = sh[k];
+      nx = (sx[k] - sx[best]) / len;
+      ny = (sy[k] - sy[best]) / len;
+    } else if (e < edge2) {
+      edge2 = e;
+      n2x = (sx[k] - sx[best]) / len;
+      n2y = (sy[k] - sy[best]) / len;
     }
   }
   out.hash = sh[best];
@@ -190,5 +228,10 @@ export function voronoiSample(
   out.f2 = Math.sqrt(f2);
   out.edge = edge;
   out.edgeHash = edgeHash;
+  out.nx = nx;
+  out.ny = ny;
+  out.edge2 = edge2;
+  out.n2x = n2x;
+  out.n2y = n2y;
   return out;
 }
