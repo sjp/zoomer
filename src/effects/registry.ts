@@ -48,6 +48,7 @@ import { seaMeta } from "./sea.meta";
 import { silkMeta } from "./silk.meta";
 import { smokeMeta } from "./smoke.meta";
 import { snowMeta } from "./snow.meta";
+import { snowWindowMeta } from "./snowwindow.meta";
 import { startrailsMeta } from "./startrails.meta";
 import { synthwaveMeta } from "./synthwave.meta";
 import { terrainMeta } from "./terrain.meta";
@@ -79,6 +80,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
+  { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
   { ...nebulaMeta, load: () => import("./nebula").then((m) => m.nebula) },
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
