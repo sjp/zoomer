@@ -121,13 +121,20 @@ describe("sampleSky", () => {
     const a = createSkyState();
     const b = createSkyState();
     const step = 1 / 24 / 600;
+    // Plain comparisons in the hot loop: an expect per sample costs far more than the check.
+    const jumps: string[] = [];
     for (let phase = -0.01; phase < 1.01; phase += step) {
       sampleSky(phase, a);
       sampleSky(phase + step, b);
       const fa = flat(a);
       const fb = flat(b);
-      for (let i = 0; i < fa.length; i++) expect(Math.abs(fa[i] - fb[i])).toBeLessThan(0.01);
+      for (let i = 0; i < fa.length; i++) {
+        if (!(Math.abs(fa[i] - fb[i]) < 0.01) && jumps.length < 10) {
+          jumps.push(`phase ${phase}, channel ${i}: ${fa[i]} -> ${fb[i]}`);
+        }
+      }
     }
+    expect(jumps).toEqual([]);
     sampleSky(1 - 1e-9, a);
     sampleSky(0, b);
     flat(a).forEach((v, i) => expect(v).toBeCloseTo(flat(b)[i], 6));
@@ -246,7 +253,7 @@ describe("buildHills", () => {
         expect(max[l]).toBeLessThan(0.7);
       }
       // Unused rows stay empty.
-      for (let i = layers * HILL_COLUMNS; i < out.length; i++) expect(out[i]).toBe(0);
+      expect(out.subarray(layers * HILL_COLUMNS).findIndex((v) => !Object.is(v, 0))).toBe(-1);
     }
   });
 
