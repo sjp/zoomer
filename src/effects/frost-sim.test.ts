@@ -85,7 +85,8 @@ describe("stampSegment", () => {
 });
 
 describe("buildFrostField", () => {
-  it("is deterministic per seed", () => {
+  // Two full-size field builds: seconds of CPU once the full suite shares the cores.
+  it("is deterministic per seed", { timeout: 20_000 }, () => {
     const again = buildFrostField(1234, W, H);
     expect(again.data).toEqual(field.data);
     const other = buildFrostField(4321, W, H);
@@ -183,17 +184,19 @@ describe("growFrost", () => {
   });
 
   it("keeps every point inside the frame and outside the reach limit", () => {
+    // Plain comparisons over every point: an expect per point dominates the runtime.
+    const stray: string[] = [];
     for (const b of skeleton.branches) {
       for (let i = 3; i < b.points.length; i += 3) {
         const x = b.points[i];
         const y = b.points[i + 1];
-        expect(x).toBeGreaterThanOrEqual(0);
-        expect(x).toBeLessThan(W);
-        expect(y).toBeGreaterThanOrEqual(0);
-        expect(y).toBeLessThan(H);
-        expect(edgeMetric(x / W, y / H)).toBeGreaterThanOrEqual(REACH_MIN);
+        const inFrame = x >= 0 && x < W && y >= 0 && y < H;
+        if (!(inFrame && edgeMetric(x / W, y / H) >= REACH_MIN) && stray.length < 10) {
+          stray.push(`(${x}, ${y})`);
+        }
       }
     }
+    expect(stray).toEqual([]);
   });
 });
 
