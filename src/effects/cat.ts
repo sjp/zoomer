@@ -381,11 +381,11 @@ void main() {
   // Body, with stripes fanning round the curl and a pale chest.
   float cb = cov(dBody);
   if (cb > 0.0) {
-    vec2 r = q + vec2(0.06, 0.0);
+    vec2 r = qb + vec2(0.06, 0.0);
     float ra = atan(r.y, r.x);
     float rr = length(r);
     float st = stripes(sin(ra * 15.0 + rr * 6.0 + 0.6 * sin(ra * 4.0)), smoothstep(0.17, 0.3, rr), 0.3);
-    float chest = 1.0 - smoothstep(0.6, 1.0, length((q - vec2(0.2, 0.1)) / vec2(0.13, 0.12)));
+    float chest = 1.0 - smoothstep(0.6, 1.0, length((qb - vec2(0.2, 0.1)) / vec2(0.13, 0.12)));
     float occ = min(min(occFrom(dHead), occFrom(dTail)), occFrom(dPaw));
     over(shade(furAt(st, chest), gBody, dBody, 0.2, rim, occ), cb);
   }
