@@ -90,6 +90,7 @@ import { snowWindowMeta } from "./snowwindow.meta";
 import { splitflapMeta } from "./splitflap.meta";
 import { startrailsMeta } from "./startrails.meta";
 import { synthwaveMeta } from "./synthwave.meta";
+import { tesseractMeta } from "./tesseract.meta";
 import { trainMeta } from "./train.meta";
 import { terrainMeta } from "./terrain.meta";
 import { truchetMeta } from "./truchet.meta";
@@ -174,6 +175,7 @@ export const effects: readonly EffectEntry[] = [
   { ...pendulumMeta, load: () => import("./pendulum").then((m) => m.pendulum) },
   { ...cradleMeta, load: () => import("./cradle").then((m) => m.cradle) },
   { ...lorenzMeta, load: () => import("./lorenz").then((m) => m.lorenz) },
+  { ...tesseractMeta, load: () => import("./tesseract").then((m) => m.tesseract) },
   { ...ferroMeta, load: () => import("./ferro").then((m) => m.ferro) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
