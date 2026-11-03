@@ -234,6 +234,66 @@ describe("createPieces", () => {
   });
 });
 
+describe("createPieces with a spawn callback", () => {
+  const data = new Float32Array(MAX * PIECE_FLOATS);
+
+  it("parks pieces until the callback places them, and draws them at its point", () => {
+    let budget = 0;
+    let spawned = 0;
+    const pieces = createPieces(MAX, 1920, 3, {
+      spawn(out) {
+        if (budget <= 0) return false;
+        budget--;
+        spawned++;
+        out.x = 500;
+        out.y = 300;
+        return true;
+      },
+    });
+    const f = frame({ count: 50 });
+    // Let the count fade in with nothing spawned: nothing is drawn.
+    let drawn = 0;
+    for (let k = 0; k < 120; k++) drawn += pieces.step(1 / 60, f, data, PIECE_FLOATS);
+    expect(drawn).toBe(0);
+    expect(Array.from(pieces.parked.subarray(0, 50)).every((p) => p === 1)).toBe(true);
+    budget = 3;
+    expect(pieces.step(1 / 60, f, data, PIECE_FLOATS)).toBe(3);
+    for (let k = 0; k < 3; k++) {
+      expect(data[k * PIECE_FLOATS]).toBeCloseTo(500, 3);
+      expect(data[k * PIECE_FLOATS + 1]).toBeCloseTo(300, 3);
+    }
+    expect(spawned).toBe(3);
+  });
+
+  it("parks a piece again when it falls off the bottom, and only offers pieces within the count", () => {
+    let offered = 0;
+    let refuse = false;
+    const pieces = createPieces(MAX, 1920, 3, {
+      spawn(out) {
+        offered++;
+        if (refuse) return false;
+        out.x = 960;
+        out.y = 1000;
+        return true;
+      },
+    });
+    const f = frame({ count: 40, speed: 3 });
+    pieces.step(1 / 60, f, data, PIECE_FLOATS);
+    expect(offered).toBe(40);
+    refuse = true;
+    for (let k = 0; k < 300; k++) pieces.step(1 / 30, f, data, PIECE_FLOATS);
+    expect(Array.from(pieces.parked.subarray(0, 40)).every((p) => p === 1)).toBe(true);
+    expect(Array.from(pieces.parked.subarray(40)).every((p) => p === 1)).toBe(true);
+    expect(pieces.step(1 / 30, f, data, PIECE_FLOATS)).toBe(0);
+  });
+
+  it("leaves pieces without a callback unparked", () => {
+    const pieces = createPieces(MAX, 1920);
+    for (let k = 0; k < 30; k++) pieces.step(1 / 60, frame(), data, PIECE_FLOATS);
+    expect(pieces.parked.every((p) => p === 0)).toBe(true);
+  });
+});
+
 describe("writeFoliage", () => {
   const data = new Float32Array(MAX_BLOBS * BLOB_FLOATS);
 

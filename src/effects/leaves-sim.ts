@@ -256,6 +256,8 @@ export interface Pieces {
   readonly ys: Float32Array;
   readonly layer: Uint8Array;
   readonly life: Float32Array;
+  /** 1 for a piece waiting for its `PieceOptions.spawn` call to succeed (never set without one). */
+  readonly parked: Uint8Array;
   /** Pieces simulated: the count plus any still fading out after it dropped. */
   readonly live: number;
   /**
@@ -277,6 +279,24 @@ export interface Pieces {
   step(dt: number, f: PieceFrame, data: Float32Array, stride: number): number;
 }
 
+/** A start position in reference units, written by a `PieceOptions.spawn` callback. */
+export interface SpawnPoint {
+  x: number;
+  y: number;
+}
+
+export interface PieceOptions {
+  /**
+   * Gives pieces a source. Called for a piece that needs a start: every piece at
+   * first, and each one that falls off the bottom. Write a position (reference
+   * units) to `out` and return true to start the piece there (drawn exactly at
+   * that point, its sway included), or return false to park it: hidden and still
+   * until a later step's call succeeds. Only pieces within the count are offered.
+   * Without it, pieces start anywhere and respawn at random above the top.
+   */
+  spawn?: (out: SpawnPoint, layer: number) => boolean;
+}
+
 /** Wrap margin of a layer: its largest radius plus sway, so the jump is never visible. */
 export const layerMargin = (layer: number, size: number) => {
   const L = LAYERS[layer];
@@ -286,8 +306,17 @@ export const layerMargin = (layer: number, size: number) => {
 /** Most groups a step can produce: every layer times every shape of a season. */
 const MAX_GROUPS = LAYERS.length * 4;
 
-export function createPieces(max: number, initialWidth: number, seed = 0x1eaf): Pieces {
+export function createPieces(
+  max: number,
+  initialWidth: number,
+  seed = 0x1eaf,
+  options: PieceOptions = {},
+): Pieces {
   const rng = createRng(seed);
+  const spawn = options.spawn;
+  const point: SpawnPoint = { x: 0, y: 0 };
+  // With a source, every piece waits for its first spawn.
+  const parked = new Uint8Array(max).fill(spawn ? 1 : 0);
   const noise = createNoise(seed);
 
   const xs = new Float32Array(max);
@@ -350,6 +379,7 @@ export function createPieces(max: number, initialWidth: number, seed = 0x1eaf): 
     ys,
     layer,
     life,
+    parked,
     groupFirst,
     groupCount,
     groupShape,
@@ -403,15 +433,38 @@ export function createPieces(max: number, initialWidth: number, seed = 0x1eaf): 
             if (layer[i] !== l || Math.floor(shapePick[i] * shapes.length) !== s) continue;
 
             const psi = swayPhase[i] + time * swayRate[i];
-            let x = xs[i] + vxLayer * dt;
-            let y = ys[i] + fallPx * L.pace * paceJitter[i] * fallFactor(psi) * dt;
-            if (x < -margin) x += spanX;
-            else if (x > refWidth + margin) x -= spanX;
-            if (y > 1080 + margin) {
-              // Respawn above the top at a new position across the padded width.
-              y -= spanY;
-              x = -margin + rng() * spanX;
-            } else if (y < -margin) y += spanY;
+            const swayPx = swayOffset(psi) * ampLayer * swayAmp[i];
+            let x: number;
+            let y: number;
+            if (parked[i]) {
+              if (i >= target || !spawn?.(point, l)) {
+                stepLife(life, i, target, fadeStep, outStep);
+                continue;
+              }
+              // Start drawn exactly at the spawn point.
+              parked[i] = 0;
+              x = point.x - swayPx;
+              y = point.y;
+            } else {
+              x = xs[i] + vxLayer * dt;
+              y = ys[i] + fallPx * L.pace * paceJitter[i] * fallFactor(psi) * dt;
+              if (x < -margin) x += spanX;
+              else if (x > refWidth + margin) x -= spanX;
+              if (y > 1080 + margin) {
+                if (!spawn) {
+                  // Respawn above the top at a new position across the padded width.
+                  y -= spanY;
+                  x = -margin + rng() * spanX;
+                } else if (i < target && spawn(point, l)) {
+                  x = point.x - swayPx;
+                  y = point.y;
+                } else {
+                  parked[i] = 1;
+                  stepLife(life, i, target, fadeStep, outStep);
+                  continue;
+                }
+              } else if (y < -margin) y += spanY;
+            }
             xs[i] = x;
             ys[i] = y;
 
@@ -433,7 +486,7 @@ export function createPieces(max: number, initialWidth: number, seed = 0x1eaf): 
             const v = clamp(y / 1080, 0, 1);
             const haze = L.haze;
             const o = visible * stride;
-            data[o] = (x + swayOffset(psi) * ampLayer * swayAmp[i]) * scale;
+            data[o] = (x + swayPx) * scale;
             data[o + 1] = y * scale;
             data[o + 2] = radiusLayer * sizeJitter[i];
             data[o + 3] = Math.min(1, alpha);
