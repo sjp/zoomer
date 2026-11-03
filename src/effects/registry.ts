@@ -44,6 +44,7 @@ import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
 import { nebulaMeta } from "./nebula.meta";
+import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
@@ -109,6 +110,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blossomMeta, load: () => import("./blossom").then((m) => m.blossom) },
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
+  { ...orbitsMeta, load: () => import("./orbits").then((m) => m.orbits) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
   { ...truchetMeta, load: () => import("./truchet").then((m) => m.truchet) },
