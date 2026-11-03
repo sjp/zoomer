@@ -7,19 +7,18 @@
 import { createNoise, createRng } from "./noise";
 import { clamp, smoothstep } from "./math";
 import { MIN_WAVE_TIME, MAX_WAVE_TIME } from "./beach.meta";
+import {
+  T_ACTIVE,
+  T_APPROACH,
+  T_DRY,
+  T_RUNUP,
+  T_STOP,
+  washFront,
+  washSinceUncovered,
+} from "./wash";
 
-/** Seconds a swell line takes to roll in from APPROACH_DIST out to the break point. */
-export const T_APPROACH = 4;
-/** Seconds from breaking to the top of the run-up (decelerating, ballistic). */
-export const T_RUNUP = 2.4;
-/** Seconds the sheet takes to drain from the top of the run-up back to the shoreline. */
-export const T_DRAIN = 3.5;
-/** Seconds from a wave's start to the top of its run-up. */
-export const T_STOP = T_APPROACH + T_RUNUP;
-/** Seconds from a wave's start until its front is back at the shoreline. */
-export const T_ACTIVE = T_STOP + T_DRAIN;
-/** e-folding time (s) of the wet band drying once the water has drained off it. */
-export const T_DRY = 4;
+export { T_ACTIVE, T_APPROACH, T_DRAIN, T_DRY, T_RUNUP, T_STOP } from "./wash";
+
 /** Seconds a wave stays in flight after draining, while its wet band dries. */
 export const WET_TAIL = 10;
 /** A wave's whole life; it is retired after this. */
@@ -30,7 +29,6 @@ export const WET_FADE = 3;
 export const BREAK = 0.06;
 /** Distance seaward where a swell line starts its approach. */
 export const APPROACH_DIST = 0.7;
-const APPROACH_SPEED = (APPROACH_DIST - BREAK) / T_APPROACH;
 
 /** Fixed number of wave slots. LIFETIME / (MIN_WAVE_TIME * SPACING_MIN) must not exceed it. */
 export const MAX_WAVES = 4;
@@ -56,17 +54,7 @@ export const WAVE_FLOATS = 16;
  * by [-APPROACH_DIST, reach], and 0 from T_ACTIVE on.
  */
 export function waveFront(tau: number, reach: number): number {
-  const t = Math.max(0, tau);
-  if (t < T_APPROACH) return -BREAK - APPROACH_SPEED * (T_APPROACH - t);
-  if (t < T_STOP) {
-    const x = 1 - (t - T_APPROACH) / T_RUNUP;
-    return -BREAK + (reach + BREAK) * (1 - x * x);
-  }
-  if (t < T_ACTIVE) {
-    const x = (t - T_STOP) / T_DRAIN;
-    return reach * (1 - x * x);
-  }
-  return 0;
+  return washFront(tau, reach, BREAK, APPROACH_DIST);
 }
 
 /** Highest the front has reached by `tau`: the front itself until it stops, then `reach`. */
@@ -88,9 +76,7 @@ export function wetFade(tau: number): number {
 export function waveWetness(n: number, tau: number, reach: number): number {
   const m = maxReach(tau, reach);
   if (m <= 0 || n > m) return 0;
-  // When the drain (reach * (1 - x²)) uncovers n: x = sqrt((reach - n) / reach).
-  const q = clamp((m - n) / m, 0, 1);
-  const since = tau - T_STOP - T_DRAIN * Math.sqrt(q);
+  const since = washSinceUncovered(n, tau, m);
   return Math.exp(-Math.max(0, since) / T_DRY) * wetFade(tau);
 }
 
