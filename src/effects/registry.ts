@@ -55,6 +55,7 @@ import { snowMeta } from "./snow.meta";
 import { snowWindowMeta } from "./snowwindow.meta";
 import { startrailsMeta } from "./startrails.meta";
 import { synthwaveMeta } from "./synthwave.meta";
+import { trainMeta } from "./train.meta";
 import { terrainMeta } from "./terrain.meta";
 import { truchetMeta } from "./truchet.meta";
 import { tunnelMeta } from "./tunnel.meta";
@@ -84,6 +85,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blobsMeta, load: () => import("./blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp").then((m) => m.desertcamp) },
+  { ...trainMeta, load: () => import("./train").then((m) => m.train) },
   { ...windowRainMeta, load: () => import("./windowrain").then((m) => m.windowRain) },
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
