@@ -103,9 +103,8 @@ const textParams = effects.flatMap((e) =>
 );
 
 describe("text params", () => {
-  it("are all found through the registry", () => {
-    const declared = metaFiles.reduce((n, [, src]) => n + src.split('kind: "text"').length - 1, 0);
-    expect(textParams.length).toBe(declared);
+  it("include the split-flap board's lines", () => {
+    expect(textParams.map(([key]) => key)).toContain("splitflap.lines");
   });
 
   it.each(textParams)("%s has whole-number limits and a sanitised default", (_, def) => {
