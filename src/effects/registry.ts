@@ -69,6 +69,7 @@ import { synthwaveMeta } from "./synthwave.meta";
 import { trainMeta } from "./train.meta";
 import { terrainMeta } from "./terrain.meta";
 import { truchetMeta } from "./truchet.meta";
+import { turntableMeta } from "./turntable.meta";
 import { tunnelMeta } from "./tunnel.meta";
 import { vinesMeta } from "./vines.meta";
 import { warpMeta } from "./warp.meta";
@@ -104,6 +105,7 @@ export const effects: readonly EffectEntry[] = [
   { ...snowWindowMeta, load: () => import("./snowwindow").then((m) => m.snowWindow) },
   { ...libraryMeta, load: () => import("./library").then((m) => m.library) },
   { ...mugMeta, load: () => import("./mug").then((m) => m.mug) },
+  { ...turntableMeta, load: () => import("./turntable").then((m) => m.turntable) },
   { ...greenhouseMeta, load: () => import("./greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost").then((m) => m.frost) },
