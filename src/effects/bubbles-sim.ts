@@ -88,6 +88,14 @@ export interface BubbleMode {
   streamShare: number;
   /** Emitter x positions as fractions of the width, clear of the centre third. */
   emitters: readonly number[];
+  /**
+   * Emitter y as a fraction of the height (1 = the bottom edge, the default): set
+   * it to start the streams from a point inside the frame, such as an air stone.
+   * Stream bubbles then appear there and the first frame lays them above it.
+   */
+  emitY?: number;
+  /** Spread of an emitted bubble's x about its emitter, px at 1080p (default 3). */
+  emitJitter?: number;
 }
 
 export const MODES: Record<string, BubbleMode> = {
@@ -269,6 +277,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
       const outStep = dt / FADE_OUT;
       const nEmit = Math.min(MAX_EMITTERS, mode.emitters.length);
       const speed = Math.max(0, f.speed) * mode.pace;
+      /** Where streams start (reference px) and how widely they scatter. */
+      const emitAt = mode.emitY === undefined ? undefined : clamp(mode.emitY, 0, 1) * 1080;
+      const jitter = mode.emitJitter ?? 3;
       if (sizeMode !== mode) {
         sizeMode = mode;
         for (let i = 0; i < max; i++) spread(i, mode);
@@ -278,7 +289,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
         primed = true;
         for (let i = 0; i < max; i++) {
           const e = emitterOf(i, f, nEmit);
-          if (e >= 0) xs[i] = mode.emitters[e] * refWidth;
+          if (e < 0) continue;
+          xs[i] = mode.emitters[e] * refWidth;
+          if (mode.emitY !== undefined) ys[i] *= clamp(mode.emitY, 0, 1);
         }
       }
 
@@ -295,7 +308,7 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
         rates[e] = 0;
         if (e >= nEmit || perEmitter[e] === 0 || speed <= 0) continue;
         const r = sizeSum[e] / perEmitter[e];
-        const transit = (1080 + 4 * r) / (riseSpeed(r) * speed);
+        const transit = ((emitAt ?? 1080) + 4 * r) / (riseSpeed(r) * speed);
         rates[e] = (perEmitter[e] / transit) * EMIT_SLACK;
         for (let k = emitCount(emitAcc, e, rates[e], dt); k > 0; k--) {
           // The next parked bubble of this stream, if any is waiting.
@@ -306,8 +319,8 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
             parked[i] = 0;
             reroll(i);
             const r0 = baseRadius(i, f) * depthScale(emitterDepth(e));
-            xs[i] = mode.emitters[e] * refWidth + (rng() - 0.5) * 3;
-            ys[i] = 1080 + r0 * 2;
+            xs[i] = mode.emitters[e] * refWidth + (rng() - 0.5) * jitter;
+            ys[i] = emitAt ?? 1080 + r0 * 2;
             emitted[e]++;
             break;
           }

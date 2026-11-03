@@ -170,6 +170,49 @@ describe("createBubbles", () => {
     expect(sim.live).toBe(sim.target);
   });
 
+  it("starts an emitter column at emitY and keeps it narrow and above the emitter", () => {
+    const mode = {
+      ...MODES.aquarium,
+      density: 1,
+      streamShare: 1,
+      emitters: [0.1],
+      emitY: 0.8,
+      emitJitter: 6,
+    };
+    const sim = createBubbles(MAX, 1920);
+    const f = frame({ mode, streams: true, count: 60, size: 4 });
+    const bad: string[] = [];
+    let seen = 0;
+    for (let i = 0; i < 20 * 40; i++) {
+      const n = sim.step(1 / 20, f, data, BUBBLE_FLOATS);
+      for (let k = 0; k < n; k++) {
+        const o = k * BUBBLE_FLOATS;
+        // Small bubbles barely zigzag: the column stays within a few px of x = 192.
+        if (Math.abs(data[o] - 192) > ZIG_PX + 6) bad.push(`x ${data[o]}`);
+        if (data[o + 1] > 0.8 * 1080 + 0.01) bad.push(`y ${data[o + 1]}`);
+        seen++;
+      }
+    }
+    expect(bad).toEqual([]);
+    expect(seen).toBeGreaterThan(0);
+    expect(sim.emitted[0]).toBeGreaterThan(20);
+    // The rate covers the shorter climb from the emitter.
+    expect(sim.rates[0]).toBeGreaterThan(0);
+  });
+
+  it("is unchanged by the emitter option's defaults", () => {
+    const a = createBubbles(MAX, 1920, 3);
+    const b = createBubbles(MAX, 1920, 3);
+    const plain = frame({ mode: MODES.champagne, streams: true });
+    const explicit = frame({ mode: { ...MODES.champagne, emitJitter: 3 }, streams: true });
+    for (let i = 0; i < 200; i++) {
+      a.step(1 / 30, plain, data, BUBBLE_FLOATS);
+      b.step(1 / 30, explicit, data, BUBBLE_FLOATS);
+    }
+    expect(Array.from(a.ys)).toEqual(Array.from(b.ys));
+    expect(Array.from(a.xs)).toEqual(Array.from(b.xs));
+  });
+
   it("freezes at speed 0", () => {
     const sim = createBubbles(MAX, 1920);
     const f = frame({ speed: 0 });
