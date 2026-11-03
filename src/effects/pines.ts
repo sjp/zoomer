@@ -1,5 +1,5 @@
 /**
- * Shared pine silhouettes (Misty Ridges, Snowy Window): a row of cells along x,
+ * Shared pine silhouettes (Misty Ridges, Snowy Window, Meteor Shower): a row of cells along x,
  * some holding a tree. Small, distant trees can use the simple cone with three
  * tiers (\`pineHalfWidth\`); larger ones the spruce with drooping, snow-laden tiers
  * (\`pineSpruce\`). The caller works out the cell, the tree's base height and the

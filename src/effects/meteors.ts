@@ -164,11 +164,12 @@ void main() {
     if (i >= uTreeCount) break;
     vec3 t = uTrees[i];
     vec2 q = p - t.xy;
-    if (abs(q.x) > t.z * 0.3 + 2.0 || q.y < -2.0 || q.y > t.z + 2.0) continue;
-    float yr = max(q.y, 0.0) / t.z;
-    float hw = pineHalfWidth(yr, t.z);
-    float cTree = clamp((hw - abs(q.x)) * uScale + 0.5, 0.0, 1.0) * clamp((t.z - q.y) * uScale + 0.5, 0.0, 1.0);
-    cTree = max(cTree, clamp((1.6 - abs(q.x)) * uScale + 0.5, 0.0, 1.0) * step(q.y, t.z * 0.1));
+    if (abs(q.x) > t.z * 0.38 + 2.0 || q.y < -2.0 || q.y > t.z + 2.0) continue;
+    // A spruce silhouette: drooping, ragged tiers, varied per tree.
+    float r = float(hash32(uint(i) * 2654435761u + 977u) >> 8) * (1.0 / 16777216.0);
+    float tiers = floor(mix(7.0, 10.99, r));
+    float dTree = pineSpruce(vec2(q.x, q.y / t.z), t.z, tiers, r).x;
+    float cTree = clamp(dTree * uScale + 0.5, 0.0, 1.0);
     col = mix(col, NEAR, cTree);
     a = mix(a, 1.0, cTree);
   }
