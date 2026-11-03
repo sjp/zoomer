@@ -33,37 +33,59 @@ export interface HillShape {
   haze: number;
   /** Tower height of a turbine standing on it (height units). */
   turbine: number;
+  /** Gaussian blur of the profile (sigma, height units): drops the small bumps, nearest most. */
+  smooth: number;
 }
 
 /** Gentle, rolling layers: each sits higher, lower and tighter than the one in front. */
 export const HILLS: readonly HillShape[] = [
-  { base: 0.03, amp: 0.16, wavelength: 1.5, haze: 0, turbine: 0.3 },
-  { base: 0.17, amp: 0.12, wavelength: 1, haze: 0.28, turbine: 0.18 },
-  { base: 0.27, amp: 0.09, wavelength: 0.7, haze: 0.48, turbine: 0.11 },
-  { base: 0.34, amp: 0.07, wavelength: 0.5, haze: 0.64, turbine: 0.07 },
+  { base: 0.03, amp: 0.16, wavelength: 1.5, haze: 0, turbine: 0.3, smooth: 0.06 },
+  { base: 0.17, amp: 0.12, wavelength: 1, haze: 0.28, turbine: 0.18, smooth: 0.03 },
+  { base: 0.27, amp: 0.09, wavelength: 0.7, haze: 0.48, turbine: 0.11, smooth: 0.018 },
+  { base: 0.34, amp: 0.07, wavelength: 0.5, haze: 0.64, turbine: 0.07, smooth: 0.012 },
 ];
 
 /** Ridged-noise share of the hill profiles (`ridgeRaw`'s `peaks`): almost pure fBm, so rolling. */
 const HILL_PEAKS = 0.1;
 
+/** Gaussian blur of the periodic row `src` into `dst` (same length), sigma in samples. */
+function blurPeriodic(src: Float32Array, dst: Float32Array, sigma: number): void {
+  const n = src.length;
+  const r = Math.ceil(3 * sigma);
+  if (r < 1) {
+    dst.set(src);
+    return;
+  }
+  const kernel = new Float32Array(2 * r + 1);
+  let total = 0;
+  for (let k = -r; k <= r; k++) total += kernel[k + r] = Math.exp(-(k * k) / (2 * sigma * sigma));
+  for (let c = 0; c < n; c++) {
+    let sum = 0;
+    for (let k = -r; k <= r; k++) sum += kernel[k + r] * src[(((c + k) % n) + n) % n];
+    dst[c] = sum / total;
+  }
+}
+
 /**
  * Fills `out` (`HILL_LAYERS * COLUMNS` floats, row = layer, nearest first) with
  * the hill profiles for `seed`: absolute heights, each row spanning its layer's
- * band [base, base + amp] exactly, one `SPAN` wide and periodic (sample it with
+ * band [base, base + amp] exactly after a blur that keeps it rolling, one `SPAN` wide and periodic (sample it with
  * `hillHeightAt` or a REPEAT-wrapped texture). Deterministic.
  */
 export function fillHillTable(out: Float32Array, seed: number): void {
   const s = Number.isFinite(seed) ? Math.floor(seed) : 0;
+  const raw = new Float32Array(COLUMNS);
   for (let i = 0; i < HILL_LAYERS; i++) {
     const shape = HILLS[i];
     const noise = createNoise(s * 7919 + i * 104729 + 211);
     const p0 = latticePeriod(shape.wavelength);
     const row = i * COLUMNS;
+    for (let c = 0; c < COLUMNS; c++) raw[c] = ridgeRaw(noise, c / COLUMNS, p0, HILL_PEAKS);
+    blurPeriodic(raw, out.subarray(row, row + COLUMNS), (shape.smooth / SPAN) * COLUMNS);
     let lo = Infinity;
     let hi = -Infinity;
     for (let c = 0; c < COLUMNS; c++) {
-      const v = ridgeRaw(noise, c / COLUMNS, p0, HILL_PEAKS);
-      out[row + c] = v;
+      const v = out[row + c];
       if (v < lo) lo = v;
       if (v > hi) hi = v;
     }
