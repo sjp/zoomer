@@ -7,6 +7,7 @@
   --text: #e8eaf0;
   --muted: #9aa0ae;
   --accent: #5b8cff;
+  --star: #f5c542;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   color: var(--text);
@@ -218,7 +219,7 @@ input[type="search"]:focus-visible {
 
 .effect-option {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   column-gap: 8px;
   padding: 6px 8px;
   border-left: 3px solid transparent;
@@ -235,6 +236,7 @@ input[type="search"]:focus-visible {
 }
 
 .effect-option-name {
+  grid-column: 1;
   font-weight: 600;
 }
 
@@ -243,18 +245,57 @@ input[type="search"]:focus-visible {
 }
 
 .effect-option-category {
+  grid-column: 2;
+  grid-row: 1;
   font-size: 11px;
   color: var(--muted);
   align-self: center;
 }
 
 .effect-option-description {
-  grid-column: 1 / -1;
+  grid-column: 1 / 3;
   overflow: hidden;
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.star-button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  color: var(--muted);
+}
+
+.star-button[aria-pressed="true"] {
+  color: var(--star);
+}
+
+.effect-option-star {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: 4px;
+  border: none;
+  background: none;
+}
+
+.effect-option-star:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.12);
+}
+
+/* With a pointer that hovers, an empty star shows only on the row under it or the
+   active one; touch screens always show it. */
+@media (hover: hover) {
+  .effect-option:not([data-active="true"], :hover) .effect-option-star[aria-pressed="false"] {
+    opacity: 0;
+  }
+}
+
+.effect-list-hint {
+  text-align: left;
 }
 
 .effect-empty {

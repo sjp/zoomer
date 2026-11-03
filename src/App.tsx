@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
@@ -11,6 +11,7 @@ import { useIdle } from "./hooks/useIdle";
 import { describeError } from "./lib/errors";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
 import { FRAME_RATES, type FrameRate } from "./lib/frameRate";
+import { createFavourites } from "./lib/favourites";
 import { loadSort, saveSort } from "./lib/preferences";
 import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
@@ -71,13 +72,15 @@ export function App() {
     [frameListeners],
   );
   const idle = useIdle(3000);
-  // The effect list: its sort is remembered, its search isn't. The search stays while
-  // the list is closed, because ← / → follow the filtered list.
+  // The effect list: its sort and favourites are remembered, its search isn't. The
+  // search stays while the list is closed, because ← / → follow the filtered list.
   const [listOpen, setListOpen] = useState(false);
   const [listFocus, setListFocus] = useState(0);
   const [sort, setSort] = useState<EffectSort>(loadSort);
   const [query, setQuery] = useState("");
-  const listOptions = useMemo(() => ({ sort, query }), [sort, query]);
+  const [favouritesStore] = useState(() => createFavourites());
+  const favourites = useSyncExternalStore(favouritesStore.subscribe, favouritesStore.get);
+  const listOptions = useMemo(() => ({ sort, query, favourites }), [sort, query, favourites]);
   const visible = useMemo(() => visibleEffects(effects, listOptions), [listOptions]);
   const changeSort = useCallback((next: EffectSort) => {
     setSort(next);
@@ -248,6 +251,16 @@ export function App() {
     }
   }, []);
 
+  // For `S`, which works with the panel hidden, so it confirms with a toast.
+  const toggleCurrentFavourite = useCallback(() => {
+    const starred = favouritesStore.get().has(effect.id);
+    favouritesStore.toggle(effect.id);
+    const message = starred
+      ? `Removed ${effect.name} from favourites`
+      : `Added ${effect.name} to favourites`;
+    setToast((t) => ({ message, id: (t?.id ?? 0) + 1 }));
+  }, [favouritesStore, effect]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) return;
@@ -256,12 +269,13 @@ export function App() {
         openList();
       } else if (e.key === "h" || e.key === "H") togglePanel();
       else if (e.key === "f" || e.key === "F") toggleFullscreen();
+      else if (e.key === "s" || e.key === "S") toggleCurrentFavourite();
       else if (e.key === "ArrowRight") step(1);
       else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, togglePanel, toggleFullscreen, openList]);
+  }, [step, togglePanel, toggleFullscreen, openList, toggleCurrentFavourite]);
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
@@ -322,6 +336,7 @@ export function App() {
               onQueryChange: setQuery,
               onSortChange: changeSort,
               onPrefetch: prefetch,
+              onToggleFavourite: favouritesStore.toggle,
             }}
             effect={effect}
             values={values}

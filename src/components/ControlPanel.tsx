@@ -6,6 +6,7 @@ import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 import type { Store } from "../lib/store";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { ParamControl } from "./ParamControl";
+import { StarButton } from "./StarButton";
 
 /** The effect list's state, owned by the app because ← / → follow it too. */
 export type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose"> & {
@@ -72,6 +73,12 @@ export function ControlPanel(props: Props) {
             <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
+        <StarButton
+          starred={list.options.favourites?.has(effect.id) ?? false}
+          name={effect.name}
+          titleSuffix=" (S)"
+          onToggle={() => list.onToggleFavourite(effect.id)}
+        />
         <button type="button" onClick={props.onHide} title="Hide controls (H)">
           Hide
         </button>
@@ -195,7 +202,7 @@ export function ControlPanel(props: Props) {
           Fullscreen
         </button>
       </footer>
-      <p className="hint">/ search · H hide · F fullscreen · ← → switch effect</p>
+      <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
     </aside>
   );
 }
