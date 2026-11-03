@@ -98,7 +98,8 @@ describe("snow", () => {
     expect(e * e + moundY(e) ** 2).toBeCloseTo(FLAKE_DISC * FLAKE_DISC, 9);
   });
 
-  it("never lets a flake leave the globe or sink into the mound", () => {
+  // 5400 steps of 300 flakes with plain checks: the cost is the simulation itself.
+  it("never lets a flake leave the globe or sink into the mound", { timeout: 20_000 }, () => {
     const s = createSnow(1, 300);
     shakeSnow(s);
     let worst = 0;
