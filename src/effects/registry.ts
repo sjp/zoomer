@@ -37,6 +37,7 @@ import { inkMeta } from "./ink.meta";
 import { jellyfishMeta } from "./jellyfish.meta";
 import { kelpMeta } from "./kelp.meta";
 import { koiMeta } from "./koi.meta";
+import { fairylightsMeta } from "./fairylights.meta";
 import { lanternsMeta } from "./lanterns.meta";
 import { lavalampMeta } from "./lavalamp.meta";
 import { moireMeta } from "./moire.meta";
@@ -102,6 +103,7 @@ export const effects: readonly EffectEntry[] = [
   { ...dappleMeta, load: () => import("./dapple").then((m) => m.dapple) },
   { ...koiMeta, load: () => import("./koi").then((m) => m.koi) },
   { ...lanternsMeta, load: () => import("./lanterns").then((m) => m.lanterns) },
+  { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
   { ...causticsMeta, load: () => import("./caustics").then((m) => m.caustics) },
