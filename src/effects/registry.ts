@@ -53,6 +53,7 @@ import { marbleMeta } from "./marble.meta";
 import { nebulaMeta } from "./nebula.meta";
 import { orbitsMeta } from "./orbits.meta";
 import { papercutMeta } from "./papercut.meta";
+import { pendulumMeta } from "./pendulum.meta";
 import { physarumMeta } from "./physarum.meta";
 import { planetMeta } from "./planet.meta";
 import { porchMeta } from "./porch.meta";
@@ -135,6 +136,7 @@ export const effects: readonly EffectEntry[] = [
   { ...blindsMeta, load: () => import("./blinds").then((m) => m.blinds) },
   { ...planetMeta, load: () => import("./planet").then((m) => m.planet) },
   { ...orbitsMeta, load: () => import("./orbits").then((m) => m.orbits) },
+  { ...pendulumMeta, load: () => import("./pendulum").then((m) => m.pendulum) },
   { ...ferroMeta, load: () => import("./ferro").then((m) => m.ferro) },
   { ...filmMeta, load: () => import("./film").then((m) => m.film) },
   { ...marbleMeta, load: () => import("./marble").then((m) => m.marble) },
