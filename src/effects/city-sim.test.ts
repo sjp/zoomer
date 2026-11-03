@@ -109,10 +109,14 @@ describe("createWindowState", () => {
     for (const target of [0.2, 0.35, 0.5]) {
       const s = createWindowState(5000);
       s.reset(3000, 2, target);
+      // Plain comparisons in the hot loop: an expect per step dominates the runtime.
+      const off: string[] = [];
       for (let t = 0; t < 3000; t += 1 / 30) {
         s.step(1 / 30, 2);
-        expect(Math.abs(litFraction(s) - target)).toBeLessThan(0.002);
+        const err = Math.abs(litFraction(s) - target);
+        if (!(err < 0.002) && off.length < 10) off.push(`t ${t}: lit ${litFraction(s)}`);
       }
+      expect(off, `target ${target}`).toEqual([]);
     }
   });
 
