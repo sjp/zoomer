@@ -54,6 +54,7 @@ import { mugMeta } from "./mug.meta";
 import { murmurationMeta } from "./murmuration.meta";
 import { lighthouseMeta } from "./lighthouse.meta";
 import { meteorsMeta } from "./meteors.meta";
+import { mobileMeta } from "./mobile.meta";
 import { leavesMeta } from "./leaves.meta";
 import { libraryMeta } from "./library.meta";
 import { marbleMeta } from "./marble.meta";
@@ -137,6 +138,7 @@ export const effects: readonly EffectEntry[] = [
   { ...fairylightsMeta, load: () => import("./fairylights").then((m) => m.fairylights) },
   { ...balloonsMeta, load: () => import("./balloons").then((m) => m.balloons) },
   { ...cranesMeta, load: () => import("./cranes").then((m) => m.cranes) },
+  { ...mobileMeta, load: () => import("./mobile").then((m) => m.mobile) },
   { ...murmurationMeta, load: () => import("./murmuration").then((m) => m.murmuration) },
   { ...windfarmMeta, load: () => import("./windfarm").then((m) => m.windfarm) },
   { ...horizonMeta, load: () => import("./horizon").then((m) => m.horizon) },
