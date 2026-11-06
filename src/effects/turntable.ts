@@ -99,7 +99,7 @@ uniform vec3 uBokehB;
 /** Bokeh brightness, and the sideboard's back edge (height units). */
 uniform vec2 uBokehSurf;
 /** Bokeh lights: x (fraction of the width), y, radius, brightness. */
-uniform vec4 uBokeh[${BOKEH_COUNT}];
+uniform vec4 uBokeh[${String(BOKEH_COUNT)}];
 out vec4 outColor;
 float box(vec2 p, vec2 lo, vec2 hi, float soft) {
   vec2 a = smoothstep(lo - soft, lo + soft, p) * (1.0 - smoothstep(hi - soft, hi + soft, p));
@@ -129,7 +129,7 @@ void main() {
   }
   // Out-of-focus lights: soft discs with a slightly brighter rim.
   vec3 glow = vec3(0.0);
-  for (int i = 0; i < ${BOKEH_COUNT}; i++) {
+  for (int i = 0; i < ${String(BOKEH_COUNT)}; i++) {
     vec4 b = uBokeh[i];
     float d = length(p - vec2(b.x * uFrame.x, b.y));
     float disc = 1.0 - smoothstep(b.z * 0.86, b.z, d);
@@ -402,7 +402,9 @@ export const turntable = defineEffect(turntableMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [
@@ -528,7 +530,9 @@ export const turntable = defineEffect(turntableMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

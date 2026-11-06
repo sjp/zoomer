@@ -136,10 +136,10 @@ void main() {
 /** Clears the state to empty (A = 1, B = 0) and stamps the seed spots. */
 const seedFragment = (codec: string) => /* glsl */ `${header(codec)}
 /** Spots as (x, y in 0..1, radius in cells). */
-uniform vec3 uSpots[${SPOT_COUNT}];
+uniform vec3 uSpots[${String(SPOT_COUNT)}];
 void main() {
   float inside = 0.0;
-  for (int i = 0; i < ${SPOT_COUNT}; i++) {
+  for (int i = 0; i < ${String(SPOT_COUNT)}; i++) {
     vec2 d = gl_FragCoord.xy - uSpots[i].xy * uSize;
     float r = uSpots[i].z;
     inside = max(inside, step(dot(d, d), r * r));
@@ -252,7 +252,9 @@ export const reaction = defineEffect(reactionMeta, {
       const filter = packed ? gl.NEAREST : gl.LINEAR;
 
       const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
+          gl.deleteProgram(p);
+        });
       const stepProgram = program(stepFragment(codec));
       const seedProgram = program(seedFragment(codec));
       const resampleProgram = program(resampleFragment(codec));
@@ -287,9 +289,14 @@ export const reaction = defineEffect(reactionMeta, {
       const statsTarget = createRenderTarget(gl, STATS_SIZE, STATS_SIZE, gl.RGBA8, {
         filter: gl.NEAREST,
       });
-      if (statsTarget) scope.add(statsTarget, (t) => t.dispose());
+      if (statsTarget)
+        scope.add(statsTarget, (t) => {
+          t.dispose();
+        });
       const statsBytes = new Uint8Array(STATS_SIZE * STATS_SIZE * 4);
-      const pbo = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const pbo = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
       gl.bufferData(gl.PIXEL_PACK_BUFFER, statsBytes.byteLength, gl.STREAM_READ);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -356,7 +363,7 @@ export const reaction = defineEffect(reactionMeta, {
         gridH = h;
         if (!a || !b) {
           a?.dispose();
-          console.warn(`reaction: can't allocate a ${w}x${h} simulation grid`);
+          console.warn(`reaction: can't allocate a ${String(w)}x${String(h)} simulation grid`);
           return;
         }
         const old = targets.length === 2 ? targets[current] : null;
@@ -418,7 +425,7 @@ export const reaction = defineEffect(reactionMeta, {
         const reseedNow = sampleCycle(cycle, readStats(statsBytes, stats), regrow);
         if (import.meta.env.DEV) {
           console.debug(
-            `reaction: ${cycle.phase}, coverage ${stats.coverage.toFixed(3)}, max B ${stats.maxB.toFixed(2)}, still ${cycle.still}`,
+            `reaction: ${cycle.phase}, coverage ${stats.coverage.toFixed(3)}, max B ${stats.maxB.toFixed(2)}, still ${String(cycle.still)}`,
           );
         }
         return reseedNow;
@@ -500,7 +507,9 @@ export const reaction = defineEffect(reactionMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

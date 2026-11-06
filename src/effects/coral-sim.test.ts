@@ -106,7 +106,9 @@ describe("buildReef", () => {
             y >= 0 &&
             y + r <= heightAt(x, ASPECT, HEIGHT) + 1e-6;
           if (!ok && outside.length < 10)
-            outside.push(`reef ${n}, instance ${i}: ${x}, ${y}, r ${r}`);
+            outside.push(
+              `reef ${String(n)}, instance ${String(i)}: ${String(x)}, ${String(y)}, r ${String(r)}`,
+            );
         }
       }
     });
@@ -143,7 +145,9 @@ describe("buildReef", () => {
           // A disc grows over a span; a zero-span disc would pop in.
           (kind === KIND_CAPSULE || t1 > t0);
         if (!ok && wrong.length < 10)
-          wrong.push(`reef ${n}, instance ${i}: ${t0}..${t1}, kind ${kind}`);
+          wrong.push(
+            `reef ${String(n)}, instance ${String(i)}: ${String(t0)}..${String(t1)}, kind ${String(kind)}`,
+          );
       }
     });
     expect(wrong).toEqual([]);
@@ -155,7 +159,8 @@ describe("buildReef", () => {
     reefs.forEach((reef, n) => {
       for (let i = 0; i < reef.count; i++) {
         const tapers = field(reef, i, 5) <= field(reef, i, 4) + 1e-9;
-        if (!tapers && wrong.length < 10) wrong.push(`reef ${n}, instance ${i} widens`);
+        if (!tapers && wrong.length < 10)
+          wrong.push(`reef ${String(n)}, instance ${String(i)} widens`);
         const p = reef.parent[i];
         if (p < 0) continue;
         children++;
@@ -167,7 +172,8 @@ describe("buildReef", () => {
           // A child starts at its parent's end point (toBeCloseTo(_, 6): within half of 1e-6).
           Math.abs(field(reef, i, 0) - field(reef, p, 2)) < 5e-7 &&
           Math.abs(field(reef, i, 1) - field(reef, p, 3)) < 5e-7;
-        if (!ok && wrong.length < 10) wrong.push(`reef ${n}, instance ${i}, parent ${p}`);
+        if (!ok && wrong.length < 10)
+          wrong.push(`reef ${String(n)}, instance ${String(i)}, parent ${String(p)}`);
       }
     });
     expect(wrong).toEqual([]);

@@ -16,7 +16,7 @@ function bruteForce(xs: Float32Array, ys: Float32Array, n: number, maxDist: numb
     for (let j = i + 1; j < n; j++) {
       const dx = xs[j] - xs[i];
       const dy = ys[j] - ys[i];
-      if (dx * dx + dy * dy < maxDist * maxDist) out.add(`${i},${j}`);
+      if (dx * dx + dy * dy < maxDist * maxDist) out.add(`${String(i)},${String(j)}`);
     }
   }
   return out;
@@ -43,7 +43,7 @@ function gridLinks(
   for (let l = 0; l < count; l++) {
     const i = Math.min(a[l], b[l]);
     const j = Math.max(a[l], b[l]);
-    pairs.push(`${i},${j}`);
+    pairs.push(`${String(i)},${String(j)}`);
     const d = Math.hypot(xs[j] - xs[i], ys[j] - ys[i]);
     expect(t[l]).toBeCloseTo(d / maxDist, 5);
   }
@@ -131,7 +131,9 @@ describe("driftPoint wrapping", () => {
         if (driftPoint(xs, ys, 0, dx, dy, minX, minY, spanX, spanY)) flagged++;
         const inside = xs[0] >= loX && xs[0] <= hiX && ys[0] >= loY && ys[0] <= hiY;
         if (!inside && outside.length < 10) {
-          outside.push(`domain ${k}, step ${step}: (${xs[0]}, ${ys[0]})`);
+          outside.push(
+            `domain ${String(k)}, step ${String(step)}: (${String(xs[0])}, ${String(ys[0])})`,
+          );
         }
       }
       expect(outside).toEqual([]);
@@ -264,7 +266,8 @@ describe("findLinks filter", () => {
     const t = new Float32Array(cap);
     const count = findLinks(grid, xs, ys, maxDist, a, b, t, cap, filter);
     const out: string[] = [];
-    for (let l = 0; l < count; l++) out.push(`${Math.min(a[l], b[l])},${Math.max(a[l], b[l])}`);
+    for (let l = 0; l < count; l++)
+      out.push(`${String(Math.min(a[l], b[l]))},${String(Math.max(a[l], b[l]))}`);
     return { pairs: out.sort(), t: t.slice(0, count) };
   };
   const view = (over: Partial<LinkFilter> = {}): LinkFilter => ({
@@ -322,7 +325,7 @@ describe("findLinks filter", () => {
     ];
     const { pairs, t } = linksOf(pts, 20, view({ reach: 0.7 }));
     expect(pairs).toEqual(["0,1", "1,2"]);
-    const ts = [...t].sort();
+    const ts = [...t].sort((a, b) => a - b);
     expect(ts[0]).toBeCloseTo(0.25, 6);
     expect(ts[1]).toBeCloseTo(0.65, 6);
     expect(linksOf(pts, 20, view({ reach: 0 })).pairs).toEqual([]);

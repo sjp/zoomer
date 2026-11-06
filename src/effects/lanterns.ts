@@ -68,7 +68,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aLantern;
 /** Colour, then halo strength. */
 layout(location = 2) in vec4 aTint;
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 out vec2 vLocal;
 out float vEdge;
 flat out vec4 vColor;
@@ -178,7 +178,9 @@ export const lanterns = defineEffect(lanternsMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       // Per lantern: x, y, half-width, opacity; r, g, b, halo; then the spin pair.
       const batch = scope.own(
         createSpriteBatch(gl, MAX_LANTERNS, [4, 4], [BODY_STRIP, polygonStrip(8, Math.PI / 8)], {
@@ -337,7 +339,9 @@ export const lanterns = defineEffect(lanternsMeta, {
           gl.disable(gl.SCISSOR_TEST);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

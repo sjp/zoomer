@@ -207,14 +207,17 @@ export const flowfield = defineEffect(flowfieldMeta, {
       /** `uFade` for this frame, from `fadeTerms`. */
       const fadeOut = new Float64Array(2);
 
-      const segProgram = scope.add(createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const fadeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const compProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
+      const segProgram = scope.add(createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const fadeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const compProgram = scope.add(
+        createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const seg = createUniforms(gl, segProgram, [
         "uResolution",
@@ -241,8 +244,12 @@ export const flowfield = defineEffect(flowfieldMeta, {
       gl.useProgram(null);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindVertexArray(vao);
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, instances.byteLength, gl.DYNAMIC_DRAW);
@@ -315,7 +322,7 @@ export const flowfield = defineEffect(flowfieldMeta, {
         if (targets.length < 2) {
           deleteTargets();
           console.warn(
-            `flowfield: can't allocate ${width}x${height} trail layers; drawing nothing`,
+            `flowfield: can't allocate ${String(width)}x${String(height)} trail layers; drawing nothing`,
           );
         }
         targetW = width;
@@ -486,7 +493,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

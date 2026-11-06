@@ -91,7 +91,7 @@ flat in vec4 vWin;
 flat in vec3 vMisc;
 uniform sampler2D uWindows;
 /** Fade progress of each slot, four slots per vec4 (a vec4 array uses a quarter of the uniform vectors). */
-uniform vec4 uFade[${FADE_SLOTS / 4}];
+uniform vec4 uFade[${String(FADE_SLOTS / 4)}];
 uniform vec3 uBuilding;
 uniform vec3 uHaze;
 uniform float uWarmth;
@@ -114,10 +114,10 @@ void main() {
     float windowPx = min(vGrid.x * vWin.z, vGrid.y * vWin.w) * uScale;
     mask = mix(mask, vWin.z * vWin.w, clamp((3.0 - windowPx) * 0.5, 0.0, 1.0));
     int idx = int(vMisc.x + 0.5) + int(cell.y) * int(vGrid.z + 0.5) + int(cell.x);
-    vec4 w = texelFetch(uWindows, ivec2(idx & ${WINDOW_TEX_WIDTH - 1}, idx >> 8), 0);
-    int slot = min(int(w.a * 255.0 + 0.5), ${FADE_SLOTS});
+    vec4 w = texelFetch(uWindows, ivec2(idx & ${String(WINDOW_TEX_WIDTH - 1)}, idx >> 8), 0);
+    int slot = min(int(w.a * 255.0 + 0.5), ${String(FADE_SLOTS)});
     float level = slot > 0 ? mix(w.r, w.g, uFade[(slot - 1) >> 2][(slot - 1) & 3]) : w.g;
-    vec3 tint = w.b > ${TV_PICK} ? TV : (w.b < uWarmth * ${TV_PICK} ? WARM : COOL);
+    vec3 tint = w.b > ${String(TV_PICK)} ? TV : (w.b < uWarmth * ${String(TV_PICK)} ? WARM : COOL);
     // Unlit glass is a touch lighter than the wall; lit glass is tinted by layer.
     vec3 glass = wall * 1.25 + 0.006 + tint * (level * vMisc.z);
     glass = mix(glass, uHaze, vMisc.y * 0.35);
@@ -169,7 +169,9 @@ export const city = defineEffect(cityMeta, {
     return withScope((scope) => {
       const buildingProgram = scope.add(
         createProgram(gl, BUILDING_VERTEX, BUILDING_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const bu = createUniforms(gl, buildingProgram, [
         "uResolution",
@@ -180,9 +182,9 @@ export const city = defineEffect(cityMeta, {
         "uHaze",
         "uWarmth",
       ]);
-      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const lu = createUniforms(gl, lightProgram, ["uResolution", "uScale"]);
       const background = scope.own(createGradientBackground(gl));
       const quads = scope.own(createSpriteBatch(gl, MAX_QUADS, [4, 4, 4, 4]));
@@ -198,7 +200,9 @@ export const city = defineEffect(cityMeta, {
           data: windows.data,
           filter: gl.NEAREST,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const skyTop = unitRgbMemo();
       const skyHorizon = unitRgbMemo();
@@ -372,7 +376,9 @@ export const city = defineEffect(cityMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

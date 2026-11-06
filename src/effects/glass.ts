@@ -52,11 +52,17 @@ const HIGHLIGHT_FADE = [3, 6] as const;
 const PALETTE_DATA = new Map<readonly string[], Float32Array>(
   Object.values(PALETTES).map((colors) => {
     const data = new Float32Array(PALETTE_SIZE * 3);
-    colors.forEach((hex, i) => data.set(hexToUnitRgb(hex), i * 3));
+    colors.forEach((hex, i) => {
+      data.set(hexToUnitRgb(hex), i * 3);
+    });
     return [colors, data];
   }),
 );
-const paletteData = (name: string) => PALETTE_DATA.get(palette(name))!;
+const paletteData = (name: string) => {
+  const data = PALETTE_DATA.get(palette(name));
+  if (!data) throw new Error(`glass: no palette data for "${name}"`);
+  return data;
+};
 
 /**
  * One full-screen pass: a 3x3 jittered-Voronoi search (`VORONOI_GLSL`, whose JS
@@ -86,7 +92,7 @@ uniform vec4 uSun;
 uniform vec2 uLight;
 /** Cells to texture tiles, and texture strength. */
 uniform vec2 uTex;
-uniform vec3 uPalette[${PALETTE_SIZE}];
+uniform vec3 uPalette[${String(PALETTE_SIZE)}];
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
@@ -116,7 +122,7 @@ void main() {
 
   // Pane: palette colour, old-glass brightness spread, centre glow, texture.
   uint ph = hash32(bestH ^ 0x5bd1e995u);
-  vec3 pane = uPalette[int(ph & ${PALETTE_SIZE - 1}u)];
+  vec3 pane = uPalette[int(ph & ${String(PALETTE_SIZE - 1)}u)];
   float spread = 1.0 + ${glslFloat(PANE_SPREAD)} * (float((ph >> 26) & 63u) * ${glslFloat(1 / 63)} - 0.5);
   float glow = 1.0 + ${glslFloat(CENTRE_GLOW)} * max(1.0 - f1 * 2.5, 0.0);
   vec2 offs = vec2(uvec2(ph >> 8, ph >> 16) & 255u) * ${glslFloat(1 / 256)};
@@ -165,9 +171,9 @@ export function leadStyle(leadWidth: number, scale: number): [number, number, nu
 export const glass = defineEffect(glassMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uGlass",
         "uPix",
@@ -197,7 +203,9 @@ export const glass = defineEffect(glassMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const drift = [0, 0];
@@ -257,7 +265,9 @@ export const glass = defineEffect(glassMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

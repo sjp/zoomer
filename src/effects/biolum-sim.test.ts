@@ -32,7 +32,7 @@ describe("glowEnergy", () => {
     for (let t = -1; t < LIFETIME + 2; t += 0.001) {
       const e = glowEnergy(t);
       if (!(e >= 0 && e <= 1 && Math.abs(e - prev) < 0.01) && bad.length < 10) {
-        bad.push(`t ${t}: ${prev} -> ${e}`);
+        bad.push(`t ${String(t)}: ${String(prev)} -> ${String(e)}`);
       }
       peak = Math.max(peak, e);
       prev = e;
@@ -171,13 +171,15 @@ describe("createBiolumScheduler", () => {
       for (let k = 0; k < s.count; k++) {
         const { reach, peelSpan } = s.waves[k];
         if (!(reach < REACH_MAX && peelSpan <= PEEL_MAX) && bad.length < 10) {
-          bad.push(`step ${i}, wave ${k}: reach ${reach}, peelSpan ${peelSpan}`);
+          bad.push(
+            `step ${String(i)}, wave ${String(k)}: reach ${String(reach)}, peelSpan ${String(peelSpan)}`,
+          );
         }
         dirs.add(s.waves[k].peelDir);
       }
     }
     expect(bad).toEqual([]);
-    expect([...dirs].sort()).toEqual([-1, 1]);
+    expect([...dirs].sort((a, b) => a - b)).toEqual([-1, 1]);
   });
 });
 

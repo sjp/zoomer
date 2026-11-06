@@ -27,11 +27,12 @@ import {
   type Trajectory,
 } from "./lorenz-sim";
 import { PALETTE_OPTIONS, SYSTEM_OPTIONS } from "./lorenz.meta";
+import { defined } from "../test/defined";
 
 const TAU = Math.PI * 2;
 const ids = SYSTEM_OPTIONS.map((o) => o.value);
 const trajectories = new Map(ids.map((id) => [id, buildTrajectory(SYSTEMS[id])]));
-const trajOf = (id: (typeof ids)[number]): Trajectory => trajectories.get(id)!;
+const trajOf = (id: (typeof ids)[number]): Trajectory => defined(trajectories.get(id));
 
 /** Framed radius (cylinder) and height of a system point. */
 function framed(t: Trajectory, x: number, y: number, z: number): [number, number] {

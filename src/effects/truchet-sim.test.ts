@@ -55,7 +55,7 @@ describe("grid layout", () => {
           g.rows * t - h < 2 * t &&
           Math.abs(g.ox + (g.cols * t) / 2 - w / 2) < 1e-9 &&
           Math.abs(g.oy + (g.rows * t) / 2 - h / 2) < 1e-9;
-        if (!ok) bad.push(`${w}x${h} @ ${tile}`);
+        if (!ok) bad.push(`${String(w)}x${String(h)} @ ${String(tile)}`);
       }
     }
     expect(bad).toEqual([]);
@@ -170,13 +170,13 @@ function run(sim: TruchetSim, seconds: number, rate: number): string[] {
     for (let s = 1; s <= MAX_FLIPS; s++) {
       const t = sim.slotTile[s];
       if (t < 0) continue;
-      if (seen.has(t)) problems.push(`tile ${t} in two slots`);
+      if (seen.has(t)) problems.push(`tile ${String(t)} in two slots`);
       seen.add(t);
-      if (sim.tileSlot[t] !== s) problems.push(`tile ${t} slot mismatch`);
+      if (sim.tileSlot[t] !== s) problems.push(`tile ${String(t)} slot mismatch`);
       const prev = startOf[t];
       // A flipping tile is never restarted before its flip ends.
       if (!Number.isNaN(prev) && prev !== sim.slotStart[s] && sim.time - prev < FLIP_DURATION) {
-        problems.push(`tile ${t} restarted mid-flip`);
+        problems.push(`tile ${String(t)} restarted mid-flip`);
       }
       startOf[t] = sim.slotStart[s];
     }

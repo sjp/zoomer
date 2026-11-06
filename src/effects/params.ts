@@ -124,7 +124,7 @@ export function decodeHash(hash: string): { effectId?: string; raw: Record<strin
 export function encodeHash(effect: EffectMeta, values: AnyParamValues): string {
   const params = new URLSearchParams({ effect: effect.id });
   for (const [key, def] of Object.entries(effect.params)) {
-    const value = values[key];
+    const value = (values as Partial<AnyParamValues>)[key];
     if (value !== undefined && value !== def.default) params.set(key, serialize(def, value));
   }
   return `#${params.toString()}`;

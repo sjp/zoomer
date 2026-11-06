@@ -22,6 +22,7 @@ import {
   yAt,
 } from "./papercut-sim";
 import { MAX_LAYERS, MIN_LAYERS, PALETTE_IDS, SCENE_IDS } from "./papercut.meta";
+import { defined } from "../test/defined";
 
 const newTable = () => new Float32Array(TABLE_ROWS * TABLE_COLUMNS * TABLE_CHANNELS);
 const at = (table: Float32Array, row: number, col: number, ch: number) =>
@@ -66,8 +67,8 @@ describe("buildScene", () => {
     const scene = buildScene(id, n, table);
     const slots = scene.layers.flatMap((l, slot) => (l.band ? [slot] : []));
     for (let k = 1; k < slots.length; k++) {
-      const back = scene.layers[slots[k - 1]].band!;
-      const front = scene.layers[slots[k]].band!;
+      const back = defined(scene.layers[slots[k - 1]].band);
+      const front = defined(scene.layers[slots[k]].band);
       expect(front[0] + front[1]).toBeLessThan(back[0] + back[1]);
     }
     // Each layer peeks out above all the layers in front of it somewhere.

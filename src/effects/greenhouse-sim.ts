@@ -13,6 +13,7 @@ import { DENSITY_MAX, type PaletteId, type RoofId } from "./greenhouse.meta";
 import { clamp, fract, smoothstep } from "./math";
 import { createRng } from "./noise";
 import { STREAK_FLOATS } from "./streaks";
+import { lookup } from "./lookup";
 import { createSwell, type Swell } from "./sway";
 
 const TAU = Math.PI * 2;
@@ -687,7 +688,7 @@ function staysClear(leaf: Leaf): boolean {
 export function buildLeaves(seed: number, density: number, palette: PaletteId): LeafLayout {
   const rng = createRng((Math.floor(seed) * 7919) ^ 0x6e3e);
   const d = clamp(Number.isFinite(density) ? density : 1, 0.1, DENSITY_MAX);
-  const shares = (PALETTES[palette] ?? PALETTES.jungle).kinds;
+  const shares = lookup(PALETTES, palette, "jungle").kinds;
   const leaves: Leaf[] = [];
   const counts: number[] = [];
   const starts: number[] = [];

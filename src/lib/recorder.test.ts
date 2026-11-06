@@ -169,7 +169,7 @@ describe("recordCanvas", () => {
     const frames = () => () => {};
 
     beforeEach(() => {
-      vi.stubGlobal("VideoEncoder", class {});
+      vi.stubGlobal("VideoEncoder", vi.fn());
       mp4.canRecordMp4.mockResolvedValue(true);
       mp4.recordMp4.mockResolvedValue(new Blob(["mp4"]));
     });
@@ -205,7 +205,9 @@ describe("recordCanvas", () => {
       mp4.canRecordMp4.mockResolvedValue(false);
       const { canvas } = fakeCanvas();
       const result = recordCanvas(canvas, 5, 30, frames);
-      await vi.waitFor(() => expect(vi.getTimerCount()).toBe(1));
+      await vi.waitFor(() => {
+        expect(vi.getTimerCount()).toBe(1);
+      });
       vi.advanceTimersByTime(5000);
       expect((await result).extension).toBe("webm");
     });

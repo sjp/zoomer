@@ -172,13 +172,14 @@ describe("palettes", () => {
     const unit = (c: readonly number[]) => c.every((v) => v >= 0 && v <= 1);
     for (const o of WATER_OPTIONS) {
       const w = WATER[o.value];
-      if (!w || !unit(w.deep) || !unit(w.haze) || !unit(w.ray)) bad++;
+      if (!(o.value in WATER) || !unit(w.deep) || !unit(w.haze) || !unit(w.ray)) bad++;
       // The reflected deep water frames the window darker than the haze.
       if (w.deep.some((v, c) => v > w.haze[c])) bad++;
     }
     for (const o of ABOVE_OPTIONS) {
       const s = SKY[o.value];
-      if (!s || !unit(s.zenith) || !unit(s.horizon) || !(s.cloudLo < s.cloudHi)) bad++;
+      if (!(o.value in SKY) || !unit(s.zenith) || !unit(s.horizon) || !(s.cloudLo < s.cloudHi))
+        bad++;
     }
     expect(bad).toBe(0);
   });

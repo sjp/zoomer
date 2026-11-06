@@ -65,7 +65,9 @@ export function ControlPanel(props: Props) {
           aria-expanded={listOpen}
           disabled={recording}
           title={recording ? "Locked while recording" : "Choose an effect (/)"}
-          onClick={() => list.onOpenChange(!list.open)}
+          onClick={() => {
+            list.onOpenChange(!list.open);
+          }}
         >
           <span className="sr-only">Effect: </span>
           {effect.name}
@@ -77,7 +79,9 @@ export function ControlPanel(props: Props) {
           starred={list.options.favourites?.has(effect.id) ?? false}
           name={effect.name}
           titleSuffix=" (S)"
-          onToggle={() => list.onToggleFavourite(effect.id)}
+          onToggle={() => {
+            list.onToggleFavourite(effect.id);
+          }}
         />
         <button type="button" onClick={props.onHide} title="Hide controls (H)">
           Hide
@@ -98,7 +102,13 @@ export function ControlPanel(props: Props) {
         <p className="hint filter-hint">
           ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}{" "}
           for “{filter}”{" "}
-          <button type="button" className="link-button" onClick={() => list.onQueryChange("")}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              list.onQueryChange("");
+            }}
+          >
             Clear
           </button>
         </p>
@@ -127,7 +137,9 @@ export function ControlPanel(props: Props) {
             id={key}
             def={def}
             value={values[key] ?? def.default}
-            onChange={(v) => props.onParamChange(key, v)}
+            onChange={(v) => {
+              props.onParamChange(key, v);
+            }}
           />
         ))}
       </section>
@@ -140,7 +152,9 @@ export function ControlPanel(props: Props) {
             value={props.resolution}
             disabled={recording}
             title={recording ? "Locked while recording" : undefined}
-            onChange={(e) => props.onResolutionChange(e.target.value as Resolution)}
+            onChange={(e) => {
+              props.onResolutionChange(e.target.value as Resolution);
+            }}
           >
             {Object.entries(RESOLUTIONS).map(([key, r]) => (
               <option key={key} value={key}>
@@ -154,7 +168,9 @@ export function ControlPanel(props: Props) {
           <select
             id="frame-rate"
             value={props.frameRate}
-            onChange={(e) => props.onFrameRateChange(e.target.value as FrameRate)}
+            onChange={(e) => {
+              props.onFrameRateChange(e.target.value as FrameRate);
+            }}
           >
             {Object.entries(FRAME_RATES).map(([key, r]) => (
               <option key={key} value={key}>
@@ -169,7 +185,9 @@ export function ControlPanel(props: Props) {
             aria-label="Clip length"
             value={duration}
             disabled={recording}
-            onChange={(e) => setDuration(Number(e.target.value))}
+            onChange={(e) => {
+              setDuration(Number(e.target.value));
+            }}
           >
             {DURATIONS.map((d) => (
               <option key={d} value={d}>
@@ -182,9 +200,11 @@ export function ControlPanel(props: Props) {
             className="primary"
             disabled={recording || !props.canRecord}
             title="Keep this tab visible while recording"
-            onClick={() => props.onRecord(duration)}
+            onClick={() => {
+              props.onRecord(duration);
+            }}
           >
-            {recording ? `Recording… ${recordingLeft}s` : "Record clip"}
+            {recording ? `Recording… ${String(recordingLeft)}s` : "Record clip"}
           </button>
         </div>
         {recording && (

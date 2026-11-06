@@ -39,7 +39,9 @@ describe("sort preference", () => {
   });
 
   it("falls back to Featured when storage throws or is missing", () => {
-    expect(() => saveSort("az", () => throwing)).not.toThrow();
+    expect(() => {
+      saveSort("az", () => throwing);
+    }).not.toThrow();
     expect(loadSort(() => throwing)).toBe("featured");
     expect(loadSort(() => undefined)).toBe("featured");
     expect(
@@ -52,6 +54,8 @@ describe("sort preference", () => {
   it("reads and writes nothing without a window", () => {
     // Vitest runs in Node, where `window` doesn't exist.
     expect(readPreference("zoomer.effectSort")).toBeNull();
-    expect(() => writePreference("zoomer.effectSort", "az")).not.toThrow();
+    expect(() => {
+      writePreference("zoomer.effectSort", "az");
+    }).not.toThrow();
   });
 });

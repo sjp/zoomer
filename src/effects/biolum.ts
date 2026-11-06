@@ -94,7 +94,7 @@ uniform vec2 uShore;
 /** Frame centre x, height units. */
 uniform float uCx;
 /** Per wave: A (local time at x = 0, its slope per unit x, reach, -), B (foam offsets, -, -). */
-uniform vec4 uWave[${MAX_WAVES * 2}];
+uniform vec4 uWave[${String(MAX_WAVES * 2)}];
 uniform int uCount;
 /** Glow colour times intensity. */
 uniform vec3 uGlowColor;
@@ -201,7 +201,7 @@ void main() {
     float wet = 0.0;
     float edge = 0.0;
     float ridge = 0.0;
-    for (int i = 0; i < ${MAX_WAVES}; i++) {
+    for (int i = 0; i < ${String(MAX_WAVES)}; i++) {
       if (i >= uCount) break;
       vec4 A = uWave[2 * i];
       vec2 off = uWave[2 * i + 1].xy;
@@ -295,9 +295,9 @@ vec4 composite(vec2 uv) {
 export const biolum = defineEffect(biolumMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const noiseTexture = scope.add(
         createDataTexture(gl, {
@@ -309,7 +309,9 @@ export const biolum = defineEffect(biolumMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
 
@@ -401,7 +403,9 @@ export const biolum = defineEffect(biolumMeta, {
           cu.f1("uStarSharp", 1 / (r * r));
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

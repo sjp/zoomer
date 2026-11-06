@@ -205,7 +205,9 @@ export const kite = defineEffect(kiteMeta, {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const cloudProgram = program(FULLSCREEN_VERTEX, CLOUD_FRAGMENT);
       const triProgram = program(TRI_VERTEX, TRI_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
@@ -238,7 +240,9 @@ export const kite = defineEffect(kiteMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, cloudNoiseChannels(NOISE_SEED)),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -321,7 +325,9 @@ export const kite = defineEffect(kiteMeta, {
           frontLines.draw(lineCounts.front, width, height);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -251,7 +251,9 @@ describe("stepEmbers", () => {
       stepEmbers(s, 1 / 60, env(30), rng, noCurl);
       for (let k = 0; k < s.count; k++) {
         if (!(s.age[k] < s.life[k]) && stale.length < 10) {
-          stale.push(`step ${i}, ember ${k}: age ${s.age[k]}, life ${s.life[k]}`);
+          stale.push(
+            `step ${String(i)}, ember ${String(k)}: age ${String(s.age[k])}, life ${String(s.life[k])}`,
+          );
         }
       }
     }
@@ -275,7 +277,7 @@ describe("emberAlpha", () => {
     for (let i = 0; i < 20_000; i++) {
       const life = 0.1 + rng() * 5;
       const a = emberAlpha(rng() * 1.2 * life, life, rng() * 7, rng() * 1000);
-      if (!(a >= 0) && negative.length < 10) negative.push(`sample ${i}: ${a}`);
+      if (!(a >= 0) && negative.length < 10) negative.push(`sample ${String(i)}: ${String(a)}`);
       hi = Math.max(hi, a);
     }
     expect(negative).toEqual([]);

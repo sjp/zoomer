@@ -8,6 +8,7 @@
  */
 import { hexToUnitRgb, type Rgb } from "./color";
 import { createRng } from "./noise";
+import { lookup } from "./lookup";
 
 export const TAU = Math.PI * 2;
 
@@ -130,7 +131,7 @@ export const PALETTES: Record<PaletteName, KaleidoPalette> = {
 };
 
 export function palette(name: string): KaleidoPalette {
-  return PALETTES[name as PaletteName] ?? PALETTES.jewel;
+  return lookup(PALETTES, name, "jewel");
 }
 
 export function isCircleView(name: string): boolean {

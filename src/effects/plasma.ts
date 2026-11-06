@@ -287,7 +287,9 @@ export const plasma = defineEffect(plasmaMeta, {
       const streaks = scope.own(createStreakRenderer(gl, MAX_STREAKS, { blend: "max" }));
       const sprites = scope.own(createSpriteBatch(gl, MAX_SPRITES, SPRITE_ATTRS));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uPxToH", "uFrame", "uGlobe", "uGlow"]);
@@ -520,7 +522,9 @@ export const plasma = defineEffect(plasmaMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

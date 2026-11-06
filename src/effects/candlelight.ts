@@ -67,7 +67,7 @@ precision highp float;
 /** Low-res px -> reference px. */
 uniform vec2 uPxToRef;
 /** Per flame: light x, light y, candle base y (reference px), brightness (0 = unused). */
-uniform vec4 uLights[${MAX_CANDLES}];
+uniform vec4 uLights[${String(MAX_CANDLES)}];
 uniform vec3 uWall;
 uniform vec3 uSurface;
 uniform float uGain;
@@ -78,7 +78,7 @@ void main() {
   float wall = 0.0;
   float surf = 0.0;
   float refl = 0.0;
-  for (int i = 0; i < ${MAX_CANDLES}; i++) {
+  for (int i = 0; i < ${String(MAX_CANDLES)}; i++) {
     vec4 l = uLights[i];
     vec2 d = (p - l.xy) * ${glslFloat(1 / LIGHT_R)};
     float q = 1.0 + dot(d, d);
@@ -277,7 +277,9 @@ export const candlelight = defineEffect(candlelightMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const lightProgram = program(FULLSCREEN_VERTEX, LIGHT_FRAGMENT);
       const lu = createUniforms(gl, lightProgram, [
@@ -448,7 +450,9 @@ export const candlelight = defineEffect(candlelightMeta, {
           flameBatch.draw(0, n);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

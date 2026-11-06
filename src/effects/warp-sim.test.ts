@@ -37,11 +37,13 @@ describe("createStarfield", () => {
         );
         // The tail lies between the centre and the head.
         if (Math.hypot(tx - 960, ty - 540) > Math.hypot(hx - 960, hy - 540) + 1e-3) {
-          bad.push(`tail outside head ${i}`);
+          bad.push(`tail outside head ${String(i)}`);
         }
-        if (hx < -50 || hx > 1970 || hy < -50 || hy > 1130) bad.push(`head off screen ${i}`);
-        if ([r, g, b].some((c) => c < 0 || c > 1)) bad.push(`colour ${r},${g},${b}`);
-        if (hw < 0.25) bad.push(`half width ${hw}`);
+        if (hx < -50 || hx > 1970 || hy < -50 || hy > 1130)
+          bad.push(`head off screen ${String(i)}`);
+        if ([r, g, b].some((c) => c < 0 || c > 1))
+          bad.push(`colour ${String(r)},${String(g)},${String(b)}`);
+        if (hw < 0.25) bad.push(`half width ${String(hw)}`);
       }
     }
     expect(bad).toEqual([]);

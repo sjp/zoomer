@@ -67,12 +67,12 @@ export interface FakeGl {
   /** Every method call, when `record` is set. Enum arguments stay numbers. */
   calls: { name: string; args: unknown[] }[];
   /** Objects created and not yet deleted. */
-  live(): FakeObject[];
+  live: () => FakeObject[];
   /** Number of objects created so far, by kind ("Texture", "Program" and so on). */
   created: Map<string, number>;
   /** Number of `drawArrays*` / `drawElements*` calls so far. */
-  draws(): number;
-  enumName(value: unknown): string;
+  draws: () => number;
+  enumName: (value: unknown) => string;
 }
 
 /** WebGL enums code may compare against `getError` or a missing value. */
@@ -94,7 +94,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     typeof value === "number" ? (enumNames.get(value) ?? `0x${value.toString(16)}`) : String(value);
 
   // Texture units are consecutive, as `TEXTURE0 + i` relies on.
-  for (let i = 0; i < 32; i++) enumOf(`TEXTURE${i}`);
+  for (let i = 0; i < 32; i++) enumOf(`TEXTURE${String(i)}`);
 
   const errors: string[] = [];
   const calls: { name: string; args: unknown[] }[] = [];
@@ -136,11 +136,12 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     if (obj === null) return true;
     const o = obj as FakeObject;
     if (typeof o !== "object" || o.kind !== kind) {
-      errors.push(`${call}: expected a ${kind}, got ${String(obj)}`);
+      const got = typeof o === "object" ? `${o.kind} ${String(o.id)}` : typeof obj;
+      errors.push(`${call}: expected a ${kind}, got ${got}`);
       return false;
     }
     if (o.deleted) {
-      errors.push(`${call}: ${kind} ${o.id} was already deleted`);
+      errors.push(`${call}: ${kind} ${String(o.id)} was already deleted`);
       return false;
     }
     return true;
@@ -148,7 +149,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
 
   const del = (kind: string) => (obj: unknown) => {
     if (obj === null || obj === undefined) return;
-    if (!check(`delete${kind}`, kind, obj) || !obj) return;
+    if (!check(`delete${kind}`, kind, obj)) return;
     obj.deleted = true;
     // As in WebGL, deleting a bound object unbinds it (a current program stays
     // in use until another is bound).
@@ -172,7 +173,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     if (state.program === null) errors.push(`${name}(${loc.name}) with no program bound`);
     else if (loc.program !== state.program) {
       errors.push(
-        `${name}(${loc.name}) belongs to program ${loc.program.id} but program ${state.program.id} is bound`,
+        `${name}(${loc.name}) belongs to program ${String(loc.program.id)} but program ${String(state.program.id)} is bound`,
       );
     }
   };
@@ -221,7 +222,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     useProgram: (program: FakeObject | null) => {
       if (check("useProgram", "Program", program)) state.program = program;
     },
-    getUniformLocation: (program: FakeObject, name: string): FakeLocation | null =>
+    getUniformLocation: (program: FakeObject | null, name: string): FakeLocation | null =>
       check("getUniformLocation", "Program", program) && program ? { program, name } : null,
     getAttribLocation: () => 0,
 
@@ -250,7 +251,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       const count = length ?? data.byteLength / bytesPer - srcOffset;
       const size = bufferSizes.get(buffer) ?? 0;
       if (offset + count * bytesPer > size || srcOffset + count > data.byteLength / bytesPer) {
-        errors.push(`bufferSubData writes ${count * bytesPer} bytes at ${offset} of ${size}`);
+        errors.push(
+          `bufferSubData writes ${String(count * bytesPer)} bytes at ${String(offset)} of ${String(size)}`,
+        );
       }
     },
     activeTexture: (unit: number) => {
@@ -277,7 +280,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       _target: number,
       _attachment: number,
       _texTarget: number,
-      texture: FakeObject,
+      texture: FakeObject | null,
     ) => {
       if (!state.drawFramebuffer) errors.push("framebufferTexture2D on the default framebuffer");
       else if (check("framebufferTexture2D", "Texture", texture) && texture) {

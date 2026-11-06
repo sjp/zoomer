@@ -196,9 +196,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
 
       // The flame shader ignores vUv; an unused vertex output is fine in GLSL ES 3.00.
-      const flameProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const flameProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const fl = createUniforms(gl, flameProgram, [
         "uNoise",
         "uRamp",
@@ -229,9 +229,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
       gl.useProgram(target.program);
       co.i1("uProfile", 1);
 
-      const emberProgram = scope.add(createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const emberProgram = scope.add(createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const em = createUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
       const batch = scope.own(createSpriteBatch(gl, MAX_EMBERS, [4]));
 
@@ -245,7 +245,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, fireNoiseChannels()),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const rampData = new Uint8Array(RAMP_SIZE * 4);
       const rampTex = scope.add(
@@ -257,7 +259,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
           type: gl.UNSIGNED_BYTE,
           data: rampData,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const profile = scope.own(createColumnTable(gl, HEARTH_PROFILE_COLUMNS, 1));
 
@@ -450,7 +454,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

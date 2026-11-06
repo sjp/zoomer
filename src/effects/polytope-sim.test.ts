@@ -11,6 +11,7 @@ import {
   toShape,
 } from "./polytope-sim";
 import { SHAPE_OPTIONS, type PolytopeShape } from "./tesseract.meta";
+import { defined } from "../test/defined";
 
 const EXPECTED: Record<PolytopeShape, [vertices: number, edges: number, degree: number]> = {
   tesseract: [16, 32, 4],
@@ -38,7 +39,7 @@ describe("signedPermutations", () => {
 describe("buildPolytope", () => {
   for (const { value } of SHAPE_OPTIONS) {
     it(`builds the ${value} with equal edges on the unit sphere`, () => {
-      const poly = polytopes.get(value)!;
+      const poly = defined(polytopes.get(value));
       const [vertices, edges, degree] = EXPECTED[value];
       expect(poly.vertexCount).toBe(vertices);
       expect(poly.edgeCount).toBe(edges);
@@ -72,7 +73,7 @@ describe("buildPolytope", () => {
 
   it("has the known edge lengths for unit circumradius", () => {
     const edge = (shape: PolytopeShape) => {
-      const { vertices: v, edges } = polytopes.get(shape)!;
+      const { vertices: v, edges } = defined(polytopes.get(shape));
       const [a, b] = [edges[0], edges[1]];
       return Math.hypot(...[0, 1, 2, 3].map((k) => v[a * 4 + k] - v[b * 4 + k]));
     };
@@ -87,7 +88,7 @@ describe("buildPolytope", () => {
 describe("rotationMatrix", () => {
   it("is orthonormal and preserves vertex norms", () => {
     const m = new Float64Array(16);
-    const poly = polytopes.get("cell120")!;
+    const poly = defined(polytopes.get("cell120"));
     const v = poly.vertices;
     let worst = 0;
     for (let k = 0; k < 20; k++) {
@@ -142,7 +143,7 @@ describe("projectPolytope", () => {
   it("shrinks the far cell of the tesseract: the inner cube", () => {
     const m = new Float64Array(16);
     rotationMatrix(m, 0, 0, 0);
-    const poly = polytopes.get("tesseract")!;
+    const poly = defined(polytopes.get("tesseract"));
     const out = new Float32Array(poly.vertexCount * PROJECTED_FLOATS);
     projectPolytope(poly, m, out);
     const near: number[] = [];

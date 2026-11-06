@@ -188,9 +188,9 @@ export const neon = defineEffect(neonMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NEON_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NEON_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uRes",
         "uScale",
@@ -207,8 +207,12 @@ export const neon = defineEffect(neonMeta, {
         "uFieldTex",
         "uGlowTex",
       ]);
-      const fieldTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
-      const glowTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      const fieldTex = scope.add(gl.createTexture(), (t) => {
+        gl.deleteTexture(t);
+      });
+      const glowTex = scope.add(gl.createTexture(), (t) => {
+        gl.deleteTexture(t);
+      });
 
       let width = 1;
       let height = 1;
@@ -252,9 +256,11 @@ export const neon = defineEffect(neonMeta, {
         hasSign = lines.length > 0;
         if (!hasSign) return;
         const measure = new OffscreenCanvas(1, 1).getContext("2d");
-        if (measure) measure.font = `${FONT_WEIGHT} 100px ${FONT_FAMILY}`;
+        if (measure) measure.font = `${String(FONT_WEIGHT)} 100px ${FONT_FAMILY}`;
         const widths = lines.map((l) => {
-          const w = measure?.measureText(l.text)?.width;
+          // Undefined without a context, and from the tests' fake one, whose methods all return undefined.
+          const metrics = measure?.measureText(l.text);
+          const w = metrics?.width;
           return typeof w === "number" && w > 0 ? w / 100 : fallbackWidthEm(l.text);
         });
         const layout = signLayout(aspect, position, widths);
@@ -274,7 +280,7 @@ export const neon = defineEffect(neonMeta, {
           ctx.fillStyle = "#000";
           ctx.fillRect(0, 0, cols, rows);
           ctx.globalCompositeOperation = "lighter";
-          ctx.font = `${FONT_WEIGHT} ${layout.font * toTexel}px ${FONT_FAMILY}`;
+          ctx.font = `${String(FONT_WEIGHT)} ${String(layout.font * toTexel)}px ${FONT_FAMILY}`;
           ctx.textAlign = layout.align;
           ctx.textBaseline = "middle";
           const ax = layout.anchor * toTexel - grid.left / FIELD_TEXEL;
@@ -282,7 +288,8 @@ export const neon = defineEffect(neonMeta, {
             ctx.fillStyle = l.index === 0 ? "#f00" : "#0f0";
             ctx.fillText(l.text, ax, rowCentre(k));
           });
-          pixels = ctx.getImageData(0, 0, cols, rows)?.data;
+          const image = ctx.getImageData(0, 0, cols, rows) as ImageData | undefined;
+          pixels = image?.data;
         }
         const masks = [new Uint8Array(cols * rows), new Uint8Array(cols * rows)];
         if (pixels) {
@@ -382,7 +389,9 @@ export const neon = defineEffect(neonMeta, {
           gl.activeTexture(gl.TEXTURE0);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

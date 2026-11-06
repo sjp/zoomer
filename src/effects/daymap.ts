@@ -29,6 +29,7 @@ import { wrap } from "./math";
 import { HASH32_GLSL } from "./noise";
 import { createSpriteBatch } from "./sprites";
 import { daymapMeta } from "./daymap.meta";
+import { has } from "./lookup";
 import { defineEffect } from "./types";
 
 /**
@@ -326,12 +327,12 @@ void main() {
 export const daymap = defineEffect(daymapMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const pinProgram = scope.add(createProgram(gl, PIN_VERTEX, PIN_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const pinProgram = scope.add(createProgram(gl, PIN_VERTEX, PIN_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const pins = scope.own(createSpriteBatch(gl, MAX_PINS, [4, 4]));
       // Until the mask loads, a single "far out at sea" texel: day and night over plain ocean.
@@ -344,7 +345,9 @@ export const daymap = defineEffect(daymapMeta, {
           type: gl.UNSIGNED_BYTE,
           data: new Uint8Array([0]),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const atlas = scope.add(
         createDataTexture(gl, {
@@ -355,7 +358,9 @@ export const daymap = defineEffect(daymapMeta, {
           type: gl.UNSIGNED_BYTE,
           data: new Uint8Array(4),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const u = createUniforms(gl, program, [
@@ -398,7 +403,9 @@ export const daymap = defineEffect(daymapMeta, {
         img.onload = () => {
           pendingMask = img;
         };
-        img.onerror = () => console.warn(`Daylight World Map: couldn't load ${MASK_URL}`);
+        img.onerror = () => {
+          console.warn(`Daylight World Map: couldn't load ${MASK_URL}`);
+        };
         img.src = MASK_URL;
         scope.defer(() => {
           img.onload = null;
@@ -454,7 +461,7 @@ export const daymap = defineEffect(daymapMeta, {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         ctx.clearRect(0, 0, w, h * MAX_PINS);
-        ctx.font = `600 ${Math.round(LABEL_FONT_PX * scale)}px system-ui, sans-serif`;
+        ctx.font = `600 ${String(Math.round(LABEL_FONT_PX * scale))}px system-ui, sans-serif`;
         ctx.textBaseline = "middle";
         ctx.lineJoin = "round";
         date.setTime(labelMs);
@@ -494,7 +501,7 @@ export const daymap = defineEffect(daymapMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const ms = clock.step(dt, p.demo);
-          const styleId = STYLES[p.style] ? p.style : "night";
+          const styleId = has(STYLES, p.style) ? p.style : "night";
           const style = STYLES[styleId];
           const centre = wrap(p.centre, -180, 360);
           const k = radiansPerPixel(width, height);
@@ -600,7 +607,9 @@ export const daymap = defineEffect(daymapMeta, {
           gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
           pins.draw(0, cities.length);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

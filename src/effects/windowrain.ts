@@ -263,18 +263,18 @@ export const windowRain = defineEffect(windowRainMeta, {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const dropProgram = scope.add(createProgram(gl, DROP_VERTEX, DROP_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const wipeProgram = scope.add(createProgram(gl, DROP_VERTEX, WIPE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const fogProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FOG_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const dropProgram = scope.add(createProgram(gl, DROP_VERTEX, DROP_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const wipeProgram = scope.add(createProgram(gl, DROP_VERTEX, WIPE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const fogProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FOG_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const lightU = createUniforms(gl, lightProgram, [
         "uResolution",
         "uColor1",
@@ -590,7 +590,9 @@ export const windowRain = defineEffect(windowRainMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

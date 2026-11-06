@@ -30,6 +30,7 @@ import {
   windSpan,
   writeStormCells,
 } from "./radar-sim";
+import { defined } from "../test/defined";
 
 const TAU = Math.PI * 2;
 
@@ -195,7 +196,7 @@ describe("terrain and labels", () => {
   });
 
   it("puts the coast's land on the radar's (west) side", () => {
-    const t = terrains.get("coast")!;
+    const t = defined(terrains.get("coast"));
     expect(sampleTerrain(t, 0.1, 0.5)).toBeGreaterThan(0);
     expect(sampleTerrain(t, 2.3, 0.5)).toBeLessThan(0);
   });

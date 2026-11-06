@@ -15,6 +15,7 @@ import { MAX_LEVELS, MIN_LEVELS, type MobilePaletteId } from "./mobile.meta";
 import { hexToUnitRgb, type Rgb } from "./color";
 import { approach, clamp, smoothstep } from "./math";
 import { createRng } from "./noise";
+import { lookup } from "./lookup";
 
 export const SHAPE_DISC = 0;
 export const SHAPE_PETAL = 1;
@@ -88,7 +89,7 @@ const SLOT_WEIGHTS = [0.3, 0.2, 0.2, 0.18, 0.12];
 
 /** The palette's colours (0..1), falling back to Primary for an unknown id. */
 export function paletteFor(id: string): readonly Rgb[] {
-  return PALETTES[id as MobilePaletteId] ?? PALETTES.primary;
+  return lookup(PALETTES, id, "primary");
 }
 
 /** The most arms and shapes any tree has. */

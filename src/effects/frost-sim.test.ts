@@ -178,20 +178,21 @@ describe("growFrost", () => {
     skeleton.branches.forEach((b, k) => {
       const p = b.points;
       if (!Object.is(p[2], b.parentArrival))
-        fail(`branch ${k} starts at ${p[2]}, not ${b.parentArrival}`);
+        fail(`branch ${String(k)} starts at ${String(p[2])}, not ${String(b.parentArrival)}`);
       for (let i = 5; i < p.length; i += 3) {
-        if (!(p[i] >= p[i - 3])) fail(`branch ${k}, point ${(i - 2) / 3} arrives earlier`);
+        if (!(p[i] >= p[i - 3]))
+          fail(`branch ${String(k)}, point ${String((i - 2) / 3)} arrives earlier`);
       }
       if (b.parent < 0) return;
       children++;
       const parent = skeleton.branches[b.parent];
-      if (!(parent.depth <= b.depth)) fail(`branch ${k} is shallower than its parent`);
+      if (!(parent.depth <= b.depth)) fail(`branch ${String(k)} is shallower than its parent`);
       let found = false;
       const q = parent.points;
       for (let i = 0; i < q.length; i += 3) {
         if (q[i] === p[0] && q[i + 1] === p[1] && q[i + 2] === p[2]) found = true;
       }
-      if (!found) fail(`branch ${k} does not start on its parent`);
+      if (!found) fail(`branch ${String(k)} does not start on its parent`);
     });
     expect(wrong).toEqual([]);
     expect(children).toBeGreaterThan(100);
@@ -199,7 +200,7 @@ describe("growFrost", () => {
 
   it("grows side branches and needles", () => {
     const depths = new Set(skeleton.branches.map((b) => b.depth));
-    expect([...depths].sort()).toEqual([0, 1, 2]);
+    expect([...depths].sort((a, b) => a - b)).toEqual([0, 1, 2]);
   });
 
   it("keeps every point inside the frame and outside the reach limit", () => {
@@ -211,7 +212,7 @@ describe("growFrost", () => {
         const y = b.points[i + 1];
         const inFrame = x >= 0 && x < W && y >= 0 && y < H;
         if (!(inFrame && edgeMetric(x / W, y / H) >= REACH_MIN) && stray.length < 10) {
-          stray.push(`(${x}, ${y})`);
+          stray.push(`(${String(x)}, ${String(y)})`);
         }
       }
     }

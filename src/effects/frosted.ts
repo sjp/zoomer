@@ -61,18 +61,18 @@ precision highp int;
 /** Low-res pixel to frame-height units: (aspect / width, 1 / height). */
 uniform vec2 uToUnits;
 /** Centre x, y, cos, sin of the rotation. */
-uniform vec4 uShapeA[${MAX_SHAPES}];
+uniform vec4 uShapeA[${String(MAX_SHAPES)}];
 /** Capsule half-length, radius, ring half-thickness (0: solid), opacity. */
-uniform vec4 uShapeB[${MAX_SHAPES}];
+uniform vec4 uShapeB[${String(MAX_SHAPES)}];
 /** Linear-light colours. */
-uniform vec3 uColors[${MAX_SHAPES}];
+uniform vec3 uColors[${String(MAX_SHAPES)}];
 uniform vec3 uBase;
 uniform int uCount;
 /** Half-width of the edge falloff in frame-height units (> 0). */
 uniform float uBlur;
 out vec4 outColor;
 
-const int MAX_SHAPES = ${MAX_SHAPES};
+const int MAX_SHAPES = ${String(MAX_SHAPES)};
 const float INV_GAMMA = ${glslFloat(1 / GAMMA)};
 
 void main() {
@@ -138,9 +138,9 @@ vec4 composite(vec2 uv) {
 export const frosted = defineEffect(frostedMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SHAPE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SHAPE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const u = createUniforms(gl, program, [
@@ -178,7 +178,9 @@ export const frosted = defineEffect(frostedMeta, {
           data: buildGrainTexture(),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const shapeA = new Float32Array(MAX_SHAPES * 4);
@@ -330,7 +332,9 @@ export const frosted = defineEffect(frostedMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

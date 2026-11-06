@@ -46,7 +46,7 @@ layout(location = 1) in vec4 aSeed;
 /** Radius fraction, spiral hue, variation, unused. */
 layout(location = 2) in vec4 aLook;
 /** Angle (radians, local x points away from the centre), flip. */
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 uniform float uAspect;
 out vec2 vLocal;
@@ -160,7 +160,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aPetal;
 /** Colour, then kind: 0 petal, 1 backing disc. */
 layout(location = 2) in vec4 aTint;
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 out vec2 vLocal;
 flat out vec2 vLight;
@@ -223,7 +223,9 @@ export const phyllotaxis = defineEffect(phyllotaxisMeta, {
       );
       const seedProgram = scope.add(
         createProgram(gl, SEED_VERTEX(seedBatch.spinLocation), SEED_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const seedU = createUniforms(gl, seedProgram, ["uResolution", "uAspect", "uStyle"]);
       // Per petal: x, y, half-length, alpha; r, g, b, kind; then the spin pair.
@@ -232,7 +234,9 @@ export const phyllotaxis = defineEffect(phyllotaxisMeta, {
       );
       const petalProgram = scope.add(
         createProgram(gl, PETAL_VERTEX(petalBatch.spinLocation), PETAL_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const petalU = createUniforms(gl, petalProgram, ["uResolution"]);
       if (seedBatch.stride !== SEED_STRIDE || petalBatch.stride !== PETAL_STRIDE) {
@@ -284,7 +288,9 @@ export const phyllotaxis = defineEffect(phyllotaxisMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

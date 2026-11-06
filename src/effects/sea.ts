@@ -214,9 +214,9 @@ const LAND_UNIFORMS = ["uLand", "uLandColor", "uLandMap"] as const;
 export const sea = defineEffect(seaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const waterU = createUniforms(gl, waterProgram, [
         "uRipples",
         "uLowToFull",
@@ -256,7 +256,9 @@ export const sea = defineEffect(seaMeta, {
           data: ripple.data,
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const land = scope.own(createColumnTable(gl, LAND_COLUMNS, 1));
       buildHeadland(land.data, 43);
@@ -400,7 +402,9 @@ export const sea = defineEffect(seaMeta, {
           // Unit 1 still holds the headland table; blit binds the water to unit 0.
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

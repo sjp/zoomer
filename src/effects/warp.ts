@@ -66,7 +66,9 @@ export const warp = defineEffect(warpMeta, {
           zoom[2] = 1 - ab;
           streaks.draw(count, width, height, zoom);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

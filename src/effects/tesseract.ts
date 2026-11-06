@@ -102,9 +102,9 @@ export const tesseract = defineEffect(tesseractMeta, {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));
       const streaks = scope.own(createStreakRenderer(gl, MAX_EDGES * LAYERS));
-      const dotProgram = scope.add(createProgram(gl, DOT_VERTEX, DOT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const dotProgram = scope.add(createProgram(gl, DOT_VERTEX, DOT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const dotU = createUniforms(gl, dotProgram, ["uResolution"]);
       const dots = scope.own(
         createSpriteBatch(gl, MAX_VERTICES, [3, 3], [polygonStrip(8, Math.PI / 8)]),
@@ -261,7 +261,9 @@ export const tesseract = defineEffect(tesseractMeta, {
           dots.draw(0, poly.vertexCount);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

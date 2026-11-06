@@ -59,7 +59,7 @@ export function EffectList(props: EffectListProps) {
   const active =
     effects.find((e) => e.id === activeId) ??
     (query ? undefined : effects.find((e) => e.id === currentId)) ??
-    effects[0];
+    effects.at(0);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -142,10 +142,16 @@ export function EffectList(props: EffectListProps) {
         data-active={isActive}
         data-current={isCurrent}
         data-favourite={isFavourite}
-        onPointerEnter={() => activate(effect)}
+        onPointerEnter={() => {
+          activate(effect);
+        }}
         // Keep focus in the search box.
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => props.onSelect(effect.id)}
+        onMouseDown={(e) => {
+          e.preventDefault();
+        }}
+        onClick={() => {
+          props.onSelect(effect.id);
+        }}
       >
         <span className="effect-option-name">
           {effect.name}
@@ -159,7 +165,9 @@ export function EffectList(props: EffectListProps) {
           starred={isFavourite}
           name={effect.name}
           hidden
-          onToggle={() => props.onToggleFavourite(effect.id)}
+          onToggle={() => {
+            props.onToggleFavourite(effect.id);
+          }}
         />
         <span className="effect-option-description">{effect.description}</span>
       </div>
@@ -183,7 +191,9 @@ export function EffectList(props: EffectListProps) {
           autoComplete="off"
           spellCheck={false}
           value={query}
-          onChange={(e) => changeQuery(e.target.value)}
+          onChange={(e) => {
+            changeQuery(e.target.value);
+          }}
           onKeyDown={onKeyDown}
         />
         <select
@@ -204,7 +214,7 @@ export function EffectList(props: EffectListProps) {
         Press * to star or unstar the highlighted effect.
       </p>
       <p className="sr-only" role="status">
-        {announcement ?? (effects.length === 1 ? "1 effect" : `${effects.length} effects`)}
+        {announcement ?? (effects.length === 1 ? "1 effect" : `${String(effects.length)} effects`)}
       </p>
       {!query.trim() && !effects.some((e) => favourites?.has(e.id)) && (
         <p className="hint effect-list-hint">Star effects to keep them at the top</p>
@@ -214,8 +224,12 @@ export function EffectList(props: EffectListProps) {
           group.heading === undefined ? (
             group.items.map(renderOption)
           ) : (
-            <div key={`${g}-${group.heading}`} role="group" aria-labelledby={`${uid}-group-${g}`}>
-              <div id={`${uid}-group-${g}`} role="presentation" className="effect-group">
+            <div
+              key={`${String(g)}-${group.heading}`}
+              role="group"
+              aria-labelledby={`${uid}-group-${String(g)}`}
+            >
+              <div id={`${uid}-group-${String(g)}`} role="presentation" className="effect-group">
                 {group.heading}
               </div>
               {group.items.map(renderOption)}

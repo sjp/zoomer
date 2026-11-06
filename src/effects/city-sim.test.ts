@@ -114,9 +114,10 @@ describe("createWindowState", () => {
       for (let t = 0; t < 3000; t += 1 / 30) {
         s.step(1 / 30, 2);
         const err = Math.abs(litFraction(s) - target);
-        if (!(err < 0.002) && off.length < 10) off.push(`t ${t}: lit ${litFraction(s)}`);
+        if (!(err < 0.002) && off.length < 10)
+          off.push(`t ${String(t)}: lit ${String(litFraction(s))}`);
       }
-      expect(off, `target ${target}`).toEqual([]);
+      expect(off, `target ${String(target)}`).toEqual([]);
     }
   });
 

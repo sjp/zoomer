@@ -1,3 +1,4 @@
+import { toError } from "./errors";
 import type { FrameSubscriber } from "./mp4-recorder";
 
 export type { FrameSubscriber };
@@ -79,7 +80,7 @@ export function recordCanvas(
   const supported = candidateTypes(width, height, fps).filter(
     (t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t),
   );
-  const mediaRecorderType = supported[0];
+  const mediaRecorderType = supported.at(0);
   if (
     mediaRecorderType?.startsWith("video/mp4") ||
     !frames ||
@@ -132,7 +133,7 @@ function recordWithMediaRecorder(
         }
       }
       if (stream) for (const track of stream.getTracks()) track.stop();
-      if (err !== undefined) reject(err instanceof Error ? err : new Error(String(err)));
+      if (err !== undefined) reject(toError(err));
       else
         resolve({
           blob: new Blob(chunks, { type: mimeType }),
@@ -150,8 +151,12 @@ function recordWithMediaRecorder(
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
-      rec.onerror = () => finish(new Error("Recording failed."));
-      rec.onstop = () => finish();
+      rec.onerror = () => {
+        finish(new Error("Recording failed."));
+      };
+      rec.onstop = () => {
+        finish();
+      };
       rec.start(1000);
       timer = setTimeout(() => {
         if (rec.state !== "inactive") rec.stop();
@@ -168,5 +173,7 @@ export function download(blob: Blob, filename: string) {
   a.href = url;
   a.download = filename;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 10_000);
 }

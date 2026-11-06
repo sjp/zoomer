@@ -78,7 +78,9 @@ describe("favourites", () => {
     ]) {
       const favourites = createFavourites(storage);
       expect(favourites.get().size).toBe(0);
-      expect(() => favourites.toggle("warp")).not.toThrow();
+      expect(() => {
+        favourites.toggle("warp");
+      }).not.toThrow();
       expect([...favourites.get()]).toEqual(["warp"]);
     }
   });

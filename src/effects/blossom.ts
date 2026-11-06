@@ -195,7 +195,9 @@ const blossomOf = (v: string): BlossomId => (v === "white" || v === "deep" ? v :
 export const blossom = defineEffect(blossomMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+      const deleteProgram = (p: WebGLProgram) => {
+        gl.deleteProgram(p);
+      };
       const background = scope.own(createGradientBackground(gl));
 
       const backdropBatch = scope.own(
@@ -365,7 +367,9 @@ export const blossom = defineEffect(blossomMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

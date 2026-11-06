@@ -173,9 +173,9 @@ export function createSmokeField(
   }
   const format = quantise ? gl.R8 : gl.R16F;
 
-  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, advectFragment(quantise)), (p) =>
-    gl.deleteProgram(p),
-  );
+  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, advectFragment(quantise)), (p) => {
+    gl.deleteProgram(p);
+  });
   const uniforms = createUniforms(gl, program, SMOKE_FIELD_UNIFORMS);
   const triangle = scope.own(createFullscreenTriangle(gl));
   const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
@@ -217,7 +217,7 @@ export function createSmokeField(
       const b = a && createRenderTarget(gl, w, h, format);
       if (!a || !b) {
         a?.dispose();
-        console.warn(`${name}: can't allocate a ${w}x${h} density field`);
+        console.warn(`${name}: can't allocate a ${String(w)}x${String(h)} density field`);
         return false;
       }
       targets = [a, b];

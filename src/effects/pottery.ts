@@ -353,7 +353,9 @@ export const pottery = defineEffect(potteryMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const profileTex = scope.add(
         createDataTexture(gl, {
           width: PROFILE_N,
@@ -363,7 +365,9 @@ export const pottery = defineEffect(potteryMeta, {
           type: gl.FLOAT,
           data: new Float32Array(PROFILE_N),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const roomProgram = program(ROOM_FRAGMENT);
@@ -493,7 +497,9 @@ export const pottery = defineEffect(potteryMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

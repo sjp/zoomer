@@ -181,7 +181,9 @@ void main() {
 export const mobile = defineEffect(mobileMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+      const deleteProgram = (p: WebGLProgram) => {
+        gl.deleteProgram(p);
+      };
       const wallProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT),
         deleteProgram,
@@ -205,9 +207,15 @@ export const mobile = defineEffect(mobileMeta, {
         createStreakRenderer(gl, MAX_WIRES * WIRE_SHADOW_WIDTH.length, { blend: "max" }),
       );
 
-      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-      const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const cornerBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       const instances = new Float32Array(MAX_SHAPES * SHAPE_FLOATS);
       gl.bindVertexArray(vao);
       gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
@@ -429,7 +437,9 @@ export const mobile = defineEffect(mobileMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

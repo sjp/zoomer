@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFakeGl } from "./fake-gl";
+import { defined } from "./defined";
 
 describe("createFakeGl", () => {
   it("reports uniform writes to a program that isn't bound", () => {
@@ -26,11 +27,11 @@ describe("createFakeGl", () => {
     expect(live().map((o) => o.kind)).toEqual(["Buffer"]);
     gl.deleteTexture(tex);
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.deleteTexture(buf as unknown as WebGLTexture);
+    gl.deleteTexture(buf);
     expect(errors).toEqual([
       "deleteTexture: Texture 1 was already deleted",
       "bindTexture: Texture 1 was already deleted",
-      "deleteTexture: expected a Texture, got [object Object]",
+      "deleteTexture: expected a Texture, got Buffer 2",
     ]);
   });
 
@@ -73,9 +74,9 @@ describe("createFakeGl", () => {
   it("fails the chosen shader compile", () => {
     const { gl } = createFakeGl({ failCompileAt: 1 });
     const results = [0, 1, 2].map(() => {
-      const shader = gl.createShader(gl.VERTEX_SHADER)!;
+      const shader = defined(gl.createShader(gl.VERTEX_SHADER));
       gl.compileShader(shader);
-      return gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      return gl.getShaderParameter(shader, gl.COMPILE_STATUS) as boolean;
     });
     expect(results).toEqual([true, false, true]);
   });

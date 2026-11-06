@@ -333,7 +333,9 @@ export const hourglass = defineEffect(hourglassMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uPxToH", "uFrame", "uSide"]);
@@ -439,7 +441,9 @@ export const hourglass = defineEffect(hourglassMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

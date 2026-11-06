@@ -58,7 +58,9 @@ describe("placeStones", () => {
       const pos = firstDiff(a.pos, b.pos);
       const look = firstDiff(a.look, b.look);
       if (!(pos === -1 && look === -1 && a.count >= 3)) {
-        wrong.push(`seed ${seed}: pos differs at ${pos}, look at ${look}, ${a.count} stones`);
+        wrong.push(
+          `seed ${String(seed)}: pos differs at ${String(pos)}, look at ${String(look)}, ${String(a.count)} stones`,
+        );
       }
     }
     expect(wrong).toEqual([]);
@@ -74,19 +76,23 @@ describe("placeStones", () => {
         for (let i = 0; i < count; i++) {
           const [x, y, r] = pos.subarray(i * STONE_FLOATS, i * STONE_FLOATS + 3);
           const placed =
-            inCentre(x, r, w) === false &&
+            !inCentre(x, r, w) &&
             Math.abs(x - w / 2) > w / 6 &&
             x - r * STONE_PAD > 0 &&
             x + r * STONE_PAD < w &&
             y - r * STONE_PAD > 0 &&
             y + r * STONE_PAD < 1080;
-          if (!placed) fail(`seed ${seed}, stone ${i} at ${x}, ${y}, r ${r}`);
+          if (!placed)
+            fail(
+              `seed ${String(seed)}, stone ${String(i)} at ${String(x)}, ${String(y)}, r ${String(r)}`,
+            );
           for (let j = 0; j < i; j++) {
             const o = j * STONE_FLOATS;
             const apart =
-              stonesApart(r, pos[o + 2], x - pos[o], y - pos[o + 1]) === true &&
+              stonesApart(r, pos[o + 2], x - pos[o], y - pos[o + 1]) &&
               Math.hypot(x - pos[o], y - pos[o + 1]) > 3 * (r + pos[o + 2]);
-            if (!apart) fail(`seed ${seed}: stones ${j} and ${i} too close`);
+            if (!apart)
+              fail(`seed ${String(seed)}: stones ${String(j)} and ${String(i)} too close`);
           }
         }
       }
@@ -347,14 +353,13 @@ describe("rerake", () => {
     let prev = sweepX(s, 1920);
     expect(sweepWeight(0, prev)).toBe(0);
     let sweepTime = 0;
-    let done = false;
     const backwards: string[] = [];
-    while (!done) {
-      done = stepRerake(s, dt, true);
+    for (;;) {
+      const done = stepRerake(s, dt, true);
       sweepTime += dt;
       if (done) break;
       const x = sweepX(s, 1920);
-      if (!(x > prev) && backwards.length < 10) backwards.push(`${prev} -> ${x}`);
+      if (!(x > prev) && backwards.length < 10) backwards.push(`${String(prev)} -> ${String(x)}`);
       prev = x;
     }
     expect(backwards).toEqual([]);

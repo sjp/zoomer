@@ -196,6 +196,6 @@ describe("shader", () => {
     const count = (s: string) => s.match(/texture\(/g)?.length ?? 0;
     expect(count(waterFragment(true))).toBe(1);
     expect(count(waterFragment(false))).toBe(0);
-    expect(waterFragment(false)).toContain(`uniform vec4 uDrops[${MAX_DROPS * 2}];`);
+    expect(waterFragment(false)).toContain(`uniform vec4 uDrops[${String(MAX_DROPS * 2)}];`);
   });
 });

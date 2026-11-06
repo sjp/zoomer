@@ -80,8 +80,8 @@ describe("crane mesh", () => {
     const count = new Map<string, number>();
     for (const t of CRANE_TRIANGLES) {
       for (let k = 0; k < 3; k++) {
-        const a = `${t.part}:${t.v[k].join()}>${t.v[(k + 1) % 3].join()}`;
-        const b = `${t.part}:${t.v[(k + 1) % 3].join()}>${t.v[k].join()}`;
+        const a = `${String(t.part)}:${t.v[k].join()}>${t.v[(k + 1) % 3].join()}`;
+        const b = `${String(t.part)}:${t.v[(k + 1) % 3].join()}>${t.v[k].join()}`;
         count.set(a, (count.get(a) ?? 0) + 1);
         count.set(b, count.get(b) ?? 0);
       }
@@ -301,7 +301,7 @@ describe("flight", () => {
     let parkedSeen = 0;
     const wasParked = c.flyers.map((f) => f.parked);
     const lastX = c.flyers.map((f) => f.x);
-    const check = () =>
+    const check = () => {
       c.flyers.forEach((f, i) => {
         // Parking happens off-screen; so does launching.
         if (f.parked && !wasParked[i] && onScreen(lastX[i])) popped++;
@@ -309,6 +309,7 @@ describe("flight", () => {
         wasParked[i] = f.parked;
         lastX[i] = f.x;
       });
+    };
     for (let i = 0; i < 30 * 200; i++) {
       stepCranes(c, DT, ASPECT, 1, 4);
       check();

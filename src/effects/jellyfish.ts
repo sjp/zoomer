@@ -46,7 +46,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aBell;
 /** Premultiplied colour, contraction. */
 layout(location = 2) in vec4 aTint;
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 out vec2 vLocal;
 flat out vec4 vTint;
@@ -181,17 +181,23 @@ export const jellyfish = defineEffect(jellyfishMeta, {
       );
       const bellProgram = scope.add(
         createProgram(gl, bellVertex(bellBatch.spinLocation), BELL_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const bellU = createUniforms(gl, bellProgram, ["uResolution", "uGlow"]);
 
-      const stripProgram = scope.add(createProgram(gl, STRIP_VERTEX, STRIP_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const stripProgram = scope.add(createProgram(gl, STRIP_VERTEX, STRIP_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const stripU = createUniforms(gl, stripProgram, ["uResolution"]);
       const strips = new Float32Array(MAX_JELLIES * CHAINS_PER_JELLY * STRIP_VERTS * STRIP_FLOATS);
-      const stripVao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const stripBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const stripVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const stripBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindVertexArray(stripVao);
       gl.bindBuffer(gl.ARRAY_BUFFER, stripBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, strips.byteLength, gl.DYNAMIC_DRAW);
@@ -208,15 +214,15 @@ export const jellyfish = defineEffect(jellyfishMeta, {
       const snowBatch = scope.own(
         createSpriteBatch(gl, MAX_SNOW, [4], [polygonStrip(8, Math.PI / 8)]),
       );
-      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const snowU = createUniforms(gl, snowProgram, ["uResolution", "uColor"]);
 
       const shaftBatch = scope.own(createSpriteBatch(gl, SHAFTS, [3, 3]));
-      const shaftProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const shaftProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const shaftU = createUniforms(gl, shaftProgram, ["uResolution", "uColor"]);
       const shafts: Beam[] = Array.from({ length: SHAFTS }, () => ({
         x0: 0,
@@ -379,7 +385,9 @@ export const jellyfish = defineEffect(jellyfishMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

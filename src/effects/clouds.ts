@@ -158,9 +158,9 @@ export const clouds = defineEffect(cloudsMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, CLOUD_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, CLOUD_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uNoise",
@@ -197,7 +197,9 @@ export const clouds = defineEffect(cloudsMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, cloudNoiseChannels(NOISE_SEED)),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       // Mipmaps keep the detail fetch from aliasing at low quality settings.
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
@@ -305,7 +307,9 @@ export const clouds = defineEffect(cloudsMeta, {
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

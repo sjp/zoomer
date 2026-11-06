@@ -63,7 +63,7 @@ describe("B-spline sampling", () => {
     for (const k of [0, 1, 3]) {
       const c = BSPLINE_BASIS[k].map(glslFloat);
       expect(COMPOSITE).toContain(
-        `vec2 w${k} = ${c[0]} + ${c[1]} * t + ${c[2]} * t2 + ${c[3]} * t3;`,
+        `vec2 w${String(k)} = ${c[0]} + ${c[1]} * t + ${c[2]} * t2 + ${c[3]} * t3;`,
       );
     }
     // The shader drops w2 (g1 = 1 - g0), which needs the weights to sum to 1.

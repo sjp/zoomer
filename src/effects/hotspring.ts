@@ -443,10 +443,14 @@ export const hotspring = defineEffect(hotspringMeta, {
           type: gl.UNSIGNED_BYTE,
           data: maskData,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const skyProgram = program(SKY_FRAGMENT);
       const ku = createUniforms(gl, skyProgram, [
@@ -720,7 +724,9 @@ export const hotspring = defineEffect(hotspringMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

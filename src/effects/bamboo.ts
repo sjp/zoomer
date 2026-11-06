@@ -35,6 +35,7 @@ import { createLowResTarget } from "./lowres";
 import { createSpriteBatch, QUAD } from "./sprites";
 import { advanceSwell, swayGlsl } from "./sway";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 const f = glslFloat;
 
@@ -319,15 +320,15 @@ export const bamboo = defineEffect(bambooMeta, {
   create(gl) {
     return withScope((scope) => {
       const haze = scope.own(createLowResTarget(gl));
-      const hazeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, HAZE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const hazeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, HAZE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const uh = createUniforms(gl, hazeProgram, ["uResolution", "uShafts", ...HAZE_UNIFORMS]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const us = createUniforms(gl, stemProgram, [
         "uResolution",
         "uScale",
@@ -338,9 +339,9 @@ export const bamboo = defineEffect(bambooMeta, {
         "uRing",
         ...HAZE_UNIFORMS,
       ]);
-      const leafProgram = scope.add(createProgram(gl, LEAF_VERTEX, LEAF_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const leafProgram = scope.add(createProgram(gl, LEAF_VERTEX, LEAF_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const ul = createUniforms(gl, leafProgram, [
         "uResolution",
         "uScale",
@@ -386,7 +387,7 @@ export const bamboo = defineEffect(bambooMeta, {
           const step = Math.max(0, Number.isFinite(dt) ? dt : 0);
           const wind = Math.min(1, Math.max(0, Number.isFinite(p.wind) ? p.wind : 0));
           phase = advanceSwell(BAMBOO_SWELL, phase, step, swaySpeed(wind));
-          const light = LIGHTS[p.light as LightId] ?? LIGHTS.morning;
+          const light = lookup(LIGHTS, p.light, "morning");
 
           if (p.seed !== builtSeed || p.density !== builtDensity || p.opening !== builtOpening) {
             const opening: OpeningId = p.opening === "none" ? "none" : "centre";
@@ -444,7 +445,9 @@ export const bamboo = defineEffect(bambooMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

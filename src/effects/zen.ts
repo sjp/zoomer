@@ -92,10 +92,10 @@ uniform vec2 uRes;
 uniform vec2 uSpacing;
 uniform int uCount;
 /** Per stone: centre, radius. Look: two wobble phases, tone, moss amount. */
-uniform vec4 uStone[${MAX_STONES}];
-uniform vec4 uLook[${MAX_STONES}];
+uniform vec4 uStone[${String(MAX_STONES)}];
+uniform vec4 uLook[${String(MAX_STONES)}];
 /** Per layout (old, then new) per stone: crest value, line slope, 1 / g, ring radius. */
-uniform vec4 uLay[${2 * MAX_STONES}];
+uniform vec4 uLay[${String(2 * MAX_STONES)}];
 /** Per layout: two sines (amplitude, wavenumber, phase). */
 uniform vec3 uWave[4];
 /** Rerake sweep line x and 1 / band width. */
@@ -110,7 +110,7 @@ uniform vec4 uRegion;
 uniform float uShadow;
 out vec4 outColor;
 
-const int MAX_STONES = ${MAX_STONES};
+const int MAX_STONES = ${String(MAX_STONES)};
 const vec2 LIGHT2 = vec2(${glslFloat(LIGHT_X)}, ${glslFloat(LIGHT_Y)});
 const vec3 LIGHT3 = ${vec3(LIGHT3)};
 ${DITHER_GLSL}
@@ -258,9 +258,9 @@ void main() {
 export const zen = defineEffect(zenMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uNoise",
         "uPix",
@@ -298,7 +298,9 @@ export const zen = defineEffect(zenMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const pos = new Float32Array(MAX_STONES * STONE_FLOATS);
@@ -414,7 +416,9 @@ export const zen = defineEffect(zenMeta, {
           gl.bindTexture(gl.TEXTURE_2D, noiseTex);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

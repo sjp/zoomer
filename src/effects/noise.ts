@@ -17,17 +17,18 @@
  * never per full-resolution pixel per frame.
  */
 
+/** Plain functions (closures, not methods), so they can be passed around unbound. */
 export interface Noise {
   /** 2D simplex noise, roughly in [-1, 1]. */
-  noise2(x: number, y: number): number;
+  noise2: (x: number, y: number) => number;
   /** 3D simplex noise, roughly in [-1, 1]. Use `z` as time for evolving 2D fields. */
-  noise3(x: number, y: number, z: number): number;
+  noise3: (x: number, y: number, z: number) => number;
   /**
    * 2D gradient noise, roughly in [-1, 1], that repeats every `px` units in x and
    * `py` units in y. Periods should be positive integers no greater than 256;
    * others are coerced by `toPeriod` rather than reading past the permutation table.
    */
-  periodic2(x: number, y: number, px: number, py: number): number;
+  periodic2: (x: number, y: number, px: number, py: number) => number;
 }
 
 /** Deterministic PRNG (mulberry32). Any number works as a seed; floats are truncated. */

@@ -49,7 +49,7 @@ describe("growTrain", () => {
       const balance = t.gears.filter((g) => g.style === STYLE_BALANCE).length;
       if (toothed < spec.count * 0.75 || balance !== 1 || t.gears.length > MAX_GEARS) {
         bad.push(
-          `${t.layout} ${t.aspect.toFixed(2)} ${t.seed}: ${toothed} gears, ${balance} balance`,
+          `${t.layout} ${t.aspect.toFixed(2)} ${String(t.seed)}: ${String(toothed)} gears, ${String(balance)} balance`,
         );
       }
     }
@@ -150,8 +150,9 @@ describe("growTrain", () => {
     for (const { layout, aspect, seed, gears } of trains) {
       gears.forEach((g, i) => {
         if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)))
-          bad.push(`${layout} ${seed} #${i} out`);
-        if (g.layer < 0 || g.layer >= LAYERS) bad.push(`${layout} ${seed} #${i} layer`);
+          bad.push(`${layout} ${String(seed)} #${String(i)} out`);
+        if (g.layer < 0 || g.layer >= LAYERS)
+          bad.push(`${layout} ${String(seed)} #${String(i)} layer`);
         for (let j = 0; j < i; j++) {
           const o = gears[j];
           if (o.layer !== g.layer || (g.parent === j && !g.axle) || (o.parent === i && !o.axle)) {
@@ -159,7 +160,7 @@ describe("growTrain", () => {
           }
           const d = Math.hypot(o.x - g.x, o.y - g.y);
           if (d < tipRadius(o) + tipRadius(g) + CLEARANCE - 1e-12) {
-            bad.push(`${layout} ${seed} #${i} overlaps #${j}`);
+            bad.push(`${layout} ${String(seed)} #${String(i)} overlaps #${String(j)}`);
           }
         }
       });

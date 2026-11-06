@@ -246,9 +246,9 @@ precision highp float;
 precision highp sampler2D;
 uniform sampler2D uHeights;
 uniform vec2 uResolution;
-uniform vec3 uColors[${MAX_LAYERS}];
+uniform vec3 uColors[${String(MAX_LAYERS)}];
 /** Bottom of each layer's strip, px (y up). */
-uniform float uBottoms[${MAX_LAYERS}];
+uniform float uBottoms[${String(MAX_LAYERS)}];
 out float vEdge;
 flat out vec3 vColor;
 void main() {
@@ -315,7 +315,9 @@ export const horizon = defineEffect(horizonMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const starProgram = program(STAR_VERTEX, STAR_FRAGMENT);
       const moonProgram = program(MOON_VERTEX, MOON_FRAGMENT);
@@ -349,7 +351,9 @@ export const horizon = defineEffect(horizonMeta, {
 
       const triangle = scope.own(createFullscreenTriangle(gl));
       /** The hill strip has no attributes, but draws with a VAO of its own bound. */
-      const hillVao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+      const hillVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
       const hills = scope.own(createColumnTable(gl, HILL_COLUMNS, 1, { rows: MAX_LAYERS }));
       const stars = scope.own(createSpriteBatch(gl, STAR_COUNT, [4, 2], [QUAD]));
       const moonSprite = scope.own(createSpriteBatch(gl, 1, [4], [QUAD]));
@@ -622,7 +626,9 @@ export const horizon = defineEffect(horizonMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

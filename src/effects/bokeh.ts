@@ -119,9 +119,9 @@ export const bokeh = defineEffect(bokehMeta, {
       // One program per aperture shape; uniforms are set only when they change
       // (uniforms are per-program state, and these programs are ours alone).
       const variants = [false, true].map((hexagon) => {
-        const program = scope.add(createProgram(gl, VERTEX, fragment(hexagon)), (p) =>
-          gl.deleteProgram(p),
-        );
+        const program = scope.add(createProgram(gl, VERTEX, fragment(hexagon)), (p) => {
+          gl.deleteProgram(p);
+        });
         const u = createUniforms(gl, program, [
           "uResolution",
           "uColors",
@@ -226,7 +226,9 @@ export const bokeh = defineEffect(bokehMeta, {
           batch.draw(0, visible, v.hexagon ? 1 : 0);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

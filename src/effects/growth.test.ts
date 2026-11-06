@@ -51,7 +51,7 @@ describe("growthStateAt", () => {
       const s = growthStateAt(CYCLE, t);
       const ok =
         s.level >= 0 && s.level <= 1 && s.melt >= 0 && s.melt <= 1 && s.time >= 0 && s.time < 200;
-      if (!ok && outside.length < 10) outside.push(`t ${t}: ${JSON.stringify(s)}`);
+      if (!ok && outside.length < 10) outside.push(`t ${String(t)}: ${JSON.stringify(s)}`);
     }
     expect(outside).toEqual([]);
   });
@@ -70,7 +70,9 @@ describe("growthStateAt", () => {
         for (const bias of biases) {
           const step = Math.abs(cover(a, arr, bias) - cover(b, arr, bias));
           if (!(step < 0.05) && jumps.length < 10) {
-            jumps.push(`t ${t}, arrival ${arr}, bias ${bias}: ${step}`);
+            jumps.push(
+              `t ${String(t)}, arrival ${String(arr)}, bias ${String(bias)}: ${String(step)}`,
+            );
           }
         }
       }
@@ -129,7 +131,8 @@ describe("createGrowthClock", () => {
     const rising: string[] = [];
     for (let i = 0; i < 200; i++) {
       clock.advance(0.5, 1, false);
-      if (!(clock.state.melt <= melt)) rising.push(`step ${i}: ${melt} -> ${clock.state.melt}`);
+      if (!(clock.state.melt <= melt))
+        rising.push(`step ${String(i)}: ${String(melt)} -> ${String(clock.state.melt)}`);
       melt = clock.state.melt;
     }
     expect(rising).toEqual([]);

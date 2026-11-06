@@ -71,7 +71,7 @@ uniform sampler2D uState;
 /** 1 / grid size. */
 uniform vec2 uInvSize;
 /** Per pair: x offset (fractional), y offset, weight. */
-uniform vec3 uTaps[${TAPS.count}];
+uniform vec3 uTaps[${String(TAPS.count)}];
 uniform float uMu;
 /** 1 / (2 sigma^2). */
 uniform float uGrowthK;
@@ -81,7 +81,7 @@ ${DECODE_GLSL}
 void main() {
   vec2 p = gl_FragCoord.xy;
   float u = 0.0;
-  for (int i = 0; i < ${TAPS.count}; i++) {
+  for (int i = 0; i < ${String(TAPS.count)}; i++) {
     vec3 t = uTaps[i];
     u += t.z * (decodeA(texture(uState, (p + t.xy) * uInvSize))
       + decodeA(texture(uState, (p - t.xy) * uInvSize)));
@@ -229,7 +229,9 @@ export const lenia = defineEffect(leniaMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
+          gl.deleteProgram(p);
+        });
       const stepProgram = program(STEP_FRAGMENT);
       const statsProgram = program(STATS_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);
@@ -275,7 +277,9 @@ export const lenia = defineEffect(leniaMeta, {
           type: gl.UNSIGNED_BYTE,
           data: buildPaletteLut(paletteKey, lutBytes),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       // Stats readback: a small RGBA8 target, read into a pixel-pack buffer and
@@ -283,9 +287,14 @@ export const lenia = defineEffect(leniaMeta, {
       const statsTarget = createRenderTarget(gl, STATS_SIZE, STATS_SIZE, gl.RGBA8, {
         filter: gl.NEAREST,
       });
-      if (statsTarget) scope.add(statsTarget, (t) => t.dispose());
+      if (statsTarget)
+        scope.add(statsTarget, (t) => {
+          t.dispose();
+        });
       const statsBytes = new Uint8Array(STATS_SIZE * STATS_SIZE * 4);
-      const pbo = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const pbo = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
       gl.bufferData(gl.PIXEL_PACK_BUFFER, statsBytes.byteLength, gl.STREAM_READ);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -377,7 +386,7 @@ export const lenia = defineEffect(leniaMeta, {
         const b = a && createRenderTarget(gl, w, h, gl.RGBA8, opts);
         if (!a || !b) {
           a?.dispose();
-          console.warn(`lenia: can't allocate a ${w}x${h} grid`);
+          console.warn(`lenia: can't allocate a ${String(w)}x${String(h)} grid`);
           return;
         }
         targets = [a, b];
@@ -540,7 +549,9 @@ export const lenia = defineEffect(leniaMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

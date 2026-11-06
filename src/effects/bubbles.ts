@@ -42,12 +42,14 @@ export const bubbles = defineEffect(bubblesMeta, {
       );
       const program = scope.add(
         createProgram(gl, bubbleVertex(batch.spinLocation), BUBBLE_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const u = createUniforms(gl, program, ["uResolution", "uLight", "uShade"]);
-      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const beamU = createUniforms(gl, beamProgram, ["uResolution", "uColor"]);
       // Per shaft: x0, slope, half-width; y0, y1, intensity.
       const beamBatch = scope.own(createSpriteBatch(gl, SHAFTS, [3, 3], [QUAD]));
@@ -148,7 +150,9 @@ export const bubbles = defineEffect(bubblesMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

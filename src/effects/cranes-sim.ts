@@ -124,7 +124,7 @@ export const CRANE_TRIANGLES: readonly MeshTriangle[] = buildTriangles();
  * -1 where there is none, which `CRANE_TRIANGLES` never has: every part is closed.
  */
 export const CRANE_NEIGHBOURS: readonly (readonly [number, number, number])[] = (() => {
-  const key = (part: number, a: Vec3, b: Vec3) => `${part}:${a.join(",")}|${b.join(",")}`;
+  const key = (part: number, a: Vec3, b: Vec3) => `${String(part)}:${a.join(",")}|${b.join(",")}`;
   const normals = CRANE_TRIANGLES.map((t) => triangleNormal(t.v[0], t.v[1], t.v[2]));
   // Directed edge -> the triangles using it, per part.
   const edges = new Map<string, number[]>();

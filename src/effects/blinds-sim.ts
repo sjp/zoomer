@@ -6,6 +6,7 @@
 import type { Rgb } from "./color";
 import { clamp, fract, smoothstep } from "./math";
 import type { Noise } from "./noise";
+import { lookup } from "./lookup";
 
 /** Lit fraction of each stripe period (the gap between two slats). */
 export const DUTY = 0.56;
@@ -76,7 +77,7 @@ export function layoutShape(
   slats: number,
   softness: number,
 ): BlindsShape {
-  const pos = POSITIONS[position as Position] ?? POSITIONS.topRight;
+  const pos = lookup(POSITIONS, position, "topRight");
   out.cx = pos.x * refWidth;
   out.cy = pos.y * 1080;
   out.halfW = Math.max(1, HALF_W * refWidth);

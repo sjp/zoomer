@@ -10,6 +10,7 @@
 import { clamp, smoothstep } from "./math";
 import { createRng } from "./noise";
 import type { MixId } from "./chamber.meta";
+import { lookup } from "./lookup";
 
 export const REF_HEIGHT = 1080;
 
@@ -84,8 +85,8 @@ export const MIX_WEIGHTS: Record<MixId, readonly [number, number, number]> = {
 };
 
 /** The kind for a uniform draw `r` (0..1) under `mix` (unknown ids count as natural). */
-export function pickKind(mix: MixId | string, r: number): TrackKind {
-  const w = MIX_WEIGHTS[mix as MixId] ?? MIX_WEIGHTS.natural;
+export function pickKind(mix: string, r: number): TrackKind {
+  const w = lookup(MIX_WEIGHTS, mix, "natural");
   if (r < w[0]) return ALPHA;
   if (r < w[0] + w[1]) return ELECTRON;
   return MUON;
@@ -454,7 +455,7 @@ export function stepChamber(
   c: Chamber,
   t: number,
   rate: number,
-  mix: MixId | string,
+  mix: string,
   magnetic: boolean,
   refWidth: number,
 ): void {

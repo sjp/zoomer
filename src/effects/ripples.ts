@@ -51,7 +51,7 @@ const BRANCH_DARK = 0.92;
 export function waterFragment(branches: boolean): string {
   return /* glsl */ `#version 300 es
 precision highp float;
-uniform vec4 uDrops[${MAX_DROPS * 2}];
+uniform vec4 uDrops[${String(MAX_DROPS * 2)}];
 uniform int uCount;
 /** 1 / target size in pixels. */
 uniform vec2 uInvSize;
@@ -70,7 +70,7 @@ const vec2 LIGHT = vec2(${glslFloat(SKY_DIR[0])}, ${glslFloat(SKY_DIR[1])});
 void main() {
   vec2 p = gl_FragCoord.xy;
   vec2 s = vec2(0.0);
-  for (int i = 0; i < ${MAX_DROPS}; i++) {
+  for (int i = 0; i < ${String(MAX_DROPS)}; i++) {
     if (i >= uCount) break;
     vec4 a = uDrops[2 * i];
     vec2 d = p - a.xy;
@@ -130,7 +130,9 @@ export const ripples = defineEffect(ripplesMeta, {
       const variants = [false, true].map((branches) => {
         const program = scope.add(
           createProgram(gl, FULLSCREEN_VERTEX, waterFragment(branches)),
-          (p) => gl.deleteProgram(p),
+          (p) => {
+            gl.deleteProgram(p);
+          },
         );
         const u = createUniforms(gl, program, UNIFORMS);
         gl.useProgram(program);
@@ -146,7 +148,9 @@ export const ripples = defineEffect(ripplesMeta, {
           type: gl.UNSIGNED_BYTE,
           data: buildBranchMask(),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const rng = createRng(0x46);
@@ -221,7 +225,9 @@ export const ripples = defineEffect(ripplesMeta, {
           target.blit();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

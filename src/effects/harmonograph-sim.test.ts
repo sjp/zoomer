@@ -141,7 +141,7 @@ describe("createHarmonograph", () => {
         new Proxy(Original, {
           construct(target, args) {
             created++;
-            return Reflect.construct(target, args);
+            return Reflect.construct(target, args) as object;
           },
         }),
       );

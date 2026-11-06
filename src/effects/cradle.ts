@@ -110,12 +110,12 @@ uniform vec3 uOrigin;
 uniform vec4 uView;
 uniform int uCount;
 /** Balls far to near: view centre (x, y, depth towards the viewer). */
-uniform vec4 uBall[${MAX_BALLS}];
+uniform vec4 uBall[${String(MAX_BALLS)}];
 /** The same balls' world x and y, for their shadows. */
-uniform vec2 uBallW[${MAX_BALLS}];
+uniform vec2 uBallW[${String(MAX_BALLS)}];
 /** Strings, back and front: pivot (view xy), eyelet (view xy). */
-uniform vec4 uStrB[${MAX_BALLS}];
-uniform vec4 uStrF[${MAX_BALLS}];
+uniform vec4 uStrB[${String(MAX_BALLS)}];
+uniform vec4 uStrF[${String(MAX_BALLS)}];
 /** Frame rods: three behind the balls, then three in front. */
 uniform vec4 uRod[6];
 /** The base's three visible faces as counter-clockwise quads (top first), and their colours. */
@@ -362,7 +362,9 @@ function buildStatics(v: CradleView, count: number, scene: ScenePalette, out: St
     ],
   ];
   quads.forEach((quad, qi) => {
-    quad.forEach(([x, y, z], k) => put2(v, x, y, z, f, qi * 8 + k * 2));
+    quad.forEach(([x, y, z], k) => {
+      put2(v, x, y, z, f, qi * 8 + k * 2);
+    });
     // Make it counter-clockwise on screen.
     let area = 0;
     for (let k = 0; k < 4; k++) {
@@ -430,7 +432,9 @@ export const cradle = defineEffect(cradleMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [
@@ -537,7 +541,7 @@ export const cradle = defineEffect(cradleMeta, {
           cradleLayout(aspect, p.size, count, view, layout);
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const rk = `${p.scene}|${view.side}`;
+          const rk = `${p.scene}|${String(view.side)}`;
           if (target.direct || roomKey !== rk) {
             target.bind();
             gl.useProgram(roomProgram);
@@ -561,7 +565,7 @@ export const cradle = defineEffect(cradleMeta, {
           // 2. The cradle, premultiplied, in its box.
           gl.viewport(0, 0, width, height);
           gl.useProgram(cradleProgram);
-          const sk = `${p.scene}|${view.side}|${count}`;
+          const sk = `${p.scene}|${String(view.side)}|${String(count)}`;
           if (sk !== staticKey) {
             buildStatics(view, count, scene, statics);
             const [bx, bz] = baseHalf(count);
@@ -639,7 +643,9 @@ export const cradle = defineEffect(cradleMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -113,11 +113,11 @@ describe("createBubbles", () => {
       for (let k = 0; k < n; k++) {
         const o = k * BUBBLE_FLOATS;
         for (let j = 0; j < BUBBLE_FLOATS; j++) {
-          if (!Number.isFinite(data[o + j])) bad.push(`non-finite ${j}`);
+          if (!Number.isFinite(data[o + j])) bad.push(`non-finite ${String(j)}`);
         }
-        if (!(data[o + 3] > 0 && data[o + 3] <= 1)) bad.push(`alpha ${data[o + 3]}`);
-        if (!(data[o + 7] > 0 && data[o + 7] <= 1)) bad.push(`flip ${data[o + 7]}`);
-        if (!(data[o] > -100 && data[o] < 2020)) bad.push(`x ${data[o]}`);
+        if (!(data[o + 3] > 0 && data[o + 3] <= 1)) bad.push(`alpha ${String(data[o + 3])}`);
+        if (!(data[o + 7] > 0 && data[o + 7] <= 1)) bad.push(`flip ${String(data[o + 7])}`);
+        if (!(data[o] > -100 && data[o] < 2020)) bad.push(`x ${String(data[o])}`);
       }
     }
     expect(bad).toEqual([]);
@@ -188,8 +188,8 @@ describe("createBubbles", () => {
       for (let k = 0; k < n; k++) {
         const o = k * BUBBLE_FLOATS;
         // Small bubbles barely zigzag: the column stays within a few px of x = 192.
-        if (Math.abs(data[o] - 192) > ZIG_PX + 6) bad.push(`x ${data[o]}`);
-        if (data[o + 1] > 0.8 * 1080 + 0.01) bad.push(`y ${data[o + 1]}`);
+        if (Math.abs(data[o] - 192) > ZIG_PX + 6) bad.push(`x ${String(data[o])}`);
+        if (data[o + 1] > 0.8 * 1080 + 0.01) bad.push(`y ${String(data[o + 1])}`);
         seen++;
       }
     }

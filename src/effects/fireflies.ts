@@ -227,13 +227,13 @@ void main() {
 export const fireflies = defineEffect(firefliesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const speckU = createUniforms(gl, speckProgram, ["uResolution"]);
-      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const beamU = createUniforms(gl, beamProgram, ["uResolution", "uColor"]);
       // Per speck: x, y, extent radius; premultiplied colour.
       const specks = scope.own(
@@ -417,7 +417,9 @@ export const fireflies = defineEffect(firefliesMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

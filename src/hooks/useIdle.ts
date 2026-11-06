@@ -5,11 +5,15 @@ export function useIdle(ms: number): boolean {
   const [idle, setIdle] = useState(false);
 
   useEffect(() => {
-    let timer = setTimeout(() => setIdle(true), ms);
+    let timer = setTimeout(() => {
+      setIdle(true);
+    }, ms);
     const wake = () => {
       setIdle(false);
       clearTimeout(timer);
-      timer = setTimeout(() => setIdle(true), ms);
+      timer = setTimeout(() => {
+        setIdle(true);
+      }, ms);
     };
     const events = ["pointermove", "pointerdown", "keydown", "wheel"] as const;
     for (const e of events) window.addEventListener(e, wake);

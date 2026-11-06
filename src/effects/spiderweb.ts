@@ -53,9 +53,9 @@ uniform vec3 uGlow;
 /** Glow centre (reference px) and 1 / radius. */
 uniform vec3 uGlowAt;
 /** Per blob: x, y (reference px, y down), 1 / radius, kind (0 foliage, 1 bokeh). */
-uniform vec4 uBlob[${MAX_BLOBS}];
+uniform vec4 uBlob[${String(MAX_BLOBS)}];
 /** Per blob: colour, strength. */
-uniform vec4 uBlobColor[${MAX_BLOBS}];
+uniform vec4 uBlobColor[${String(MAX_BLOBS)}];
 uniform int uBlobCount;
 out vec4 outColor;
 void main() {
@@ -63,7 +63,7 @@ void main() {
   vec3 c = mix(uBottom, uTop, vUv.y);
   vec2 g = (p - uGlowAt.xy) * uGlowAt.z;
   c += uGlow * exp(-dot(g, g));
-  for (int i = 0; i < ${MAX_BLOBS}; i++) {
+  for (int i = 0; i < ${String(MAX_BLOBS)}; i++) {
     if (i >= uBlobCount) break;
     vec4 b = uBlob[i];
     vec4 col = uBlobColor[i];
@@ -142,7 +142,9 @@ export const spiderweb = defineEffect(spiderwebMeta, {
       const target = scope.own(createLowResTarget(gl));
       const triangle = scope.own(createFullscreenTriangle(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const backdropProgram = program(FULLSCREEN_VERTEX, BACKDROP_FRAGMENT);
       const bu = createUniforms(gl, backdropProgram, [
         "uRefSize",
@@ -253,7 +255,9 @@ export const spiderweb = defineEffect(spiderwebMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

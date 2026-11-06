@@ -266,7 +266,7 @@ describe("hourglassLayout", () => {
             const ey = (Math.abs(Math.sin(a)) * CAP_W + Math.abs(Math.cos(a)) * CAP_END) * l.unit;
             if (l.cx - ex < x0 || l.cx + ex > x1 || cy - ey < y0 || cy + ey > y1) ok = false;
           }
-          if (!ok) bad.push(`${aspect} ${pos} ${size}`);
+          if (!ok) bad.push(`${String(aspect)} ${pos} ${String(size)}`);
         }
       }
     }

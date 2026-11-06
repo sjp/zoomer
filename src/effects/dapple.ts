@@ -126,9 +126,9 @@ vec4 composite(vec2 uv) {
 export const dapple = defineEffect(dappleMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uNoise",
         "uPix",
@@ -161,7 +161,9 @@ export const dapple = defineEffect(dappleMeta, {
           ),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const wallRgb = unitRgbMemo();
@@ -265,7 +267,9 @@ export const dapple = defineEffect(dappleMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -158,7 +158,7 @@ uniform float uLines;
 
 out vec4 outColor;
 
-const int RIDGE_LAST = ${RIDGE_POINTS - 1};
+const int RIDGE_LAST = ${String(RIDGE_POINTS - 1)};
 const float RIDGE_SEGMENTS = ${glslFloat(RIDGE_POINTS - 1)};
 ${DITHER_GLSL}
 /** Box-filtered coverage of a line of width w at signed distance d from the pixel centre. */
@@ -531,9 +531,9 @@ export function mountainTop(hy: number, width: number, height: number, scale: nu
 export const synthwave = defineEffect(synthwaveMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ridge = scope.own(
         createColumnTable(gl, RIDGE_POINTS, 1, { rows: 2, data: getRidgeData() }),
@@ -580,7 +580,9 @@ export const synthwave = defineEffect(synthwaveMeta, {
        * coverages). They are rebuilt only when an input changes, so a static scene
        * (speed 0, sway 0) does no CPU work or uploads for them.
        */
-      const rowTex = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      const rowTex = scope.add(gl.createTexture(), (t) => {
+        gl.deleteTexture(t);
+      });
       gl.bindTexture(gl.TEXTURE_2D, rowTex);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
@@ -731,7 +733,9 @@ export const synthwave = defineEffect(synthwaveMeta, {
           u.f1("uLines", lines);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

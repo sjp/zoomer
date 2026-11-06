@@ -10,6 +10,7 @@ import {
   trackAt,
 } from "./chamber-sim";
 import { chamberMeta, type LightId } from "./chamber.meta";
+import { lookup } from "./lookup";
 import {
   beginFrame,
   createDataTexture,
@@ -50,7 +51,7 @@ const MIST_TILE = [1500, 640] as const;
 const MIST_FINE_SHARE = 0.6;
 const MIST_FINE_RISE = 1.6;
 
-const LIGHTS: Record<LightId | string, readonly [number, number, number]> = {
+const LIGHTS: Record<LightId, readonly [number, number, number]> = {
   white: [0.9, 0.94, 1],
   blue: [0.55, 0.74, 1],
   warm: [1, 0.8, 0.58],
@@ -101,9 +102,9 @@ export const chamber = defineEffect(chamberMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uNoise",
         "uTracks",
@@ -131,7 +132,9 @@ export const chamber = defineEffect(chamberMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const streaks = scope.own(
         createStreakRenderer(gl, MAX_TRACKS * (MAX_POINTS - 1) * LAYERS, { blend: "max" }),
@@ -248,7 +251,7 @@ export const chamber = defineEffect(chamberMeta, {
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, buffer ? buffer.texture : null);
           gl.activeTexture(gl.TEXTURE0);
-          const light = LIGHTS[p.light] ?? LIGHTS.white;
+          const light = lookup(LIGHTS, p.light, "white");
           u.f1("uScale", scale);
           u.f1("uInvRefWidth", 1 / refWidth);
           // The mist drifts with the trails; the fine layer a little slower and rising, so it evolves.
@@ -263,7 +266,9 @@ export const chamber = defineEffect(chamberMeta, {
           u.f3("uLight", light[0], light[1], light[2]);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

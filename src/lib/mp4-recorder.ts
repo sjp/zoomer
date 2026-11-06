@@ -4,6 +4,7 @@
  * a WebGL canvas without `preserveDrawingBuffer` still has its pixels, then encoded as
  * H.264 and muxed into an MP4 in memory. Loaded on demand: most browsers never need it.
  */
+import { toError } from "./errors";
 import {
   BufferTarget,
   canEncodeVideo,
@@ -87,7 +88,7 @@ export async function recordMp4(
       clearTimeout(stall);
       try {
         if (err === undefined && frames === 0) err = new Error("Recording captured no frames.");
-        if (err !== undefined) throw err;
+        if (err !== undefined) throw toError(err);
         await queue;
         await output.finalize();
         resolve(new Blob([target.buffer ?? new ArrayBuffer(0)], { type: "video/mp4" }));

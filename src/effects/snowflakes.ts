@@ -119,9 +119,9 @@ function buildFlakeRenderer(
   fadeMask: boolean,
   scope: Scope,
 ): FlakeRenderer {
-  const program = scope.add(createProgram(gl, flakeVertex(fadeMask), FLAKE_FRAGMENT), (p) =>
-    gl.deleteProgram(p),
-  );
+  const program = scope.add(createProgram(gl, flakeVertex(fadeMask), FLAKE_FRAGMENT), (p) => {
+    gl.deleteProgram(p);
+  });
   const u = createUniforms(gl, program, ["uResolution", "uColor"]);
   if (fadeMask) {
     const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
@@ -134,7 +134,9 @@ function buildFlakeRenderer(
   return {
     data: batch.data,
     stride: batch.stride,
-    upload: (count) => batch.upload(count),
+    upload: (count) => {
+      batch.upload(count);
+    },
     draw(first, count, width, height, color, mask) {
       gl.useProgram(program);
       u.f2("uResolution", width, height);
@@ -145,6 +147,8 @@ function buildFlakeRenderer(
       }
       batch.draw(first, count);
     },
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      scope.dispose();
+    },
   };
 }

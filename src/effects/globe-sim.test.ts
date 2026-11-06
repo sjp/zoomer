@@ -52,7 +52,7 @@ describe("globeLayout", () => {
             l.cx - l.r - NUDGE >= x0 &&
             l.cx + l.r + NUDGE <= x1 &&
             l.cy + l.r + NUDGE <= y1;
-          if (!ok) bad.push(`${aspect} ${pos} ${size}`);
+          if (!ok) bad.push(`${String(aspect)} ${pos} ${String(size)}`);
         }
       }
     }

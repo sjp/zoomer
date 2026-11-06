@@ -141,7 +141,7 @@ describe("gustAt", () => {
     for (let t = 1 / 60; t < 900; t += 1 / 60) {
       const g = gustAt(noise, t);
       if (!(g >= 0 && g <= 1 && Math.abs(g - prev) < 0.01) && bad.length < 10) {
-        bad.push(`t ${t}: ${prev} -> ${g}`);
+        bad.push(`t ${String(t)}: ${String(prev)} -> ${String(g)}`);
       }
       if (g < 0.1) calm++;
       if (g > 0.4) gusty++;
@@ -180,12 +180,12 @@ describe("createPieces", () => {
       for (let i = 0; i < pieces.live; i++) {
         const margin = m[pieces.layer[i]];
         const [x, y] = [pieces.xs[i], pieces.ys[i]];
-        if (x < -margin || x > 1920 + margin) bad.push(`x ${x} outside ${margin}`);
-        if (y < -margin || y > 1080 + margin) bad.push(`y ${y} outside ${margin}`);
+        if (x < -margin || x > 1920 + margin) bad.push(`x ${String(x)} outside ${String(margin)}`);
+        if (y < -margin || y > 1080 + margin) bad.push(`y ${String(y)} outside ${String(margin)}`);
         if (ys[i] - y > 540) {
           respawns++;
-          if (ys[i] < 1080 + margin - 30) bad.push(`fell from ${ys[i]}`);
-          if (y > -margin + 30) bad.push(`respawned at ${y}`);
+          if (ys[i] < 1080 + margin - 30) bad.push(`fell from ${String(ys[i])}`);
+          if (y > -margin + 30) bad.push(`respawned at ${String(y)}`);
         }
       }
     }

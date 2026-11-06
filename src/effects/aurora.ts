@@ -358,9 +358,9 @@ const toHorizonKind = (v: string): HorizonKind =>
 export const aurora = defineEffect(auroraMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uResolution",
@@ -387,9 +387,9 @@ export const aurora = defineEffect(auroraMeta, {
       u.f2("uFalloff", 1 / HALF_UP, 1 / HALF_DOWN);
       u.f1("uColorSpan", 1 / COLOR_SPAN);
 
-      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const starU = createUniforms(gl, starProgram, ["uResolution", "uScale", "uTime"]);
       const stars = scope.own(createSpriteBatch(gl, MAX_STARS, [4, 2]));
       gl.useProgram(null);
@@ -523,7 +523,9 @@ export const aurora = defineEffect(auroraMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

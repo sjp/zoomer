@@ -66,18 +66,20 @@ describe("createRainSim", () => {
     const fail = (msg: string) => bad.length < 10 && bad.push(msg);
     for (let f = 0; f < 600; f++) {
       const n = sim.step(1 / 60, 14, 0.7, 1, 1.5, data, stride);
-      if (!(n <= 100)) fail(`frame ${f}: ${n} drops`);
+      if (!(n <= 100)) fail(`frame ${String(f)}: ${String(n)} drops`);
       const perColumn = new Map<number, number>();
       for (let i = 0; i < n; i++) {
         const o = i * stride;
         const [c, , rate, , r0, r1] = data.subarray(o, o + stride);
         perColumn.set(c, (perColumn.get(c) ?? 0) + 1);
         if (!(c >= 0 && c < 50 && rate > 0 && r0 >= 0 && r0 < r1 && r1 <= 30)) {
-          fail(`frame ${f}, drop ${i}: column ${c}, rate ${rate}, rows ${r0}..${r1}`);
+          fail(
+            `frame ${String(f)}, drop ${String(i)}: column ${String(c)}, rate ${String(rate)}, rows ${String(r0)}..${String(r1)}`,
+          );
         }
       }
       const most = Math.max(0, ...perColumn.values());
-      if (!(most <= 2)) fail(`frame ${f}: ${most} drops in one column`);
+      if (!(most <= 2)) fail(`frame ${String(f)}: ${String(most)} drops in one column`);
     }
     expect(bad).toEqual([]);
   });

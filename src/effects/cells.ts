@@ -53,11 +53,17 @@ const PALETTE_DATA = new Map<readonly string[], Float32Array>(
       (c) => 0.3 * (bodyA[c] + bodyB[c]) + 0.2 * membrane[c] + 0.2 * medium[c],
     ) as Rgb;
     const data = new Float32Array(PAL_SLOTS * 3);
-    [medium, bodyA, bodyB, membrane, nucleus, mean].forEach((rgb, i) => data.set(rgb, i * 3));
+    [medium, bodyA, bodyB, membrane, nucleus, mean].forEach((rgb, i) => {
+      data.set(rgb, i * 3);
+    });
     return [colors, data];
   }),
 );
-const paletteData = (name: string) => PALETTE_DATA.get(palette(name))!;
+const paletteData = (name: string) => {
+  const data = PALETTE_DATA.get(palette(name));
+  if (!data) throw new Error(`cells: no palette data for "${name}"`);
+  return data;
+};
 
 /**
  * One low-res pass: per pixel, the nearest cell of the power diagram (brute force
@@ -71,14 +77,14 @@ const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
 /** Per cell: centre (reference px, y down), r², r. */
-uniform vec4 uCell[${MAX_CELLS}];
+uniform vec4 uCell[${String(MAX_CELLS)}];
 /** Per cell: tone, sister serial, merge (0 unless pinching apart), nucleus strength. */
-uniform vec4 uInfo[${MAX_CELLS}];
+uniform vec4 uInfo[${String(MAX_CELLS)}];
 uniform int uCount;
 /** Reference position = gl_FragCoord.xy * xy + zw. */
 uniform vec4 uPix;
 /** Medium, body (tone 0), body (tone 1), membrane, nucleus, mean. */
-uniform vec3 uPal[${PAL_SLOTS}];
+uniform vec3 uPal[${String(PAL_SLOTS)}];
 /** 1 / membrane falloff, anti-alias half width (both reference px), nuclei on, calm centre on. */
 uniform vec4 uStyle;
 /** 1 / reference width, and dither on (when rendering straight to the canvas). */
@@ -101,7 +107,7 @@ void main() {
   // Nearest cell by power distance |p - c|² - r².
   float d1 = 1e20;
   int i1 = 0;
-  for (int i = 0; i < ${MAX_CELLS}; i++) {
+  for (int i = 0; i < ${String(MAX_CELLS)}; i++) {
     if (i >= uCount) break;
     vec4 c = uCell[i];
     vec2 d = p - c.xy;
@@ -119,7 +125,7 @@ void main() {
   float edge = 1e20;
   float sisEdge = 1e20;
   int sis = -1;
-  for (int k = 0; k < ${MAX_CELLS}; k++) {
+  for (int k = 0; k < ${String(MAX_CELLS)}; k++) {
     if (k >= uCount) break;
     if (k == i1) continue;
     vec4 c = uCell[k];
@@ -177,9 +183,9 @@ void main() {
 export const cells = defineEffect(cellsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uCell",
         "uInfo",
@@ -259,7 +265,9 @@ export const cells = defineEffect(cellsMeta, {
           // Unbind the low-res texture so it is never sampled while it is a render target.
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

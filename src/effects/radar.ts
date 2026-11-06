@@ -48,6 +48,7 @@ import {
   writeStormCells,
 } from "./radar-sim";
 import { radarMeta } from "./radar.meta";
+import { has } from "./lookup";
 import { defineEffect } from "./types";
 
 /** The Daylight World Map's land mask (see daymap.ts): a 1024x512 equirectangular distance field. */
@@ -208,7 +209,7 @@ uniform int uMode;
 /** Front line position along the wind. */
 uniform float uFront;
 /** Storm cells: centre x, y, radius (q units) and intensity. */
-uniform vec4 uCells[${MAX_CELLS}];
+uniform vec4 uCells[${String(MAX_CELLS)}];
 uniform vec2 uCentre;
 uniform float uRange;
 
@@ -242,7 +243,7 @@ void main() {
   } else if (uMode == 2) {
     vec2 p = q + 0.05 * vec2(o1 - 0.5, o2 - 0.5);
     float sum = 0.0;
-    for (int i = 0; i < ${MAX_CELLS}; i++) {
+    for (int i = 0; i < ${String(MAX_CELLS)}; i++) {
       vec4 cell = uCells[i];
       vec2 d = p - cell.xy;
       sum += cell.w * exp(-dot(d, d) / (cell.z * cell.z));
@@ -315,12 +316,12 @@ vec4 composite(vec2 uv) {
 export const radar = defineEffect(radarMeta, {
   create(gl) {
     return withScope((scope) => {
-      const mapProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MAP_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const rainProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, RAIN_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const mapProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MAP_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const rainProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, RAIN_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const triangle = scope.own(createFullscreenTriangle(gl));
       const terrain = scope.own(createColumnTable(gl, TERRAIN_COLS, 1, { rows: TERRAIN_ROWS }));
@@ -335,7 +336,9 @@ export const radar = defineEffect(radarMeta, {
             data,
             wrap: wrapMode,
           }),
-          (t) => gl.deleteTexture(t),
+          (t) => {
+            gl.deleteTexture(t);
+          },
         );
       const noise = rgba8(NOISE_SIZE, NOISE_SIZE, getNoiseData(), gl.REPEAT);
       const lutData = new Uint8Array(SCALE_SIZE * 4);
@@ -353,7 +356,9 @@ export const radar = defineEffect(radarMeta, {
           data: new Uint8Array([0]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       let mapTarget: RenderTarget | null = null;
       scope.defer(() => mapTarget?.dispose());
@@ -419,7 +424,9 @@ export const radar = defineEffect(radarMeta, {
         img.onload = () => {
           pendingMask = img;
         };
-        img.onerror = () => console.warn(`Weather Radar: couldn't load ${MASK_URL}`);
+        img.onerror = () => {
+          console.warn(`Weather Radar: couldn't load ${MASK_URL}`);
+        };
         img.src = MASK_URL;
         scope.defer(() => {
           img.onload = null;
@@ -468,7 +475,7 @@ export const radar = defineEffect(radarMeta, {
         if (!labelCanvas || !ctx) return false;
         const palette = PALETTES[paletteId];
         ctx.clearRect(0, 0, width, height);
-        ctx.font = `500 ${Math.round(LABEL_FONT_PX * scale)}px system-ui, sans-serif`;
+        ctx.font = `500 ${String(Math.round(LABEL_FONT_PX * scale))}px system-ui, sans-serif`;
         ctx.textBaseline = "middle";
         ctx.textAlign = "left";
         ctx.lineJoin = "round";
@@ -529,7 +536,7 @@ export const radar = defineEffect(radarMeta, {
         const palette = PALETTES[paletteId];
         date.setTime(ms);
         ctx.clearRect(0, 0, w, h);
-        ctx.font = `500 ${Math.round(STAMP_FONT_PX * scale)}px ui-monospace, monospace`;
+        ctx.font = `500 ${String(Math.round(STAMP_FONT_PX * scale))}px ui-monospace, monospace`;
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
         ctx.lineJoin = "round";
@@ -554,7 +561,7 @@ export const radar = defineEffect(radarMeta, {
           const aspect = width / height;
           const regionIndex = Math.max(0, REGION_IDS.indexOf(p.region));
           const region = REGION_IDS[regionIndex];
-          const paletteId = PALETTES[p.palette] ? p.palette : "classic";
+          const paletteId = has(PALETTES, p.palette) ? p.palette : "classic";
           const palette = PALETTES[paletteId];
           const seed = Math.round(p.seed);
           radarCentre(aspect, centre);
@@ -659,7 +666,9 @@ export const radar = defineEffect(radarMeta, {
           gl.bindTexture(gl.TEXTURE_2D, stampTex);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

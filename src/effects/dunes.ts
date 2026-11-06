@@ -69,7 +69,7 @@ precision highp sampler2D;
 /** Per ridge, per column: height above base, slope, left and right horizon angles. */
 uniform sampler2D uTable;
 /** Per ridge: base height, face depth, haze, ripple contrast. */
-uniform vec4 uRidge[${MAX_RIDGES}];
+uniform vec4 uRidge[${String(MAX_RIDGES)}];
 uniform int uCount;
 /** Table u = p.x * uXMap.x + uXMap.y. */
 uniform vec2 uXMap;
@@ -92,7 +92,7 @@ uniform vec2 uRim;
 
 out vec4 outColor;
 
-const int MAX_RIDGES = ${MAX_RIDGES};
+const int MAX_RIDGES = ${String(MAX_RIDGES)};
 const float INV_ROWS = ${glslFloat(1 / MAX_RIDGES)};
 const float HORIZON = ${glslFloat(HORIZON)};
 const float SKY_GRAD = ${glslFloat(1 / (1 - HORIZON))};
@@ -228,9 +228,9 @@ const mixInto = (out: Rgb, a: Rgb, b: Rgb, t: number, k = 1) => {
 export const dunes = defineEffect(dunesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, TABLE_COLUMNS, TABLE_CHANNELS, { rows: MAX_RIDGES }),
@@ -387,7 +387,9 @@ export const dunes = defineEffect(dunesMeta, {
           cu.f2("uGlowFall", 1 / (0.06 * height), 1 / (0.35 * height));
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

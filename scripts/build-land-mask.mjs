@@ -39,16 +39,29 @@ const PAD = (RANGE + 2) * SS;
 // Rasterise (even-odd scanline fill at pixel centres)
 // ---------------------------------------------------------------------------
 
-const geo = JSON.parse(readFileSync(input, "utf8"));
+/** @typedef {[number, number]} Position */
+/** @typedef {Position[]} Ring */
+/**
+ * @typedef {{ type: "Polygon"; coordinates: Ring[] }
+ *   | { type: "MultiPolygon"; coordinates: Ring[][] }
+ *   | { type: string; coordinates?: unknown }} Geometry
+ */
+/** @typedef {{ features: { geometry: Geometry }[] }} FeatureCollection */
+
+const geo = /** @type {FeatureCollection} */ (JSON.parse(readFileSync(input, "utf8")));
+/** @type {Ring[]} */
 const rings = [];
 for (const f of geo.features) {
   const g = f.geometry;
-  const polys =
-    g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+  /** @type {Ring[][]} */
+  let polys = [];
+  if (g.type === "Polygon") polys = [/** @type {Ring[]} */ (g.coordinates)];
+  else if (g.type === "MultiPolygon") polys = /** @type {Ring[][]} */ (g.coordinates);
   for (const poly of polys) for (const ring of poly) rings.push(ring);
 }
 
 const land = new Uint8Array(HW * HH);
+/** @type {number[]} */
 const xs = [];
 for (let y = 0; y < HH; y++) {
   const lat = 90 - ((y + 0.5) * 180) / HH;
@@ -76,6 +89,13 @@ for (let y = 0; y < HH; y++) {
 // ---------------------------------------------------------------------------
 
 const INF = 1e20;
+/**
+ * @param {Float64Array} f
+ * @param {number} n
+ * @param {Float64Array} d
+ * @param {Int32Array} v
+ * @param {Float64Array} z
+ */
 function dt1(f, n, d, v, z) {
   let k = 0;
   v[0] = 0;
@@ -99,7 +119,9 @@ function dt1(f, n, d, v, z) {
   }
 }
 
-/** Squared distance from each pixel to the nearest pixel where `inside(x, y)`, with wrapped columns. */
+/** Squared distance from each pixel to the nearest pixel where `inside(x, y)`, with wrapped columns.
+ * @param {(v: number) => boolean} inside
+ */
 function edt(inside) {
   const PW = HW + 2 * PAD;
   const grid = new Float64Array(PW * HH);
@@ -161,11 +183,16 @@ for (let n = 0; n < 256; n++) {
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
   crcTable[n] = c >>> 0;
 }
+/** @param {Uint8Array} buf */
 const crc32 = (buf) => {
   let c = 0xffffffff;
   for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 };
+/**
+ * @param {string} type
+ * @param {Buffer} data
+ */
 const chunk = (type, data) => {
   const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
   const len = Buffer.alloc(4);
@@ -174,6 +201,11 @@ const chunk = (type, data) => {
   crc.writeUInt32BE(crc32(body));
   return Buffer.concat([len, body, crc]);
 };
+/**
+ * @param {number} a
+ * @param {number} b
+ * @param {number} c
+ */
 const paeth = (a, b, c) => {
   const p = a + b - c;
   const pa = Math.abs(p - a);
@@ -226,5 +258,5 @@ writeFileSync(output, png);
 let landCount = 0;
 for (const v of out) if (v >= 128) landCount++;
 console.log(
-  `wrote ${output}: ${png.length} bytes, land ${((100 * landCount) / out.length).toFixed(1)}% of texels`,
+  `wrote ${output}: ${String(png.length)} bytes, land ${((100 * landCount) / out.length).toFixed(1)}% of texels`,
 );

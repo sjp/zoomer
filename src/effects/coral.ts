@@ -101,7 +101,7 @@ layout(location = 4) in float aPale;
 uniform vec2 uResolution;
 /** Growth level (the reveal threshold). */
 uniform float uLevel;
-uniform vec3 uColors[${SLOTS}];
+uniform vec3 uColors[${String(SLOTS)}];
 ${GROWTH_GLSL}
 ${TO_CLIP_GLSL}
 out vec2 vLocal;
@@ -223,12 +223,12 @@ void main() {
 export const coral = defineEffect(coralMeta, {
   create(gl) {
     return withScope((scope) => {
-      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const coralProgram = scope.add(createProgram(gl, CORAL_VERTEX, CORAL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const coralProgram = scope.add(createProgram(gl, CORAL_VERTEX, CORAL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const batch = scope.own(createSpriteBatch(gl, MAX_INSTANCES, INSTANCE_ATTRIBUTES, [QUAD]));
@@ -287,7 +287,7 @@ export const coral = defineEffect(coralMeta, {
           if (aspect !== builtAspect) resizeWait += step;
           else resizeWait = 0;
           const cs = cycleSeed(seed, s.cycle);
-          const key = `${cs}|${p.density}|${p.height}`;
+          const key = `${String(cs)}|${String(p.density)}|${String(p.height)}`;
           if (key !== builtKey || resizeWait >= RESIZE_SETTLE || builtAspect === 0) {
             buildReef(cs, aspect, p.density, p.height, reef);
             batch.data.set(reef.data.subarray(0, reef.count * batch.stride));
@@ -338,7 +338,9 @@ export const coral = defineEffect(coralMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

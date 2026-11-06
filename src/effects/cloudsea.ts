@@ -276,9 +276,9 @@ vec4 composite(vec2 uv) {
 export const cloudsea = defineEffect(cloudseaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const peakTable = scope.own(createColumnTable(gl, PEAK_COLUMNS, 4));
@@ -294,7 +294,9 @@ export const cloudsea = defineEffect(cloudseaMeta, {
           data: billow.data,
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       const u = createUniforms(gl, scene, [
@@ -459,7 +461,9 @@ export const cloudsea = defineEffect(cloudseaMeta, {
           cu.v3("uRim", rim);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

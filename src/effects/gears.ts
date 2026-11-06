@@ -31,6 +31,7 @@ import { wrap } from "./math";
 import { HASH32_GLSL } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 const TAU = Math.PI * 2;
 const g = glslFloat;
@@ -349,7 +350,9 @@ export const gears = defineEffect(gearsMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const bu = createUniforms(gl, program(FULLSCREEN_VERTEX, BACKDROP_FRAGMENT), [
         "uPxToH",
         "uFrame",
@@ -428,7 +431,7 @@ export const gears = defineEffect(gearsMeta, {
 
           // 1. The backdrop, re-rendered only when it changes, upscaled every frame.
           if (target.direct || drawnBackdrop !== p.backdrop) {
-            const b = BACKDROPS[p.backdrop as GearBackdropId] ?? BACKDROPS.plate;
+            const b = lookup(BACKDROPS, p.backdrop, "plate");
             target.bind();
             gl.useProgram(bu.program);
             bu.f2(
@@ -503,7 +506,9 @@ export const gears = defineEffect(gearsMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

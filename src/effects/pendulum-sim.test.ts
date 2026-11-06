@@ -251,12 +251,12 @@ describe("frame data", () => {
     rig.fill(1, "coloured", b.balls, b.strings, b.bar, b.shadows);
     const heads = new Set<string>();
     for (let j = 0; j < 12; j++)
-      heads.add(`${b.balls[j * BALL_FLOATS]},${b.balls[j * BALL_FLOATS + 1]}`);
+      heads.add(`${String(b.balls[j * BALL_FLOATS])},${String(b.balls[j * BALL_FLOATS + 1])}`);
     let bad = 0;
     const barY = b.bar[1];
     for (let i = 0; i < 12; i++) {
       const o = i * LINE_FLOATS;
-      if (!heads.has(`${b.strings[o + 2]},${b.strings[o + 3]}`)) bad++;
+      if (!heads.has(`${String(b.strings[o + 2])},${String(b.strings[o + 3])}`)) bad++;
       // Front view: the pivots lie on the bar.
       if (Math.abs(b.strings[o + 1] - barY) > 1e-3) bad++;
     }
@@ -282,7 +282,9 @@ describe("frame data", () => {
     colours.clear();
     for (let j = 0; j < 10; j++) {
       const o = j * BALL_FLOATS;
-      colours.add(`${b.balls[o + 4]},${b.balls[o + 5]},${b.balls[o + 6]},${b.balls[o + 7]}`);
+      colours.add(
+        `${String(b.balls[o + 4])},${String(b.balls[o + 5])},${String(b.balls[o + 6])},${String(b.balls[o + 7])}`,
+      );
     }
     expect(colours.size).toBe(1);
   });

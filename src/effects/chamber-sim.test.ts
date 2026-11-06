@@ -130,25 +130,25 @@ describe("track geometry", () => {
       for (const kind of [ALPHA, ELECTRON, MUON] as const) {
         for (const magnetic of [false, true]) {
           const { tracks, failed } = spawnMany(kind, magnetic, 120, w);
-          const where = `${w} ${kind} ${magnetic}`;
-          if (failed > 6) bad.push(`${where}: ${failed} failed`);
+          const where = `${String(w)} ${String(kind)} ${String(magnetic)}`;
+          if (failed > 6) bad.push(`${where}: ${String(failed)} failed`);
           for (const t of tracks) {
             checked++;
             if (t.count < 2 || t.count > MAX_POINTS || t.length < MIN_LENGTH) {
-              bad.push(`${where}: ${t.count} points, ${t.length} long`);
+              bad.push(`${where}: ${String(t.count)} points, ${String(t.length)} long`);
             }
             let sum = 0;
             for (let i = 0; i < t.count; i++) {
               const x = t.pts[2 * i];
               const y = t.pts[2 * i + 1];
               if (!(x >= lo && x <= w - lo && y >= lo && y <= REF_HEIGHT - lo)) {
-                bad.push(`${where}: (${x}, ${y}) out of frame`);
+                bad.push(`${where}: (${String(x)}, ${String(y)}) out of frame`);
               }
               if (i === 0) continue;
               const step = Math.hypot(x - t.pts[2 * i - 2], y - t.pts[2 * i - 1]);
               // Continuous: no zero-length steps, and electrons step at most 14 px.
               if (!(step > 0) || (kind === ELECTRON && step > 14.01)) {
-                bad.push(`${where}: step ${step}`);
+                bad.push(`${where}: step ${String(step)}`);
               }
               sum += step;
             }

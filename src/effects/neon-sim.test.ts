@@ -66,7 +66,8 @@ describe("signLayout", () => {
           if (rx < 0 || rx + rw > aspect || ry < 0 || ry + rh > 0.5) {
             problems.push(`${tag}: region outside the upper half of the frame`);
           }
-          if (!(l.font > 0.02 && l.font <= MAX_FONT)) problems.push(`${tag}: font ${l.font}`);
+          if (!(l.font > 0.02 && l.font <= MAX_FONT))
+            problems.push(`${tag}: font ${String(l.font)}`);
         }
       }
     }

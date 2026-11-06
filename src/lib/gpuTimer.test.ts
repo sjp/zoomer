@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createGpuTimer } from "./gpuTimer";
+import { defined } from "../test/defined";
 
 const TIME_ELAPSED_EXT = 0x88bf;
 const GPU_DISJOINT_EXT = 0x8fbb;
@@ -73,7 +74,7 @@ describe("createGpuTimer", () => {
 
   it("averages finished frames in ms and resets after each read", () => {
     const fake = fakeGl({ gpuNsPerFrame: 3_000_000 });
-    const timer = createGpuTimer(fake.gl)!;
+    const timer = defined(createGpuTimer(fake.gl));
     expect(timer.takeAverage()).toBeUndefined();
     for (let i = 0; i < 3; i++) {
       timer.begin();
@@ -87,7 +88,7 @@ describe("createGpuTimer", () => {
 
   it("skips frames while every query is in flight, then resumes", () => {
     const fake = fakeGl();
-    const timer = createGpuTimer(fake.gl)!;
+    const timer = defined(createGpuTimer(fake.gl));
     for (let i = 0; i < 10; i++) {
       timer.begin();
       timer.end();
@@ -102,7 +103,7 @@ describe("createGpuTimer", () => {
 
   it("drops results from a disjoint period", () => {
     const fake = fakeGl();
-    const timer = createGpuTimer(fake.gl)!;
+    const timer = defined(createGpuTimer(fake.gl));
     timer.begin();
     timer.end();
     fake.finish();
@@ -112,7 +113,7 @@ describe("createGpuTimer", () => {
 
   it("ignores end without begin and a nested begin", () => {
     const fake = fakeGl();
-    const timer = createGpuTimer(fake.gl)!;
+    const timer = defined(createGpuTimer(fake.gl));
     timer.end();
     timer.begin();
     timer.begin();
@@ -123,7 +124,7 @@ describe("createGpuTimer", () => {
 
   it("ends an active query and deletes all queries on dispose", () => {
     const fake = fakeGl();
-    const timer = createGpuTimer(fake.gl)!;
+    const timer = defined(createGpuTimer(fake.gl));
     timer.begin();
     timer.dispose();
     expect(fake.isActive()).toBe(false);

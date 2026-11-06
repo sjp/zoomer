@@ -84,7 +84,7 @@ uniform vec2 uGrid;
 /** Cells per step. */
 uniform float uSpeed;
 uniform uint uSalt;
-uniform vec2 uFood[${FOOD_COUNT}];
+uniform vec2 uFood[${String(FOOD_COUNT)}];
 uniform float uFoodOn;
 uniform float uCalmOn;
 /** Grid width / height. */
@@ -99,7 +99,7 @@ float sense(vec2 p, float a) {
   vec2 uv = fract(p + vec2(cos(a), sin(a)) * (${glslFloat(SENSOR_DISTANCE)} / uGrid));
   float s = textureLod(uTrail, uv, 0.0).r * uRange;
   if (uFoodOn > 0.0) {
-    for (int i = 0; i < ${FOOD_COUNT}; i++) {
+    for (int i = 0; i < ${String(FOOD_COUNT)}; i++) {
       vec2 d = (uv - uFood[i]) * vec2(uAspect, 1.0);
       s += ${glslFloat(FOOD_STRENGTH)} * exp(-dot(d, d) * ${glslFloat(1 / (FOOD_RADIUS * FOOD_RADIUS))});
     }
@@ -233,12 +233,16 @@ export const physarum = defineEffect(physarumMeta, {
       const range = r8 ? TRAIL_MAX : 1;
 
       const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
+          gl.deleteProgram(p);
+        });
       const diffuseProgram = program(DIFFUSE_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);
       const agentProgram = scope.add(
         createProgram(gl, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const diffuse = createUniforms(gl, diffuseProgram, [
         "uTrail",
@@ -290,14 +294,22 @@ export const physarum = defineEffect(physarumMeta, {
           type: gl.UNSIGNED_BYTE,
           data: buildPaletteLut("gold", lutBytes),
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       let paletteKey = "gold";
 
       // Agents: two ping-ponged vertex buffers, each with a VAO reading it.
-      const buffers = [0, 1].map(() => scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b)));
+      const buffers = [0, 1].map(() =>
+        scope.add(gl.createBuffer(), (b) => {
+          gl.deleteBuffer(b);
+        }),
+      );
       const vaos = buffers.map((buffer) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+        const vao = scope.add(gl.createVertexArray(), (v) => {
+          gl.deleteVertexArray(v);
+        });
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.enableVertexAttribArray(0);
@@ -306,9 +318,9 @@ export const physarum = defineEffect(physarumMeta, {
       });
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) =>
-        gl.deleteTransformFeedback(t),
-      );
+      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
+        gl.deleteTransformFeedback(t);
+      });
       let agentCur = 0;
       /** Agents in the buffers; 0 until the first frame. */
       let agents = 0;
@@ -356,7 +368,7 @@ export const physarum = defineEffect(physarumMeta, {
         const b = a && createRenderTarget(gl, w, h, trailFormat, opts);
         if (!a || !b) {
           a?.dispose();
-          console.warn(`physarum: can't allocate a ${w}x${h} trail grid`);
+          console.warn(`physarum: can't allocate a ${String(w)}x${String(h)} trail grid`);
           return;
         }
         targets = [a, b];
@@ -471,7 +483,9 @@ export const physarum = defineEffect(physarumMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

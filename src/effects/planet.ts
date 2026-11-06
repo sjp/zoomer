@@ -167,9 +167,9 @@ void main() {
 export const planet = defineEffect(planetMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uSurface",
@@ -204,7 +204,9 @@ export const planet = defineEffect(planetMeta, {
             data,
             wrap: gl.REPEAT,
           }),
-          (t) => gl.deleteTexture(t),
+          (t) => {
+            gl.deleteTexture(t);
+          },
         );
         // Longitude repeats; latitude stops at the poles. Mipmaps follow each build.
         gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -298,7 +300,9 @@ export const planet = defineEffect(planetMeta, {
           gl.bindTexture(gl.TEXTURE_2D, surfaceTex);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

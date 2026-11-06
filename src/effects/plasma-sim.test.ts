@@ -68,7 +68,7 @@ describe("plasmaLayout", () => {
             l.cx - l.r >= x0 &&
             l.cx + l.r <= x1 &&
             l.cy + l.r <= y1;
-          if (!ok) bad.push(`${aspect} ${corner} ${size}`);
+          if (!ok) bad.push(`${String(aspect)} ${corner} ${String(size)}`);
         }
       }
     }
@@ -253,7 +253,7 @@ describe("palettes", () => {
     const bad = COLOUR_OPTIONS.map((o) => o.value).filter(
       (value) =>
         !roomGlow(value).every((c) => c >= 0 && c <= 1) ||
-        (value !== "rainbow" && PALETTES[value] === undefined),
+        (value !== "rainbow" && !(value in PALETTES)),
     );
     expect(bad).toEqual([]);
   });

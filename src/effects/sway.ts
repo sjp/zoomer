@@ -52,13 +52,13 @@ const TAU = Math.PI * 2;
  */
 export function createSwell(period: number, waves: readonly SwellWave[]): Swell {
   if (!(period > 0) || !Number.isFinite(period)) {
-    throw new Error(`createSwell: period must be positive, got ${period}`);
+    throw new Error(`createSwell: period must be positive, got ${String(period)}`);
   }
   if (waves.length === 0) throw new Error("createSwell: needs at least one wave");
   let sum = 0;
   for (const w of waves) {
     if (!Number.isInteger(w.cycles) || w.cycles < 1) {
-      throw new Error(`createSwell: cycles must be a positive integer, got ${w.cycles}`);
+      throw new Error(`createSwell: cycles must be a positive integer, got ${String(w.cycles)}`);
     }
     sum += Math.abs(w.amplitude);
   }

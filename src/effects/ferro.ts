@@ -80,8 +80,8 @@ uniform vec4 uShape;
 uniform int uSteps;
 out vec4 outColor;
 
-const int MAX_STEPS = ${FERRO_STEPS.high};
-const int REFINE = ${REFINE};
+const int MAX_STEPS = ${String(FERRO_STEPS.high)};
+const int REFINE = ${String(REFINE)};
 const float MIN_STEP = ${glslFloat(MIN_STEP)};
 const vec3 CAM_POS = vec3(0.0, ${glslFloat(CAMERA.pos[1])}, ${glslFloat(CAMERA.pos[2])});
 const vec3 CAM_UP = vec3(0.0, ${glslFloat(CAMERA.up[1])}, ${glslFloat(CAMERA.up[2])});
@@ -276,9 +276,9 @@ export const ferro = defineEffect(ferroMeta, {
   create(gl) {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, POOL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, POOL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uResolution",
@@ -340,7 +340,9 @@ export const ferro = defineEffect(ferroMeta, {
           triangle.draw();
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

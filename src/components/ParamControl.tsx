@@ -26,7 +26,9 @@ export function ParamControl({ id, def, value, onChange }: Props) {
             max={def.max}
             step={def.step}
             value={Number(value)}
-            onChange={(e) => onChange(Number(e.target.value))}
+            onChange={(e) => {
+              onChange(Number(e.target.value));
+            }}
           />
         </div>
       );
@@ -38,7 +40,9 @@ export function ParamControl({ id, def, value, onChange }: Props) {
             id={inputId}
             type="color"
             value={String(value)}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              onChange(e.target.value);
+            }}
           />
         </div>
       );
@@ -50,7 +54,9 @@ export function ParamControl({ id, def, value, onChange }: Props) {
             id={inputId}
             type="checkbox"
             checked={Boolean(value)}
-            onChange={(e) => onChange(e.target.checked)}
+            onChange={(e) => {
+              onChange(e.target.checked);
+            }}
           />
         </div>
       );
@@ -58,7 +64,13 @@ export function ParamControl({ id, def, value, onChange }: Props) {
       return (
         <div className="control control-inline">
           <label htmlFor={inputId}>{def.label}</label>
-          <select id={inputId} value={String(value)} onChange={(e) => onChange(e.target.value)}>
+          <select
+            id={inputId}
+            value={String(value)}
+            onChange={(e) => {
+              onChange(e.target.value);
+            }}
+          >
             {def.options.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -96,7 +108,9 @@ function TextControl({ inputId, def, value, onChange }: TextProps) {
         spellCheck={false}
         autoComplete="off"
         value={composing ?? value}
-        onCompositionStart={(e) => setComposing(e.currentTarget.value)}
+        onCompositionStart={(e) => {
+          setComposing(e.currentTarget.value);
+        }}
         onCompositionEnd={(e) => {
           setComposing(null);
           onChange(sanitizeText(def, e.currentTarget.value));

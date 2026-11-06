@@ -230,9 +230,9 @@ uniform vec3 uRoofSlate;
 uniform vec3 uWindowDark;
 uniform vec3 uWindowLit;
 /** Per house in view: centre x, half width, wall height, roof height (reference px). */
-uniform vec4 uHouse[${MAX_HOUSES}];
+uniform vec4 uHouse[${String(MAX_HOUSES)}];
 /** Per house: window light, roof tone, unused, unused. */
-uniform vec4 uHouseLook[${MAX_HOUSES}];
+uniform vec4 uHouseLook[${String(MAX_HOUSES)}];
 uniform int uHouseCount;
 out vec4 outColor;
 ${DITHER_GLSL}
@@ -272,7 +272,7 @@ void main() {
   float a = cFar;
 
   // Farmhouses: a wall with two windows under a hipped roof.
-  for (int i = 0; i < ${MAX_HOUSES}; i++) {
+  for (int i = 0; i < ${String(MAX_HOUSES)}; i++) {
     if (i >= uHouseCount) break;
     vec4 h = uHouse[i];
     vec2 q = vec2(p.x - h.x, p.y - ${F(HOUSE_Y)});
@@ -409,7 +409,9 @@ export const train = defineEffect(trainMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const skyProgram = program(SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, [
         "uHills",
@@ -485,7 +487,9 @@ export const train = defineEffect(trainMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, cloudNoiseChannels(NOISE_SEED)),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       gl.useProgram(skyProgram);
@@ -691,7 +695,9 @@ export const train = defineEffect(trainMeta, {
           gl.disable(gl.BLEND);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

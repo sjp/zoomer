@@ -29,7 +29,13 @@ export class PanelErrorBoundary extends Component<Props, State> {
     return (
       <aside className="panel" role="alert">
         <p className="effect-error">The controls crashed. The background keeps running.</p>
-        <button type="button" className="primary" onClick={() => window.location.reload()}>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
           Reload
         </button>
       </aside>

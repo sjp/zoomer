@@ -62,7 +62,7 @@ export function tileFragment(iterations: number): string {
   let body = "";
   for (let n = 0; n < iterations; n++) {
     body += `
-  t = uT[${n}];
+  t = uT[${String(n)}];
   i = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));
   s = sin(i.x + t);
   k = cos(i.y + t);
@@ -71,7 +71,7 @@ export function tileFragment(iterations: number): string {
   return /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vUv;
-uniform float uT[${iterations}];
+uniform float uT[${String(iterations)}];
 out vec4 outColor;
 void main() {
   vec2 p = vUv * 6.28318530718;
@@ -211,7 +211,9 @@ export const caustics = defineEffect(causticsMeta, {
       // Caustic tile: R8 is colour-renderable and filterable in core WebGL2.
       const tileProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, tileFragment(CAUSTIC_RATES.length)),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       let tile: RenderTarget | null = null;
@@ -224,7 +226,9 @@ export const caustics = defineEffect(causticsMeta, {
         [false, true].map((chroma) => {
           const program = scope.add(
             createProgram(gl, FULLSCREEN_VERTEX, mainFragment(scene > 0, chroma, scene > 1)),
-            (p) => gl.deleteProgram(p),
+            (p) => {
+              gl.deleteProgram(p);
+            },
           );
           const u = createUniforms(gl, program, MAIN_UNIFORMS);
           gl.useProgram(program);
@@ -239,9 +243,9 @@ export const caustics = defineEffect(causticsMeta, {
       const rng = createRng(0xc0a5);
       const rays = createRays(rng, RAY_COUNT);
 
-      const bubbleProgram = scope.add(createProgram(gl, BUBBLE_VERTEX, BUBBLE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const bubbleProgram = scope.add(createProgram(gl, BUBBLE_VERTEX, BUBBLE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const bubbleU = createUniforms(gl, bubbleProgram, ["uResolution", "uColor"]);
       // Per bubble: centre x, centre y, radius (device px, y down), then alpha.
       const batch = scope.own(createSpriteBatch(gl, MAX_BUBBLES, [3, 1], [polygonStrip(8)]));
@@ -458,7 +462,9 @@ export const caustics = defineEffect(causticsMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

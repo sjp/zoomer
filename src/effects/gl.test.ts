@@ -10,6 +10,7 @@ import {
   withScope,
 } from "./gl";
 import { createFakeGl } from "../test/fake-gl";
+import { defined } from "../test/defined";
 
 describe("beginFrame", () => {
   it("resets everything a crashed or careless effect could leave set", () => {
@@ -65,9 +66,13 @@ describe("createScope", () => {
       throw new Error("second");
     });
     scope.defer(() => order.push("d"));
-    expect(() => scope.dispose()).toThrow("second");
+    expect(() => {
+      scope.dispose();
+    }).toThrow("second");
     expect(order).toEqual(["d", "a"]);
-    expect(() => scope.dispose()).not.toThrow("has no GLSL literal");
+    expect(() => {
+      scope.dispose();
+    }).not.toThrow("has no GLSL literal");
   });
 });
 
@@ -76,7 +81,11 @@ describe("withScope", () => {
     let disposed = false;
     const result = withScope((scope) => {
       scope.defer(() => (disposed = true));
-      return { dispose: () => scope.dispose() };
+      return {
+        dispose: () => {
+          scope.dispose();
+        },
+      };
     });
     expect(disposed).toBe(false);
     result.dispose();
@@ -179,13 +188,13 @@ describe("createColumnTable", () => {
     const { gl, calls, enums, texture } = recordingGl();
     const table = createColumnTable(gl, 8, 4, { rows: 2 });
     expect(table.data.length).toBe(64);
-    const image = calls.find((c) => c.name === "texImage2D")!;
+    const image = defined(calls.find((c) => c.name === "texImage2D"));
     expect(image.args.slice(2, 8)).toEqual([enums.RGBA16F, 8, 2, 0, enums.RGBA, enums.FLOAT]);
 
     calls.length = 0;
     table.upload();
     expect(calls[0]).toEqual({ name: "bindTexture", args: [enums.TEXTURE_2D, texture] });
-    const sub = calls.find((c) => c.name === "texSubImage2D")!;
+    const sub = defined(calls.find((c) => c.name === "texSubImage2D"));
     expect(sub.args).toEqual([
       enums.TEXTURE_2D,
       0,
@@ -237,13 +246,15 @@ describe("createRenderTarget", () => {
 
   it("returns a cleared target of the requested size when complete", () => {
     const { gl, calls, texture } = make(COMPLETE);
-    const t = createRenderTarget(gl, 64, 32, 7)!;
+    const t = defined(createRenderTarget(gl, 64, 32, 7));
     expect(t).not.toBeNull();
     expect([t.width, t.height, t.texture, t.framebuffer]).toEqual([64, 32, texture, fbo]);
-    expect(calls.find((c) => c.name === "texStorage2D")!.args.slice(1)).toEqual([1, 7, 64, 32]);
+    expect(defined(calls.find((c) => c.name === "texStorage2D")).args.slice(1)).toEqual([
+      1, 7, 64, 32,
+    ]);
     expect(calls.some((c) => c.name === "clear")).toBe(true);
     // Restores the framebuffer that was bound before: the default one here.
-    expect(calls.findLast((c) => c.name === "bindFramebuffer")!.args[1]).toBeNull();
+    expect(defined(calls.findLast((c) => c.name === "bindFramebuffer")).args[1]).toBeNull();
 
     calls.length = 0;
     t.dispose();
@@ -261,7 +272,7 @@ describe("createRenderTarget", () => {
     gl.clearColor(0.25, 0.5, 0.75, 1);
     gl.colorMask(true, false, true, false);
     gl.enable(gl.SCISSOR_TEST);
-    const t = createRenderTarget(gl, 64, 32, gl.RGBA8)!;
+    const t = defined(createRenderTarget(gl, 64, 32, gl.RGBA8));
     expect(t).not.toBeNull();
     expect(state.drawFramebuffer).toBe(prevFbo);
     expect(state.textures.get(0)).toBe(prevTex);

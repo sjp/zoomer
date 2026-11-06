@@ -48,10 +48,10 @@ const MINIFY = [0.35, 0.9] as const;
  */
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
-uniform vec4 uOpA[${MAX_OPS}];
-uniform vec4 uOpB[${MAX_OPS}];
+uniform vec4 uOpA[${String(MAX_OPS)}];
+uniform vec4 uOpB[${String(MAX_OPS)}];
 uniform int uCount;
-uniform vec3 uPalette[${MAX_COLOURS}];
+uniform vec3 uPalette[${String(MAX_COLOURS)}];
 uniform int uColours;
 uniform vec3 uMean;
 /** Frame centre (device px) and units per device px. */
@@ -81,7 +81,7 @@ void main() {
   vec2 q = (gl_FragCoord.xy - uView.xy) * uView.z;
   vec3 acc = vec3(0.0);
   float w = 1.0;
-  for (int i = 0; i < ${MAX_OPS}; i++) {
+  for (int i = 0; i < ${String(MAX_OPS)}; i++) {
     int k = uCount - 1 - i;
     if (k < 0) break;
     vec4 a = uOpA[k];
@@ -153,9 +153,9 @@ function paletteData(p: MarblePalette): PaletteData {
 export const marble = defineEffect(marbleMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uOpA",
         "uOpB",
@@ -198,8 +198,8 @@ export const marble = defineEffect(marbleMeta, {
       let height = 1;
       let scale = 1;
 
-      function uploadOps(from: number, count: number) {
-        packOps(sim!.ops, from, count, sim!.time, opA, opB);
+      function uploadOps(s: MarbleSim, from: number, count: number) {
+        packOps(s.ops, from, count, s.time, opA, opB);
         gl.uniform4fv(u.loc.uOpA, opA);
         gl.uniform4fv(u.loc.uOpB, opB);
         u.i1("uCount", count);
@@ -213,14 +213,14 @@ export const marble = defineEffect(marbleMeta, {
       }
 
       /** Renders the pattern with the oldest `k` operations into the spare target and makes it the base. */
-      function bake(k: number, pxPerUnit: number) {
+      function bake(s: MarbleSim, k: number, pxPerUnit: number) {
         if (!spare || spare.width !== width || spare.height !== height) {
           spare?.dispose();
           spare = null;
           spare = createRenderTarget(gl, width, height, gl.RGBA8, { wrap: gl.MIRRORED_REPEAT });
         }
         if (spare) {
-          uploadOps(0, k);
+          uploadOps(s, 0, k);
           bindBase();
           u.f1("uDither", 0);
           spare.bind();
@@ -236,7 +236,7 @@ export const marble = defineEffect(marbleMeta, {
           gl.viewport(0, 0, width, height);
         }
         // Without a target (a lost context) the operations are dropped rather than stalling the queue.
-        sim!.commitBake(k);
+        s.commitBake(k);
       }
 
       return {
@@ -273,15 +273,17 @@ export const marble = defineEffect(marbleMeta, {
 
           sim.step(dt, p, extent);
           const k = sim.bakeCount();
-          if (k > 0) bake(k, pxPerUnit);
+          if (k > 0) bake(sim, k, pxPerUnit);
 
-          uploadOps(0, sim.ops.length);
+          uploadOps(sim, 0, sim.ops.length);
           bindBase();
           u.f1("uDither", 1);
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

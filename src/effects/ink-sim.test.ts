@@ -25,6 +25,7 @@ import {
   WARP_BOUND,
 } from "./ink-sim";
 import { createRng } from "./noise";
+import { defined } from "../test/defined";
 
 describe("plume lifecycle", () => {
   it("is zero at landing and at the end of life, and full in between", () => {
@@ -145,7 +146,7 @@ describe("drop scheduler", () => {
     const seen = new Set<number>();
     for (let i = 0; i < 500; i++) {
       const state = createDropState();
-      const p = spawnPlume(state, rng, 3)!;
+      const p = defined(spawnPlume(state, rng, 3));
       seen.add(p.edge);
       landingPoint(p, aspect, pt);
       const [x, y] = pt;
@@ -165,10 +166,10 @@ describe("drop scheduler", () => {
   it("cycles ink colours through the inks in use", () => {
     const rng = createRng(8);
     const state = createDropState();
-    const colors = [0, 1].map(() => spawnPlume(state, rng, 2)!.color);
+    const colors = [0, 1].map(() => defined(spawnPlume(state, rng, 2)).color);
     expect(colors).toEqual([0, 1]);
     state.plumes[0].alive = false;
-    expect(spawnPlume(state, rng, 2)!.color).toBe(0);
+    expect(defined(spawnPlume(state, rng, 2)).color).toBe(0);
   });
 });
 
@@ -179,7 +180,7 @@ describe("packPlumes", () => {
     const u = createPlumeUniforms();
     expect(packPlumes(state, 16 / 9, 1, u)).toBe(0);
     spawnPlume(state, rng, 3, 0); // age 0: not yet visible
-    const b = spawnPlume(state, rng, 3, 20)!;
+    const b = defined(spawnPlume(state, rng, 3, 20));
     expect(packPlumes(state, 16 / 9, 1.5, u)).toBe(1);
     expect(u.color[0]).toBe(b.color);
     const r = u.p0[2];

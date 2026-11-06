@@ -39,7 +39,13 @@ export function StarButton({
       aria-hidden={hidden || undefined}
       tabIndex={hidden ? -1 : undefined}
       // In the list, keep focus in the search box.
-      onMouseDown={hidden ? (e) => e.preventDefault() : undefined}
+      onMouseDown={
+        hidden
+          ? (e) => {
+              e.preventDefault();
+            }
+          : undefined
+      }
       onClick={(e) => {
         // Don't let the click reach the row and select it.
         e.stopPropagation();

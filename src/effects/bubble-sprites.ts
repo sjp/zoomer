@@ -23,7 +23,7 @@ layout(location = 1) in vec4 aBubble;
 /** Edge softness (fraction of the radius), sprite extent (radii). */
 layout(location = 2) in vec2 aLook;
 /** Angle (radians), squash of the local x axis. */
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 out vec2 vLocal;
 flat out vec2 vLight;

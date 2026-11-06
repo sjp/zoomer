@@ -60,7 +60,7 @@ describe("palettes", () => {
     for (const name of Object.keys(PALETTES)) {
       const d = paletteData(name);
       if (d !== paletteData(name)) bad.push(`${name}: rebuilt`);
-      for (const t of d.tints) if (!(t >= 0 && t < 1)) bad.push(`${name}: ${t}`);
+      for (const t of d.tints) if (!(t >= 0 && t < 1)) bad.push(`${name}: ${String(t)}`);
     }
     expect(bad).toEqual([]);
   });
@@ -74,9 +74,11 @@ describe("minimum spacing", () => {
       for (const spacing of [-5, 0, 4, MIN_SPACING, 20, 80, Number.NaN]) {
         const s = spacingPx(spacing, scale);
         const line = s * LINE_FRACTION;
-        if (line < MIN_LINE_DEVICE_PX - 1e-9) bad.push(`${height}p ${spacing}: ${line} px`);
-        if (line < MIN_LINE_1080 * scale - 1e-9) bad.push(`${height}p ${spacing}: ${line} px`);
-        if (s * DOT_FRACTION < line) bad.push(`${height}p ${spacing}: dots`);
+        if (line < MIN_LINE_DEVICE_PX - 1e-9)
+          bad.push(`${String(height)}p ${String(spacing)}: ${String(line)} px`);
+        if (line < MIN_LINE_1080 * scale - 1e-9)
+          bad.push(`${String(height)}p ${String(spacing)}: ${String(line)} px`);
+        if (s * DOT_FRACTION < line) bad.push(`${String(height)}p ${String(spacing)}: dots`);
       }
     }
     expect(bad).toEqual([]);
@@ -135,12 +137,12 @@ describe("layer poses", () => {
           a.scale = b.scale;
         }
         // Under a pixel (or a milliradian) per 1/2000 of the cycle, including the wrap.
-        if (maxStep > 1) bad.push(`motion ${m} layer ${layer}: ${maxStep}`);
+        if (maxStep > 1) bad.push(`motion ${String(m)} layer ${String(layer)}: ${String(maxStep)}`);
         // Period 1: phase 0 and phase just under 1 agree.
         layerPose(layer, m, 0, a);
         layerPose(layer, m, 1 - 1e-12, b);
         if (Math.abs(a.cx - b.cx) + Math.abs(a.cy - b.cy) + Math.abs(a.angle - b.angle) > 1e-6)
-          bad.push(`motion ${m} layer ${layer}: not periodic`);
+          bad.push(`motion ${String(m)} layer ${String(layer)}: not periodic`);
       }
     }
     expect(bad).toEqual([]);
@@ -163,7 +165,7 @@ describe("layer poses", () => {
       const seen = new Set<string>();
       for (let layer = 0; layer < MAX_LAYERS; layer++) {
         layerPose(layer, m, 0.2, p);
-        seen.add(`${p.cx.toFixed(3)},${p.cy.toFixed(3)},${p.angle.toFixed(5)},${p.scale}`);
+        seen.add(`${p.cx.toFixed(3)},${p.cy.toFixed(3)},${p.angle.toFixed(5)},${String(p.scale)}`);
       }
       expect(seen.size).toBe(MAX_LAYERS);
     }

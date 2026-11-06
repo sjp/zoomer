@@ -201,9 +201,9 @@ export const nebula = defineEffect(nebulaMeta, {
     return withScope((scope) => {
       // Half floats keep the dark gradients smooth until the dithered blit.
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f" }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GAS_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GAS_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uNoise",
@@ -222,9 +222,9 @@ export const nebula = defineEffect(nebulaMeta, {
       gl.useProgram(program);
       u.i1("uNoise", 0);
 
-      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const su = createUniforms(gl, starProgram, [
         "uResolution",
         "uScale",
@@ -248,7 +248,9 @@ export const nebula = defineEffect(nebulaMeta, {
           data: noiseData,
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -361,7 +363,9 @@ export const nebula = defineEffect(nebulaMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

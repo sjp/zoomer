@@ -30,7 +30,6 @@ import {
   HUB_Y,
   layoutFarm,
   paletteFor,
-  type Side,
   SPAN,
   TOWER_FOOT,
   TOWER_TOP,
@@ -106,7 +105,7 @@ const TURBINE_STRIP = [
 ].flat();
 
 const TABLE_GLSL = /* glsl */ `
-const int LAYERS = ${HILL_LAYERS};
+const int LAYERS = ${String(HILL_LAYERS)};
 const float INV_SPAN = ${f(1 / SPAN)};
 const float HALF_TEXEL = ${f(HALF_TEXEL)};
 const float CREST = ${f(CREST)};
@@ -154,7 +153,7 @@ uniform vec4 uCloud;
 /** Shadow noise offset (u, v), darkness, unused. */
 uniform vec4 uShadow;
 /** Each layer's colour, nearest first. */
-uniform vec3 uHill[${HILL_LAYERS}];
+uniform vec3 uHill[${String(HILL_LAYERS)}];
 uniform vec3 uHaze;
 
 out vec4 outColor;
@@ -432,12 +431,12 @@ function sideIndex(id: string): number {
 export const windfarm = defineEffect(windfarmMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const turbineProgram = scope.add(createProgram(gl, TURBINE_VERTEX, TURBINE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const turbineProgram = scope.add(createProgram(gl, TURBINE_VERTEX, TURBINE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, COLUMNS, 1, { rows: HILL_LAYERS, wrap: gl.REPEAT }),
@@ -452,7 +451,9 @@ export const windfarm = defineEffect(windfarmMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, cloudNoiseChannels(NOISE_SEED)),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const turbines = scope.own(createSpriteBatch(gl, MAX_TURBINES, [4, 4], [TURBINE_STRIP]));
@@ -552,14 +553,7 @@ export const windfarm = defineEffect(windfarmMeta, {
           layoutKey.set(2, p.seed);
           layoutKey.set(3, aspect);
           if (layoutKey.take()) {
-            layoutFarm(
-              farm,
-              table.data,
-              aspect,
-              p.turbines,
-              SIDE_OPTIONS[side].value as Side,
-              p.seed,
-            );
+            layoutFarm(farm, table.data, aspect, p.turbines, SIDE_OPTIONS[side].value, p.seed);
           }
           advanceRotors(farm, dt, wind);
           cloudU = wrap(cloudU - dt * wind * CLOUD_SPEED, 0, 1);
@@ -614,7 +608,9 @@ export const windfarm = defineEffect(windfarmMeta, {
           turbines.draw(0, count);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -263,7 +263,9 @@ export const porch = defineEffect(porchMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const gardenProgram = program(FULLSCREEN_VERTEX, GARDEN_FRAGMENT);
       const gu = createUniforms(gl, gardenProgram, [
@@ -500,7 +502,9 @@ export const porch = defineEffect(porchMeta, {
           sprites.draw(0, m);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

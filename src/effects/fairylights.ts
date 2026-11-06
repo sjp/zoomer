@@ -45,8 +45,8 @@ uniform vec3 uGlowColor;
 /** Frame size in reference px (1080 tall). */
 uniform vec2 uRefSize;
 /** Per glow: centre x, y (reference px, y down), 1 / x radius, 1 / y radius. */
-uniform vec4 uGlow[${MAX_GLOWS}];
-uniform float uGlowStrength[${MAX_GLOWS}];
+uniform vec4 uGlow[${String(MAX_GLOWS)}];
+uniform float uGlowStrength[${String(MAX_GLOWS)}];
 uniform int uGlowCount;
 out vec4 outColor;
 ${DITHER_GLSL}
@@ -54,7 +54,7 @@ void main() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uRefSize;
   vec3 c = mix(uTop, uBottom, 1.0 - vUv.y);
   float g = 0.0;
-  for (int i = 0; i < ${MAX_GLOWS}; i++) {
+  for (int i = 0; i < ${String(MAX_GLOWS)}; i++) {
     if (i >= uGlowCount) break;
     vec2 d = (p - uGlow[i].xy) * uGlow[i].zw;
     float f = max(0.0, 1.0 - dot(d, d));
@@ -119,9 +119,9 @@ void main() {
 export const fairylights = defineEffect(fairylightsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const wallU = createUniforms(gl, wallProgram, [
         "uTop",
         "uBottom",
@@ -132,9 +132,9 @@ export const fairylights = defineEffect(fairylightsMeta, {
         "uGlowCount",
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const bulbProgram = scope.add(createProgram(gl, BULB_VERTEX, BULB_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const bulbProgram = scope.add(createProgram(gl, BULB_VERTEX, BULB_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const bulbU = createUniforms(gl, bulbProgram, ["uResolution"]);
       const bulbs = scope.own(
         createSpriteBatch(gl, MAX_BULBS, [4, 4], [polygonStrip(8, Math.PI / 8)]),
@@ -240,7 +240,9 @@ export const fairylights = defineEffect(fairylightsMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

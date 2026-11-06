@@ -235,8 +235,7 @@ describe("palettes", () => {
 
   it("keeps colours in range, and night darker than day", () => {
     const out = Object.values(PALETTES)
-      .flatMap((p) => Object.values(p))
-      .flat()
+      .flatMap((p) => Object.values(p).flatMap((v: number | readonly number[]) => v))
       .filter((c) => !(c >= 0 && c <= 1.2));
     expect(out).toEqual([]);
     expect(PALETTES.night.snow[1]).toBeLessThan(PALETTES.day.snow[1]);

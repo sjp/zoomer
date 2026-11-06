@@ -35,6 +35,7 @@ import {
 } from "./greenhouse-sim";
 import { DENSITY_MAX } from "./greenhouse.meta";
 import { STREAK_FLOATS } from "./streaks";
+import { defined } from "../test/defined";
 
 const SEEDS = [0, 1, 7, 42, 999];
 
@@ -45,8 +46,8 @@ describe("roof", () => {
       for (let k = 0; k <= 40; k++) {
         const u = k / 40;
         const y = eaveY(kind, u);
-        if (Math.abs(y - eaveY(kind, 1 - u)) > 1e-9) bad.push(`sym ${kind} ${u}`);
-        if (y < 0.1 || y > EAVE_EDGE + 1e-9) bad.push(`range ${kind} ${u}`);
+        if (Math.abs(y - eaveY(kind, 1 - u)) > 1e-9) bad.push(`sym ${kind} ${String(u)}`);
+        if (y < 0.1 || y > EAVE_EDGE + 1e-9) bad.push(`range ${kind} ${String(u)}`);
       }
     }
     expect(bad).toEqual([]);
@@ -57,7 +58,7 @@ describe("roof", () => {
   it("writes bars that fit the buffer, at every aspect ratio", () => {
     const out = new Float32Array(MAX_BARS * BAR_FLOATS);
     for (const aspect of [1, 4 / 3, 16 / 9, 21 / 9, 4]) {
-      const roof = buildRoof("arched", aspect)!;
+      const roof = defined(buildRoof("arched", aspect));
       const n = writeBars(roof, out);
       expect(n).toBe(roof.panes + 1 + roof.panes * 3);
       expect(n).toBeLessThanOrEqual(MAX_BARS);
@@ -72,7 +73,7 @@ describe("rivulets", () => {
     const p: [number, number] = [0, 0];
     const out = new Float32Array(MAX_RIVULETS * TRAIL_SEGS * STREAK_FLOATS);
     for (const kind of ["arched", "pitched"] as const) {
-      const roof = buildRoof(kind, 16 / 9)!;
+      const roof = defined(buildRoof(kind, 16 / 9));
       const riv = createRivulets(3);
       let maxAlive = 0;
       for (let s = 0; s < 3000; s++) {
@@ -85,18 +86,19 @@ describe("rivulets", () => {
           const r = rivuletR(riv, i, f);
           const pane = riv.pane[i];
           if (r < pane + PANE_MARGIN - 1e-9 || r > pane + 1 - PANE_MARGIN + 1e-9) {
-            bad.push(`pane ${kind} ${s} ${i}`);
+            bad.push(`pane ${kind} ${String(s)} ${String(i)}`);
           }
           roofPoint(roof, r, f, p);
-          if (p[1] < -1e-9 || p[1] > EAVE_EDGE + 1e-9) bad.push(`y ${kind} ${s} ${i}`);
+          if (p[1] < -1e-9 || p[1] > EAVE_EDGE + 1e-9)
+            bad.push(`y ${kind} ${String(s)} ${String(i)}`);
         }
         maxAlive = Math.max(maxAlive, alive);
         const n = writeRivulets(riv, roof, 1080, 1, [1, 1, 1], out);
         for (let k = 0; k < n * STREAK_FLOATS; k++) {
-          if (!Number.isFinite(out[k])) bad.push(`nan ${s}`);
+          if (!Number.isFinite(out[k])) bad.push(`nan ${String(s)}`);
         }
       }
-      if (maxAlive < MAX_RIVULETS * 0.8) bad.push(`few ${kind} ${maxAlive}`);
+      if (maxAlive < MAX_RIVULETS * 0.8) bad.push(`few ${kind} ${String(maxAlive)}`);
     }
     expect(bad.slice(0, 5)).toEqual([]);
     // Heavy by nature: 6000 rivulet steps, with no per-sample expects to trim.
@@ -106,7 +108,7 @@ describe("rivulets", () => {
     const riv = createRivulets(1);
     stepRivulets(riv, null, 0.1, 1);
     expect(riv.alive.every((a) => a === 0)).toBe(true);
-    const roof = buildRoof("pitched", 16 / 9)!;
+    const roof = defined(buildRoof("pitched", 16 / 9));
     for (let s = 0; s < 300; s++) stepRivulets(riv, roof, 0.1, 0);
     expect(riv.alive.every((a) => a === 0)).toBe(true);
   });
@@ -114,7 +116,7 @@ describe("rivulets", () => {
 
 describe("drips", () => {
   it("fall from the eave, stay within the pool and stop when switched off", () => {
-    const roof = buildRoof("arched", 16 / 9)!;
+    const roof = defined(buildRoof("arched", 16 / 9));
     const d = createDrips(2);
     const out = new Float32Array(MAX_DRIPS * STREAK_FLOATS);
     let seen = 0;
@@ -179,18 +181,18 @@ describe("buildLeaves", () => {
       const mid = buildLeaves(seed, 1, "jungle");
       const high = buildLeaves(seed, DENSITY_MAX, "fern");
       for (const layout of [low, mid, high]) {
-        if (layout.counts.length !== LEAF_LAYERS.length) bad.push(`layers ${seed}`);
-        if (layout.counts.some((c) => c < 1)) bad.push(`empty ${seed}`);
-        if (layout.leaves.length > MAX_LEAVES) bad.push(`max ${seed}`);
+        if (layout.counts.length !== LEAF_LAYERS.length) bad.push(`layers ${String(seed)}`);
+        if (layout.counts.some((c) => c < 1)) bad.push(`empty ${String(seed)}`);
+        if (layout.leaves.length > MAX_LEAVES) bad.push(`max ${String(seed)}`);
         layout.leaves.forEach((leaf, i) => {
           const l = leaf.layer;
           if (i < layout.starts[l] || i >= layout.starts[l] + layout.counts[l]) {
-            bad.push(`order ${seed}`);
+            bad.push(`order ${String(seed)}`);
           }
         });
       }
       if (!(low.leaves.length < mid.leaves.length && mid.leaves.length < high.leaves.length)) {
-        bad.push(`density ${seed}`);
+        bad.push(`density ${String(seed)}`);
       }
     }
     expect(bad).toEqual([]);

@@ -357,7 +357,9 @@ export const marblerun = defineEffect(marblerunMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const bgu = createUniforms(gl, program(FULLSCREEN_VERTEX, BACKDROP_FRAGMENT), [
         "uPxToH",
         "uAspect",
@@ -410,7 +412,7 @@ export const marblerun = defineEffect(marblerunMeta, {
           beginFrame(gl, width, height);
           const aspect = width / height;
           const side: MarbleSide = p.side === "left" ? "left" : "right";
-          const key = `${p.levels}|${side}|${aspect}`;
+          const key = `${String(p.levels)}|${side}|${String(aspect)}`;
           if (key !== runKey || !run) {
             run = buildRun(p.levels, side, aspect);
             runKey = key;
@@ -428,7 +430,7 @@ export const marblerun = defineEffect(marblerunMeta, {
           liftTravel += time * LIFT_SPEED;
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const backdropKey = `${side}|${aspect}`;
+          const backdropKey = `${side}|${String(aspect)}`;
           if (target.direct || drawnBackdrop !== backdropKey) {
             target.bind();
             gl.useProgram(bgu.program);
@@ -512,7 +514,9 @@ export const marblerun = defineEffect(marblerunMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

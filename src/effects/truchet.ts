@@ -70,8 +70,8 @@ uniform usampler2D uTiles;
 uniform vec4 uGrid;
 uniform vec2 uCells;
 /** Eased flip progress per slot; slot 0 is "not flipping" and stays 0. */
-uniform float uFlip[${MAX_FLIPS + 1}];
-uniform vec3 uBand[${TONES}];
+uniform float uFlip[${String(MAX_FLIPS + 1)}];
+uniform vec3 uBand[${String(TONES)}];
 uniform vec3 uBgA;
 uniform vec3 uBgB;
 uniform vec3 uGap;
@@ -92,7 +92,7 @@ void main() {
   float tilePx = uGrid.w;
 
   // Turn: the tile's content is rotated by ang, so sample it at R(-ang) q.
-  float e = uFlip[int(min(tile.r >> 2, ${MAX_FLIPS}u))];
+  float e = uFlip[int(min(tile.r >> 2, ${String(MAX_FLIPS)}u))];
   float ang = e * ${glslFloat(Math.PI / 2)} * ((tile.r & 2u) != 0u ? -1.0 : 1.0);
   float c = cos(ang);
   float s = sin(ang);
@@ -124,8 +124,8 @@ void main() {
   vec3 band = uBand[0];
   if (uPathColors > 0.5) {
     uint bits = nearA ? tile.g : tile.g >> 4;
-    vec3 from = uBand[int(min(bits & 3u, ${TONES - 1}u))];
-    vec3 to = uBand[int(min((bits >> 2) & 3u, ${TONES - 1}u))];
+    vec3 from = uBand[int(min(bits & 3u, ${String(TONES - 1)}u))];
+    vec3 to = uBand[int(min((bits >> 2) & 3u, ${String(TONES - 1)}u))];
     band = mix(from, to, float(tile.b) * ${glslFloat(1 / 255)});
   }
 
@@ -176,7 +176,9 @@ function paletteData(name: string): PaletteData {
   let d = PALETTE_DATA.get(p);
   if (!d) {
     const bands = new Float32Array(TONES * 3);
-    p.bands.forEach((hex, i) => bands.set(hexToUnitRgb(hex), i * 3));
+    p.bands.forEach((hex, i) => {
+      bands.set(hexToUnitRgb(hex), i * 3);
+    });
     const bgA = hexToUnitRgb(p.bgA);
     const bgB = hexToUnitRgb(p.bgB);
     const flat: Rgb = [(bgA[0] + bgB[0]) / 2, (bgA[1] + bgB[1]) / 2, (bgA[2] + bgB[2]) / 2];
@@ -196,9 +198,9 @@ function paletteData(name: string): PaletteData {
 export const truchet = defineEffect(truchetMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uTiles",
         "uGrid",
@@ -277,16 +279,18 @@ export const truchet = defineEffect(truchetMeta, {
           beginFrame(gl, width, height);
           gl.useProgram(program);
           ensureGrid(p.tileSize, p.seed);
-          const g = layout!;
-          const s = sim!;
+          const g = layout;
+          const s = sim;
+          const t = tex;
+          if (!g || !s || !t) throw new Error("truchet: ensureGrid left no layout, sim or texture");
 
           const flags = s.step(dt, p.flipRate);
           gl.activeTexture(gl.TEXTURE0);
           if (flags & (STARTED | COMPLETED | FADING)) {
             s.encode(data);
-            updateDataTexture(gl, tex!, s.cols, s.rows, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, data);
+            updateDataTexture(gl, t, s.cols, s.rows, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, data);
           } else {
-            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.bindTexture(gl.TEXTURE_2D, t);
           }
 
           s.flipProgress(flips);
@@ -320,7 +324,9 @@ export const truchet = defineEffect(truchetMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

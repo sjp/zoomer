@@ -206,7 +206,7 @@ describe("shaders", () => {
     const src = tileFragment(CAUSTIC_RATES.length);
     expect(src.startsWith("#version 300 es")).toBe(true);
     expect(src.match(/inversesqrt/g)?.length).toBe(CAUSTIC_RATES.length);
-    expect(src).toContain(`uniform float uT[${CAUSTIC_RATES.length}];`);
+    expect(src).toContain(`uniform float uT[${String(CAUSTIC_RATES.length)}];`);
   });
 
   it("samples the tile 2 or 4 times, plus the ray table in deep water with rays", () => {

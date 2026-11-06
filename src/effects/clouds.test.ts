@@ -218,7 +218,8 @@ describe("layerUniforms", () => {
         layerUniforms(offA, detail, params, o, layer, t * 0.01, t, 1.2, 0.8);
         // Texture offsets, wrapped to [0, 1): the base pair and the detail layer's.
         for (const v of [...offA.subarray(o, o + 4), detail[o], detail[o + 1]]) {
-          if (!(v >= 0 && v < 1)) bad.push(`offset ${v} at t = ${t}, layer ${layer}`);
+          if (!(v >= 0 && v < 1))
+            bad.push(`offset ${String(v)} at t = ${String(t)}, layer ${String(layer)}`);
         }
         // Plain comparisons in the hot loop; toBeCloseTo(_, 6) is within half of 1e-6.
         const ok =
@@ -230,7 +231,9 @@ describe("layerUniforms", () => {
           params[o + 2] <= Math.SQRT2 + 1e-6 &&
           Math.abs(params[o + 3] - 0.8) < 5e-7;
         if (!ok) {
-          bad.push(`params ${[...params.subarray(o, o + 4)]}, scale ${detail[o + 2]} at t = ${t}`);
+          bad.push(
+            `params ${[...params.subarray(o, o + 4)].join(",")}, scale ${String(detail[o + 2])} at t = ${String(t)}`,
+          );
         }
       }
     }

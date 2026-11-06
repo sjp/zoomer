@@ -54,11 +54,11 @@ precision highp int;
 uniform vec2 uToUnits;
 uniform float uAspect;
 /** x (0..1 across), y, radius, intensity. */
-uniform vec4 uLights[${MAX_LIGHTS}];
-uniform vec3 uLightColors[${MAX_LIGHTS}];
+uniform vec4 uLights[${String(MAX_LIGHTS)}];
+uniform vec3 uLightColors[${String(MAX_LIGHTS)}];
 uniform int uLightCount;
 /** x (0..1 across), base y, height, distance (0 near, 1 far); far to near. */
-uniform vec4 uTrees[${MAX_TREES}];
+uniform vec4 uTrees[${String(MAX_TREES)}];
 uniform int uTreeCount;
 /** Edge half-width in frame heights. */
 uniform float uBlur;
@@ -88,7 +88,7 @@ void main() {
   float ground = smoothstep(gy + uBlur, gy - uBlur, y);
   c = mix(c, mix(GROUND_NEAR, GROUND_FAR, clamp(y / gy, 0.0, 1.0)), ground);
 
-  for (int i = 0; i < ${MAX_TREES}; i++) {
+  for (int i = 0; i < ${String(MAX_TREES)}; i++) {
     if (i >= uTreeCount) break;
     vec4 t = uTrees[i];
     float h = (y - t.y) / t.z;
@@ -105,7 +105,7 @@ void main() {
     c = mix(c, tc, cover);
   }
 
-  for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+  for (int i = 0; i < ${String(MAX_LIGHTS)}; i++) {
     if (i >= uLightCount) break;
     vec4 l = uLights[i];
     float d = length(p - vec2(l.x * uAspect, l.y));
@@ -208,9 +208,9 @@ vec4 composite(vec2 uv) {
 export const frost = defineEffect(frostMeta, {
   create(gl) {
     return withScope((scope) => {
-      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const su = createUniforms(gl, sceneProgram, [
@@ -328,7 +328,7 @@ export const frost = defineEffect(frostMeta, {
             diffuse = createRenderTarget(gl, dw, dh, gl.RGBA8);
             sceneKey = "";
           }
-          const key = `${p.scene}|${seed}|${target.width}x${target.height}|${aspect}`;
+          const key = `${p.scene}|${String(seed)}|${String(target.width)}x${String(target.height)}|${String(aspect)}`;
           if (key !== sceneKey) {
             sceneKey = key;
             drawScene(p.scene, seed, dw, dh);
@@ -368,7 +368,9 @@ export const frost = defineEffect(frostMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

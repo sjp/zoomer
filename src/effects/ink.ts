@@ -102,12 +102,12 @@ uniform int uCount;
 uniform vec2 uFreq;
 /** Filament gaps near plume edges. */
 uniform float uFil;
-uniform vec4 uP0[${MAX_PLUMES}];
-uniform vec4 uP1[${MAX_PLUMES}];
-uniform vec4 uP2[${MAX_PLUMES}];
-uniform vec4 uP3[${MAX_PLUMES}];
+uniform vec4 uP0[${String(MAX_PLUMES)}];
+uniform vec4 uP1[${String(MAX_PLUMES)}];
+uniform vec4 uP2[${String(MAX_PLUMES)}];
+uniform vec4 uP3[${String(MAX_PLUMES)}];
 /** Per plume: absorption (light water) or emission (dark water). */
-uniform vec3 uInk[${MAX_PLUMES}];
+uniform vec3 uInk[${String(MAX_PLUMES)}];
 
 vec2 toLocal(vec2 q, vec4 s) {
   return vec2(dot(q, s.xy) / s.z, s.x * q.y - s.y * q.x);
@@ -196,11 +196,14 @@ export const ink = defineEffect(inkMeta, {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl));
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const dropsProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, DROPS_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const marbleProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MARBLE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
+      const dropsProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, DROPS_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const marbleProgram = scope.add(
+        createProgram(gl, FULLSCREEN_VERTEX, MARBLE_FRAGMENT),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const du = createUniforms(gl, dropsProgram, [
         ...COMMON_UNIFORMS,
@@ -239,7 +242,9 @@ export const ink = defineEffect(inkMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       // The fine warps minify the texture at low quality: mipmaps keep them from aliasing.
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
@@ -367,7 +372,9 @@ export const ink = defineEffect(inkMeta, {
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

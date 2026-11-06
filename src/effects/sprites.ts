@@ -110,9 +110,15 @@ export function createSpriteBatch(
 
   // Nothing below can throw, so a plain scope (no `withScope`) is enough.
   const scope = createScope();
-  const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-  const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-  const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+  const vao = scope.add(gl.createVertexArray(), (v) => {
+    gl.deleteVertexArray(v);
+  });
+  const cornerBuffer = scope.add(gl.createBuffer(), (b) => {
+    gl.deleteBuffer(b);
+  });
+  const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+    gl.deleteBuffer(b);
+  });
   gl.bindVertexArray(vao);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
@@ -175,6 +181,8 @@ export function createSpriteBatch(
       // Unbind so another effect's element-buffer binding can't land in this VAO.
       gl.bindVertexArray(null);
     },
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      scope.dispose();
+    },
   };
 }

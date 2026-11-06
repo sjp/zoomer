@@ -132,7 +132,9 @@ describe("projectBeam with tilt", () => {
           Math.abs(b.length - prev.length) < 0.01 &&
           Math.abs(b.roundness - prev.roundness) < 0.01;
         if (!ok && jumps.length < 10) {
-          jumps.push(`tilt ${tilt}, step ${i}: ${JSON.stringify(prev)} -> ${JSON.stringify(b)}`);
+          jumps.push(
+            `tilt ${String(tilt)}, step ${String(i)}: ${JSON.stringify(prev)} -> ${JSON.stringify(b)}`,
+          );
         }
         prev = { ...b };
       }

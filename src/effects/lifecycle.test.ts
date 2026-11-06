@@ -73,8 +73,10 @@ function paramSets(schema: ParamSchema): AnyParamValues[] {
 function frameEndProblems(fake: FakeGl): string[] {
   const s = fake.state;
   const out: string[] = [];
-  if (s.drawFramebuffer !== null) out.push(`draw framebuffer ${s.drawFramebuffer.id} left bound`);
-  if (s.readFramebuffer !== null) out.push(`read framebuffer ${s.readFramebuffer.id} left bound`);
+  if (s.drawFramebuffer !== null)
+    out.push(`draw framebuffer ${String(s.drawFramebuffer.id)} left bound`);
+  if (s.readFramebuffer !== null)
+    out.push(`read framebuffer ${String(s.readFramebuffer.id)} left bound`);
   if (s.blendEquationRgb !== "FUNC_ADD" || s.blendEquationAlpha !== "FUNC_ADD") {
     out.push(`blend equation left as ${s.blendEquationRgb}/${s.blendEquationAlpha}`);
   }
@@ -87,7 +89,7 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
   const problems: string[] = [];
   const frames = (n: number, params: AnyParamValues, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) {
-      instance.frame(dt, params as never);
+      instance.frame(dt, params);
       problems.push(...frameEndProblems(fake));
     }
   };
@@ -125,7 +127,7 @@ describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
     expect(fake.errors).toEqual([]);
     expect([...new Set(problems)]).toEqual([]);
     expect(draws).toBeGreaterThan(0);
-    expect(fake.live().map((o) => `${o.kind} ${o.id}`)).toEqual([]);
+    expect(fake.live().map((o) => `${o.kind} ${String(o.id)}`)).toEqual([]);
   });
 
   it("frees everything when a shader fails to compile part-way through create", () => {
@@ -138,9 +140,15 @@ describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
       } catch (err) {
         error = err;
       }
-      expect(String(error ?? "failed to compile")).toMatch(/failed to compile/);
+      const message =
+        error === undefined
+          ? "failed to compile"
+          : error instanceof Error
+            ? error.message
+            : "not an Error";
+      expect(message).toMatch(/failed to compile/);
       expect(fake.errors).toEqual([]);
-      expect(fake.live().map((o) => `${o.kind} ${o.id}`)).toEqual([]);
+      expect(fake.live().map((o) => `${o.kind} ${String(o.id)}`)).toEqual([]);
       if (error === undefined) break;
     }
   });

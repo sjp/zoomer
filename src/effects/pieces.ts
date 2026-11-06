@@ -20,7 +20,7 @@ layout(location = 1) in vec4 aPiece;
 /** Shaded colour, then edge softness as a fraction of the radius. */
 layout(location = 2) in vec4 aTint;
 /** In-plane angle (radians), flip scale. */
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 out float vEdge;
 out float vAcross;

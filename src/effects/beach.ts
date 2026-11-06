@@ -73,8 +73,8 @@ uniform float uAspect;
 /** Landward unit axis (xy) and offset: n = dot(p, xy) - z. */
 uniform vec3 uAxis;
 /** Per wave, four vec4s; see packWaves. */
-uniform vec4 uWave[${MAX_WAVES * 4}];
-uniform vec2 uOff[${MAX_WAVES}];
+uniform vec4 uWave[${String(MAX_WAVES * 4)}];
+uniform vec2 uOff[${String(MAX_WAVES)}];
 uniform int uCount;
 uniform vec3 uSand;
 uniform vec3 uWetSand;
@@ -86,7 +86,7 @@ uniform vec4 uCaustic;
 
 out vec4 outColor;
 
-const int MAX_WAVES = ${MAX_WAVES};
+const int MAX_WAVES = ${String(MAX_WAVES)};
 const vec4 SHORE_W = vec4(${SHORE_WEIGHTS.map(glslFloat).join(", ")});
 const float SHORE_AMP = ${glslFloat(SHORE_AMP)};
 const float INV_SPAN = ${glslFloat(1 / SHAPE_SPAN)};
@@ -213,9 +213,9 @@ export const beach = defineEffect(beachMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const shape = scope.own(
         createColumnTable(gl, SHAPE_COLUMNS, 4, { wrap: gl.REPEAT, data: buildShapeTable(54) }),
@@ -230,7 +230,9 @@ export const beach = defineEffect(beachMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
       gl.generateMipmap(gl.TEXTURE_2D);
@@ -345,7 +347,9 @@ export const beach = defineEffect(beachMeta, {
           cu.v3("uFoamColor", toRgb(palette.foam));
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -82,7 +82,7 @@ uniform float uDensity;
 uniform vec4 uTrail;
 /** Foreground on, lone tree on. */
 uniform vec2 uFg;
-uniform vec3 uBlobs[${TREE_BLOBS}];
+uniform vec3 uBlobs[${String(TREE_BLOBS)}];
 uniform vec4 uTrunk;
 uniform vec4 uTreeBox;
 out vec4 outColor;
@@ -100,7 +100,7 @@ const vec3 FG = ${C("#04060a")};
 
 float treeDist(vec2 p) {
   float d = 1e9;
-  for (int i = 0; i < ${TREE_BLOBS}; i++) d = min(d, length(p - uBlobs[i].xy) - uBlobs[i].z);
+  for (int i = 0; i < ${String(TREE_BLOBS)}; i++) d = min(d, length(p - uBlobs[i].xy) - uBlobs[i].z);
   vec2 q = vec2(abs(p.x - uTrunk.x) - uTrunk.w, max(uTrunk.y - p.y, p.y - uTrunk.z));
   return min(d, length(max(q, 0.0)) + min(max(q.x, q.y), 0.0));
 }
@@ -150,7 +150,7 @@ void main() {
       uint rh = hash32(ring ^ uSalt);
       float len = uTrail.x;
       vec3 sum = vec3(0.0);
-      for (int i = 0; i < ${SECTORS_CHECKED}; i++) {
+      for (int i = 0; i < ${String(SECTORS_CHECKED)}; i++) {
         uint h1 = hash32(rh + (j + uint(i)) % uint(n));
         if (float(h1 & 0xffffu) >= uDensity) continue;
         float delta = (float(i) + (float(h1 >> 16) + 0.5) * ${glslFloat(1 / 65536)} - f) * sector;
@@ -188,9 +188,9 @@ void main() {
 export const startrails = defineEffect(startrailsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uGround",
         "uNoise",
@@ -210,7 +210,9 @@ export const startrails = defineEffect(startrailsMeta, {
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ground = scope.own(createColumnTable(gl, FG_COLUMNS, 1));
-      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => gl.deleteTexture(t));
+      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => {
+        gl.deleteTexture(t);
+      });
       gl.useProgram(program);
       u.i1("uGround", 0);
       u.i1("uNoise", 1);
@@ -289,7 +291,9 @@ export const startrails = defineEffect(startrailsMeta, {
           triangle.draw();
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -63,7 +63,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aBox;
 layout(location = 2) in vec4 aColor;
 layout(location = 3) in float aShape;
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 /** Source origin (units), 1 / span. */
 uniform vec4 uMap;
 uniform float uPad;
@@ -192,12 +192,14 @@ export const kaleido = defineEffect(kaleidoMeta, {
       if (batch.stride !== INSTANCE_STRIDE) throw new Error("kaleido: instance layout mismatch");
       const chipProgram = scope.add(
         createProgram(gl, chipVertex(batch.spinLocation), CHIP_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const cu = createUniforms(gl, chipProgram, ["uMap", "uPad", "uRimWidth"]);
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uSource",
         "uCentre",
@@ -269,9 +271,10 @@ export const kaleido = defineEffect(kaleidoMeta, {
           const circle = isCircleView(p.view);
           const radiusPx = viewRadius(circle);
           ensure(segments, p.seed, radiusPx);
-          const s = sim!;
-          const l = layout!;
-          const t = target!;
+          const s = sim;
+          const l = layout;
+          const t = target;
+          if (!s || !l || !t) throw new Error("kaleido: ensure left no sim, layout or target");
           const pal = paletteData(p.palette);
           if (pal !== lastPalette) {
             lastPalette = pal;
@@ -325,7 +328,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

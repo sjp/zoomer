@@ -233,9 +233,9 @@ void main() {
 export const lava = defineEffect(lavaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const skyProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SKY_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const skyProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SKY_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const su = createUniforms(gl, skyProgram, [
         "uNoise",
         "uZenith",
@@ -246,9 +246,9 @@ export const lava = defineEffect(lavaMeta, {
       gl.useProgram(skyProgram);
       su.i1("uNoise", 0);
 
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GROUND_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GROUND_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uNoise",
         "uSky",
@@ -274,7 +274,9 @@ export const lava = defineEffect(lavaMeta, {
           data: buildPeriodicNoiseTexture(TEX_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       // Mipmaps keep the far ground's noise from aliasing; the shader picks the level.
       gl.bindTexture(gl.TEXTURE_2D, noiseTex);
@@ -358,7 +360,9 @@ export const lava = defineEffect(lavaMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

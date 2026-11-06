@@ -200,7 +200,7 @@ export function buildRun(levels: number, side: MarbleSide, aspect: number): Run 
       spin: -dir / MARBLE_R,
       hop: k > 0,
     });
-    const next = tracks[k + 1];
+    const next = tracks.at(k + 1);
     if (next) {
       const nx = X(next.u0);
       const h = t.y1 - next.y0;

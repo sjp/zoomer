@@ -388,7 +388,9 @@ export const globe = defineEffect(globeMeta, {
       const target = scope.own(createLowResTarget(gl));
       const batch = scope.own(createSpriteBatch(gl, MAX_FLAKES, [FLAKE_STRIDE]));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uPxToH", "uFrame", "uSide"]);
@@ -485,7 +487,9 @@ export const globe = defineEffect(globeMeta, {
           gl.disable(gl.BLEND);
           gl.disable(gl.SCISSOR_TEST);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

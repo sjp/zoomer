@@ -35,7 +35,7 @@ const mobiles = SIDES.flatMap((side) =>
   LEVELS.flatMap((levels) =>
     ASPECTS.flatMap((aspect) =>
       SEEDS.map((seed) => ({
-        label: `${side} L${levels} ${aspect.toFixed(2)} #${seed}`,
+        label: `${side} L${String(levels)} ${aspect.toFixed(2)} #${String(seed)}`,
         mobile: createMobile(seed, levels, side, aspect),
       })),
     ),
@@ -72,10 +72,12 @@ describe("shapes", () => {
         }
       }
       const area = (inside * 4) / (n * n);
-      if (Math.abs(area / shapeArea(kind) - 1) > 0.01) bad.push(`kind ${kind}: ${area}`);
+      if (Math.abs(area / shapeArea(kind) - 1) > 0.01)
+        bad.push(`kind ${String(kind)}: ${String(area)}`);
       for (let k = 0; k < 64; k++) {
         const a = (k / 64) * Math.PI * 2;
-        if (shapeSdf(kind, 1.001 * Math.cos(a), 1.001 * Math.sin(a)) <= 0) bad.push(`kind ${kind}`);
+        if (shapeSdf(kind, 1.001 * Math.cos(a), 1.001 * Math.sin(a)) <= 0)
+          bad.push(`kind ${String(kind)}`);
       }
     }
     expect(bad).toEqual([]);
@@ -96,7 +98,8 @@ describe("createMobile", () => {
         const m1 = arm.ends[1].arm ? mass(arm.ends[1].arm) : (arm.ends[1].shape?.mass ?? 0);
         const torque = m0 * arm.a - m1 * arm.b;
         if (!(Math.abs(torque) <= 1e-9 * (m0 + m1) * (arm.a + arm.b))) bad.push(label);
-        if (!(arm.a > 0 && arm.b > 0)) bad.push(`${label}: arm sides ${arm.a}, ${arm.b}`);
+        if (!(arm.a > 0 && arm.b > 0))
+          bad.push(`${label}: arm sides ${String(arm.a)}, ${String(arm.b)}`);
       }
     }
     expect(bad).toEqual([]);
@@ -106,7 +109,7 @@ describe("createMobile", () => {
     const bad: string[] = [];
     for (const { label, mobile } of mobiles) {
       const levels = Number(label.split(" L")[1].split(" ")[0]);
-      if (depth(mobile.root) !== levels) bad.push(`${label}: depth ${depth(mobile.root)}`);
+      if (depth(mobile.root) !== levels) bad.push(`${label}: depth ${String(depth(mobile.root))}`);
       if (mobile.arms.length > MAX_ARMS || mobile.shapes.length > MAX_SHAPES) bad.push(label);
       if (mobile.shapes.length !== mobile.arms.length + 1) bad.push(label);
     }
@@ -193,10 +196,10 @@ describe("motion", () => {
         }
       }
       // Shapes move at most a few thousandths of the frame height per twentieth of a second.
-      if (maxJump > 0.006) bad.push(`${label}: jump ${maxJump}`);
-      if (outside > 0) bad.push(`${label}: ${outside} parts outside`);
+      if (maxJump > 0.006) bad.push(`${label}: jump ${String(maxJump)}`);
+      if (outside > 0) bad.push(`${label}: ${String(outside)} parts outside`);
       if (yawOver > 0) bad.push(`${label}: yaw out of bounds`);
-      if (!(minGap > 0)) bad.push(`${label}: shapes touch (${minGap})`);
+      if (!(minGap > 0)) bad.push(`${label}: shapes touch (${String(minGap)})`);
     }
     expect(bad).toEqual([]);
   });

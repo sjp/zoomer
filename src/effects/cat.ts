@@ -528,7 +528,9 @@ export const cat = defineEffect(catMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [
@@ -607,7 +609,7 @@ export const cat = defineEffect(catMeta, {
           beamFor(layout, look.slope, beam);
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const key = `${p.time}|${layout.side}|${layout.size}`;
+          const key = `${p.time}|${String(layout.side)}|${String(layout.size)}`;
           if (target.direct || drawnRoom !== key) {
             target.bind();
             gl.useProgram(roomProgram);
@@ -692,7 +694,9 @@ export const cat = defineEffect(catMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

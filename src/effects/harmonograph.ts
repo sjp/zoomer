@@ -66,7 +66,7 @@ uniform float uFadeAge;
 uniform float uRadius;
 uniform float uGain;
 uniform float uGlow;
-uniform vec3 uPalette[${PALETTE_STOPS}];
+uniform vec3 uPalette[${String(PALETTE_STOPS)}];
 
 out vec2 vLocal;
 flat out float vLength;
@@ -89,8 +89,8 @@ void main() {
 
   // Cyclic palette lookup, eased between stops.
   float ph = aMeta.y;
-  int i = int(floor(ph)) % ${PALETTE_STOPS};
-  int j = (i + 1) % ${PALETTE_STOPS};
+  int i = int(floor(ph)) % ${String(PALETTE_STOPS)};
+  int j = (i + 1) % ${String(PALETTE_STOPS)};
   float f = fract(ph);
   vec3 color = mix(uPalette[i], uPalette[j], f * f * (3.0 - 2.0 * f));
   // The newest segments (the pen tip) run brighter and whiter.
@@ -145,7 +145,9 @@ void main() {
 export const harmonograph = defineEffect(harmonographMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
+      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uResolution",
         "uCenter",
@@ -163,9 +165,15 @@ export const harmonograph = defineEffect(harmonographMeta, {
       const sim = createHarmonograph(MAX_SEGMENTS, rng, 0.4);
       const data = sim.data;
 
-      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-      const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const cornerBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       const stride = SEG_FLOATS * 4;
       gl.bindVertexArray(vao);
       gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
@@ -300,7 +308,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
           drawLive();
           gl.blendEquation(gl.FUNC_ADD);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -154,7 +154,9 @@ export const smoke = defineEffect(smokeMeta, {
       const adv = field.uniforms;
       const compositeProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const comp = createUniforms(gl, compositeProgram, [
         "uField",
@@ -259,7 +261,9 @@ export const smoke = defineEffect(smokeMeta, {
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

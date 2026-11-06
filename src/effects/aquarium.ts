@@ -25,7 +25,7 @@ import {
   type PlantLayout,
   stepFishSim,
 } from "./aquarium-sim";
-import { aquariumMeta, type LightId, MAX_FISH, type SpeciesId } from "./aquarium.meta";
+import { aquariumMeta, MAX_FISH, type SpeciesId } from "./aquarium.meta";
 import { BUBBLE_FRAGMENT, bubbleVertex } from "./bubble-sprites";
 import { type BubbleFrame, createBubbles } from "./bubbles-sim";
 import { tileFragment } from "./caustics";
@@ -48,6 +48,7 @@ import { HASH32_GLSL } from "./noise";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { advanceSwell, swayGlsl } from "./sway";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 const f = glslFloat;
 
@@ -107,11 +108,11 @@ uniform vec3 uWood;
 uniform vec3 uLightCol;
 uniform vec3 uRayCol;
 /** Rays: top x (px), slope (dx/dy), half width (px), strength. */
-uniform vec4 uRays[${RAYS.length}];
+uniform vec4 uRays[${String(RAYS.length)}];
 /** Rocks: centre (px), radii (px). */
-uniform vec4 uRocks[${MAX_ROCKS}];
+uniform vec4 uRocks[${String(MAX_ROCKS)}];
 /** Driftwood: base and tip (px); radii at base and tip, two per branch. */
-uniform vec4 uWoods[${MAX_WOOD}];
+uniform vec4 uWoods[${String(MAX_WOOD)}];
 uniform vec4 uWoodR;
 /** Air stone: centre (px), radii (px). */
 uniform vec4 uStone;
@@ -188,7 +189,7 @@ void main() {
   }
 
   // Driftwood: tapered capsules, lit from above, with a faint grain.
-  for (int i = 0; i < ${MAX_WOOD}; i++) {
+  for (int i = 0; i < ${String(MAX_WOOD)}; i++) {
     vec4 w = uWoods[i];
     vec2 pa = px - w.xy;
     vec2 ba = w.zw - w.xy;
@@ -208,7 +209,7 @@ void main() {
   }
 
   // Rocks, half buried in the gravel.
-  for (int i = 0; i < ${MAX_ROCKS}; i++) {
+  for (int i = 0; i < ${String(MAX_ROCKS)}; i++) {
     vec4 r = uRocks[i];
     vec2 d = (px - r.xy) / r.zw;
     if (abs(d.x) > 1.3 || abs(d.y) > 1.3) continue;
@@ -241,7 +242,7 @@ void main() {
 
   // Light rays from the surface, over everything in the background.
   float shaft = 0.0;
-  for (int i = 0; i < ${RAYS.length}; i++) {
+  for (int i = 0; i < ${String(RAYS.length)}; i++) {
     vec4 ry = uRays[i];
     float dr = (px.x - ry.x - ry.y * px.y) / (ry.z * (1.0 + 2.0 * v));
     shaft += ry.w * exp(-dr * dr);
@@ -466,16 +467,18 @@ export const aquarium = defineEffect(aquariumMeta, {
       // Caustic tile (R8, REPEAT), re-rendered at most every TILE_INTERVAL.
       const tileProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, tileFragment(CAUSTIC_RATES.length)),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       let tile: RenderTarget | null = null;
       scope.defer(() => tile?.dispose());
 
       const back = scope.own(createLowResTarget(gl));
-      const backProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACK_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const backProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACK_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const ub = createUniforms(gl, backProgram, [
         "uResolution",
         "uScale",
@@ -504,9 +507,9 @@ export const aquarium = defineEffect(aquariumMeta, {
       gl.useProgram(backProgram);
       ub.i1("uTile", 0);
 
-      const plantProgram = scope.add(createProgram(gl, PLANT_VERTEX, PLANT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const plantProgram = scope.add(createProgram(gl, PLANT_VERTEX, PLANT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const up = createUniforms(gl, plantProgram, [
         "uResolution",
         "uScale",
@@ -517,9 +520,9 @@ export const aquarium = defineEffect(aquariumMeta, {
         "uTop",
         "uDeep",
       ]);
-      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const uf = createUniforms(gl, fishProgram, ["uResolution", "uTop", "uDeep", "uFishLight"]);
 
       const plants = scope.own(createSpriteBatch(gl, MAX_PLANTS, [4, 4], [PLANT_STRIP]));
@@ -532,7 +535,9 @@ export const aquarium = defineEffect(aquariumMeta, {
       );
       const bubbleProgram = scope.add(
         createProgram(gl, bubbleVertex(bubbleBatch.spinLocation), BUBBLE_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const uBub = createUniforms(gl, bubbleProgram, ["uResolution", "uLight", "uShade"]);
       gl.useProgram(null);
@@ -662,7 +667,7 @@ export const aquarium = defineEffect(aquariumMeta, {
           const sdt = step * speed;
           clock += sdt;
           phase = advanceSwell(AQUARIUM_SWELL, phase, step, speed);
-          const light = LIGHTS[p.light as LightId] ?? LIGHTS.daylight;
+          const light = lookup(LIGHTS, p.light, "daylight");
           const aspect = width / Math.max(1, height);
 
           if (p.seed !== builtSeed) {
@@ -805,7 +810,9 @@ export const aquarium = defineEffect(aquariumMeta, {
           drawPlants(layout.backCount, layout.frontCount, FRONT_LAYER, light);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -46,8 +46,8 @@ export const ferroMeta = defineEffectMeta({
       kind: "select",
       label: "Quality",
       options: [
-        { value: "high", label: `High (${FERRO_STEPS.high} steps)` },
-        { value: "low", label: `Low (${FERRO_STEPS.low} steps)` },
+        { value: "high", label: `High (${String(FERRO_STEPS.high)} steps)` },
+        { value: "low", label: `Low (${String(FERRO_STEPS.low)} steps)` },
       ],
       default: "high",
     },

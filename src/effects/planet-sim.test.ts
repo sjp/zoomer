@@ -55,7 +55,7 @@ function same(a: Uint8Array, b: Uint8Array): boolean {
 /** Surfaces are slow to build, so each test shares one per world and seed. */
 const surfaces = new Map<string, Uint8Array>();
 function surface(world: string, seed: number): Uint8Array {
-  const key = `${world}:${seed}`;
+  const key = `${world}:${String(seed)}`;
   let data = surfaces.get(key);
   if (!data) {
     data = buildSurface(world, seed);

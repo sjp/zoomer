@@ -108,7 +108,7 @@ in vec2 vUv;
 uniform sampler2D uHills;
 uniform float uScale;
 /** Per tree: x, base y, height (reference px). */
-uniform vec3 uTrees[${MAX_TREES}];
+uniform vec3 uTrees[${String(MAX_TREES)}];
 uniform int uTreeCount;
 /** Tent centre x, base y (reference px), on (0 or 1). */
 uniform vec3 uTent;
@@ -160,7 +160,7 @@ void main() {
   col = mix(col, nearCol, cNear);
   a = mix(a, 1.0, cNear);
 
-  for (int i = 0; i < ${MAX_TREES}; i++) {
+  for (int i = 0; i < ${String(MAX_TREES)}; i++) {
     if (i >= uTreeCount) break;
     vec3 t = uTrees[i];
     vec2 q = p - t.xy;
@@ -215,7 +215,9 @@ export const meteors = defineEffect(meteorsMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const skyProgram = program(SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, ["uNoise", "uScale", "uPole", "uMilky"]);
       const groundProgram = program(GROUND_FRAGMENT);
@@ -228,7 +230,9 @@ export const meteors = defineEffect(meteorsMeta, {
       ]);
       const blitProgram = program(BLIT_FRAGMENT);
       const bu = createUniforms(gl, blitProgram, ["uBackground"]);
-      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => gl.deleteTexture(t));
+      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => {
+        gl.deleteTexture(t);
+      });
       const hills = scope.own(createColumnTable(gl, HILL_COLUMNS, HILL_CHANNELS));
       const stars = scope.own(createStarSprites(gl, MAX_STARS));
       const streaks = scope.own(createStreakRenderer(gl, MAX_ACTIVE * STREAKS_PER_METEOR));
@@ -435,7 +439,9 @@ export const meteors = defineEffect(meteorsMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

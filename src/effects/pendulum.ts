@@ -155,7 +155,9 @@ void main() {
 export const pendulum = defineEffect(pendulumMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+      const deleteProgram = (p: WebGLProgram) => {
+        gl.deleteProgram(p);
+      };
       const backdropProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, BACKDROP_FRAGMENT),
         deleteProgram,
@@ -179,7 +181,7 @@ export const pendulum = defineEffect(pendulumMeta, {
       if (
         balls.stride !== BALL_FLOATS ||
         shadows.stride !== SHADOW_FLOATS ||
-        STREAK_FLOATS !== LINE_FLOATS
+        STREAK_FLOATS !== (LINE_FLOATS as number)
       ) {
         throw new Error("Pendulum: instance layout mismatch");
       }
@@ -197,7 +199,7 @@ export const pendulum = defineEffect(pendulumMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const refWidth = width / scale;
-          const key = `${p.count}:${p.view}:${p.placement}:${refWidth}`;
+          const key = `${String(p.count)}:${p.view}:${p.placement}:${String(refWidth)}`;
           if (key !== builtKey) {
             builtKey = key;
             rig.configure({ count: p.count, view: p.view, placement: p.placement, refWidth });
@@ -247,7 +249,9 @@ export const pendulum = defineEffect(pendulumMeta, {
           bar.draw(st.barCount, width, height);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

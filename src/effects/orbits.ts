@@ -52,11 +52,11 @@ const CENTRE_RATE = 0.15;
 
 const TRAIL_VERTEX = /* glsl */ `#version 300 es
 /** a (reference px), e, argument of periapsis, parent index (-1: centre of mass). */
-uniform vec4 uElem[${MAX_BODIES}];
+uniform vec4 uElem[${String(MAX_BODIES)}];
 /** Wrapped mean anomaly now, mean motion (rad/s), unused, unused. */
-uniform vec4 uMotion[${MAX_BODIES}];
+uniform vec4 uMotion[${String(MAX_BODIES)}];
 /** rgb, half-width (reference px). */
-uniform vec4 uColor[${MAX_BODIES}];
+uniform vec4 uColor[${String(MAX_BODIES)}];
 uniform vec2 uResolution;
 /** Centre of mass (device px, y down), device px per reference px, cos(tilt). */
 uniform vec4 uFrame;
@@ -77,7 +77,7 @@ const float TAU = 6.283185307179586;
 float kepler(float m, float e) {
   m -= TAU * floor((m + PI) / TAU);
   float ea = m + 0.85 * e * sign(m);
-  for (int i = 0; i < ${KEPLER_ITERATIONS}; i++) {
+  for (int i = 0; i < ${String(KEPLER_ITERATIONS)}; i++) {
     ea -= (ea - e * sin(ea) - m) / (1.0 - e * cos(ea));
   }
   return ea;
@@ -277,9 +277,9 @@ void main() {
 export const orbits = defineEffect(orbitsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const trailProgram = scope.add(createProgram(gl, TRAIL_VERTEX, TRAIL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const trailProgram = scope.add(createProgram(gl, TRAIL_VERTEX, TRAIL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const tu = createUniforms(gl, trailProgram, [
         "uElem",
         "uMotion",
@@ -289,16 +289,18 @@ export const orbits = defineEffect(orbitsMeta, {
         "uStrip",
         "uFirst",
       ]);
-      const bodyProgram = scope.add(createProgram(gl, BODY_VERTEX, BODY_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const bodyProgram = scope.add(createProgram(gl, BODY_VERTEX, BODY_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const bu = createUniforms(gl, bodyProgram, ["uResolution", "uCosTilt"]);
-      const glowProgram = scope.add(createProgram(gl, GLOW_VERTEX, GLOW_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const glowProgram = scope.add(createProgram(gl, GLOW_VERTEX, GLOW_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const gu = createUniforms(gl, glowProgram, ["uResolution"]);
 
-      const stripVao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+      const stripVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
       const bodies = scope.own(createSpriteBatch(gl, MAX_BODIES, [4, 4, 4], [QUAD]));
       const glows = scope.own(createSpriteBatch(gl, 2, [4, 4], [polygonStrip(8)]));
       if (bodies.stride !== BODY_FLOATS || glows.stride !== GLOW_FLOATS) {
@@ -338,14 +340,14 @@ export const orbits = defineEffect(orbitsMeta, {
           beginFrame(gl, width, height);
           const seed = Math.floor(p.seed);
           const kind = resolveKind(p.system, seed);
-          const key = `${kind}:${Math.round(p.planets)}:${seed}`;
+          const key = `${kind}:${String(Math.round(p.planets))}:${String(seed)}`;
           if (key !== sysKey || !sys) {
             sysKey = key;
             sys = createSystem(kind, p.planets, seed);
             elementsDirty = true;
           }
           const refWidth = width / scale;
-          const sk = `${seed}:${refWidth}`;
+          const sk = `${String(seed)}:${String(refWidth)}`;
           if (sk !== starsKey) {
             starsKey = sk;
             pole[0] = refWidth / 2;
@@ -441,7 +443,9 @@ export const orbits = defineEffect(orbitsMeta, {
           bodies.draw(0, bodyCount);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

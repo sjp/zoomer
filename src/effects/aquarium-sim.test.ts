@@ -126,7 +126,7 @@ describe("light presets", () => {
     let bad = 0;
     for (const l of Object.values(LIGHTS)) {
       for (const c of [l.top, l.deep, l.wall, l.gravelA, l.gravelB, l.rock, l.light]) {
-        if (c.length !== 3 || c.some((v) => !(v >= 0 && v <= 1))) bad++;
+        if (c.some((v) => !(v >= 0 && v <= 1))) bad++;
       }
     }
     expect(bad).toBe(0);
@@ -190,12 +190,12 @@ describe("fish", () => {
           for (let i = 0; i < sim.live; i++) {
             maxF = Math.max(maxF, Math.hypot(sim.fx[i], sim.fy[i]));
             const sp = Math.hypot(sim.vx[i], sim.vy[i]);
-            if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) issues.push(`speed ${sp}`);
+            if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) issues.push(`speed ${String(sp)}`);
             const x = sim.x[i];
             const y = sim.y[i];
-            if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) issues.push(`x ${x}`);
-            if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) issues.push(`y ${y}`);
-            if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) issues.push(`z ${sim.z[i]}`);
+            if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) issues.push(`x ${String(x)}`);
+            if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) issues.push(`y ${String(y)}`);
+            if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) issues.push(`z ${String(sim.z[i])}`);
           }
           if (issues.length > 5) break;
         }

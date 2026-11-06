@@ -50,7 +50,7 @@ float dither8(vec2 fragCoord) {
  * Throws on NaN and infinities, which have no literal.
  */
 export function glslFloat(n: number): string {
-  if (!Number.isFinite(n)) throw new Error(`glslFloat: ${n} has no GLSL literal`);
+  if (!Number.isFinite(n)) throw new Error(`glslFloat: ${String(n)} has no GLSL literal`);
   return Number.isInteger(n) ? n.toFixed(1) : String(n);
 }
 
@@ -108,11 +108,15 @@ export function createScope(): Scope {
   const cleanups: (() => void)[] = [];
   return {
     add(resource, dispose) {
-      cleanups.push(() => dispose(resource));
+      cleanups.push(() => {
+        dispose(resource);
+      });
       return resource;
     },
     own(resource) {
-      cleanups.push(() => resource.dispose());
+      cleanups.push(() => {
+        resource.dispose();
+      });
       return resource;
     },
     defer(cleanup) {
@@ -121,8 +125,7 @@ export function createScope(): Scope {
     dispose() {
       let failed = false;
       let first: unknown;
-      while (cleanups.length > 0) {
-        const cleanup = cleanups.pop()!;
+      for (let cleanup = cleanups.pop(); cleanup !== undefined; cleanup = cleanups.pop()) {
         try {
           cleanup();
         } catch (err) {
@@ -410,9 +413,9 @@ export function createGradientBackground(gl: WebGL2RenderingContext): GradientBa
 }
 
 function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): GradientBackground {
-  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) =>
-    gl.deleteProgram(p),
-  );
+  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) => {
+    gl.deleteProgram(p);
+  });
   const triangle = scope.own(createFullscreenTriangle(gl));
   const u = createUniforms(gl, program, ["uTop", "uBottom"]);
   return {
@@ -429,7 +432,9 @@ function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): Grad
       u.v3("uBottom", bottom);
       triangle.draw();
     },
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      scope.dispose();
+    },
   };
 }
 
@@ -565,7 +570,7 @@ export function createColumnTable(
   const data = options.data ?? new Float32Array(length);
   if (data.length !== length) {
     throw new Error(
-      `createColumnTable: ${columns}x${rows}x${channels} needs ${length} floats, got ${data.length}`,
+      `createColumnTable: ${String(columns)}x${String(rows)}x${String(channels)} needs ${String(length)} floats, got ${String(data.length)}`,
     );
   }
   const { internalFormat, format } = columnTableFormat(gl, channels);
@@ -583,8 +588,12 @@ export function createColumnTable(
     data,
     columns,
     rows,
-    upload: () => updateDataTexture(gl, texture, columns, rows, format, gl.FLOAT, data),
-    dispose: () => gl.deleteTexture(texture),
+    upload: () => {
+      updateDataTexture(gl, texture, columns, rows, format, gl.FLOAT, data);
+    },
+    dispose: () => {
+      gl.deleteTexture(texture);
+    },
   };
 }
 

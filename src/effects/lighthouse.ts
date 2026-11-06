@@ -333,12 +333,12 @@ void main() {
 export const lighthouse = defineEffect(lighthouseMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const flareProgram = scope.add(createProgram(gl, FLARE_VERTEX, FLARE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const flareProgram = scope.add(createProgram(gl, FLARE_VERTEX, FLARE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const noiseTexture = scope.add(
         createDataTexture(gl, {
@@ -353,7 +353,9 @@ export const lighthouse = defineEffect(lighthouseMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const flareBatch = scope.own(createSpriteBatch(gl, 1, [4], [polygonStrip(8, Math.PI / 8)]));
@@ -499,7 +501,9 @@ export const lighthouse = defineEffect(lighthouseMeta, {
           flareBatch.draw(0, 1);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

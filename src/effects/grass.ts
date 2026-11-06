@@ -20,7 +20,6 @@ import {
   bladeCount,
   buildBlades,
   D_MIN,
-  type FieldId,
   FIELDS,
   GUST_CX,
   GUST_CZ,
@@ -33,7 +32,6 @@ import {
   NOISE_CHANNELS,
   NOISE_SIZE,
   SEGMENT_BEND,
-  type SunId,
   SUNS,
   WAVE1,
   WAVE2,
@@ -43,6 +41,7 @@ import { buildPeriodicNoiseTexture } from "./noise";
 import { createSpriteBatch } from "./sprites";
 import { grassMeta } from "./grass.meta";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 /** Blade layout seed: the field is the same every time. */
 const SEED = 55;
@@ -262,9 +261,9 @@ const mulInto = (out: Rgb, a: Rgb, b: Rgb, k = 1) => {
 export const grass = defineEffect(grassMeta, {
   create(gl) {
     return withScope((scope) => {
-      const bg = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const bg = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ub = createUniforms(gl, bg, [
         "uNoise",
@@ -284,9 +283,9 @@ export const grass = defineEffect(grassMeta, {
         "uRootLit",
         "uUnderLit",
       ]);
-      const blade = scope.add(createProgram(gl, BLADE_VERTEX, BLADE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const blade = scope.add(createProgram(gl, BLADE_VERTEX, BLADE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const ug = createUniforms(gl, blade, [
         "uNoise",
         "uPhase",
@@ -321,7 +320,9 @@ export const grass = defineEffect(grassMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const blades = scope.own(createSpriteBatch(gl, MAX_BLADES, [4, 4], [BLADE_STRIP]));
       /** Blades in the batch; -1 builds them on the first frame. */
@@ -354,8 +355,8 @@ export const grass = defineEffect(grassMeta, {
             blades.upload(built);
           }
 
-          const fp = FIELDS[p.field as FieldId] ?? FIELDS.meadow;
-          const sp = SUNS[p.sun as SunId] ?? SUNS.golden;
+          const fp = lookup(FIELDS, p.field, "meadow");
+          const sp = lookup(SUNS, p.sun, "golden");
           mid[0] = (fp.a[0] + fp.b[0]) * 0.5;
           mid[1] = (fp.a[1] + fp.b[1]) * 0.5;
           mid[2] = (fp.a[2] + fp.b[2]) * 0.5;
@@ -413,7 +414,9 @@ export const grass = defineEffect(grassMeta, {
           blades.draw(0, built);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

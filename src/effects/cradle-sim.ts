@@ -17,7 +17,7 @@
  * and then tilts it down by a pitch; view x and y are screen axes (cradle
  * units), view z points towards the viewer.
  */
-import type { CradleCorner, CradleFinish, CradleScene } from "./cradle.meta";
+import type { CradleFinish, CradleScene } from "./cradle.meta";
 import { BALLS_RANGE, SIZE_RANGE, SWING_RANGE } from "./cradle.meta";
 import { clamp } from "./math";
 
@@ -403,6 +403,6 @@ export function finishOf(id: string): Finish {
 }
 
 /** Side of a `corner` select value: +1 bottom right, -1 bottom left. */
-export function cornerSide(corner: CradleCorner | string): 1 | -1 {
+export function cornerSide(corner: string): 1 | -1 {
   return corner === "left" ? -1 : 1;
 }

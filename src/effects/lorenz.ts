@@ -167,7 +167,7 @@ ${HASH32_GLSL}
 ${SYSTEM_GLSL}
 void main() {
   vec3 p = aParticle.xyz;
-  for (int i = 0; i < ${SUBSTEPS}; i++) {
+  for (int i = 0; i < ${String(SUBSTEPS)}; i++) {
     vec3 k1 = deriv(p);
     vec3 k2 = deriv(p + (0.5 * uH) * k1);
     vec3 k3 = deriv(p + (0.5 * uH) * k2);
@@ -180,8 +180,8 @@ void main() {
   vec3 q = (p - uCentre) * uNorm;
   // Written so NaN fails the bound too.
   if (r < uRespawn || !(dot(q, q) < 9.0)) {
-    int s = int(hash32(h) % ${TRAJ_SAMPLES}u);
-    p = texelFetch(uTraj, ivec2(s % ${TRAJ_W}, s / ${TRAJ_W}), 0).xyz;
+    int s = int(hash32(h) % ${String(TRAJ_SAMPLES)}u);
+    p = texelFetch(uTraj, ivec2(s % ${String(TRAJ_W)}, s / ${String(TRAJ_W)}), 0).xyz;
     age = 0.0;
   }
   vParticle = vec4(p, age);
@@ -352,7 +352,9 @@ export const lorenz = defineEffect(lorenzMeta, {
         gl.getExtension("EXT_color_buffer_half_float") !== null;
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
-        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => {
+          gl.deleteProgram(p);
+        });
       const updateProgram = program(UPDATE_VERTEX, NULL_FRAGMENT, ["vParticle"]);
       const fadeProgram = program(FULLSCREEN_VERTEX, FADE_FRAGMENT);
       const segmentProgram = program(SEGMENT_VERTEX, SEGMENT_FRAGMENT);
@@ -394,20 +396,26 @@ export const lorenz = defineEffect(lorenzMeta, {
           data: new Float32Array(TRAJ_SAMPLES * 4),
           filter: gl.NEAREST,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
       // Particles: two ping-ponged vertex buffers. vaos[c] reads buffer c (update
       // and points); segVaos[c] reads the other buffer as the previous position.
       const buffers = [0, 1].map(() => {
-        const b = scope.add(gl.createBuffer(), (x) => gl.deleteBuffer(x));
+        const b = scope.add(gl.createBuffer(), (x) => {
+          gl.deleteBuffer(x);
+        });
         gl.bindBuffer(gl.ARRAY_BUFFER, b);
         gl.bufferData(gl.ARRAY_BUFFER, MAX_PARTICLES * PARTICLE_FLOATS * 4, gl.DYNAMIC_COPY);
         return b;
       });
       const stride = PARTICLE_FLOATS * 4;
       const vaos = buffers.map((buffer) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+        const vao = scope.add(gl.createVertexArray(), (v) => {
+          gl.deleteVertexArray(v);
+        });
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.enableVertexAttribArray(0);
@@ -415,7 +423,9 @@ export const lorenz = defineEffect(lorenzMeta, {
         return vao;
       });
       const segVaos = buffers.map((buffer, c) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+        const vao = scope.add(gl.createVertexArray(), (v) => {
+          gl.deleteVertexArray(v);
+        });
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers[c ^ 1]);
         gl.enableVertexAttribArray(0);
@@ -429,9 +439,9 @@ export const lorenz = defineEffect(lorenzMeta, {
       });
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) =>
-        gl.deleteTransformFeedback(t),
-      );
+      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
+        gl.deleteTransformFeedback(t);
+      });
       let cur = 0;
       const seedData = new Float32Array(MAX_PARTICLES * PARTICLE_FLOATS);
 
@@ -456,7 +466,7 @@ export const lorenz = defineEffect(lorenzMeta, {
           trailFloat = false;
           trails = createRenderTarget(gl, w, h, gl.RGBA8);
         }
-        if (!trails) console.warn(`lorenz: can't allocate a ${w}x${h} trail layer`);
+        if (!trails) console.warn(`lorenz: can't allocate a ${String(w)}x${String(h)} trail layer`);
       };
       const clearTrails = () => {
         if (!trails) return;
@@ -601,7 +611,9 @@ export const lorenz = defineEffect(lorenzMeta, {
           gl.bindVertexArray(null);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

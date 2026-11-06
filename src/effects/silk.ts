@@ -47,9 +47,9 @@ precision highp float;
 /** Frame-height position (centred, y up) = gl_FragCoord.xy * xy + zw. */
 uniform vec4 uPix;
 /** Per wave: (kx, ky, phase, amplitude). */
-uniform vec4 uWave[${WAVES}];
+uniform vec4 uWave[${String(WAVES)}];
 /** Per warp wave: (gx, gy, phase, amplitude). */
-uniform vec4 uWarp[${WARPS}];
+uniform vec4 uWarp[${String(WARPS)}];
 /** Gradient-to-slope factor (depth). */
 uniform float uSlope;
 /** Crease darkening strength. */
@@ -71,7 +71,7 @@ void main() {
   vec2 q = p + vec2(uWarp[0].w * sin(w0), uWarp[1].w * sin(w1));
   float h = 0.0;
   vec2 s = vec2(0.0);
-  for (int i = 0; i < ${WAVES}; i++) {
+  for (int i = 0; i < ${String(WAVES)}; i++) {
     vec4 w = uWave[i];
     float th = dot(w.xy, q) + w.z;
     h += w.w * sin(th);
@@ -113,9 +113,9 @@ void main() {
 export const silk = defineEffect(silkMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uPix",
         "uWave",
@@ -177,7 +177,9 @@ export const silk = defineEffect(silkMeta, {
           u.f1("uSheen", p.sheen * SHEEN_GAIN);
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

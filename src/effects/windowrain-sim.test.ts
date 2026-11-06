@@ -83,7 +83,7 @@ describe("grid", () => {
     const listed = (c: number) => {
       const out: number[] = [];
       for (let i = sim.head[c]; i !== -1; i = sim.next[i]) out.push(i);
-      return out.sort();
+      return out.sort((a, b) => a - b);
     };
     expect(listed(cellOf(sim, 10, 10))).toEqual([0, 1]);
     expect(listed(cellOf(sim, 500, 300))).toEqual([2]);
@@ -336,7 +336,7 @@ describe("spawning", () => {
       for (let i = 0; i < sim.staticCount; i++) {
         const { dx, dy } = sim;
         if (sim.dKind[i] === STATIC && (dx[i] < 0 || dx[i] > 1920 || dy[i] < 0 || dy[i] > 1080)) {
-          out.push(`static ${i} at ${dx[i]}, ${dy[i]}`);
+          out.push(`static ${String(i)} at ${String(dx[i])}, ${String(dy[i])}`);
         }
       }
       // Trails are left just above a runner, which may hang off the bottom edge
@@ -345,13 +345,16 @@ describe("spawning", () => {
         if (sim.dKind[i] !== TRAIL) continue;
         trails++;
         const { dx, dy } = sim;
-        if (dx[i] < -MAX_RUNNER_R || dx[i] > 1920 + MAX_RUNNER_R) out.push(`trail x ${dx[i]}`);
-        if (dy[i] < -MAX_RUNNER_R || dy[i] > 1080 + 3 * MAX_RUNNER_R) out.push(`trail y ${dy[i]}`);
+        if (dx[i] < -MAX_RUNNER_R || dx[i] > 1920 + MAX_RUNNER_R)
+          out.push(`trail x ${String(dx[i])}`);
+        if (dy[i] < -MAX_RUNNER_R || dy[i] > 1080 + 3 * MAX_RUNNER_R)
+          out.push(`trail y ${String(dy[i])}`);
       }
       for (let i = 0; i < sim.runnerCount; i++) {
         if (sim.rState[i] === RUNNING) running++;
-        if (sim.rx[i] < 0 || sim.rx[i] > 1920) out.push(`runner x ${sim.rx[i]}`);
-        if (sim.ry[i] < 0 || sim.ry[i] > 1080 + 3 * MAX_RUNNER_R) out.push(`runner y ${sim.ry[i]}`);
+        if (sim.rx[i] < 0 || sim.rx[i] > 1920) out.push(`runner x ${String(sim.rx[i])}`);
+        if (sim.ry[i] < 0 || sim.ry[i] > 1080 + 3 * MAX_RUNNER_R)
+          out.push(`runner y ${String(sim.ry[i])}`);
       }
     }
     expect(out).toEqual([]);

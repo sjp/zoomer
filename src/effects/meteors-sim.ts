@@ -12,7 +12,6 @@
 import { clamp, smoothstep } from "./math";
 import { createNoise, createRng } from "./noise";
 import { bandThrough, type MilkyWayBand } from "./starfield-sim";
-import type { GroundId, RadiantId } from "./meteors.meta";
 
 export const REF_HEIGHT = 1080;
 const DEG = Math.PI / 180;
@@ -95,7 +94,7 @@ export const BAND: MilkyWayBand = bandThrough([0, POLE_Y], 470, 720, 1.1, 170);
 
 /** Radiant position (reference px) for a frame `refWidth` wide. */
 export function radiantPoint(
-  id: RadiantId | string,
+  id: string,
   refWidth: number,
   out: [number, number],
 ): [number, number] {
@@ -223,7 +222,7 @@ const radiantScratch: [number, number] = [0, 0];
 export function setSkyFrame(
   f: SkyFrame,
   refWidth: number,
-  radiant: RadiantId | string,
+  radiant: string,
   groundTop: number,
 ): SkyFrame {
   f.refWidth = Math.max(1, refWidth);
@@ -588,7 +587,7 @@ export const createGroundLayout = (): GroundLayout => ({
 export function layoutGround(
   out: GroundLayout,
   table: Float32Array,
-  ground: GroundId | string,
+  ground: string,
   seed: number,
   refWidth: number,
 ): GroundLayout {

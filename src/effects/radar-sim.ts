@@ -382,7 +382,7 @@ export function placeLabels(terrain: Float32Array, aspect: number, seed: number)
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+const pad2 = (n: number) => (n < 10 ? `0${String(n)}` : String(n));
 
 /** The timestamp text for a local date, e.g. "TUE 03 NOV  14:05". */
 export function formatStamp(date: Date): string {

@@ -34,7 +34,8 @@ export function createGpuTimer(gl: WebGL2RenderingContext): GpuTimer | undefined
   if (!ext) return undefined;
   const queries: WebGLQuery[] = [];
   for (let i = 0; i < RING; i++) {
-    const q = gl.createQuery();
+    // Null on a lost context, although the DOM typings omit it.
+    const q = gl.createQuery() as WebGLQuery | null;
     if (!q) {
       for (const made of queries) gl.deleteQuery(made);
       return undefined;

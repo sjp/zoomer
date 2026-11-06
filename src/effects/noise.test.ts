@@ -62,7 +62,7 @@ describe("createRng", () => {
       for (let i = 0; i < 10000; i++) {
         const v = rng();
         if (!(v >= 0 && v < 1) && outside.length < 10)
-          outside.push(`seed ${seed}, draw ${i}: ${v}`);
+          outside.push(`seed ${String(seed)}, draw ${String(i)}: ${String(v)}`);
         buckets[Math.floor(v * 10)]++;
       }
       for (const n of buckets) expect(n).toBeGreaterThan(800);

@@ -122,7 +122,7 @@ describe("createLanterns", () => {
             l.x[i] < f.refWidth + reach &&
             l.y[i] >= -reach &&
             l.y[i] <= 1080 + reach;
-          if (!ok) out.push(`${i}: ${l.x[i]}, ${l.y[i]}`);
+          if (!ok) out.push(`${String(i)}: ${String(l.x[i])}, ${String(l.y[i])}`);
         }
       }
     }

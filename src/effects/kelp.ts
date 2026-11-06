@@ -22,7 +22,6 @@ import {
   LAYERS,
   MAX_FRONDS,
   MAX_SHAFTS,
-  type PaletteId,
   PALETTES,
   PROFILE_COLUMNS,
   PROFILE_ROWS,
@@ -40,6 +39,7 @@ import { createLowResTarget, qualityDivisor } from "./lowres";
 import { advanceSwell, swayGlsl } from "./sway";
 import { createSpriteBatch, QUAD } from "./sprites";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 const f = glslFloat;
 
@@ -78,7 +78,7 @@ in vec2 vUv;
 /** Full canvas size, px. */
 uniform vec2 uResolution;
 /** Shafts: top x (px), slope (dx/dy), top half width (px), strength. */
-uniform vec4 uShafts[${MAX_SHAFTS}];
+uniform vec4 uShafts[${String(MAX_SHAFTS)}];
 uniform int uShaftCount;
 uniform vec3 uShaftCol;
 /** Shaft strength param, and the ripple phase (0..1). */
@@ -94,7 +94,7 @@ void main() {
   float rip = sin(TAU * fract(xh * 1.3 + uLight.y)) * sin(TAU * fract(xh * 2.1 - 2.0 * uLight.y + 0.3));
   c += uSurface * exp(-v * 12.0) * (0.3 + 0.12 * rip);
   float shaft = 0.0;
-  for (int i = 0; i < ${MAX_SHAFTS}; i++) {
+  for (int i = 0; i < ${String(MAX_SHAFTS)}; i++) {
     if (i >= uShaftCount) break;
     vec4 s = uShafts[i];
     float d = (px.x - s.x - s.y * px.y) / (s.z * (1.0 + 2.5 * v));
@@ -291,9 +291,9 @@ export const kelp = defineEffect(kelpMeta, {
   create(gl) {
     return withScope((scope) => {
       const water = scope.own(createLowResTarget(gl));
-      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const uw = createUniforms(gl, waterProgram, [
         "uResolution",
         "uShafts",
@@ -306,9 +306,9 @@ export const kelp = defineEffect(kelpMeta, {
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const frondProgram = scope.add(createProgram(gl, FROND_VERTEX, FROND_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const frondProgram = scope.add(createProgram(gl, FROND_VERTEX, FROND_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const uf = createUniforms(gl, frondProgram, [
         "uResolution",
         "uScale",
@@ -322,9 +322,9 @@ export const kelp = defineEffect(kelpMeta, {
         "uDeep",
         "uProfile",
       ]);
-      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const ufi = createUniforms(gl, fishProgram, [
         "uResolution",
         "uFish",
@@ -333,9 +333,9 @@ export const kelp = defineEffect(kelpMeta, {
         "uMid",
         "uDeep",
       ]);
-      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const us = createUniforms(gl, snowProgram, ["uResolution", "uScale", "uSnow"]);
       gl.useProgram(frondProgram);
       uf.i1("uProfile", 0);
@@ -391,7 +391,7 @@ export const kelp = defineEffect(kelpMeta, {
             snow = createSnow(p.seed);
             simSeed = p.seed;
           }
-          const pal = PALETTES[p.palette as PaletteId] ?? PALETTES.temperate;
+          const pal = lookup(PALETTES, p.palette, "temperate");
 
           // Water.
           water.resize(width, height, qualityDivisor(p.quality, WATER_DIVISORS));
@@ -469,7 +469,9 @@ export const kelp = defineEffect(kelpMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

@@ -227,9 +227,9 @@ const getTextureLevels = () => {
 export const tunnel = defineEffect(tunnelMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const texture = scope.add(
         createDataTexture(gl, {
@@ -242,7 +242,9 @@ export const tunnel = defineEffect(tunnelMeta, {
           data: getTextureLevels()[0],
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       // Mipmaps stop the walls shimmering where they minify (mid-depth and beyond);
       // the shader picks the level with textureGrad. Uploaded straight after
@@ -356,7 +358,9 @@ export const tunnel = defineEffect(tunnelMeta, {
           }
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

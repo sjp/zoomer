@@ -71,13 +71,13 @@ uniform sampler2D uTable;
 uniform sampler2D uPaper;
 uniform int uCount;
 /** Per layer, front first: parallax offset (xy), table slot (z). */
-uniform vec4 uLayer[${MAX_STACK}];
+uniform vec4 uLayer[${String(MAX_STACK)}];
 /** Per layer: has x row, has y row, first shape, end of shapes. */
-uniform ivec4 uFlags[${MAX_STACK}];
-uniform vec3 uColor[${MAX_STACK}];
+uniform ivec4 uFlags[${String(MAX_STACK)}];
+uniform vec3 uColor[${String(MAX_STACK)}];
 /** Per shape, in its layer's coordinates: centre, size, kind; and rotation (cos, sin). */
-uniform vec4 uShape[${MAX_SHAPES}];
-uniform vec2 uShapeRot[${MAX_SHAPES}];
+uniform vec4 uShape[${String(MAX_SHAPES)}];
+uniform vec2 uShapeRot[${String(MAX_SHAPES)}];
 uniform vec3 uSky;
 uniform vec3 uStarColor;
 uniform float uStars;
@@ -165,7 +165,7 @@ void main() {
   float lit = 1.0;
   // Offset of the paper texture: the parallax of the layer the pixel lands on.
   vec2 paperOff = vec2(0.0);
-  for (int i = 0; i < ${MAX_STACK}; i++) {
+  for (int i = 0; i < ${String(MAX_STACK)}; i++) {
     if (i >= uCount) break;
     vec4 L = uLayer[i];
     ivec4 F = uFlags[i];
@@ -230,9 +230,9 @@ void main() {
 export const papercut = defineEffect(papercutMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, TABLE_COLUMNS, TABLE_CHANNELS, {
@@ -253,7 +253,9 @@ export const papercut = defineEffect(papercutMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const u = createUniforms(gl, program, [
         "uTable",
@@ -411,7 +413,9 @@ export const papercut = defineEffect(papercutMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

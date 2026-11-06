@@ -83,7 +83,7 @@ describe("sampleDawn", () => {
     expect(sampleDawn(DAWN_HOURS.predawn, s).sunY).toBeLessThan(0);
     expect(sampleDawn(DAWN_HOURS.golden, s).sunY).toBeGreaterThan(0);
     let last = -Infinity;
-    for (let h = DAWN_HOURS.predawn; h <= DAWN_HOURS.golden; h += 0.01) {
+    for (let h: number = DAWN_HOURS.predawn; h <= DAWN_HOURS.golden; h += 0.01) {
       const y = sampleDawn(h, s).sunY;
       expect(y).toBeGreaterThanOrEqual(last - 1e-12);
       last = y;

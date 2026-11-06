@@ -224,7 +224,9 @@ describe("balloons", () => {
         const lo = altitudeLow(b.depth[i]) - 1e-12;
         const hi = altitudeHigh(b.depth[i]) + 1e-12;
         if (!(b.y[i] >= lo && b.y[i] <= hi) && outside.length < 10) {
-          outside.push(`step ${s}, balloon ${i}: y ${b.y[i]} outside [${lo}, ${hi}]`);
+          outside.push(
+            `step ${String(s)}, balloon ${String(i)}: y ${String(b.y[i])} outside [${String(lo)}, ${String(hi)}]`,
+          );
         }
       }
     }
@@ -257,7 +259,9 @@ describe("balloons", () => {
         const timer = b.burnTimer[i];
         const age = b.burnAge[i];
         if (!(timer <= BURN_GAP_MAX && age < BURN_MAX && age >= -1) && unbounded.length < 10) {
-          unbounded.push(`step ${s}, balloon ${i}: burnTimer ${timer}, burnAge ${age}`);
+          unbounded.push(
+            `step ${String(s)}, balloon ${String(i)}: burnTimer ${String(timer)}, burnAge ${String(age)}`,
+          );
         }
         if (age >= 0) fired[i] = 1;
       }

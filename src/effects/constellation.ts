@@ -301,9 +301,9 @@ export const constellation = defineEffect(constellationMeta, {
   create(gl) {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));
-      const pointProgram = scope.add(createProgram(gl, POINT_VERTEX, POINT_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const pointProgram = scope.add(createProgram(gl, POINT_VERTEX, POINT_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const pointU = createUniforms(gl, pointProgram, ["uResolution", "uColor"]);
       const points = scope.own(
         createSpriteBatch(gl, MAX_POINTS, [4], [polygonStrip(8, Math.PI / 8)]),
@@ -481,7 +481,9 @@ export const constellation = defineEffect(constellationMeta, {
           gl.disable(gl.BLEND);
           gl.blendEquation(gl.FUNC_ADD);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

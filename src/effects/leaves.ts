@@ -70,16 +70,18 @@ export const leaves = defineEffect(leavesMeta, {
       );
       const pieceProgram = scope.add(
         createProgram(gl, pieceVertex(pieceBatch.spinLocation), PIECE_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const pieceU = createUniforms(gl, pieceProgram, ["uResolution", "uVein"]);
       // Per blob: x, y, radius, opacity; r, g, b.
       const blobBatch = scope.own(
         createSpriteBatch(gl, MAX_BLOBS, [4, 3], [polygonStrip(8, Math.PI / 8)]),
       );
-      const blobProgram = scope.add(createProgram(gl, BLOB_VERTEX, BLOB_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const blobProgram = scope.add(createProgram(gl, BLOB_VERTEX, BLOB_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const blobU = createUniforms(gl, blobProgram, ["uResolution"]);
       const background = scope.own(createGradientBackground(gl));
       const bgTop = unitRgbMemo();
@@ -164,7 +166,9 @@ export const leaves = defineEffect(leavesMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

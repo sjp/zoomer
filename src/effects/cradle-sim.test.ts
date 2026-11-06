@@ -149,7 +149,7 @@ describe("swing", () => {
     let worst = Infinity;
     const xs = new Float64Array(BALLS_RANGE[1]);
     const ys = new Float64Array(BALLS_RANGE[1]);
-    for (let count = BALLS_RANGE[0]; count <= BALLS_RANGE[1]; count++) {
+    for (let count: number = BALLS_RANGE[0]; count <= BALLS_RANGE[1]; count++) {
       for (const lifted of [1, 2]) {
         const m = liftedCount(lifted, count);
         for (const deg of [SWING_RANGE[0], 25, SWING_RANGE[1]]) {
@@ -216,7 +216,7 @@ describe("view and layout", () => {
     const left = createLayout();
     for (const aspect of [4 / 3, 16 / 9, 21 / 9]) {
       for (const size of [SIZE_RANGE[0], 1, SIZE_RANGE[1]]) {
-        for (let count = BALLS_RANGE[0]; count <= BALLS_RANGE[1]; count++) {
+        for (let count: number = BALLS_RANGE[0]; count <= BALLS_RANGE[1]; count++) {
           cradleLayout(aspect, size, count, createView(1), right);
           cradleLayout(aspect, size, count, createView(-1), left);
           const b = right.box;

@@ -19,7 +19,6 @@ import { profile, profileParams, type ProfileParams } from "./dunes-sim";
 import { clamp, smoothstep } from "./math";
 import { createRng, type Noise } from "./noise";
 import { bandThrough, type MilkyWayBand } from "./starfield-sim";
-import type { FireSide } from "./desertcamp.meta";
 
 export const REF_HEIGHT = 1080;
 
@@ -150,7 +149,7 @@ export const createCampLayout = (): CampLayout => ({
 export function layoutCamp(
   out: CampLayout,
   table: Float32Array,
-  fire: FireSide | string,
+  fire: string,
   refWidth: number,
 ): CampLayout {
   const w = Math.max(1, refWidth);

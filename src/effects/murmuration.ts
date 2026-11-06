@@ -290,7 +290,9 @@ export const murmuration = defineEffect(murmurationMeta, {
       const fieldFormat = float ? gl.RGBA16F : gl.RGBA8;
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
-        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => {
+          gl.deleteProgram(p);
+        });
       const splatProgram = program(SPLAT_VERTEX, SPLAT_FRAGMENT);
       const blurProgram = program(FULLSCREEN_VERTEX, BLUR_FRAGMENT);
       const updateProgram = program(UPDATE_VERTEX, NULL_FRAGMENT, ["vBird"]);
@@ -334,9 +336,15 @@ export const murmuration = defineEffect(murmurationMeta, {
       let horizonAspect = 0;
 
       // Birds: two ping-ponged vertex buffers, each with a VAO reading it.
-      const buffers = [0, 1].map(() => scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b)));
+      const buffers = [0, 1].map(() =>
+        scope.add(gl.createBuffer(), (b) => {
+          gl.deleteBuffer(b);
+        }),
+      );
       const vaos = buffers.map((buffer) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+        const vao = scope.add(gl.createVertexArray(), (v) => {
+          gl.deleteVertexArray(v);
+        });
         gl.bindVertexArray(vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.enableVertexAttribArray(0);
@@ -345,9 +353,9 @@ export const murmuration = defineEffect(murmurationMeta, {
       });
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) =>
-        gl.deleteTransformFeedback(t),
-      );
+      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
+        gl.deleteTransformFeedback(t);
+      });
       let cur = 0;
       let seeded = false;
 
@@ -368,7 +376,7 @@ export const murmuration = defineEffect(murmurationMeta, {
         const b = a && createRenderTarget(gl, w, h, fieldFormat);
         if (!a || !b) {
           a?.dispose();
-          console.warn(`murmuration: can't allocate a ${w}x${h} field grid`);
+          console.warn(`murmuration: can't allocate a ${String(w)}x${String(h)} field grid`);
           return;
         }
         targets = [a, b];
@@ -519,7 +527,9 @@ export const murmuration = defineEffect(murmurationMeta, {
           gl.bindVertexArray(null);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

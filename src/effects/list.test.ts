@@ -202,7 +202,10 @@ describe("visibleEffects", () => {
     const grouped = (sort: ListOptions["sort"]) =>
       visibleEffects(list, { sort, favourites }).map((e) => effectGroup(e, { sort, favourites }));
     for (const sort of ["featured", "az", "lightest"] as const) {
-      expect(grouped(sort)).toEqual([...Array(3).fill("Favourites"), ...Array(3).fill(undefined)]);
+      expect(grouped(sort)).toEqual([
+        ...Array<string>(3).fill("Favourites"),
+        ...Array<undefined>(3).fill(undefined),
+      ]);
     }
     expect(grouped("category")).toEqual([
       "Favourites",

@@ -45,9 +45,9 @@ export const snow = defineEffect(snowMeta, {
   create(gl) {
     return withScope((scope) => {
       const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_FLAKES));
-      const mistProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MIST_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const mistProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MIST_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const mistU = createUniforms(gl, mistProgram, ["uHeight", "uMist", "uAmount"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const background = scope.own(createGradientBackground(gl));
@@ -133,7 +133,9 @@ export const snow = defineEffect(snowMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

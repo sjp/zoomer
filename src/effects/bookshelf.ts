@@ -232,7 +232,9 @@ export function createBookshelfTexture(gl: WebGL2RenderingContext, scope: Scope)
       type: gl.UNSIGNED_BYTE,
       data: pixels,
     }),
-    (t) => gl.deleteTexture(t),
+    (t) => {
+      gl.deleteTexture(t);
+    },
   );
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);

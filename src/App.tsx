@@ -107,11 +107,12 @@ export function App() {
 
   /** Loads an effect and runs it, unless another load has started since. */
   const startLoad = useCallback(
-    (entry: EffectEntry) =>
+    (entry: EffectEntry) => {
       latestLoad.run(effectLoader.load(entry), setRunning, (err) => {
         console.error(`Failed to load "${entry.name}":`, err);
         setLoadError(`This effect failed to load: ${describeError(err)}`);
-      }),
+      });
+    },
     [latestLoad],
   );
   /**
@@ -152,17 +153,20 @@ export function App() {
     const entry = getEffect(initial.effectId) ?? defaultEffect;
     if (effectLoader.get(entry.id)) return;
     startLoad(entry);
-    return () => latestLoad.cancel();
+    return () => {
+      latestLoad.cancel();
+    };
   }, [initial, latestLoad, startLoad]);
 
   // Debounced: dragging a slider changes params on every input event, and each
   // replaceState is an IPC round-trip that browsers throttle when called rapidly.
   useEffect(() => {
-    const timer = setTimeout(
-      () => window.history.replaceState(null, "", encodeHash(effect, values)),
-      HASH_DEBOUNCE,
-    );
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      window.history.replaceState(null, "", encodeHash(effect, values));
+    }, HASH_DEBOUNCE);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [effect, values]);
 
   // Follow hand edits and pasted links. The app's own replaceState writes don't fire
@@ -186,21 +190,28 @@ export function App() {
       selectEffect(next.effect.id);
     };
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+    };
   }, [selectEffect]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(undefined), TOAST_MS);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      setToast(undefined);
+    }, TOAST_MS);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [toast]);
 
   const setParam = useCallback(
-    (key: string, value: ParamValue) =>
+    (key: string, value: ParamValue) => {
       setValuesById((prev) => ({
         ...prev,
         [effect.id]: { ...(prev[effect.id] ?? defaults(effect.params)), [key]: value },
-      })),
+      }));
+    },
     [effect],
   );
 
@@ -239,8 +250,9 @@ export function App() {
   // Fullscreen can be refused (in an iframe, without a user gesture, or on iPhone,
   // which lacks the API); say so briefly rather than failing silently.
   const toggleFullscreen = useCallback(() => {
-    const fail = () =>
+    const fail = () => {
       setToast((t) => ({ message: "Fullscreen unavailable", id: (t?.id ?? 0) + 1 }));
+    };
     try {
       const change = document.fullscreenElement
         ? document.exitFullscreen()
@@ -274,7 +286,9 @@ export function App() {
       else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, [step, togglePanel, toggleFullscreen, openList, toggleCurrentFavourite]);
 
   const record = async (seconds: number) => {
@@ -284,10 +298,9 @@ export function App() {
     setRecordingLeft(seconds);
     // The list is locked while recording; don't bring it back when the recording ends.
     setListOpen(false);
-    const countdown = setInterval(
-      () => setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1))),
-      1000,
-    );
+    const countdown = setInterval(() => {
+      setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1)));
+    }, 1000);
     try {
       const { blob, extension } = await recordCanvas(
         canvas,
@@ -295,7 +308,10 @@ export function App() {
         FRAME_RATES[frameRate].fps ?? 60,
         subscribeFrames,
       );
-      download(blob, `zoomer-${effect.id}-${canvas.width}x${canvas.height}.${extension}`);
+      download(
+        blob,
+        `zoomer-${effect.id}-${String(canvas.width)}x${String(canvas.height)}.${extension}`,
+      );
     } catch (err) {
       window.alert(err instanceof Error ? err.message : String(err));
     } finally {
@@ -322,8 +338,12 @@ export function App() {
       <div
         className="panel-wrap"
         data-visible={showPanel}
-        onPointerEnter={() => setHoveringPanel(true)}
-        onPointerLeave={() => setHoveringPanel(false)}
+        onPointerEnter={() => {
+          setHoveringPanel(true);
+        }}
+        onPointerLeave={() => {
+          setHoveringPanel(false);
+        }}
       >
         <PanelErrorBoundary>
           <ControlPanel
@@ -343,16 +363,22 @@ export function App() {
             error={loadError ?? (ready ? effectError : undefined)}
             loading={loading}
             canRecord={ready}
-            onReload={loadError === undefined ? undefined : () => window.location.reload()}
+            onReload={
+              loadError === undefined
+                ? undefined
+                : () => {
+                    window.location.reload();
+                  }
+            }
             resolution={resolution}
             frameRate={frameRate}
             stats={statsStore}
             recordingLeft={recordingLeft}
             onEffectChange={selectEffect}
             onParamChange={setParam}
-            onReset={() =>
-              setValuesById((prev) => ({ ...prev, [effect.id]: defaults(effect.params) }))
-            }
+            onReset={() => {
+              setValuesById((prev) => ({ ...prev, [effect.id]: defaults(effect.params) }));
+            }}
             onResolutionChange={setResolution}
             onFrameRateChange={setFrameRate}
             onRecord={(s) => void record(s)}

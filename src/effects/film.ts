@@ -148,9 +148,9 @@ vec4 composite(vec2 uv) {
 export const film = defineEffect(filmMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, THICKNESS_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, THICKNESS_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE }));
       const u = createUniforms(gl, program, [
@@ -178,7 +178,9 @@ export const film = defineEffect(filmMeta, {
           data: buildPeriodicNoiseTexture(NOISE_SIZE, NOISE_CHANNELS),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const table = new Uint8Array(TABLE_SIZE * 4);
       const tableTex = scope.add(
@@ -190,7 +192,9 @@ export const film = defineEffect(filmMeta, {
           type: gl.UNSIGNED_BYTE,
           data: table,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       let tableMode = "";
       let tableSat = Number.NaN;
@@ -285,7 +289,9 @@ export const film = defineEffect(filmMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

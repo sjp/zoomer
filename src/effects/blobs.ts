@@ -273,14 +273,14 @@ precision highp int;
 /** Low-res pixel to frame-height units: (aspect / width, 1 / height). */
 uniform vec2 uToUnits;
 /** x, y, k = log2(e) / r^2; only the first uCount are set. */
-uniform vec4 uBlobs[${MAX_BLOBS}];
+uniform vec4 uBlobs[${String(MAX_BLOBS)}];
 /** Linear-light blob colours. */
-uniform vec3 uColors[${MAX_BLOBS}];
+uniform vec3 uColors[${String(MAX_BLOBS)}];
 uniform vec3 uBase;
 uniform int uCount;
 out vec4 outColor;
 
-const int MAX_BLOBS = ${MAX_BLOBS};
+const int MAX_BLOBS = ${String(MAX_BLOBS)};
 const float BASE_WEIGHT = ${glslFloat(BASE_WEIGHT)};
 const float INV_GAMMA = ${glslFloat(1 / GAMMA)};
 
@@ -331,9 +331,9 @@ vec4 composite(vec2 uv) {
 export const blobs = defineEffect(blobsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const mainT = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       // Sampled by mainT's composite, so it must never render direct: DIVISORS are all > 1.
@@ -474,7 +474,9 @@ export const blobs = defineEffect(blobsMeta, {
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE0);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

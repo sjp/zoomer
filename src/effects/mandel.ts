@@ -120,9 +120,9 @@ void main() {
 export const mandel = defineEffect(mandelMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uPalette",
         "uCentre",
@@ -153,7 +153,9 @@ export const mandel = defineEffect(mandelMeta, {
           data: paletteTexels(palette),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       let mean = paletteMean(palette);
 
@@ -167,12 +169,11 @@ export const mandel = defineEffect(mandelMeta, {
       let spin = 0;
       let drift = 0;
 
-      const setView = (name: "uViewA" | "uViewB", depth: number) => {
-        writeView(tgt!, depth, spin, view);
+      const setView = (t: MandelTarget, name: "uViewA" | "uViewB", depth: number) => {
+        writeView(t, depth, spin, view);
         u.f4(name, view[0], view[1], view[2], view[3]);
       };
-      const setMap = (name: "uMapA" | "uMapB", depth: number, detail: number) => {
-        const t = tgt!;
+      const setMap = (t: MandelTarget, name: "uMapA" | "uMapB", depth: number, detail: number) => {
         writePaletteMap(t, depth, map);
         u.f4(name, map[0], map[1], iterCap(t, depth, detail), capIndex(t, detail));
       };
@@ -219,13 +220,13 @@ export const mandel = defineEffect(mandelMeta, {
           const lh = target.height;
           u.f3("uFrame", lw / 2, lh / 2, 2 / lh);
           u.f2("uCentre", t.centre[0], t.centre[1]);
-          setView("uViewA", zoom);
-          setMap("uMapA", zoom, p.detail);
+          setView(t, "uViewA", zoom);
+          setMap(t, "uMapA", zoom, p.detail);
           const fade = fadeWeight(t, zoom);
           u.f1("uFade", fade);
           if (fade > 0) {
-            setView("uViewB", zoom - loop);
-            setMap("uMapB", zoom - loop, p.detail);
+            setView(t, "uViewB", zoom - loop);
+            setMap(t, "uMapB", zoom - loop, p.detail);
           }
           const capI = capIndex(t, p.detail);
           u.f4(
@@ -243,7 +244,9 @@ export const mandel = defineEffect(mandelMeta, {
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

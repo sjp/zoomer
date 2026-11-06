@@ -93,7 +93,7 @@ void main() {
 
   uint h = hash32(uint(col) * 0x9e3779b1u ^ hash32(uint(row) + uint(vSeed) * 0x85ebca77u));
   int g = int(h % uint(uCount));
-  ivec2 tile = ivec2(g % ${ATLAS_COLS}, g / ${ATLAS_COLS}) * uCellPx;
+  ivec2 tile = ivec2(g % ${String(ATLAS_COLS)}, g / ${String(ATLAS_COLS)}) * uCellPx;
   float glyph = texelFetch(uAtlas, tile + local, 0).r;
 
   // Rows the head has passed, including the cell it is in now.
@@ -113,7 +113,9 @@ export const rain = defineEffect(rainMeta, {
     return withScope((scope) => {
       const backgroundRgb = unitRgbMemo();
       const colorRgb = unitRgbMemo();
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
+      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uResolution",
         "uCell",
@@ -128,7 +130,9 @@ export const rain = defineEffect(rainMeta, {
         "uBody",
         "uHeadColor",
       ]);
-      const atlas = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      const atlas = scope.add(gl.createTexture(), (t) => {
+        gl.deleteTexture(t);
+      });
       let atlasCell = 0;
       let atlasCharset = "";
       let glyphCount = 1;
@@ -169,7 +173,7 @@ export const rain = defineEffect(rainMeta, {
         if (!ctx) throw new Error("Digital Rain: no 2D context for the glyph atlas");
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = `${cell}px ${FONT_FAMILY}`;
+        ctx.font = `${String(cell)}px ${FONT_FAMILY}`;
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
         ctx.fillStyle = "#fff";
@@ -251,7 +255,9 @@ export const rain = defineEffect(rainMeta, {
           batch.draw(0, n);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

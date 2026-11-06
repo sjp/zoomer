@@ -80,7 +80,8 @@ describe("buildMesh", () => {
         const [bx, bz] = decode(mesh[o + 3]);
         const nextOk = mesh[o] + ax === mesh[next] && mesh[o + 1] + az === mesh[next + 1];
         const lastOk = mesh[o] + bx === mesh[last] && mesh[o + 1] + bz === mesh[last + 1];
-        if (!(nextOk && lastOk) && wrong.length < 10) wrong.push(`triangle at ${v}, corner ${i}`);
+        if (!(nextOk && lastOk) && wrong.length < 10)
+          wrong.push(`triangle at ${String(v)}, corner ${String(i)}`);
       }
     }
     expect(wrong).toEqual([]);
@@ -93,14 +94,15 @@ describe("buildMesh", () => {
     for (let i = 0; i < tris.length; i += 2) {
       const xs = [...tris[i], ...tris[i + 1]].map((p) => p[0]);
       const zs = [...tris[i], ...tris[i + 1]].map((p) => p[1]);
-      const key = `${Math.min(...xs)},${Math.min(...zs)}`;
+      const key = `${String(Math.min(...xs))},${String(Math.min(...zs))}`;
       if (seen.has(key)) fail(`cell ${key} covered twice`);
       seen.add(key);
       if (Math.max(...xs) - Math.min(...xs) !== 1) fail(`cell ${key} is not one wide`);
       if (Math.max(...zs) - Math.min(...zs) !== 1) fail(`cell ${key} is not one deep`);
     }
     for (const t of tris) {
-      for (const [x] of t) if (!(Math.abs(x) < PERIOD / 2)) fail(`x ${x} outside the period`);
+      for (const [x] of t)
+        if (!(Math.abs(x) < PERIOD / 2)) fail(`x ${String(x)} outside the period`);
     }
     expect(wrong).toEqual([]);
   });
@@ -119,7 +121,8 @@ describe("buildMesh", () => {
       const dist = col >= 0 ? col : -col;
       // Lexicographic (row, dist) never increases.
       const descending = row < prev.row || (row === prev.row && dist <= prev.dist);
-      if (!descending && wrong.length < 10) wrong.push(`cell ${col},${row} after ${prev.row}`);
+      if (!descending && wrong.length < 10)
+        wrong.push(`cell ${String(col)},${String(row)} after ${String(prev.row)}`);
       prev = { row, dist };
       // The camera is behind row 0 inside column 0; take a far, sideways sample of it.
       for (const cam of [
@@ -130,7 +133,9 @@ describe("buildMesh", () => {
           [0, 1].map((k) => (t[0][k] + t[1][k] + t[2][k]) / 3);
         const d = (t: [number, number][]) => Math.hypot(...centroid(t).map((v, k) => v - cam[k]));
         if (!(d(far) > d(near)) && wrong.length < 10) {
-          wrong.push(`cell ${col},${row}: far triangle not farther from ${cam}`);
+          wrong.push(
+            `cell ${String(col)},${String(row)}: far triangle not farther from ${cam.join(",")}`,
+          );
         }
       }
     }
@@ -163,7 +168,7 @@ describe("cameraAt", () => {
         Math.abs(pose.y - CAM_HEIGHT) <= SWAY_Y + 1e-12 &&
         Math.abs(pose.yaw) <= SWAY_YAW + 1e-12 &&
         Math.abs(pose.horizon - HORIZON_NDC) <= SWAY_HORIZON + 1e-12;
-      if (!ok && outside.length < 10) outside.push(`t ${t}: ${JSON.stringify(pose)}`);
+      if (!ok && outside.length < 10) outside.push(`t ${String(t)}: ${JSON.stringify(pose)}`);
     }
     expect(outside).toEqual([]);
   });
@@ -202,7 +207,7 @@ describe("cameraMeshZ", () => {
       // toBeCloseTo(0.037, 9): within half of 1e-9.
       const smooth = Math.abs(world - prevWorld - 0.037) < 5e-10;
       if (!(behind && smooth) && wrong.length < 10)
-        wrong.push(`d ${d}: z ${z}, step ${world - prevWorld}`);
+        wrong.push(`d ${String(d)}: z ${String(z)}, step ${String(world - prevWorld)}`);
       prevWorld = world;
     }
     expect(wrong).toEqual([]);

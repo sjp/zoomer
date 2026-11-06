@@ -90,17 +90,19 @@ describe("boundaryForce", () => {
     const aspect = 16 / 9;
     const problems: string[] = [];
     for (let y = 0.45; y <= 0.95; y += 0.05) {
-      if (boundaryForce(0.02, y, aspect, f)[0] <= 0) problems.push(`left ${y}`);
-      if (boundaryForce(-0.1, y, aspect, f)[0] <= 0) problems.push(`left outside ${y}`);
-      if (boundaryForce(aspect - 0.02, y, aspect, f)[0] >= 0) problems.push(`right ${y}`);
-      if (boundaryForce(aspect + 0.1, y, aspect, f)[0] >= 0) problems.push(`right outside ${y}`);
+      if (boundaryForce(0.02, y, aspect, f)[0] <= 0) problems.push(`left ${String(y)}`);
+      if (boundaryForce(-0.1, y, aspect, f)[0] <= 0) problems.push(`left outside ${String(y)}`);
+      if (boundaryForce(aspect - 0.02, y, aspect, f)[0] >= 0) problems.push(`right ${String(y)}`);
+      if (boundaryForce(aspect + 0.1, y, aspect, f)[0] >= 0)
+        problems.push(`right outside ${String(y)}`);
     }
     for (let x = 0.1; x < aspect - 0.1; x += 0.05) {
-      if (boundaryForce(x, 0.98, aspect, f)[1] >= 0) problems.push(`top ${x}`);
-      if (boundaryForce(x, 1.1, aspect, f)[1] >= 0) problems.push(`top outside ${x}`);
+      if (boundaryForce(x, 0.98, aspect, f)[1] >= 0) problems.push(`top ${String(x)}`);
+      if (boundaryForce(x, 1.1, aspect, f)[1] >= 0) problems.push(`top outside ${String(x)}`);
       // Everywhere in the bottom third the push is upwards.
       for (let y = -0.1; y < 1 / 3; y += 0.05) {
-        if (boundaryForce(x, y, aspect, f)[1] <= 0) problems.push(`bottom ${x} ${y}`);
+        if (boundaryForce(x, y, aspect, f)[1] <= 0)
+          problems.push(`bottom ${String(x)} ${String(y)}`);
       }
     }
     expect(problems).toEqual([]);
@@ -115,7 +117,8 @@ describe("boundaryForce", () => {
         boundaryForce(x, y, aspect, f);
         const outward = f[0] * (x - cx) + f[1] * (y - EX_Y);
         const deepInside = Math.abs(x - cx) < 0.16 && y < 0.5;
-        if (outward < 0 || f[1] < 0 || (deepInside && outward <= 0)) problems.push(`${x} ${y}`);
+        if (outward < 0 || f[1] < 0 || (deepInside && outward <= 0))
+          problems.push(`${String(x)} ${String(y)}`);
       }
     }
     expect(problems).toEqual([]);

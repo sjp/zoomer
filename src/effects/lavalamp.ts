@@ -57,13 +57,13 @@ uniform vec2 uScale;
  * Per blob, (q, c) such that d = p * q + c is the offset from the blob centre
  * pre-scaled by (sqrt(stretch), 1 / sqrt(stretch)), so the field term is r^2 / (d.d + EPS).
  */
-uniform vec4 uBlobs[${MAX_BLOBS}];
+uniform vec4 uBlobs[${String(MAX_BLOBS)}];
 /** Per blob radius squared, in lamp units squared. */
-uniform float uBlobR2[${MAX_BLOBS}];
+uniform float uBlobR2[${String(MAX_BLOBS)}];
 uniform int uCount;
 uniform float uPoolR2;
 
-const int MAX_BLOBS = ${MAX_BLOBS};
+const int MAX_BLOBS = ${String(MAX_BLOBS)};
 const float REF_H = ${glslFloat(REF_H)};
 const float THRESHOLD = ${glslFloat(THRESHOLD)};
 const float EPS = ${glslFloat(EPS)};
@@ -142,7 +142,7 @@ uniform float uSoftness;
 
 out vec4 outColor;
 
-const int TILE_SHIFT = ${TILE_SHIFT};
+const int TILE_SHIFT = ${String(TILE_SHIFT)};
 ${DITHER_GLSL}
 void main() {
   // Lamp coordinates, y down like the 2D canvas.
@@ -300,12 +300,12 @@ export function fillBlobs(
 export const lavalamp = defineEffect(lavalampMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const maskProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const maskProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const fieldNames = [
         "uResolution",
@@ -467,7 +467,9 @@ export const lavalamp = defineEffect(lavalampMeta, {
           // Unbind the mask so it is never sampled while it is the render target.
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

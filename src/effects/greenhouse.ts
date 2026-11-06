@@ -309,7 +309,9 @@ void main() {
 export const greenhouse = defineEffect(greenhouseMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+      const deleteProgram = (p: WebGLProgram) => {
+        gl.deleteProgram(p);
+      };
       const background = scope.own(createLowResTarget(gl));
       const bgProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT),
@@ -479,7 +481,9 @@ export const greenhouse = defineEffect(greenhouseMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

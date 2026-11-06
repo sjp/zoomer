@@ -176,7 +176,7 @@ uniform vec3 uInk;
 uniform vec3 uCardCol;
 out vec4 outColor;
 float glyphAt(float g, vec2 uv) {
-  vec2 tile = vec2(mod(g, ${ATLAS_COLS}.0), floor(g / ${ATLAS_COLS}.0));
+  vec2 tile = vec2(mod(g, ${String(ATLAS_COLS)}.0), floor(g / ${String(ATLAS_COLS)}.0));
   return texture(uAtlas, tile * uTile + uPad + vec2(uv.x, 1.0 - uv.y) * uGlyphSize).r;
 }
 void main() {
@@ -231,7 +231,9 @@ export const splitflap = defineEffect(splitflapMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const housingProgram = scope.add(
         createProgram(gl, FULLSCREEN_VERTEX, HOUSING_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const hu = createUniforms(gl, housingProgram, [
         "uPx",
@@ -242,9 +244,9 @@ export const splitflap = defineEffect(splitflapMeta, {
         "uWallBottom",
         "uHousingCol",
       ]);
-      const cellProgram = scope.add(createProgram(gl, CELL_VERTEX, CELL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const cellProgram = scope.add(createProgram(gl, CELL_VERTEX, CELL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const cu = createUniforms(gl, cellProgram, [
         "uResolution",
         "uOrigin",
@@ -261,7 +263,9 @@ export const splitflap = defineEffect(splitflapMeta, {
       ]);
       const maxCells = BOARD_COLS * MAX_ROWS;
       const batch = scope.own(createSpriteBatch(gl, maxCells, [4, 1]));
-      const atlas = scope.add(gl.createTexture(), (t) => gl.deleteTexture(t));
+      const atlas = scope.add(gl.createTexture(), (t) => {
+        gl.deleteTexture(t);
+      });
 
       const board = createBoard(BOARD_COLS, MAX_ROWS);
       const layout = createLayout();
@@ -312,16 +316,19 @@ export const splitflap = defineEffect(splitflapMeta, {
         ctx.textBaseline = "alphabetic";
         // Size the font so its capitals are CAP_FRACTION of the cell tall.
         let size = ch * 0.78;
-        ctx.font = `bold ${size}px ${FONT_FAMILY}`;
-        const capRatio = (ctx.measureText("H")?.actualBoundingBoxAscent || 0.72 * size) / size;
+        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
+        // Typed loosely: the tests' fake 2D context returns undefined from every method.
+        const capMetrics = ctx.measureText("H") as TextMetrics | undefined;
+        const capRatio = (capMetrics?.actualBoundingBoxAscent || 0.72 * size) / size;
         size = (CAP_FRACTION * ch) / Math.max(0.5, capRatio);
-        ctx.font = `bold ${size}px ${FONT_FAMILY}`;
+        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
         const cap = capRatio * size;
         Array.from(GLYPHS).forEach((g, i) => {
           if (g === " ") return;
           const x = (i % ATLAS_COLS) * tileW + ATLAS_PAD;
           const y = Math.floor(i / ATLAS_COLS) * tileH + ATLAS_PAD;
-          const w = ctx.measureText(g)?.width || 0;
+          const metrics = ctx.measureText(g) as TextMetrics | undefined;
+          const w = metrics?.width || 0;
           const squeeze = w > MAX_GLYPH_WIDTH * cw ? (MAX_GLYPH_WIDTH * cw) / w : 1;
           ctx.save();
           ctx.beginPath();
@@ -478,7 +485,9 @@ export const splitflap = defineEffect(splitflapMeta, {
           batch.draw(0, count);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

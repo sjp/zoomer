@@ -86,8 +86,11 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
       const streaks = scope.own(createStreakRenderer(gl, MAX_STREAKS));
       const data = streaks.data;
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const bgProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
+      const bgProgram = scope.add(
+        createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const bgU = createUniforms(gl, bgProgram, [
         "uResolution",
@@ -207,7 +210,9 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
           streaks.upload(n);
           streaks.draw(n, width, height);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

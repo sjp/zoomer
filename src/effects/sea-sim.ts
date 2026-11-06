@@ -7,6 +7,7 @@ import { hexToUnitRgb, type Rgb } from "./color";
 import { sampleSky, type SkyKey, type SkyState } from "./horizon-sim";
 import { clamp, smoothstep, wrap } from "./math";
 import { createNoise, createRng, fbmPeriodic2 } from "./noise";
+import { lookup } from "./lookup";
 
 const TAU = Math.PI * 2;
 const GRAVITY = 9.81;
@@ -266,8 +267,7 @@ export const SEA_PRESETS: Readonly<Record<SeaTime, SeaPreset>> = {
 };
 
 /** The preset for a `time` select value, falling back to sunset. */
-export const seaPreset = (time: string): SeaPreset =>
-  SEA_PRESETS[time as SeaTime] ?? SEA_PRESETS.sunset;
+export const seaPreset = (time: string): SeaPreset => lookup(SEA_PRESETS, time, "sunset");
 
 /** Fills `out` with the sky for `preset`. */
 export function presetSky(preset: SeaPreset, out: SkyState): SkyState {

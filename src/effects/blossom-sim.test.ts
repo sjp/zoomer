@@ -47,14 +47,16 @@ describe("buildBranch", () => {
     const bad: string[] = [];
     for (const seed of SEEDS) {
       const segs = buildBranch(seed, 0);
-      if (segs.length < 20 || segs.length > MAX_SEGMENTS_PER_BRANCH) bad.push(`count ${seed}`);
-      if (segs.filter((s) => s.parent < 0).length !== 1) bad.push(`roots ${seed}`);
-      if (Math.max(...segs.map((s) => s.depth)) < 2) bad.push(`depth ${seed}`);
+      if (segs.length < 20 || segs.length > MAX_SEGMENTS_PER_BRANCH)
+        bad.push(`count ${String(seed)}`);
+      if (segs.filter((s) => s.parent < 0).length !== 1) bad.push(`roots ${String(seed)}`);
+      if (Math.max(...segs.map((s) => s.depth)) < 2) bad.push(`depth ${String(seed)}`);
       segs.forEach((s, i) => {
-        if (s.parent >= i) bad.push(`order ${seed}:${i}`);
-        if (s.parent >= 0 && s.depth < segs[s.parent].depth) bad.push(`depth ${seed}:${i}`);
+        if (s.parent >= i) bad.push(`order ${String(seed)}:${String(i)}`);
+        if (s.parent >= 0 && s.depth < segs[s.parent].depth)
+          bad.push(`depth ${String(seed)}:${String(i)}`);
         const hasChild = segs.some((c) => c.parent === i);
-        if (hasChild === s.tip) bad.push(`tip flag ${seed}:${i}`);
+        if (hasChild === s.tip) bad.push(`tip flag ${String(seed)}:${String(i)}`);
       });
     }
     expect(bad).toEqual([]);
@@ -79,8 +81,10 @@ describe("buildBranch", () => {
     for (const seed of SEEDS) {
       const segs = buildBranch(seed, 0);
       segs.forEach((s, i) => {
-        if (!(s.r1 <= s.r0) || !(s.r1 > 0)) bad.push(`${seed}:${i} ${s.r0} -> ${s.r1}`);
-        if (s.parent >= 0 && s.r0 > segs[s.parent].r1) bad.push(`${seed}:${i} thicker than parent`);
+        if (!(s.r1 <= s.r0) || !(s.r1 > 0))
+          bad.push(`${String(seed)}:${String(i)} ${String(s.r0)} -> ${String(s.r1)}`);
+        if (s.parent >= 0 && s.r0 > segs[s.parent].r1)
+          bad.push(`${String(seed)}:${String(i)} thicker than parent`);
       });
     }
     expect(bad).toEqual([]);
@@ -90,8 +94,10 @@ describe("buildBranch", () => {
     const bad: string[] = [];
     for (const seed of SEEDS) {
       for (const s of buildBranch(seed, 0)) {
-        if (s.x1 + s.r1 > REGION_W || s.y1 + s.r1 > REGION_H) bad.push(`${seed}: ${s.x1}, ${s.y1}`);
-        if (s.x0 + s.r0 > REGION_W || s.y0 + s.r0 > REGION_H) bad.push(`${seed}: ${s.x0}, ${s.y0}`);
+        if (s.x1 + s.r1 > REGION_W || s.y1 + s.r1 > REGION_H)
+          bad.push(`${String(seed)}: ${String(s.x1)}, ${String(s.y1)}`);
+        if (s.x0 + s.r0 > REGION_W || s.y0 + s.r0 > REGION_H)
+          bad.push(`${String(seed)}: ${String(s.x0)}, ${String(s.y0)}`);
       }
     }
     expect(bad).toEqual([]);
@@ -106,16 +112,17 @@ describe("buildScene", () => {
       const pose = restPose(scene);
       scene.blossoms.forEach((b, j) => {
         const s = scene.segments[b.segment];
-        if (!s || b.t < 0 || b.t > 1) bad.push(`${seed}:${j} detached`);
+        if (b.segment < 0 || b.segment >= scene.segments.length || b.t < 0 || b.t > 1)
+          bad.push(`${String(seed)}:${String(j)} detached`);
         const x = pose.bx[j];
         const y = pose.by[j];
         if (x + b.radius > REGION_W || y + b.radius > REGION_H)
-          bad.push(`${seed}:${j} at ${x}, ${y}`);
+          bad.push(`${String(seed)}:${String(j)} at ${String(x)}, ${String(y)}`);
         // Its distance from the segment's axis is its offset across it.
         const ax = s.x0 + (s.x1 - s.x0) * b.t;
         const ay = s.y0 + (s.y1 - s.y0) * b.t;
         if (Math.abs(Math.hypot(x - ax, y - ay) - Math.abs(b.across)) > 1e-6) {
-          bad.push(`${seed}:${j} off its segment`);
+          bad.push(`${String(seed)}:${String(j)} off its segment`);
         }
       });
     }
@@ -237,17 +244,18 @@ describe("writers", () => {
     scene.segments.forEach((s, i) => {
       const x = segData[i * SEGMENT_FLOATS + 2] / 2;
       const want = s.side === 1 ? 1920 - pose.ex[i] : pose.ex[i];
-      if (Math.abs(x - want) > 1e-3) bad.push(`segment ${i}`);
-      if (segData[i * SEGMENT_FLOATS + 5] > segData[i * SEGMENT_FLOATS + 4]) bad.push(`taper ${i}`);
+      if (Math.abs(x - want) > 1e-3) bad.push(`segment ${String(i)}`);
+      if (segData[i * SEGMENT_FLOATS + 5] > segData[i * SEGMENT_FLOATS + 4])
+        bad.push(`taper ${String(i)}`);
     });
     const data = new Float32Array(scene.blossoms.length * BLOSSOM_FLOATS);
     expect(writeBlossoms(scene, pose, BLOSSOM_PALETTES.deep, 2, data)).toBe(scene.blossoms.length);
     scene.blossoms.forEach((b, j) => {
       const o = j * BLOSSOM_FLOATS;
-      if (Math.abs(data[o] - pose.bx[j] * 2) > 1e-3) bad.push(`blossom ${j}`);
-      if (data[o + 7] !== b.kind) bad.push(`kind ${j}`);
+      if (Math.abs(data[o] - pose.bx[j] * 2) > 1e-3) bad.push(`blossom ${String(j)}`);
+      if (data[o + 7] !== b.kind) bad.push(`kind ${String(j)}`);
       for (let k = 4; k < 7; k++)
-        if (!(data[o + k] >= 0 && data[o + k] <= 1)) bad.push(`colour ${j}`);
+        if (!(data[o + k] >= 0 && data[o + k] <= 1)) bad.push(`colour ${String(j)}`);
     });
     expect(bad).toEqual([]);
   });
@@ -306,7 +314,7 @@ describe("createPetalSource", () => {
         const at = state.scene.open.some(
           (j) => state.pose.bx[j] === out.x && state.pose.by[j] === out.y,
         );
-        if (!at) bad.push(`spawned at ${out.x}, ${out.y}`);
+        if (!at) bad.push(`spawned at ${String(out.x)}, ${String(out.y)}`);
         return true;
       },
     });

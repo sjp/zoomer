@@ -20,6 +20,7 @@ import {
   TREE_FLOATS,
 } from "./horizon-sim";
 import { MAX_LAYERS } from "./horizon.meta";
+import { defined } from "../test/defined";
 
 const MEADOW = { amp: 1, ridge: 0, freq: 1 };
 const MOUNTAINS = { amp: 1.9, ridge: 0.8, freq: 1.3 };
@@ -110,7 +111,7 @@ describe("sampleSky", () => {
     for (const k of SKY_KEYS) {
       sampleSky(k.hour / 24, s);
       expect(flat(s)).toEqual(
-        [...k.zenith, ...k.horizon, ...k.glow, ...k.light, k.glowStrength].map((v) =>
+        [...k.zenith, ...k.horizon, ...k.glow, ...k.light, k.glowStrength].map((v): unknown =>
           expect.closeTo(v, 9),
         ),
       );
@@ -130,14 +131,18 @@ describe("sampleSky", () => {
       const fb = flat(b);
       for (let i = 0; i < fa.length; i++) {
         if (!(Math.abs(fa[i] - fb[i]) < 0.01) && jumps.length < 10) {
-          jumps.push(`phase ${phase}, channel ${i}: ${fa[i]} -> ${fb[i]}`);
+          jumps.push(
+            `phase ${String(phase)}, channel ${String(i)}: ${String(fa[i])} -> ${String(fb[i])}`,
+          );
         }
       }
     }
     expect(jumps).toEqual([]);
     sampleSky(1 - 1e-9, a);
     sampleSky(0, b);
-    flat(a).forEach((v, i) => expect(v).toBeCloseTo(flat(b)[i], 6));
+    flat(a).forEach((v, i) => {
+      expect(v).toBeCloseTo(flat(b)[i], 6);
+    });
   });
 
   it("is dark at midnight, bright at noon and warm at sunset", () => {
@@ -156,7 +161,7 @@ describe("sampleSky", () => {
     for (let i = 1; i < SKY_KEYS.length; i++) {
       expect(SKY_KEYS[i].hour).toBeGreaterThan(SKY_KEYS[i - 1].hour);
     }
-    expect(SKY_KEYS.at(-1)!.hour).toBeLessThan(24);
+    expect(defined(SKY_KEYS.at(-1)).hour).toBeLessThan(24);
   });
 });
 

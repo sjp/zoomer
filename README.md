@@ -20,7 +20,7 @@ npm install
 npm run dev      # dev server with hot reload
 npm run build    # type-check and build to dist/
 npm run preview  # serve the built dist/
-npm run check    # oxlint, oxfmt --check and tsc
+npm run check    # type-aware oxlint (with type-checking) and oxfmt --check
 npm run fmt      # format with oxfmt
 npm test         # vitest
 ```

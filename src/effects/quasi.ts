@@ -36,23 +36,23 @@ const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
 /** Per wave: direction times angular frequency (per device px), and phase offset. */
-uniform vec3 uWave[${MAX_WAVES}];
+uniform vec3 uWave[${String(MAX_WAVES)}];
 uniform int uN;
 /** Gain on the raw cosine sum, and contrast (0 to 1). */
 uniform vec2 uTone;
-uniform vec3 uPal[${PALETTE_STOPS}];
+uniform vec3 uPal[${String(PALETTE_STOPS)}];
 out vec4 outColor;
 ${DITHER_GLSL}
 void main() {
   vec2 x = gl_FragCoord.xy;
   float s = 0.0;
-  for (int k = 0; k < ${MAX_WAVES}; k++) {
+  for (int k = 0; k < ${String(MAX_WAVES)}; k++) {
     if (k >= uN) break;
     s += cos(dot(x, uWave[k].xy) + uWave[k].z);
   }
   float g = s * uTone.x;
   float t = 0.5 + 0.5 * uTone.y * g * inversesqrt(1.0 + g * g);
-  float p = t * ${PALETTE_STOPS - 1}.0;
+  float p = t * ${String(PALETTE_STOPS - 1)}.0;
   vec3 c = mix(uPal[0], uPal[1], clamp(p, 0.0, 1.0));
   c = mix(c, uPal[2], clamp(p - 1.0, 0.0, 1.0));
   c = mix(c, uPal[3], clamp(p - 2.0, 0.0, 1.0));
@@ -67,9 +67,9 @@ void main() {
 export const quasi = defineEffect(quasiMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, ["uWave", "uN", "uTone", "uPal"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
@@ -127,7 +127,9 @@ export const quasi = defineEffect(quasiMeta, {
 
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

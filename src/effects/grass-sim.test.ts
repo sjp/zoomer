@@ -96,7 +96,8 @@ describe("buildBlades", () => {
   it("keeps existing blades when the count grows", () => {
     const key = (out: Float32Array) => {
       const s = new Set<string>();
-      for (let o = 0; o < out.length; o += BLADE_FLOATS) s.add(`${out[o]},${out[o + 1]}`);
+      for (let o = 0; o < out.length; o += BLADE_FLOATS)
+        s.add(`${String(out[o])},${String(out[o + 1])}`);
       return s;
     };
     const small = key(build(3, 1000).out);

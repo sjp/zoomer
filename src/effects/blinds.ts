@@ -144,9 +144,9 @@ void main() {
 export const blinds = defineEffect(blindsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uPlaster",
         "uPix",
@@ -170,12 +170,14 @@ export const blinds = defineEffect(blindsMeta, {
           data: buildPeriodicNoiseTexture(PLASTER_SIZE, [{ period: PLASTER_PERIOD, seed: 25 }]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
 
-      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const moteU = createUniforms(gl, moteProgram, ["uResolution"]);
       const motes = scope.own(
         createSpriteBatch(gl, MAX_MOTES, [3, 3], [polygonStrip(8, Math.PI / 8)]),
@@ -300,7 +302,9 @@ export const blinds = defineEffect(blindsMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

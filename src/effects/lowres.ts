@@ -195,7 +195,9 @@ function buildLowResTarget(
       FULLSCREEN_VERTEX,
       blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
     ),
-    (p) => gl.deleteProgram(p),
+    (p) => {
+      gl.deleteProgram(p);
+    },
   );
   const uTex = gl.getUniformLocation(program, "uLowRes");
   const uSize = gl.getUniformLocation(program, "uLowResSize");
@@ -281,7 +283,9 @@ function buildLowResTarget(
       return direct;
     },
     program,
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      scope.dispose();
+    },
   };
   return target;
 }

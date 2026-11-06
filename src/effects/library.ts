@@ -34,11 +34,12 @@ import {
   stepMotes,
   SUN,
 } from "./library-sim";
-import { type BeamId, libraryMeta, MAX_DUST, type PaletteId } from "./library.meta";
+import { type BeamId, libraryMeta, MAX_DUST } from "./library.meta";
 import { createLowResTarget } from "./lowres";
 import { approach } from "./math";
 import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 /** Room pass: about 3 reference px per texel (divisor 6 at 4K). The room is all soft. */
 const ROOM_TEXEL_REF = 3;
@@ -167,7 +168,9 @@ export const library = defineEffect(libraryMeta, {
       const target = scope.own(createLowResTarget(gl));
       const shelves = createBookshelfTexture(gl, scope);
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [
@@ -230,7 +233,7 @@ export const library = defineEffect(libraryMeta, {
           time += dt;
           const refWidth = width / scale;
           const seed = Math.floor(p.seed);
-          const palette = ROOM_PALETTES[p.palette as PaletteId] ?? ROOM_PALETTES.oak;
+          const palette = lookup(ROOM_PALETTES, p.palette, "oak");
 
           gl.activeTexture(gl.TEXTURE0);
           if (seed !== bakedSeed || p.palette !== bakedPalette) {
@@ -336,7 +339,9 @@ export const library = defineEffect(libraryMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

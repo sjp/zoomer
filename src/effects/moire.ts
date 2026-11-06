@@ -51,12 +51,12 @@ const AA_PX = 0.75;
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
-uniform mat2 uM[${MAX_LAYERS}];
-uniform vec2 uO[${MAX_LAYERS}];
-uniform vec3 uTint[${MAX_LAYERS}];
-uniform int uKind[${MAX_LAYERS}];
+uniform mat2 uM[${String(MAX_LAYERS)}];
+uniform vec2 uO[${String(MAX_LAYERS)}];
+uniform vec3 uTint[${String(MAX_LAYERS)}];
+uniform int uKind[${String(MAX_LAYERS)}];
 /** Per layer: mark half width and edge half width (pattern units), and strength. */
-uniform vec3 uEdge[${MAX_LAYERS}];
+uniform vec3 uEdge[${String(MAX_LAYERS)}];
 uniform int uLayers;
 uniform vec3 uBg;
 /** Vignette: centre (device px), and 1 / its half axes (device px). */
@@ -80,7 +80,7 @@ void main() {
   float calm = 1.0 - ${glslFloat(VIGNETTE)} * (1.0 - smoothstep(${glslFloat(VIGNETTE_RAMP[0])},
     ${glslFloat(VIGNETTE_RAMP[1])}, length((x - uVig.xy) * uVig.zw)));
   vec3 col = uBg;
-  for (int i = 0; i < ${MAX_LAYERS}; i++) {
+  for (int i = 0; i < ${String(MAX_LAYERS)}; i++) {
     if (i >= uLayers) break;
     vec2 p = uM[i] * x + uO[i];
     float c = cover(uKind[i], p, uEdge[i].xy);
@@ -97,9 +97,9 @@ void main() {
 export const moire = defineEffect(moireMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uM",
         "uO",
@@ -170,7 +170,9 @@ export const moire = defineEffect(moireMeta, {
 
           triangle.draw();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

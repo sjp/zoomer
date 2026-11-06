@@ -85,8 +85,12 @@ export function createLatest<T>() {
 export function whenIdle(task: () => void): () => void {
   if (typeof requestIdleCallback === "function") {
     const handle = requestIdleCallback(task, { timeout: 2000 });
-    return () => cancelIdleCallback(handle);
+    return () => {
+      cancelIdleCallback(handle);
+    };
   }
   const handle = setTimeout(task, 200);
-  return () => clearTimeout(handle);
+  return () => {
+    clearTimeout(handle);
+  };
 }

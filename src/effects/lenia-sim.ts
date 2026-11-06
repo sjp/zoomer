@@ -162,7 +162,7 @@ export function buildTaps(R: number, b: readonly number[]): TapTable {
     }
     for (let i = 0; i < row.length; i += 2) {
       const [x1, w1] = row[i];
-      const next = row[i + 1];
+      const next = row.at(i + 1);
       // Only cells next to each other can share a fetch (the shell is contiguous per row).
       if (next && next[0] === x1 + 1) {
         const w = w1 + next[1];

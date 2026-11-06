@@ -12,7 +12,7 @@ export function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
 }
 
 export function rgba([r, g, b]: Rgb, alpha: number): string {
-  return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`;
+  return `rgba(${String(r | 0)},${String(g | 0)},${String(b | 0)},${String(alpha)})`;
 }
 
 /** Colour channels in 0..1, e.g. for a WebGL `vec3` uniform. */

@@ -197,7 +197,9 @@ function buildStreakRenderer(
   if (alpha && options.chromatic) {
     throw new Error("Streaks: the chromatic option is additive only");
   }
-  const deleteProgram = (p: WebGLProgram) => gl.deleteProgram(p);
+  const deleteProgram = (p: WebGLProgram) => {
+    gl.deleteProgram(p);
+  };
   const program = scope.add(
     createProgram(gl, capsuleVertex(alpha), capsuleFragment(alpha)),
     deleteProgram,
@@ -209,9 +211,15 @@ function buildStreakRenderer(
   const cu = chromatic ? createUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"]) : null;
   const data = new Float32Array(max * STREAK_FLOATS);
 
-  const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-  const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-  const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+  const vao = scope.add(gl.createVertexArray(), (v) => {
+    gl.deleteVertexArray(v);
+  });
+  const cornerBuffer = scope.add(gl.createBuffer(), (b) => {
+    gl.deleteBuffer(b);
+  });
+  const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+    gl.deleteBuffer(b);
+  });
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
   // Triangle strip: (tail, -side), (head, -side), (tail, +side), (head, +side).
@@ -264,6 +272,8 @@ function buildStreakRenderer(
       gl.bindVertexArray(null);
       if (maxBlend) gl.blendEquation(gl.FUNC_ADD);
     },
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      scope.dispose();
+    },
   };
 }

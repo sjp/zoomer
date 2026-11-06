@@ -364,9 +364,9 @@ vec4 composite(vec2 uv) {
 export const contours = defineEffect(contoursMeta, {
   create(gl) {
     return withScope((scope) => {
-      const noiseProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NOISE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const noiseProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NOISE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE }));
       const nu = createUniforms(gl, noiseProgram, ["uPixToWorld", "uWorldOffset", "uZ", "uFloat"]);
@@ -455,7 +455,9 @@ export const contours = defineEffect(contoursMeta, {
           cu.rgb("uHighColor", p.highColor);
           target.blit();
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

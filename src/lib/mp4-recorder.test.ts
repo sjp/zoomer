@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { defined } from "../test/defined";
 
 /** What the fake mediabunny saw, reset per test. */
 const seen = vi.hoisted(() => ({
@@ -54,8 +55,8 @@ vi.mock("mediabunny", () => {
     Output,
     VideoSample,
     VideoSampleSource,
-    Mp4OutputFormat: class {},
-    Quality: class {},
+    Mp4OutputFormat: vi.fn<(options: unknown) => void>(),
+    Quality: vi.fn<(bitrate: unknown) => void>(),
     canEncodeVideo: () => Promise.resolve(seen.canEncode),
   };
 });
@@ -104,7 +105,7 @@ beforeEach(() => {
     canEncode: true,
   });
   vi.stubGlobal("VideoFrame", FakeVideoFrame);
-  vi.stubGlobal("VideoEncoder", class {});
+  vi.stubGlobal("VideoEncoder", vi.fn());
 });
 
 afterEach(() => {
@@ -140,7 +141,7 @@ describe("recordMp4", () => {
     expect(seen.added).toHaveLength(30);
     expect(seen.added[0].timestamp).toBe(0);
     expect(seen.added[1].timestamp).toBe(33_333);
-    expect(seen.added.at(-1)!.timestamp).toBe(966_667);
+    expect(defined(seen.added.at(-1)).timestamp).toBe(966_667);
     expect(seen.closed).toBe(30);
     expect(seen.finalized).toBe(true);
     expect(frames.count).toBe(0);

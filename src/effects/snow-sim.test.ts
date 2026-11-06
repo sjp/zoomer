@@ -72,18 +72,18 @@ describe("createFlakes", () => {
       for (let i = 0; i < flakes.live; i++) {
         const margin = m[flakes.layer[i]];
         const [x, y] = [flakes.xs[i], flakes.ys[i]];
-        if (x < -margin || x > 1920 + margin) bad.push(`x ${x} outside ${margin}`);
-        if (y < -margin || y > 1080 + margin) bad.push(`y ${y} outside ${margin}`);
+        if (x < -margin || x > 1920 + margin) bad.push(`x ${String(x)} outside ${String(margin)}`);
+        if (y < -margin || y > 1080 + margin) bad.push(`y ${String(y)} outside ${String(margin)}`);
         // A flake that jumped was past the margin before the step and is back outside it after.
         if (Math.abs(y - ys[i]) > 540) {
           wraps++;
-          if (ys[i] < 1080 + margin - 60) bad.push(`fell from ${ys[i]}`);
-          if (y > -margin + 60) bad.push(`respawned at ${y}`);
+          if (ys[i] < 1080 + margin - 60) bad.push(`fell from ${String(ys[i])}`);
+          if (y > -margin + 60) bad.push(`respawned at ${String(y)}`);
         }
         if (Math.abs(x - xs[i]) > 960 && Math.abs(y - ys[i]) <= 540) {
           wraps++;
           if (xs[i] > -margin + 60 && xs[i] < 1920 + margin - 60)
-            bad.push(`jumped from x ${xs[i]}`);
+            bad.push(`jumped from x ${String(xs[i])}`);
         }
       }
     }

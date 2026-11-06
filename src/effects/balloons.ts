@@ -102,9 +102,9 @@ precision highp sampler2D;
 uniform sampler2D uHeights;
 uniform vec2 uResolution;
 uniform int uLayerBase;
-uniform vec3 uColors[${HILL_LAYERS}];
+uniform vec3 uColors[${String(HILL_LAYERS)}];
 /** Bottom of each layer's strip, px (y up). */
-uniform float uBottoms[${HILL_LAYERS}];
+uniform float uBottoms[${String(HILL_LAYERS)}];
 out float vEdge;
 flat out vec3 vColor;
 void main() {
@@ -303,7 +303,9 @@ export const balloons = defineEffect(balloonsMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const hillProgram = program(HILL_VERTEX, HILL_FRAGMENT);
       const mistProgram = program(FULLSCREEN_VERTEX, MIST_FRAGMENT);
@@ -335,7 +337,9 @@ export const balloons = defineEffect(balloonsMeta, {
 
       const triangle = scope.own(createFullscreenTriangle(gl));
       /** The hill strip has no attributes, but draws with a VAO of its own bound. */
-      const hillVao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
+      const hillVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
       const hills = scope.own(createColumnTable(gl, HILL_COLUMNS, 1, { rows: HILL_ROWS }));
       const batch = scope.own(
         createSpriteBatch(gl, MAX_BALLOONS, [4, 4, 4, 4, 2], [BALLOON_STRIP]),
@@ -477,7 +481,9 @@ export const balloons = defineEffect(balloonsMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

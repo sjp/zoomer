@@ -24,7 +24,6 @@ import {
   MAX_TAN_H,
   octaveWeights,
   PALETTES,
-  type PaletteId,
   type OctaveRowWriter,
   PERIOD,
   RAMP_SIZE,
@@ -36,6 +35,7 @@ import {
 } from "./terrain-sim";
 import { terrainMeta } from "./terrain.meta";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 /** Valley along the flight path: height scale at its floor, and where its walls start and end. */
 const VALLEY_FLOOR = 0.12;
@@ -76,11 +76,11 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 layout(location = 0) in ivec4 aVert;
-/** Four noise octaves, texel (x, z) mod ${PERIOD} for grid vertex (x, z). */
+/** Four noise octaves, texel (x, z) mod ${String(PERIOD)} for grid vertex (x, z). */
 uniform sampler2D uOctaves;
 /** Height colour ramp: rgb and rockiness. */
 uniform sampler2D uRamp;
-/** Whole cells flown, mod ${PERIOD}: mesh row j shows terrain row j + uRow (the texture is a ring buffer). */
+/** Whole cells flown, mod ${String(PERIOD)}: mesh row j shows terrain row j + uRow (the texture is a ring buffer). */
 uniform int uRow;
 /** Octave weights (amplitude included) and base height. */
 uniform vec4 uWeights;
@@ -102,7 +102,7 @@ out float vFog;
 
 float rawHeight(ivec2 c) {
   // Offsets keep both operands of & non-negative.
-  ivec2 t = ivec2((c.x + ${PERIOD * 4}) & ${PERIOD - 1}, (c.y + uRow) & ${PERIOD - 1});
+  ivec2 t = ivec2((c.x + ${String(PERIOD * 4)}) & ${String(PERIOD - 1)}, (c.y + uRow) & ${String(PERIOD - 1)});
   vec4 o = texelFetch(uOctaves, t, 0) * 2.0 - 1.0;
   float d = abs(float(c.x) - 0.5);
   float v = mix(${glslFloat(VALLEY_FLOOR)}, 1.0, smoothstep(${glslFloat(VALLEY_IN)}, ${glslFloat(VALLEY_OUT)}, d));
@@ -176,7 +176,9 @@ export const terrain = defineEffect(terrainMeta, {
   create(gl) {
     return withScope((scope) => {
       const sky = scope.own(createGradientBackground(gl));
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => gl.deleteProgram(p));
+      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uOctaves",
         "uRamp",
@@ -201,8 +203,12 @@ export const terrain = defineEffect(terrainMeta, {
 
       const mesh = buildMesh();
       const vertexCount = mesh.length / VERTEX_SHORTS;
-      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const vbo = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const vbo = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindVertexArray(vao);
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
       gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
@@ -227,7 +233,9 @@ export const terrain = defineEffect(terrainMeta, {
           data: new Uint8Array(PERIOD * PERIOD * 4),
           filter: gl.NEAREST,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const ramp = scope.own(createColumnTable(gl, RAMP_SIZE, 4));
       let paletteId = "";
@@ -270,7 +278,7 @@ export const terrain = defineEffect(terrainMeta, {
           gl.activeTexture(gl.TEXTURE1);
           if (p.palette !== paletteId) {
             paletteId = p.palette;
-            const pal = PALETTES[paletteId as PaletteId] ?? PALETTES.alpine;
+            const pal = lookup(PALETTES, paletteId, "alpine");
             buildRamp(pal.stops, ramp.data);
             ramp.upload();
             u.v3("uRock", rgb(pal.rock));
@@ -340,7 +348,9 @@ export const terrain = defineEffect(terrainMeta, {
           gl.bindVertexArray(null);
           gl.disable(gl.CULL_FACE);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

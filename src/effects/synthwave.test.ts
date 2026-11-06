@@ -51,7 +51,8 @@ describe("buildRidgeData", () => {
         const env = ridgeEnvelope(i / last);
         // toBeCloseTo(_, 6): within half of 1e-6.
         const ok = Math.abs(v - ridge[i] * env) < 5e-7 && v >= 0 && v <= env + 1e-6;
-        if (!ok && wrong.length < 10) wrong.push(`ridge ${row}, point ${i}: ${v}`);
+        if (!ok && wrong.length < 10)
+          wrong.push(`ridge ${String(row)}, point ${String(i)}: ${String(v)}`);
       }
     });
     expect(wrong).toEqual([]);
@@ -160,7 +161,9 @@ describe("fillRows", () => {
           for (const i of [3, 7, 11]) {
             const v = rows[o + i];
             if (!(v >= 0 && v <= 1) && wrong.length < 10) {
-              wrong.push(`stripes ${stripes}, scanlines ${scanlines}, row ${row}[${i}]: ${v}`);
+              wrong.push(
+                `stripes ${String(stripes)}, scanlines ${String(scanlines)}, row ${String(row)}[${String(i)}]: ${String(v)}`,
+              );
             }
           }
         }
@@ -221,7 +224,7 @@ describe("fillRows", () => {
       const want = plain[o] * (dark ? 0.84 : 1);
       // toBeCloseTo(_, 6): within half of 1e-6.
       if (!(Math.abs(rows[o] - want) < 5e-7) && wrong.length < 10) {
-        wrong.push(`row ${row}: ${rows[o]}, want ${want}`);
+        wrong.push(`row ${String(row)}: ${String(rows[o])}, want ${String(want)}`);
       }
     }
     expect(wrong).toEqual([]);

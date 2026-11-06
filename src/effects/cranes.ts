@@ -200,9 +200,9 @@ void main() {
 export const cranes = defineEffect(cranesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, CRANE_VERTEX, CRANE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const program = scope.add(createProgram(gl, CRANE_VERTEX, CRANE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const u = createUniforms(gl, program, [
         "uResolution",
         "uZScale",
@@ -214,9 +214,15 @@ export const cranes = defineEffect(cranesMeta, {
       const sky = scope.own(createGradientBackground(gl));
       const threads = scope.own(createStreakRenderer(gl, MOBILE_CRANES, { blend: "alpha" }));
 
-      const vao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const meshBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-      const instanceBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const meshBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      const instanceBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       const instances = new Float32Array(MAX_INSTANCES * INSTANCE_FLOATS);
       gl.bindVertexArray(vao);
       gl.bindBuffer(gl.ARRAY_BUFFER, meshBuffer);
@@ -335,7 +341,9 @@ export const cranes = defineEffect(cranesMeta, {
             gl.disable(gl.BLEND);
           }
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

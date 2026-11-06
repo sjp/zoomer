@@ -76,9 +76,9 @@ uniform sampler2D uTable;
 /** Two octaves of tiling fog noise (RG). */
 uniform sampler2D uNoise;
 /** Per layer: table u offset (pan), table row v, haze, unused. */
-uniform vec4 uLayer[${MAX_LAYERS}];
+uniform vec4 uLayer[${String(MAX_LAYERS)}];
 /** Per fog band: floor height, 1 / thickness, noise u and v offsets. */
-uniform vec4 uBand[${MAX_LAYERS}];
+uniform vec4 uBand[${String(MAX_LAYERS)}];
 uniform int uCount;
 /** Low-res px to height units, x and y. */
 uniform vec2 uInvLow;
@@ -95,7 +95,7 @@ uniform float uFogAmount;
 
 out vec4 outColor;
 
-const int MAX_LAYERS = ${MAX_LAYERS};
+const int MAX_LAYERS = ${String(MAX_LAYERS)};
 const float INV_SPAN = ${glslFloat(1 / SPAN)};
 const float FOG_NX = ${glslFloat(FOG_NX)};
 const float FOG_NY = ${glslFloat(FOG_NY)};
@@ -288,12 +288,12 @@ const BIRD_STRIP = [-1, -0.5, 0, 0.5, 1].flatMap((x) => [x, 1, x, -1]);
 export const ridges = defineEffect(ridgesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const birdProgram = scope.add(createProgram(gl, BIRD_VERTEX, BIRD_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const birdProgram = scope.add(createProgram(gl, BIRD_VERTEX, BIRD_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, COLUMNS, 1, { rows: MAX_LAYERS, wrap: gl.REPEAT }),
@@ -311,7 +311,9 @@ export const ridges = defineEffect(ridgesMeta, {
           ]),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const birds = scope.own(createSpriteBatch(gl, MAX_BIRDS, [BIRD_FLOATS], [BIRD_STRIP]));
@@ -474,7 +476,9 @@ export const ridges = defineEffect(ridgesMeta, {
           birds.draw(0, count);
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

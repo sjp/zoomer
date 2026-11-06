@@ -52,7 +52,7 @@ layout(location = 2) in vec4 aShape;
 /** Birth at each end (plant s), plant index. */
 layout(location = 3) in vec3 aMeta;
 /** Per plant: x offset (ref px), age (plant s), alpha, wither. */
-uniform vec4 uPlant[${MAX_PLANTS}];
+uniform vec4 uPlant[${String(MAX_PLANTS)}];
 uniform vec2 uResolution;
 uniform float uScale;
 /** Offset (device px) and width multiplier, for the shadow pass. */
@@ -120,7 +120,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aSprite;
 layout(location = 2) in vec3 aColor;
 /** In-plane angle (radians), flip scale. */
-layout(location = ${spinLocation}) in vec2 aSpin;
+layout(location = ${String(spinLocation)}) in vec2 aSpin;
 uniform vec2 uResolution;
 /** Offset (device px), for the shadow pass. */
 uniform vec2 uOffset;
@@ -208,9 +208,15 @@ export const vines = defineEffect(vinesMeta, {
     return withScope((scope) => {
       // Stems: a corner strip plus one instance per segment.
       const segCount = MAX_PLANTS * PLANT_SEGS;
-      const stemVao = scope.add(gl.createVertexArray(), (v) => gl.deleteVertexArray(v));
-      const cornerBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
-      const segBuffer = scope.add(gl.createBuffer(), (b) => gl.deleteBuffer(b));
+      const stemVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const cornerBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      const segBuffer = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
       gl.bindVertexArray(stemVao);
       gl.bindBuffer(gl.ARRAY_BUFFER, cornerBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, -1, 0, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
@@ -228,9 +234,9 @@ export const vines = defineEffect(vinesMeta, {
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const stemU = createUniforms(gl, stemProgram, [
         "uPlant",
         "uResolution",
@@ -248,7 +254,9 @@ export const vines = defineEffect(vinesMeta, {
       );
       const spriteProgram = scope.add(
         createProgram(gl, spriteVertex(sprites.spinLocation), SPRITE_FRAGMENT),
-        (p) => gl.deleteProgram(p),
+        (p) => {
+          gl.deleteProgram(p);
+        },
       );
       const spriteU = createUniforms(gl, spriteProgram, [
         "uResolution",
@@ -259,9 +267,9 @@ export const vines = defineEffect(vinesMeta, {
         "uSoft",
       ]);
 
-      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const wallU = createUniforms(gl, wallProgram, ["uColor", "uWood", "uPlank"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const wallColor = unitRgbMemo();
@@ -401,7 +409,9 @@ export const vines = defineEffect(vinesMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

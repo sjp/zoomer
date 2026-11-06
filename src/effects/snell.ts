@@ -41,8 +41,9 @@ import {
   type LeafPose,
 } from "./snell-sim";
 import { createSpriteBatch, polygonStrip } from "./sprites";
-import { type AboveId, snellMeta, type WaterId } from "./snell.meta";
+import { snellMeta } from "./snell.meta";
 import { defineEffect } from "./types";
+import { lookup } from "./lookup";
 
 /** Low-res divisors: soft apart from the rim, which the Fresnel falloff softens anyway. */
 const DIVISORS = { high: 1, balanced: 1.5, low: 2 } as const;
@@ -267,7 +268,9 @@ export const snell = defineEffect(snellMeta, {
       const programs = [false, true].map((trees) => {
         const program = scope.add(
           createProgram(gl, FULLSCREEN_VERTEX, windowFragment(trees)),
-          (p) => gl.deleteProgram(p),
+          (p) => {
+            gl.deleteProgram(p);
+          },
         );
         const u = createUniforms(gl, program, WINDOW_UNIFORMS);
         gl.useProgram(program);
@@ -287,7 +290,9 @@ export const snell = defineEffect(snellMeta, {
           data: buildSlopeMap(),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const noiseTex = scope.add(
         createDataTexture(gl, {
@@ -302,15 +307,17 @@ export const snell = defineEffect(snellMeta, {
           ),
           wrap: gl.REPEAT,
         }),
-        (t) => gl.deleteTexture(t),
+        (t) => {
+          gl.deleteTexture(t);
+        },
       );
       const rayTable = scope.own(createColumnTable(gl, RAY_COLUMNS, 1, { wrap: gl.REPEAT }));
       const rng = createRng(0x5e11);
       const shafts = createRays(rng, RAY_COUNT);
 
-      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const moteU = createUniforms(gl, moteProgram, ["uResolution", "uColor"]);
       // Per mote: centre x, centre y, sprite half-size (device px, y down), then glow.
       const batch = scope.own(createSpriteBatch(gl, MOTE_COUNT, [3, 1], [polygonStrip(8)]));
@@ -357,8 +364,8 @@ export const snell = defineEffect(snellMeta, {
           const swayY = CANOPY_SWAY * 0.6 * Math.sin(time * CANOPY_SWAY_RATE * 0.73 + 1.3);
           leafFade = Math.min(1, Math.max(0, leafFade + (p.leaf ? step : -step) / LEAF_FADE));
 
-          const water = WATER[p.water as WaterId] ?? WATER.blue;
-          const skyPal = SKY[p.above as AboveId] ?? SKY.sky;
+          const water = lookup(WATER, p.water, "blue");
+          const skyPal = lookup(SKY, p.above, "sky");
           const depthPx = eyeDepth(p.depth);
           const radius = windowRadius(p.depth);
           const cx = refWidth / 2;
@@ -436,7 +443,9 @@ export const snell = defineEffect(snellMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

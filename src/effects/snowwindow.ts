@@ -214,7 +214,7 @@ precision highp int;
 /** Condensation mask: R fog, G droplet edge (0.5 on it), B droplet highlight. */
 uniform sampler2D uCond;
 /** Panes, height units: left, bottom, right, top. */
-uniform vec4 uPane[${MAX_PANES}];
+uniform vec4 uPane[${String(MAX_PANES)}];
 uniform int uPaneCount;
 /** 1 / canvas height. */
 uniform float uInvHeight;
@@ -230,7 +230,7 @@ uniform vec2 uReflect;
 out vec4 outColor;
 ${DITHER_GLSL}
 
-const int MAX_PANES = ${MAX_PANES};
+const int MAX_PANES = ${String(MAX_PANES)};
 const float BEVEL = ${glslFloat(BEVEL)};
 const float SILL_TOP = ${glslFloat(SILL_TOP)};
 const vec3 LAMP = vec3(1.0, 0.72, 0.45);
@@ -359,12 +359,12 @@ void main() {
 export const snowWindow = defineEffect(snowWindowMeta, {
   create(gl) {
     return withScope((scope) => {
-      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
-      const glassProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GLASS_FRAGMENT), (p) =>
-        gl.deleteProgram(p),
-      );
+      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
+      const glassProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GLASS_FRAGMENT), (p) => {
+        gl.deleteProgram(p);
+      });
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_SNOWFALL));
@@ -373,7 +373,9 @@ export const snowWindow = defineEffect(snowWindowMeta, {
       let condData = new Uint8Array(4);
       let condWidth = 0;
       let condHeight = 0;
-      scope.defer(() => gl.deleteTexture(condTexture));
+      scope.defer(() => {
+        gl.deleteTexture(condTexture);
+      });
 
       const su = createUniforms(gl, sceneProgram, [
         "uInvLow",
@@ -448,7 +450,9 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             paneCount = panes.length;
             sill = interior(aspect)[1];
             paneData.fill(0);
-            panes.forEach((r, i) => paneData.set(r, i * 4));
+            panes.forEach((r, i) => {
+              paneData.set(r, i * 4);
+            });
             const size = condensationSize(aspect);
             if (size.width !== condWidth || size.height !== condHeight || !condTexture) {
               condWidth = size.width;
@@ -529,7 +533,9 @@ export const snowWindow = defineEffect(snowWindowMeta, {
           triangle.draw();
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

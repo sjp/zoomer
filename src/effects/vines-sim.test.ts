@@ -68,8 +68,8 @@ describe("region", () => {
       expect(bandWidth(1920, border)).toBeLessThanOrEqual(1920 / 3);
       for (let x = 640; x <= 1280; x += 40) {
         for (let y = bandHeight(border) + 1; y <= 1080; y += 40) {
-          if (allowed(x, y, 1920, border) !== false && open.length < 10) {
-            open.push(`border ${border}: ${x},${y}`);
+          if (allowed(x, y, 1920, border) && open.length < 10) {
+            open.push(`border ${String(border)}: ${String(x)},${String(y)}`);
           }
         }
       }

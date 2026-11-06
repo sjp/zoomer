@@ -144,7 +144,7 @@ uniform float uScale;
 /** Fire base x, y (reference px), light (0 with no fire), on (0 or 1). */
 uniform vec4 uFire;
 /** Per tongue: sway (radians, as a shear), stretch, brightness. */
-uniform vec3 uTongue[${TONGUES}];
+uniform vec3 uTongue[${String(TONGUES)}];
 /** Tent centre x, base y (reference px), on, the fire's side (-1 left, 1 right). */
 uniform vec4 uTent;
 out vec4 outColor;
@@ -161,9 +161,9 @@ const vec3 FLAME_RED = ${C("#c8320c")};
 const vec3 FLAME_ORANGE = ${C("#ff8a1e")};
 const vec3 FLAME_YELLOW = ${C("#ffd060")};
 const vec3 FLAME_WHITE = ${C("#fff4d8")};
-const float TX[${TONGUES}] = float[](${TONGUE_X.map(glslFloat).join(", ")});
-const float TL[${TONGUES}] = float[](${TONGUE_L.map(glslFloat).join(", ")});
-const float TW[${TONGUES}] = float[](${TONGUE_W.map(glslFloat).join(", ")});
+const float TX[${String(TONGUES)}] = float[](${TONGUE_X.map(glslFloat).join(", ")});
+const float TL[${String(TONGUES)}] = float[](${TONGUE_L.map(glslFloat).join(", ")});
+const float TW[${String(TONGUES)}] = float[](${TONGUE_W.map(glslFloat).join(", ")});
 
 /** Coverage of a silhouette whose top is \`d\` device px above this pixel. */
 float coverage(float d) {
@@ -235,7 +235,7 @@ void main() {
     col += HALO * (uFire.z * exp2(-dot(g, g) * ${glslFloat(1 / (HALO_R * HALO_R))}));
     if (f.x > ${glslFloat(FLAME_BOX[0])} && f.x < ${glslFloat(FLAME_BOX[2])} && f.y > ${glslFloat(FLAME_BOX[1])} && f.y < ${glslFloat(FLAME_BOX[3])}) {
       float heat = 0.0;
-      for (int i = 0; i < ${TONGUES}; i++) {
+      for (int i = 0; i < ${String(TONGUES)}; i++) {
         vec3 tg = uTongue[i];
         float t = f.y / (TL[i] * tg.y);
         if (t <= 0.0 || t >= 1.0) continue;
@@ -295,14 +295,18 @@ export const desertcamp = defineEffect(desertcampMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
       const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => gl.deleteProgram(p));
+        scope.add(createProgram(gl, vs, fs), (p) => {
+          gl.deleteProgram(p);
+        });
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, ["uNoise", "uPxToRef", "uPole", "uMilky"]);
       const landProgram = program(FULLSCREEN_VERTEX, LAND_FRAGMENT);
       const lu = createUniforms(gl, landProgram, ["uDunes", "uScale", "uFire", "uTongue", "uTent"]);
       const sparkProgram = program(SPARK_VERTEX, SPARK_FRAGMENT);
       const pu = createUniforms(gl, sparkProgram, ["uInvRes"]);
-      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => gl.deleteTexture(t));
+      const noiseTex = scope.add(createMilkyWayNoise(gl), (t) => {
+        gl.deleteTexture(t);
+      });
       const dunes = scope.own(createColumnTable(gl, DUNE_COLUMNS, DUNE_CHANNELS));
       const stars = scope.own(createStarSprites(gl, MAX_STARS));
       const sparkBatch = scope.own(
@@ -479,7 +483,9 @@ export const desertcamp = defineEffect(desertcampMeta, {
           }
           gl.disable(gl.BLEND);
         },
-        dispose: () => scope.dispose(),
+        dispose: () => {
+          scope.dispose();
+        },
       };
     });
   },

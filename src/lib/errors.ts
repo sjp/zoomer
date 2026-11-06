@@ -8,3 +8,8 @@ export function describeError(err: unknown): string {
     return "Unknown error";
   }
 }
+
+/** `err` itself if it is an Error, else an Error carrying its description, with it as the cause. */
+export function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(describeError(err), { cause: err });
+}

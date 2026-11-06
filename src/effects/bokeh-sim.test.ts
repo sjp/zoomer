@@ -36,12 +36,14 @@ describe("createLights", () => {
           [xs[i], lights.xs[i], 1920],
           [ys[i], lights.ys[i], 1080],
         ]) {
-          if (b < -margin || b > size + margin) bad.push(`light ${i} left the padded span: ${b}`);
+          if (b < -margin || b > size + margin)
+            bad.push(`light ${String(i)} left the padded span: ${String(b)}`);
           if (Math.abs(b - a) > size / 2) {
             wraps++;
             // Before and after the jump, the whole sprite (radius < margin) is out of view.
-            if (!(a <= -margin + 30 || a >= size + margin - 30)) bad.push(`jumped from ${a}`);
-            if (!(b <= -margin + 30 || b >= size + margin - 30)) bad.push(`jumped to ${b}`);
+            if (!(a <= -margin + 30 || a >= size + margin - 30))
+              bad.push(`jumped from ${String(a)}`);
+            if (!(b <= -margin + 30 || b >= size + margin - 30)) bad.push(`jumped to ${String(b)}`);
           }
         }
       }
