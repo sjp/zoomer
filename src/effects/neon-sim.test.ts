@@ -56,18 +56,25 @@ describe("signLayout", () => {
     for (const aspect of aspects) {
       for (const { value: position } of NEON_POSITION_OPTIONS) {
         for (const lines of [["On Air"], [full], [full, full], ["Hi", full], ["東".repeat(24)]]) {
-          const l = signLayout(aspect, position, lines.map(fallbackWidthEm));
+          const l = signLayout(
+            aspect,
+            position,
+            lines.map((v) => fallbackWidthEm(v)),
+          );
           const [rx, ry, rw, rh] = l.region;
           const tag = `${aspect.toFixed(2)} ${position} ${lines.join("/")}`;
-          if (l.x < rx - eps || l.x + l.w > rx + rw + eps)
+          if (l.x < rx - eps || l.x + l.w > rx + rw + eps) {
             problems.push(`${tag}: x outside region`);
-          if (l.y < ry - eps || l.y + l.h > ry + rh + eps)
+          }
+          if (l.y < ry - eps || l.y + l.h > ry + rh + eps) {
             problems.push(`${tag}: y outside region`);
+          }
           if (rx < 0 || rx + rw > aspect || ry < 0 || ry + rh > 0.5) {
             problems.push(`${tag}: region outside the upper half of the frame`);
           }
-          if (!(l.font > 0.02 && l.font <= MAX_FONT))
+          if (!(l.font > 0.02 && l.font <= MAX_FONT)) {
             problems.push(`${tag}: font ${String(l.font)}`);
+          }
         }
       }
     }
@@ -102,12 +109,16 @@ describe("squaredDistance", () => {
       for (let x = 0; x < w; x++) {
         let best = Infinity;
         for (let j = 0; j < w * h; j++) {
-          if (mask[j] !== 1) continue;
+          if (mask[j] !== 1) {
+            continue;
+          }
           const dx = (j % w) - x;
           const dy = Math.floor(j / w) - y;
           best = Math.min(best, dx * dx + dy * dy);
         }
-        if (got[y * w + x] !== best) bad++;
+        if (got[y * w + x] !== best) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -124,7 +135,9 @@ describe("centrelineDistance", () => {
   /** A horizontal band 6 texels tall across a 40 x 30 grid. */
   const band = () => {
     const mask = new Uint8Array(40 * 30);
-    for (let y = 12; y < 18; y++) mask.fill(1, y * 40, y * 40 + 40);
+    for (let y = 12; y < 18; y++) {
+      mask.fill(1, y * 40, y * 40 + 40);
+    }
     return mask;
   };
 
@@ -135,8 +148,11 @@ describe("centrelineDistance", () => {
     // Smallest at the band's middle rows, then one texel more per row away from it.
     expect(Math.min(...column)).toBeCloseTo(0.5 * FIELD_TEXEL, 6);
     let ok = true;
-    for (let y = 15; y < 29; y++)
-      if (Math.abs(column[y + 1] - column[y] - FIELD_TEXEL) > 1e-6) ok = false;
+    for (let y = 15; y < 29; y++) {
+      if (Math.abs(column[y + 1] - column[y] - FIELD_TEXEL) > 1e-6) {
+        ok = false;
+      }
+    }
     expect(ok).toBe(true);
   });
 
@@ -182,7 +198,9 @@ describe("clips", () => {
     const cols = 400;
     const rows = 40;
     const dist = new Float32Array(cols * rows).fill(100);
-    for (let x = 30; x < 370; x++) dist[20 * cols + x] = 0;
+    for (let x = 30; x < 370; x++) {
+      dist[20 * cols + x] = 0;
+    }
     const clips = placeClips(dist, cols, 0, rows, 18, 5, 5);
     expect(clips.length).toBeGreaterThanOrEqual(2);
     expect(clips.every(([x, y]) => dist[y * cols + x] === 0)).toBe(true);
@@ -246,7 +264,9 @@ describe("warmUp", () => {
     let prev = warmUp(0);
     for (let t = 0.01; t <= WARM_UP + 1; t += 0.01) {
       const v = warmUp(t);
-      if (v < prev) monotonic = false;
+      if (v < prev) {
+        monotonic = false;
+      }
       steepest = Math.max(steepest, (v - prev) / 0.01);
       prev = v;
     }

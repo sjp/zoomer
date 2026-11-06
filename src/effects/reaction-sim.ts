@@ -11,6 +11,7 @@
 import { createRng } from "./noise";
 import { wrap } from "./math";
 import type { PATTERN_OPTIONS } from "./reaction.meta";
+import { lookup } from "./lookup";
 
 /** Diffusion rates of A and B, and the time step per simulation step (Karl Sims' units). */
 export const DA = 1;
@@ -46,7 +47,7 @@ export const PRESETS = {
 
 /** The preset for a select value; unknown values fall back to coral. */
 export function presetFor(id: string): Preset {
-  return Object.hasOwn(PRESETS, id) ? PRESETS[id as PatternId] : PRESETS.coral;
+  return lookup(PRESETS, id, "coral");
 }
 
 /** Seconds per lap of the drift path. */
@@ -299,8 +300,12 @@ export const retreatSteps = (gridW: number) =>
  * negative (no effect) while growing or holding.
  */
 export function cycleFront(c: Cycle, gridW: number): number {
-  if (c.phase === "retreat") return (c.steps / retreatSteps(gridW)) * (1 + FRONT_BAND);
-  if (c.phase === "clear") return 1 + FRONT_BAND;
+  if (c.phase === "retreat") {
+    return (c.steps / retreatSteps(gridW)) * (1 + FRONT_BAND);
+  }
+  if (c.phase === "clear") {
+    return 1 + FRONT_BAND;
+  }
   return -1;
 }
 
@@ -318,7 +323,9 @@ export function advanceCycle(
   enabled: boolean,
 ): boolean {
   if (!enabled) {
-    if (c.phase !== "grow") enter(c, "grow");
+    if (c.phase !== "grow") {
+      enter(c, "grow");
+    }
     c.steps += steps;
     c.sinceSample += steps;
     return false;
@@ -326,19 +333,29 @@ export function advanceCycle(
   c.steps += steps;
   c.sinceSample += steps;
   // Paused (speed 0) means paused: phase time only counts while stepping.
-  if (steps > 0) c.seconds += dt;
+  if (steps > 0) {
+    c.seconds += dt;
+  }
   switch (c.phase) {
     case "grow":
-      if (c.seconds >= GROW_FALLBACK_SECONDS) enter(c, "hold");
+      if (c.seconds >= GROW_FALLBACK_SECONDS) {
+        enter(c, "hold");
+      }
       break;
     case "hold":
-      if (c.seconds >= holdSeconds) enter(c, "retreat");
+      if (c.seconds >= holdSeconds) {
+        enter(c, "retreat");
+      }
       break;
     case "retreat":
-      if (c.steps >= retreatSteps(gridW)) enter(c, "clear");
+      if (c.steps >= retreatSteps(gridW)) {
+        enter(c, "clear");
+      }
       break;
     case "clear":
-      if (c.steps >= CLEAR_FALLBACK_STEPS) return true;
+      if (c.steps >= CLEAR_FALLBACK_STEPS) {
+        return true;
+      }
       break;
   }
   return false;
@@ -371,10 +388,18 @@ export const createStats = (): Stats => ({
  */
 export function sampleCycle(c: Cycle, stats: Stats, enabled: boolean): boolean {
   c.sinceSample = 0;
-  if (!enabled) return false;
-  if (c.phase === "clear") return stats.maxB < EMPTY_B;
-  if (c.phase !== "grow") return false;
-  if (stats.maxB < EMPTY_B && c.steps > SAMPLE_STEPS) return true;
+  if (!enabled) {
+    return false;
+  }
+  if (c.phase === "clear") {
+    return stats.maxB < EMPTY_B;
+  }
+  if (c.phase !== "grow") {
+    return false;
+  }
+  if (stats.maxB < EMPTY_B && c.steps > SAMPLE_STEPS) {
+    return true;
+  }
   // The oldest kept sample, then this one over it.
   const oldest = c.history[c.next];
   const full = c.samples > SETTLE_SAMPLES;
@@ -382,9 +407,13 @@ export function sampleCycle(c: Cycle, stats: Stats, enabled: boolean): boolean {
   let tiles = 0;
   if (full) {
     for (let i = 0; i < STATS_TILES; i++) {
-      if (stats.tiles[i] < 0) continue;
+      if (stats.tiles[i] < 0) {
+        continue;
+      }
       tiles++;
-      if (Math.abs(stats.tiles[i] - oldest[i]) > SETTLE_TILE_DELTA) moving++;
+      if (Math.abs(stats.tiles[i] - oldest[i]) > SETTLE_TILE_DELTA) {
+        moving++;
+      }
     }
   }
   const still = full && moving <= Math.max(1, Math.floor(tiles * SETTLE_MOVING_FRACTION));
@@ -392,7 +421,9 @@ export function sampleCycle(c: Cycle, stats: Stats, enabled: boolean): boolean {
   c.next = (c.next + 1) % c.history.length;
   c.samples++;
   c.still = still && stats.coverage >= MIN_COVERAGE ? c.still + 1 : 0;
-  if (c.still >= SETTLE_CHECKS) enter(c, "hold");
+  if (c.still >= SETTLE_CHECKS) {
+    enter(c, "hold");
+  }
   return false;
 }
 
@@ -422,7 +453,9 @@ export function readStats(bytes: Uint8Array, out: Stats): Stats {
     out.tiles[t] = v;
     sum += v;
     tiles++;
-    if (bytes[i + 1] > max) max = bytes[i + 1];
+    if (bytes[i + 1] > max) {
+      max = bytes[i + 1];
+    }
   }
   out.coverage = tiles > 0 ? sum / tiles : 0;
   out.maxB = max / 255;

@@ -49,7 +49,9 @@ function inside(ring: Float32Array, x: number, y: number): boolean {
     const yi = ring[i * 2 + 1];
     const xj = ring[j * 2];
     const yj = ring[j * 2 + 1];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      c = !c;
+    }
   }
   return c;
 }
@@ -65,7 +67,9 @@ describe("web geometry", () => {
     let bad = 0;
     for (let seed = 0; seed < 30; seed++) {
       const g = buildWeb({ corner: "topLeft", size: 0.6, seed, refWidth: 1920 });
-      if (g.spokes < 20 || g.spokes > 30) bad++;
+      if (g.spokes < 20 || g.spokes > 30) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -77,10 +81,13 @@ describe("web geometry", () => {
       for (let seed = 0; seed < 8; seed++) {
         const g = buildWeb({ corner, size: seed / 7, seed, refWidth: 1920 });
         for (let i = 0; i < g.segments; i++) {
-          if (g.kind[i] !== KIND_SPIRAL && g.kind[i] !== KIND_HUB) continue;
+          if (g.kind[i] !== KIND_SPIRAL && g.kind[i] !== KIND_HUB) {
+            continue;
+          }
           checked++;
-          if (!inside(g.frameRing, g.ax[i], g.ay[i]) || !inside(g.frameRing, g.bx[i], g.by[i]))
+          if (!inside(g.frameRing, g.ax[i], g.ay[i]) || !inside(g.frameRing, g.bx[i], g.by[i])) {
             bad++;
+          }
         }
       }
     }
@@ -91,7 +98,11 @@ describe("web geometry", () => {
   it("puts many spiral threads around the hub", () => {
     const g = buildWeb({ corner: "topRight", size: 0.6, seed: 9, refWidth: 1920 });
     let spiral = 0;
-    for (let i = 0; i < g.segments; i++) if (g.kind[i] === KIND_SPIRAL) spiral++;
+    for (let i = 0; i < g.segments; i++) {
+      if (g.kind[i] === KIND_SPIRAL) {
+        spiral++;
+      }
+    }
     expect(spiral).toBeGreaterThan(600);
     expect(g.segments).toBeLessThan(4096);
   });
@@ -105,8 +116,12 @@ describe("web geometry", () => {
           const g = buildWeb({ corner, size: 1, seed, refWidth });
           // The speaker's middle third stays clear, and so does the far half of the height.
           const right = corner.endsWith("Right");
-          if (right ? g.boxX0 < (refWidth * 2) / 3 - 1e-3 : g.boxX1 > refWidth / 3 + 1e-3) bad++;
-          if (g.boxY1 - g.boxY0 > REF_HEIGHT * 0.65) bad++;
+          if (right ? g.boxX0 < (refWidth * 2) / 3 - 1e-3 : g.boxX1 > refWidth / 3 + 1e-3) {
+            bad++;
+          }
+          if (g.boxY1 - g.boxY0 > REF_HEIGHT * 0.65) {
+            bad++;
+          }
           const out = threadsOut(g);
           for (let t = 0; t < 60; t += 2.5) {
             const n = writeThreads(g, frame({ time: t }), out);
@@ -119,7 +134,9 @@ describe("web geometry", () => {
                 worst = Math.max(worst, g.boxX0 - x, x - g.boxX1, g.boxY0 - y, y - g.boxY1);
               }
             }
-            if (worst > slack) bad++;
+            if (worst > slack) {
+              bad++;
+            }
           }
         }
       }
@@ -194,14 +211,18 @@ describe("dew", () => {
     const firstSpiral = g.kind.indexOf(KIND_SPIRAL);
     for (let i = 0; i < g.drops; i++) {
       const seg = g.dropSeg[i];
-      if (g.kind[seg] !== KIND_SPIRAL) continue;
+      if (g.kind[seg] !== KIND_SPIRAL) {
+        continue;
+      }
       // Spiral threads come last, three pieces each. On a near-level thread at
       // least 30 px long, the middle piece holds the bow's bottom.
       const piece = (seg - firstSpiral) % 3;
       const a = seg - piece;
       const dx = g.bx[a + 2] - g.ax[a];
       const dy = g.by[a + 2] - g.ay[a];
-      if (Math.abs(dy) > 0.05 * Math.abs(dx) || Math.abs(dx) < 30) continue;
+      if (Math.abs(dy) > 0.05 * Math.abs(dx) || Math.abs(dx) < 30) {
+        continue;
+      }
       if (piece === 1) {
         mid += g.dropR[i];
         midN++;
@@ -273,8 +294,12 @@ describe("sway", () => {
         anchors++;
         anchorMoved = Math.max(anchorMoved, moved);
       }
-      if (g.aw[i] === 1) hubMove = Math.max(hubMove, moved);
-      if (g.kind[i] === KIND_ANCHOR && g.aw[i] > 0) frameMove = Math.max(frameMove, moved);
+      if (g.aw[i] === 1) {
+        hubMove = Math.max(hubMove, moved);
+      }
+      if (g.kind[i] === KIND_ANCHOR && g.aw[i] > 0) {
+        frameMove = Math.max(frameMove, moved);
+      }
     }
     expect(anchors).toBeGreaterThanOrEqual(3);
     expect(anchorMoved).toBe(0);
@@ -309,7 +334,9 @@ describe("backdrop", () => {
       let sum = 0;
       let n = 0;
       for (let i = 0; i < b.count; i++) {
-        if (b.base[i * 4 + 3] !== 1) continue;
+        if (b.base[i * 4 + 3] !== 1) {
+          continue;
+        }
         sum += b.base[i * 4];
         n++;
       }

@@ -287,10 +287,11 @@ export const lenia = defineEffect(leniaMeta, {
       const statsTarget = createRenderTarget(gl, STATS_SIZE, STATS_SIZE, gl.RGBA8, {
         filter: gl.NEAREST,
       });
-      if (statsTarget)
+      if (statsTarget) {
         scope.add(statsTarget, (t) => {
           t.dispose();
         });
+      }
       const statsBytes = new Uint8Array(STATS_SIZE * STATS_SIZE * 4);
       const pbo = scope.add(gl.createBuffer(), (b) => {
         gl.deleteBuffer(b);
@@ -303,7 +304,9 @@ export const lenia = defineEffect(leniaMeta, {
       let fenceGeneration = 0;
       let generation = 0;
       scope.defer(() => {
-        if (fence) gl.deleteSync(fence);
+        if (fence) {
+          gl.deleteSync(fence);
+        }
         fence = null;
       });
       const fieldStats: FieldStats = { mean: 0, max: 0 };
@@ -315,7 +318,9 @@ export const lenia = defineEffect(leniaMeta, {
       let gridW = 0;
       let gridH = 0;
       const deleteTargets = () => {
-        for (const t of targets) t.dispose();
+        for (const t of targets) {
+          t.dispose();
+        }
         targets = [];
       };
       scope.defer(deleteTargets);
@@ -370,7 +375,9 @@ export const lenia = defineEffect(leniaMeta, {
         seedField(s, ruleId, sp.soup, count, gridW, gridH, field);
         packState(field, fieldBytes);
         // Both targets, so the composite's interpolation starts from the new field.
-        for (const t of targets) upload(t, 0, 0, gridW, gridH, fieldBytes);
+        for (const t of targets) {
+          upload(t, 0, 0, gridW, gridH, fieldBytes);
+        }
         spawnRng = createRng(s + 17);
         restartLife(life);
         statsTimer = 0;
@@ -397,7 +404,9 @@ export const lenia = defineEffect(leniaMeta, {
 
       /** Renders the tile stats and starts reading them back. */
       const requestStats = () => {
-        if (!statsTarget) return;
+        if (!statsTarget) {
+          return;
+        }
         const [tx, ty] = statsTile(gridW, gridH);
         statsTarget.bind();
         gl.clearColor(0, 0, 0, 0);
@@ -419,26 +428,34 @@ export const lenia = defineEffect(leniaMeta, {
         gl.readPixels(0, 0, STATS_SIZE, STATS_SIZE, gl.RGBA, gl.UNSIGNED_BYTE, 0);
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0) ?? null;
-        if (!fence) readback = false;
+        if (!fence) {
+          readback = false;
+        }
         fenceGeneration = generation;
       };
 
       /** Collects a finished readback, if any; true if fresh stats arrived. */
       const collectStats = (): boolean => {
-        if (!fence || gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
+        if (!fence || gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) {
+          return false;
+        }
         gl.deleteSync(fence);
         fence = null;
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
         gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, statsBytes);
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        if (fenceGeneration !== generation) return false;
+        if (fenceGeneration !== generation) {
+          return false;
+        }
         readStats(statsBytes, fieldStats);
         return true;
       };
 
       /** Writes one fresh seed patch into an empty part of the field, if there is one. */
       const spawn = (soup: boolean) => {
-        if (!pickSpawnSpot(statsBytes, gridW, gridH, spawnRng, spot)) return;
+        if (!pickSpawnSpot(statsBytes, gridW, gridH, spawnRng, spot)) {
+          return;
+        }
         spawnPatch(spawnRng(), ruleId, soup, patch);
         // The current target only: the composite blends the patch in over one step.
         packState(patch, patchBytes);
@@ -489,7 +506,9 @@ export const lenia = defineEffect(leniaMeta, {
 
           // Life cycle: a param change or the "mixed" timer fades out, then reseeds.
           const sp = speciesFor(p.species);
-          if (!same && life.phase !== "out") life.phase = "out";
+          if (!same && life.phase !== "out") {
+            life.phase = "out";
+          }
           const cycle = sp.rules.length > 1 ? MIXED_SECONDS : 0;
           if (advanceLife(life, dt, cycle)) {
             // Same params: move on to the species' next rule. New params: start over.
@@ -499,7 +518,9 @@ export const lenia = defineEffect(leniaMeta, {
           }
           if (collectStats()) {
             const n = judgeStats(life, fieldStats, count, ruleId, gridW * gridH);
-            for (let i = 0; i < n; i++) spawn(sp.soup);
+            for (let i = 0; i < n; i++) {
+              spawn(sp.soup);
+            }
           }
 
           const rule = RULES[ruleId];

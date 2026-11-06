@@ -358,12 +358,16 @@ export const windowRain = defineEffect(windowRainMeta, {
       const makeTarget = (w: number, h: number, format: GLenum): RenderTarget => {
         const t = createRenderTarget(gl, w, h, format);
         // R8 and RGBA8 are always colour-renderable in WebGL2.
-        if (!t) throw new Error("Window rain: render target is not renderable");
+        if (!t) {
+          throw new Error("Window rain: render target is not renderable");
+        }
         return t;
       };
       scope.defer(() => {
         dropTarget?.dispose();
-        for (const t of fogTargets) t.dispose();
+        for (const t of fogTargets) {
+          t.dispose();
+        }
       });
 
       /** The drop map is about 1080p whatever the canvas size. */
@@ -371,7 +375,9 @@ export const windowRain = defineEffect(windowRainMeta, {
         const div = Math.max(1, scale);
         const w = lowResSize(width, div);
         const h = lowResSize(height, div);
-        if (dropTarget && w === dropW && h === dropH) return dropTarget;
+        if (dropTarget && w === dropW && h === dropH) {
+          return dropTarget;
+        }
         dropTarget?.dispose();
         dropTarget = null;
         dropTarget = makeTarget(w, h, gl.RGBA8);
@@ -388,7 +394,9 @@ export const windowRain = defineEffect(windowRainMeta, {
       const ensureFogTargets = () => {
         const w = lowResSize(width, FOG_TEXEL * scale);
         const h = lowResSize(height, FOG_TEXEL * scale);
-        if (fogTargets.length === 2 && w === fogW && h === fogH) return false;
+        if (fogTargets.length === 2 && w === fogW && h === fogH) {
+          return false;
+        }
         const old = fogTargets;
         const keep = old.length === 2 ? old[fogCurrent] : null;
         fogTargets = [];
@@ -405,7 +413,9 @@ export const windowRain = defineEffect(windowRainMeta, {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           }
         } finally {
-          for (const t of old) t.dispose();
+          for (const t of old) {
+            t.dispose();
+          }
         }
         fogW = w;
         fogH = h;
@@ -415,7 +425,9 @@ export const windowRain = defineEffect(windowRainMeta, {
       const drawBackground = (n: number, blur: number, c1: Rgb, c2: Rgb, back: Rgb) => {
         target.bind();
         gradient.draw(top, back);
-        if (n === 0) return;
+        if (n === 0) {
+          return;
+        }
         const data = lightBatch.data;
         const stride = lightBatch.stride;
         const baseR = (25 + 85 * blur) * scale;
@@ -449,7 +461,9 @@ export const windowRain = defineEffect(windowRainMeta, {
           height = Math.max(1, Math.round(height));
           const newRefWidth = width / scale;
           const k = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_LIGHTS; i++) lx[i] *= k;
+          for (let i = 0; i < MAX_LIGHTS; i++) {
+            lx[i] *= k;
+          }
           refWidth = newRefWidth;
           resizeRainSim(sim, refWidth, 1080);
           bgTimer = Infinity;
@@ -570,7 +584,9 @@ export const windowRain = defineEffect(windowRainMeta, {
             fogTex = dst.texture;
           } else if (fogTargets.length > 0) {
             // Free the fog targets while fog is off: they are re-created fully fogged anyway.
-            for (const t of fogTargets) t.dispose();
+            for (const t of fogTargets) {
+              t.dispose();
+            }
             fogTargets = [];
           }
 

@@ -30,7 +30,11 @@ const frame = (over: Partial<LanternFrame> = {}): LanternFrame => ({
 });
 
 const isSorted = (a: ArrayLike<number>) => {
-  for (let i = 1; i < a.length; i++) if (a[i] < a[i - 1]) return false;
+  for (let i = 1; i < a.length; i++) {
+    if (a[i] < a[i - 1]) {
+      return false;
+    }
+  }
   return true;
 };
 
@@ -42,8 +46,12 @@ describe("lantern shape", () => {
     for (let i = 0; i < o.length; i += 2) {
       const [x, y] = [o[i], o[i + 1]];
       expect(Math.abs(y)).toBeLessThanOrEqual(1.3 + 1e-9);
-      if (y < -1) topW = Math.max(topW, Math.abs(x));
-      if (y > 1) botW = Math.max(botW, Math.abs(x));
+      if (y < -1) {
+        topW = Math.max(topW, Math.abs(x));
+      }
+      if (y > 1) {
+        botW = Math.max(botW, Math.abs(x));
+      }
     }
     expect(topW).toBeGreaterThan(botW);
   });
@@ -122,7 +130,9 @@ describe("createLanterns", () => {
             l.x[i] < f.refWidth + reach &&
             l.y[i] >= -reach &&
             l.y[i] <= 1080 + reach;
-          if (!ok) out.push(`${String(i)}: ${String(l.x[i])}, ${String(l.y[i])}`);
+          if (!ok) {
+            out.push(`${String(i)}: ${String(l.x[i])}, ${String(l.y[i])}`);
+          }
         }
       }
     }
@@ -139,7 +149,11 @@ describe("createLanterns", () => {
     for (let s = 0; s < 600; s++) {
       const before = Float64Array.from(l.y);
       l.step(0.1, f, data, LANTERN_FLOATS);
-      for (let i = 0; i < MAX; i++) if (l.y[i] > before[i]) respawnedAt.push(l.y[i]);
+      for (let i = 0; i < MAX; i++) {
+        if (l.y[i] > before[i]) {
+          respawnedAt.push(l.y[i]);
+        }
+      }
     }
     expect(respawnedAt.length).toBeGreaterThan(0);
     expect(Math.min(...respawnedAt)).toBeGreaterThan(820);
@@ -149,7 +163,9 @@ describe("createLanterns", () => {
     const l = createLanterns(MAX, 1920);
     const data = new Float32Array(MAX * LANTERN_FLOATS);
     // Fade everyone in.
-    for (let s = 0; s < 20; s++) l.step(0.1, frame(), data, LANTERN_FLOATS);
+    for (let s = 0; s < 20; s++) {
+      l.step(0.1, frame(), data, LANTERN_FLOATS);
+    }
     const n = l.step(0.1, frame(), data, LANTERN_FLOATS);
     expect(n).toBe(MAX);
     const radii: number[] = [];
@@ -170,11 +186,15 @@ describe("createLanterns", () => {
     const l = createLanterns(MAX, 1920);
     const data = new Float32Array(MAX * LANTERN_FLOATS);
     let n = 0;
-    for (let s = 0; s < 40; s++) n = l.step(0.1, frame({ count: 30 }), data, LANTERN_FLOATS);
+    for (let s = 0; s < 40; s++) {
+      n = l.step(0.1, frame({ count: 30 }), data, LANTERN_FLOATS);
+    }
     expect(n).toBe(30);
     // Not just the 30 farthest: some near ones are included.
     let maxR = 0;
-    for (let i = 0; i < n; i++) maxR = Math.max(maxR, data[i * LANTERN_FLOATS + 2]);
+    for (let i = 0; i < n; i++) {
+      maxR = Math.max(maxR, data[i * LANTERN_FLOATS + 2]);
+    }
     expect(maxR).toBeGreaterThan(64 / 2.6 / 2);
   });
 });

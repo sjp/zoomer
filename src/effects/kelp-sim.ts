@@ -34,7 +34,9 @@ export const SWELL_TRAVEL = 3;
 export const SEGMENTS = 20;
 export const FROND_STRIP: readonly number[] = (() => {
   const out: number[] = [];
-  for (let i = 0; i <= SEGMENTS; i++) out.push(i, -1, i, 1);
+  for (let i = 0; i <= SEGMENTS; i++) {
+    out.push(i, -1, i, 1);
+  }
   return out;
 })();
 
@@ -172,7 +174,9 @@ export function buildBladeProfiles(seed: number): Float32Array {
       for (let c = 0; c < PROFILE_COLUMNS; c++) {
         const t = c / (PROFILE_COLUMNS - 1);
         const u = (t - t0) / len;
-        if (u <= 0 || u >= 1) continue;
+        if (u <= 0 || u >= 1) {
+          continue;
+        }
         // A leaf: quick to widen from its attachment, long taper to its point.
         const w = size * Math.sin(Math.PI * Math.sqrt(u)) ** 1.2;
         const i = row + c * 2 + side;
@@ -202,7 +206,7 @@ export function buildFronds(seed: number, density: number, out: Float32Array): F
   let n = 0;
   for (let l = 0; l < LAYERS.length; l++) {
     const layer = LAYERS[l];
-    const rng = createRng((Math.floor(seed) * 7919 + l * 104729) | 0);
+    const rng = createRng(Math.floor(seed) * 7919 + l * 104729);
     const want = Math.min(layerCount(layer, density), Math.floor(out.length / FROND_FLOATS) - n);
     starts.push(n);
     counts.push(Math.max(0, want));
@@ -212,9 +216,13 @@ export function buildFronds(seed: number, density: number, out: Float32Array): F
       let x = -1;
       for (let tries = 0; tries < 64 && x < 0; tries++) {
         const c = X_MARGIN + (1 - 2 * X_MARGIN) * rng();
-        if (rng() < edgeWeight(c, layer.centre)) x = c;
+        if (rng() < edgeWeight(c, layer.centre)) {
+          x = c;
+        }
       }
-      if (x < 0) x = rng() < 0.5 ? X_MARGIN + 0.2 * rng() : 1 - X_MARGIN - 0.2 * rng();
+      if (x < 0) {
+        x = rng() < 0.5 ? X_MARGIN + 0.2 * rng() : 1 - X_MARGIN - 0.2 * rng();
+      }
       const h = layer.heightMin + (layer.heightMax - layer.heightMin) * rng();
       const o = (n + k) * FROND_FLOATS;
       out[o] = x;
@@ -377,21 +385,29 @@ export function schoolGone(f: Fish, aspect: number): boolean {
  * timer runs out and no school is still crossing, despawned once it has left.
  */
 export function stepFish(f: Fish, dt: number, aspect: number): void {
-  if (!(dt > 0)) return;
+  if (!(dt > 0)) {
+    return;
+  }
   f.timer -= dt;
   if (f.active) {
     f.age += dt;
     f.x += f.dir * f.speed * dt;
     // A gentle rise and fall, so the school doesn't cross on a ruler.
     f.y += 0.006 * Math.sin(f.age * 0.4) * dt;
-    if (schoolGone(f, aspect)) f.active = false;
+    if (schoolGone(f, aspect)) {
+      f.active = false;
+    }
   }
-  if (!f.active && f.timer <= 0) spawnSchool(f, aspect);
+  if (!f.active && f.timer <= 0) {
+    spawnSchool(f, aspect);
+  }
 }
 
 /** Writes the active school's fish into `out` (`FISH_FLOATS` each); returns how many. */
 export function fishInstances(f: Fish, aspect: number, out: Float32Array): number {
-  if (!f.active) return 0;
+  if (!f.active) {
+    return 0;
+  }
   const n = Math.min(FISH_PER_SCHOOL, Math.floor(out.length / FISH_FLOATS));
   for (let i = 0; i < n; i++) {
     const o = i * FISH_FLOATS;
@@ -449,11 +465,15 @@ export function createSnow(seed: number, maxAspect = 4): Snow {
 
 /** Sinks the snow by `dt` seconds, wrapping each particle from the bottom back to the top. */
 export function stepSnow(s: Snow, dt: number): void {
-  if (!(dt > 0)) return;
+  if (!(dt > 0)) {
+    return;
+  }
   s.t += dt;
   for (let i = 0; i < SNOW_COUNT; i++) {
     let y = s.y[i] + s.sink[i] * dt;
-    if (y > 1.02) y -= 1.04;
+    if (y > 1.02) {
+      y -= 1.04;
+    }
     s.y[i] = y;
   }
 }
@@ -464,7 +484,9 @@ export function snowInstances(s: Snow, aspect: number, out: Float32Array): numbe
   let k = 0;
   for (let i = 0; i < n; i++) {
     const x = s.x[i];
-    if (x > aspect + 0.02) continue;
+    if (x > aspect + 0.02) {
+      continue;
+    }
     const o = k * SNOW_FLOATS;
     out[o] = x + 0.008 * Math.sin(s.t * 0.25 + s.phase[i]);
     out[o + 1] = s.y[i];

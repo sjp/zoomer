@@ -332,8 +332,8 @@ uniform vec3 uSeal;
 uniform vec3 uReflect;
 out vec4 outColor;
 ${DITHER_GLSL}
-const float WIRE_DX[3] = float[](${WIRE_DX.map(F).join(", ")});
-const float WIRE_Y[3] = float[](${WIRE_Y.map(F).join(", ")});
+const float WIRE_DX[3] = float[](${WIRE_DX.map((v) => F(v)).join(", ")});
+const float WIRE_Y[3] = float[](${WIRE_Y.map((v) => F(v)).join(", ")});
 const float WIRE_SAG4[3] = float[](${WIRE_SAG.map((s) => F(4 * s)).join(", ")});
 
 void main() {

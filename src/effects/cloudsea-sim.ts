@@ -13,6 +13,7 @@ import { sampleSky, type SkyKey, type SkyState } from "./horizon-sim";
 import { approach, clamp, fract, smoothstep } from "./math";
 import { createNoise, createRng, fbmPeriodic2 } from "./noise";
 import { MAX_PEAKS } from "./cloudsea.meta";
+import { lookup } from "./lookup";
 
 const TAU = Math.PI * 2;
 
@@ -182,7 +183,9 @@ export function sampleDawn(hour: number, out: DawnState, keys: readonly DawnKey[
   const h = clamp(hour, keys[0].hour, keys[keys.length - 1].hour);
   sampleSky(h / 24, out, keys);
   let i = 0;
-  while (i < keys.length - 2 && keys[i + 1].hour <= h) i++;
+  while (i < keys.length - 2 && keys[i + 1].hour <= h) {
+    i++;
+  }
   const a = keys[i];
   const b = keys[Math.min(i + 1, keys.length - 1)];
   const t = b.hour > a.hour ? smoothstep(0, 1, (h - a.hour) / (b.hour - a.hour)) : 0;
@@ -218,15 +221,12 @@ export function cyclePhaseFor(hour: number): number {
 }
 
 /** The fixed hour for a `timeOfDay` value; unknown values fall back to sunrise. */
-export const fixedHour = (time: string): number =>
-  Object.hasOwn(DAWN_HOURS, time)
-    ? DAWN_HOURS[time as keyof typeof DAWN_HOURS]
-    : DAWN_HOURS.sunrise;
+export const fixedHour = (time: string): number => lookup(DAWN_HOURS, time, "sunrise");
 
 export interface DawnClock {
   readonly hour: number;
   /** Advances by `dt` seconds and returns the hour. */
-  step(dt: number, time: string, cycleMins: number): number;
+  step: (dt: number, time: string, cycleMins: number) => number;
 }
 
 /**
@@ -244,7 +244,9 @@ export function createDawnClock(initialHour: number = DAWN_HOURS.sunrise): DawnC
     },
     step(dt, time, cycleMins) {
       if (time === "cycle") {
-        if (!cycling) phase = cyclePhaseFor(hour);
+        if (!cycling) {
+          phase = cyclePhaseFor(hour);
+        }
         cycling = true;
         phase += dt / (Math.max(cycleMins, 0.1) * 60);
         hour = cycleHour(phase);
@@ -445,7 +447,9 @@ export function fillPeakTable(out: Float32Array, peaks: readonly PeakSpec[], asp
       const p = peaks[k];
       const dx = xh - p.x * aspect;
       const d = Math.abs(dx) / (dx < 0 ? p.left : p.right);
-      if (d >= 1.2) continue;
+      if (d >= 1.2) {
+        continue;
+      }
       const fall = Math.max(0, 1 - d);
       const rough = 0.09 * noises[k].noise2(xh * 14, 0.5) + 0.04 * noises[k].noise2(xh * 37, 3.5);
       const h = p.height * (fall ** 1.35 + rough * Math.min(fall * 3, 1)) - 0.02 * (1 - fall);

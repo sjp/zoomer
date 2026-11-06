@@ -31,7 +31,7 @@ export interface MapClock {
    * demo mode runs `DEMO_RATE` times faster from wherever it is, and leaving demo
    * mode snaps back to the wall clock.
    */
-  step(dt: number, demo: boolean): number;
+  step: (dt: number, demo: boolean) => number;
 }
 
 export function createMapClock(now: () => number = () => Date.now()): MapClock {
@@ -251,7 +251,9 @@ export function twilightRamps(
  */
 export function twilightLight(s: number, lo: ArrayLike<number>, hi: ArrayLike<number>): number {
   let l = 0;
-  for (let i = 0; i < 4; i++) l += TWILIGHT_WEIGHTS[i] * clamp((s - lo[i]) / (hi[i] - lo[i]), 0, 1);
+  for (let i = 0; i < 4; i++) {
+    l += TWILIGHT_WEIGHTS[i] * clamp((s - lo[i]) / (hi[i] - lo[i]), 0, 1);
+  }
   return l;
 }
 

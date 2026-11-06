@@ -7,6 +7,7 @@
  * from the bottom edge (matching `gl_FragCoord / height`). Layer 0 is the nearest.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
+import { lookup } from "./lookup";
 import { clamp, wrap } from "./math";
 import { createNoise, MAX_PERIOD, type Noise } from "./noise";
 import { MIN_LAYERS, MAX_LAYERS } from "./ridges.meta";
@@ -82,7 +83,7 @@ export type PaletteId = keyof typeof PALETTES;
 
 /** The palette for a select value; unknown values fall back to ink wash. */
 export function paletteFor(id: string): RidgePalette {
-  return Object.hasOwn(PALETTES, id) ? PALETTES[id as PaletteId] : PALETTES.ink;
+  return lookup(PALETTES, id, "ink");
 }
 
 // ---------------------------------------------------------------------------
@@ -204,8 +205,12 @@ export function ridgeHeightAt(table: Float32Array, layer: number, x: number): nu
  * the top. Continuous with a continuous slope; the shader has the same curve.
  */
 export function fogDensity(t: number): number {
-  if (!(t > 0)) return 1;
-  if (t >= 1) return 0;
+  if (!(t > 0)) {
+    return 1;
+  }
+  if (t >= 1) {
+    return 0;
+  }
   return 1 - t * t * (3 - 2 * t);
 }
 
@@ -342,7 +347,9 @@ function launch(f: Flock, aspect: number, rand: () => number): void {
 /** Distance the last bird trails the leader, height units. */
 const trail = (f: Flock) => {
   let max = 0;
-  for (let b = 0; b < f.count; b++) max = Math.max(max, f.back[b]);
+  for (let b = 0; b < f.count; b++) {
+    max = Math.max(max, f.back[b]);
+  }
   return max;
 };
 
@@ -354,7 +361,9 @@ const trail = (f: Flock) => {
 export function stepFlock(f: Flock, dt: number, aspect: number, rand: () => number): void {
   if (f.count === 0) {
     f.wait -= dt;
-    if (f.wait <= 0) launch(f, aspect, rand);
+    if (f.wait <= 0) {
+      launch(f, aspect, rand);
+    }
     return;
   }
   f.time += dt;

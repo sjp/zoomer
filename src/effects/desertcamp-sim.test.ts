@@ -63,7 +63,9 @@ describe("sky", () => {
       for (let x = 0; x <= w; x += 20) {
         for (let y = DUNE_TOP * REF_HEIGHT; y <= REF_HEIGHT; y += 20) {
           toSky(x - pole[0], y - pole[1], 0, q);
-          if (Math.abs(bandAcross(BAND, q[0], q[1])) < 10) hits++;
+          if (Math.abs(bandAcross(BAND, q[0], q[1])) < 10) {
+            hits++;
+          }
         }
       }
       expect(hits).toBeGreaterThan(20);
@@ -86,7 +88,9 @@ describe("sky", () => {
     const n = fillStars(a, 64000, layout);
     expect(fillStars(b, 64000, layout)).toBe(n);
     let same = true;
-    for (let i = 0; i < n * STAR_FLOATS; i++) same &&= a[i] === b[i];
+    for (let i = 0; i < n * STAR_FLOATS; i++) {
+      same &&= a[i] === b[i];
+    }
     expect(same).toBe(true);
     // Under the cap at the default density.
     expect(n).toBeLessThan(64000);
@@ -117,10 +121,14 @@ describe("dunes", () => {
       const b = table(5, w);
       let same = true;
       let ok = true;
-      for (let i = 0; i < a.length; i++) same &&= a[i] === b[i];
+      for (let i = 0; i < a.length; i++) {
+        same &&= a[i] === b[i];
+      }
       for (let c = 0; c < DUNE_COLUMNS; c++) {
         const o = c * DUNE_CHANNELS;
-        for (let l = 0; l < 3; l++) ok &&= a[o + l] > 0.04 && a[o + l] <= DUNE_TOP + 1e-6;
+        for (let l = 0; l < 3; l++) {
+          ok &&= a[o + l] > 0.04 && a[o + l] <= DUNE_TOP + 1e-6;
+        }
         ok &&= Number.isFinite(a[o + 3]) && Math.abs(a[o + 3]) < 3;
       }
       expect(same).toBe(true);
@@ -129,7 +137,9 @@ describe("dunes", () => {
     const a = table(5, 1920);
     const b = table(6, 1920);
     let diff = 0;
-    for (let i = 0; i < a.length; i++) diff = Math.max(diff, Math.abs(a[i] - b[i]));
+    for (let i = 0; i < a.length; i++) {
+      diff = Math.max(diff, Math.abs(a[i] - b[i]));
+    }
     expect(diff).toBeGreaterThan(0.01);
   });
 
@@ -212,13 +222,17 @@ describe("sparks", () => {
       maxCount = Math.max(maxCount, s.count);
       for (let k = 0; k < s.count; k++) {
         const g = sparkGlow(s, k);
-        if (s.y[k] < 100 || Math.abs(s.x[k] - 200) > 150 || !(g >= 0 && g <= 1)) bad++;
+        if (s.y[k] < 100 || Math.abs(s.x[k] - 200) > 150 || !(g >= 0 && g <= 1)) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
     expect(maxCount).toBeLessThanOrEqual(MAX_SPARKS);
     expect(maxCount).toBeGreaterThan(4);
-    for (let i = 0; i < 60 * 4; i++) stepSparks(s, 1 / 60, false, 200, 100, 0);
+    for (let i = 0; i < 60 * 4; i++) {
+      stepSparks(s, 1 / 60, false, 200, 100, 0);
+    }
     expect(s.count).toBe(0);
   });
 });
@@ -270,12 +284,20 @@ describe("meteors", () => {
           seen++;
           peak = Math.max(peak, pose.bright);
           const inCentre = (x: number) => x > 640 && x < 1280;
-          if (inCentre(pose.headX) || inCentre(pose.tailX) || pose.headY > REF_HEIGHT) bad++;
+          if (inCentre(pose.headX) || inCentre(pose.tailX) || pose.headY > REF_HEIGHT) {
+            bad++;
+          }
         }
       }
-      if (peak > c.bright + 1e-9) bad++;
-      if (meteorAt(c, c.start, pose).bright !== 0) bad++;
-      if (meteorAt(c, c.start + c.duration, pose).bright > 1e-9) bad++;
+      if (peak > c.bright + 1e-9) {
+        bad++;
+      }
+      if (meteorAt(c, c.start, pose).bright !== 0) {
+        bad++;
+      }
+      if (meteorAt(c, c.start + c.duration, pose).bright > 1e-9) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(seen).toBeGreaterThan(1000);

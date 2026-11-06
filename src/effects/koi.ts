@@ -380,7 +380,9 @@ export const koi = defineEffect(koiMeta, {
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       const tile = createRenderTarget(gl, CAUSTIC_TILE, CAUSTIC_TILE, gl.R8, { wrap: gl.REPEAT });
-      if (!tile) throw new Error("Koi: R8 caustic tile is not renderable");
+      if (!tile) {
+        throw new Error("Koi: R8 caustic tile is not renderable");
+      }
       scope.own(tile);
       const phases = new Float32Array(CAUSTIC_ITERATIONS);
       let tileAge = Infinity;
@@ -454,7 +456,9 @@ export const koi = defineEffect(koiMeta, {
       const frame: FishFrame = { refWidth, count: 0, size: 0, speed: 0 };
       let ripplesOn = true;
       const onSurface = (x: number, y: number) => {
-        if (ripplesOn) spawnRipple(ripples, x, y);
+        if (ripplesOn) {
+          spawnRipple(ripples, x, y);
+        }
       };
       const waterRgb = unitRgbMemo();
       let lastWater = "";
@@ -532,8 +536,14 @@ export const koi = defineEffect(koiMeta, {
           }
           writeRipples(ripples, scale, p.ripples ? 1 : 0, rippleData);
           let idle = true;
-          for (let k = 3; k < rippleData.length; k += 4) if (rippleData[k] !== 0) idle = false;
-          if (!(idle && ripplesIdle)) gl.uniform4fv(floorU.loc.uRipples, rippleData);
+          for (let k = 3; k < rippleData.length; k += 4) {
+            if (rippleData[k] !== 0) {
+              idle = false;
+            }
+          }
+          if (!(idle && ripplesIdle)) {
+            gl.uniform4fv(floorU.loc.uRipples, rippleData);
+          }
           ripplesIdle = idle;
           triangle.draw();
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -565,7 +575,9 @@ export const koi = defineEffect(koiMeta, {
             pd[o + 9] = 1;
           }
           for (let i = 0; i < nPads; i++) {
-            if (!(lily.flower[i] > 0)) continue;
+            if (!(lily.flower[i] > 0)) {
+              continue;
+            }
             const o = (nPads + nFlowers) * stride;
             const a = lily.angle[i] + Math.PI;
             const r = lily.r[i];
@@ -582,7 +594,9 @@ export const koi = defineEffect(koiMeta, {
             pd[o + 9] = 1;
             nFlowers++;
           }
-          if (nPads > 0) pads.upload(nPads + nFlowers);
+          if (nPads > 0) {
+            pads.upload(nPads + nFlowers);
+          }
 
           // 5. Fish strips.
           const nFish = fish.live;
@@ -634,7 +648,9 @@ export const koi = defineEffect(koiMeta, {
             gl.bindVertexArray(fishVao);
             for (let k = 0; k < nFish; k++) {
               const i = order[k];
-              if (!(fish.life[i] > 0)) continue;
+              if (!(fish.life[i] > 0)) {
+                continue;
+              }
               const d = (FISH_SHADOW_NEAR + FISH_SHADOW_FAR * (1 - fish.depth[i])) * scale;
               shadowU.f3("uOffset", SHADOW_DIR[0] * d, SHADOW_DIR[1] * d, 1.35);
               shadowU.f1("uAlpha", 0.38 * fish.life[i] * (1 - 0.3 * fish.depth[i]));
@@ -648,7 +664,9 @@ export const koi = defineEffect(koiMeta, {
             fishU.f3("uWater", w[0] * 0.8, w[1] * 0.8, w[2] * 0.8);
             for (let k = 0; k < nFish; k++) {
               const i = order[k];
-              if (!(fish.life[i] > 0)) continue;
+              if (!(fish.life[i] > 0)) {
+                continue;
+              }
               fishU.f4(
                 "uFish",
                 varietyOf(fish, i, p.varieties),

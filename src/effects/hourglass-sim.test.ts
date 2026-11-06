@@ -79,8 +79,9 @@ describe("sand tables", () => {
   it("surface heights are monotonic in volume", () => {
     let ok = true;
     for (let i = 1; i < TABLE_N; i++) {
-      if (!(tables.top[i] > tables.top[i - 1]) || !(tables.pile[i] > tables.pile[i - 1]))
+      if (!(tables.top[i] > tables.top[i - 1]) || !(tables.pile[i] > tables.pile[i - 1])) {
         ok = false;
+      }
     }
     expect(ok).toBe(true);
   });
@@ -123,8 +124,12 @@ describe("clock", () => {
       const bot = bottomSand(c, tables);
       // The levels each bulb shows hold what the clock says it holds.
       const shown = topVolume(topLevel(tables, top)) + pileVolume(pileLevel(tables, bot));
-      if (Math.abs(top + bot - tables.total) > 1e-12) bad++;
-      if (Math.abs(shown - tables.total) > 2e-3 * tables.total) bad++;
+      if (Math.abs(top + bot - tables.total) > 1e-12) {
+        bad++;
+      }
+      if (Math.abs(shown - tables.total) > 2e-3 * tables.total) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(steps * DT).toBeCloseTo(run, 1);
@@ -180,7 +185,9 @@ describe("clock", () => {
       const a = turnAngle(c);
       const lift = turnLift(a);
       const blend = turnBlend(c);
-      if (a < prev || blend < prevBlend) monotonic = false;
+      if (a < prev || blend < prevBlend) {
+        monotonic = false;
+      }
       maxJump = Math.max(
         maxJump,
         Math.abs(a - prev),
@@ -204,7 +211,9 @@ describe("clock", () => {
       const lift = turnLift(a);
       // Lowest corner, measured from the centre at rest.
       const low = Math.abs(Math.sin(a)) * CAP_W + Math.abs(Math.cos(a)) * CAP_END;
-      if (lift - low < -CAP_END - 1e-12) bad++;
+      if (lift - low < -CAP_END - 1e-12) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(turnLift(0)).toBe(0);
@@ -264,9 +273,13 @@ describe("hourglassLayout", () => {
             const cy = l.cy + turnLift(a) * l.unit;
             const ex = (Math.abs(Math.cos(a)) * CAP_W + Math.abs(Math.sin(a)) * CAP_END) * l.unit;
             const ey = (Math.abs(Math.sin(a)) * CAP_W + Math.abs(Math.cos(a)) * CAP_END) * l.unit;
-            if (l.cx - ex < x0 || l.cx + ex > x1 || cy - ey < y0 || cy + ey > y1) ok = false;
+            if (l.cx - ex < x0 || l.cx + ex > x1 || cy - ey < y0 || cy + ey > y1) {
+              ok = false;
+            }
           }
-          if (!ok) bad.push(`${String(aspect)} ${pos} ${String(size)}`);
+          if (!ok) {
+            bad.push(`${String(aspect)} ${pos} ${String(size)}`);
+          }
         }
       }
     }
@@ -290,7 +303,9 @@ describe("hourglassLayout", () => {
 
 describe("meta", () => {
   it("maps every frame option and falls back to walnut", () => {
-    for (const o of FRAME_OPTIONS) expect(frameKind(o.value)).toBe(FRAMES[o.value]);
+    for (const o of FRAME_OPTIONS) {
+      expect(frameKind(o.value)).toBe(FRAMES[o.value]);
+    }
     expect(frameKind("plastic")).toBe(FRAMES.walnut);
     expect(frameKind("constructor")).toBe(FRAMES.walnut);
   });

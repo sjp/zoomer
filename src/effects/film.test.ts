@@ -24,7 +24,9 @@ function findEntry(
   test: (r: number, g: number, b: number) => boolean,
 ): number {
   for (let i = from; i < TABLE_SIZE; i++) {
-    if (test(t[i * 4], t[i * 4 + 1], t[i * 4 + 2])) return i;
+    if (test(t[i * 4], t[i * 4 + 1], t[i * 4 + 2])) {
+      return i;
+    }
   }
   return -1;
 }
@@ -71,7 +73,9 @@ describe("buildFilmTable", () => {
         const t = buildFilmTable(mode, sat);
         let max = 0;
         for (let i = 0; i < TABLE_SIZE; i++) {
-          for (let c = 0; c < 3; c++) max = Math.max(max, t[i * 4 + c]);
+          for (let c = 0; c < 3; c++) {
+            max = Math.max(max, t[i * 4 + c]);
+          }
         }
         expect(max).toBe(255);
       }
@@ -120,7 +124,9 @@ describe("buildFilmTable", () => {
   it("makes pearl pale and mostly opaque", () => {
     const t = buildFilmTable("pearl", 1);
     for (let i = 0; i < TABLE_SIZE; i++) {
-      for (let c = 0; c < 3; c++) expect(t[i * 4 + c]).toBeGreaterThan(150);
+      for (let c = 0; c < 3; c++) {
+        expect(t[i * 4 + c]).toBeGreaterThan(150);
+      }
       expect(t[i * 4 + 3]).toBeGreaterThan(100);
     }
   });
@@ -147,7 +153,9 @@ describe("drainProfile", () => {
   it("averages about 1, so the thickness param stays the mean", () => {
     let sum = 0;
     const n = 1000;
-    for (let k = 0; k < n; k++) sum += drainProfile((k + 0.5) / n);
+    for (let k = 0; k < n; k++) {
+      sum += drainProfile((k + 0.5) / n);
+    }
     expect(sum / n).toBeGreaterThan(0.9);
     expect(sum / n).toBeLessThan(1.1);
   });

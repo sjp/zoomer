@@ -36,8 +36,12 @@ export const CRESCENT_CUT_R = 0.8;
 
 /** Area of the overlap of two discs of radii r1 and r2 whose centres are d apart. */
 export function discOverlap(r1: number, r2: number, d: number): number {
-  if (d >= r1 + r2) return 0;
-  if (d <= Math.abs(r1 - r2)) return Math.PI * Math.min(r1, r2) ** 2;
+  if (d >= r1 + r2) {
+    return 0;
+  }
+  if (d <= Math.abs(r1 - r2)) {
+    return Math.PI * Math.min(r1, r2) ** 2;
+  }
   const a1 = Math.acos(clamp((d * d + r1 * r1 - r2 * r2) / (2 * d * r1), -1, 1));
   const a2 = Math.acos(clamp((d * d + r2 * r2 - r1 * r1) / (2 * d * r2), -1, 1));
   const k = Math.sqrt(Math.max(0, (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2)));
@@ -61,7 +65,9 @@ export function shapeArea(kind: ShapeKind): number {
  */
 export function shapeSdf(kind: ShapeKind, x: number, y: number): number {
   const disc = Math.hypot(x, y) - 1;
-  if (kind === SHAPE_DISC) return disc;
+  if (kind === SHAPE_DISC) {
+    return disc;
+  }
   if (kind === SHAPE_PETAL) {
     return Math.max(
       Math.hypot(x - PETAL_OFFSET, y) - PETAL_RADIUS,
@@ -278,7 +284,9 @@ function pickSlot(rng: Rng): number {
   let u = rng();
   for (let i = 0; i < PALETTE_SLOTS - 1; i++) {
     u -= SLOT_WEIGHTS[i];
-    if (u < 0) return i;
+    if (u < 0) {
+      return i;
+    }
   }
   return PALETTE_SLOTS - 1;
 }
@@ -320,6 +328,15 @@ function droop(arm: MobileArm, s: number): number {
   return (-arm.curve * s * s) / (arm.a + arm.b);
 }
 
+/** The extent recorded for `arm`, which must already be built. */
+function extentOf(b: Builder, arm: MobileArm): Extent {
+  const e = b.extents.get(arm);
+  if (!e) {
+    throw new Error("Mobile: an arm's extent is needed before it is built");
+  }
+  return e;
+}
+
 function endExtent(b: Builder, end: MobileEnd, ext: Extent): void {
   if (end.shape) {
     const s = end.shape;
@@ -328,8 +345,11 @@ function endExtent(b: Builder, end: MobileEnd, ext: Extent): void {
     ext.hi = Math.max(0, s.r - s.stub);
     ext.reach = s.r;
   } else {
-    const a = end.arm as MobileArm;
-    const e = b.extents.get(a) as Extent;
+    const a = end.arm;
+    if (!a) {
+      throw new Error("Mobile: an end has neither a shape nor an arm");
+    }
+    const e = extentOf(b, a);
     ext.mass = e.mass;
     ext.lo = e.lo - a.drop;
     ext.hi = Math.max(0, e.hi - a.drop);
@@ -353,8 +373,11 @@ function buildArm(b: Builder, depth: number, main: boolean): MobileArm {
       deeper &&
       b.arms < MAX_ARMS &&
       ((main && i === mainSide) || rng() < (depth === 0 ? 0.75 : 0.45));
-    if (branch) ends[i].arm = buildArm(b, depth + 1, main && i === mainSide);
-    else ends[i].shape = makeShape(rng, depth);
+    if (branch) {
+      ends[i].arm = buildArm(b, depth + 1, main && i === mainSide);
+    } else {
+      ends[i].shape = makeShape(rng, depth);
+    }
   }
   const amp = [0.85 + 0.4 * rng(), 0.35 + 0.3 * rng(), 0.12 + 0.15 * rng()];
   // Smaller arms turn a little faster; a wide mobile turns more slowly.
@@ -402,8 +425,11 @@ function balanceAndStack(b: Builder, arm: MobileArm, length: number): void {
   // below). The slack covers the reach the hanging wires gain below.
   const clear = e0.reach + e1.reach + MARGIN;
   const turning = arm.ends[0].arm !== null || arm.ends[1].arm !== null;
-  if (!turning) length = Math.max(length, clear);
-  else if (clear > length && clear < length * b.stretch) length = clear + MARGIN;
+  if (!turning) {
+    length = Math.max(length, clear);
+  } else if (clear > length && clear < length * b.stretch) {
+    length = clear + MARGIN;
+  }
   // Torque balance: m0 a = m1 b with a + b = length.
   arm.a = (length * e1.mass) / (e0.mass + e1.mass);
   arm.b = (length * e0.mass) / (e0.mass + e1.mass);
@@ -414,7 +440,9 @@ function balanceAndStack(b: Builder, arm: MobileArm, length: number): void {
   // Sub-mobiles clear the arm wire.
   for (let i = 0; i < 2; i++) {
     const sub = arm.ends[i].arm;
-    if (!sub) continue;
+    if (!sub) {
+      continue;
+    }
     const top = tips[i] + exts[i].hi;
     if (top > wireLo - MARGIN) {
       sub.drop += top - (wireLo - MARGIN);
@@ -425,12 +453,17 @@ function balanceAndStack(b: Builder, arm: MobileArm, length: number): void {
   if (turning && e0.reach + e1.reach + MARGIN > length) {
     // The upper end is a shape if there is one, else the shorter subtree.
     let lower = arm.ends[0].arm ? 0 : 1;
-    if (arm.ends[0].arm && arm.ends[1].arm) lower = e0.lo < e1.lo ? 0 : 1;
+    if (arm.ends[0].arm && arm.ends[1].arm) {
+      lower = e0.lo < e1.lo ? 0 : 1;
+    }
     const upper = 1 - lower;
     const floor = tips[upper] + exts[upper].lo - MARGIN;
     const top = tips[lower] + exts[lower].hi;
-    const sub = arm.ends[lower].arm as MobileArm;
+    const sub = arm.ends[lower].arm;
     if (top > floor) {
+      if (!sub) {
+        throw new Error("Mobile: the lower end to hang has no arm");
+      }
       sub.drop += top - floor;
       endExtent(b, arm.ends[lower], exts[lower]);
     }
@@ -446,8 +479,11 @@ function balanceAndStack(b: Builder, arm: MobileArm, length: number): void {
 function collect(arm: MobileArm, arms: MobileArm[], shapes: MobileShape[]): void {
   arms.push(arm);
   for (const end of arm.ends) {
-    if (end.arm) collect(end.arm, arms, shapes);
-    else if (end.shape) shapes.push(end.shape);
+    if (end.arm) {
+      collect(end.arm, arms, shapes);
+    } else if (end.shape) {
+      shapes.push(end.shape);
+    }
   }
 }
 
@@ -456,8 +492,9 @@ function scaleArm(arm: MobileArm, k: number): void {
   arm.b *= k;
   arm.drop *= k;
   for (const end of arm.ends) {
-    if (end.arm) scaleArm(end.arm, k);
-    else if (end.shape) {
+    if (end.arm) {
+      scaleArm(end.arm, k);
+    } else if (end.shape) {
       const s = end.shape;
       s.r *= k;
       s.mass *= k * k;
@@ -484,7 +521,7 @@ export function createMobile(seed: number, levels: number, side: string, aspect:
     extents: new Map(),
   };
   const root = buildArm(b, 0, true);
-  const ext = b.extents.get(root) as Extent;
+  const ext = extentOf(b, root);
   // Fit the region: the hanging wire plus the tree's height, and its reach.
   const height = TOP_DROP + Math.max(0, ext.hi) - ext.lo;
   const reach = ext.reach + (TOP_DROP + Math.max(0, ext.hi)) * SWING_MAX;
@@ -512,15 +549,18 @@ export function createMobile(seed: number, levels: number, side: string, aspect:
 /** Yaw of an arm at draught phase tau. */
 export function armYaw(arm: MobileArm, tau: number): number {
   let y = arm.yaw0;
-  for (let k = 0; k < arm.amp.length; k++)
+  for (let k = 0; k < arm.amp.length; k++) {
     y += arm.amp[k] * Math.sin(arm.freq[k] * tau + arm.phase[k]);
+  }
   return y;
 }
 
 /** Largest |yaw - yaw0| an arm can reach. */
 export function maxYawOffset(arm: MobileArm): number {
   let s = 0;
-  for (const a of arm.amp) s += a;
+  for (const a of arm.amp) {
+    s += a;
+  }
   return s;
 }
 
@@ -629,7 +669,9 @@ export function writeWires(mobile: Mobile, out: Float32Array): number {
     }
     for (const end of arm.ends) {
       const sh = end.shape;
-      if (sh) n = writeSegment(out, n, sh.x, sh.y + sh.stub, sh.z, sh.x, sh.y, sh.z);
+      if (sh) {
+        n = writeSegment(out, n, sh.x, sh.y + sh.stub, sh.z, sh.x, sh.y, sh.z);
+      }
     }
   }
   return n;

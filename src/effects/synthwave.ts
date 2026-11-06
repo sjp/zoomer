@@ -72,7 +72,9 @@ export function generateRidge(out: Float32Array, seed: number, roughness: number
     max = Math.max(max, out[i]);
   }
   const range = max - min || 1;
-  for (let i = 0; i <= last; i++) out[i] = (out[i] - min) / range;
+  for (let i = 0; i <= last; i++) {
+    out[i] = (out[i] - min) / range;
+  }
 }
 
 /** Ridge height scale at `x` (0..1 across the ridge): low in the middle so the sun stays visible. */
@@ -282,12 +284,15 @@ void main() {
 
 let ridgeData: Float32Array | undefined;
 /** The ridges are deterministic, so build them once and reuse them across instances. */
-export const getRidgeData = () => (ridgeData ??= buildRidgeData());
+export const getRidgeData = () => {
+  ridgeData ??= buildRidgeData();
+  return ridgeData;
+};
 
 let ridgeMaxStep: [number, number] | undefined;
 /** Largest height change between neighbouring ridge points, per row (0..1 units). */
-export const getRidgeMaxStep = () =>
-  (ridgeMaxStep ??= [0, 1].map((row) => {
+export const getRidgeMaxStep = (): [number, number] => {
+  const rowMaxStep = (row: number) => {
     const data = getRidgeData();
     let max = 0;
     for (let i = 1; i < RIDGE_POINTS; i++) {
@@ -295,7 +300,10 @@ export const getRidgeMaxStep = () =>
       max = Math.max(max, Math.abs(data[at] - data[at - 1]));
     }
     return max;
-  }) as [number, number]);
+  };
+  ridgeMaxStep ??= [rowMaxStep(0), rowMaxStep(1)];
+  return ridgeMaxStep;
+};
 
 interface Palette {
   skyTopHex: string;
@@ -450,17 +458,19 @@ export function fillRows(rows: Float32Array, n: number, s: RowScene, c: RowColor
     let cy = 0;
     if (y < sunClip + 1) {
       cy = overlap(sunTop, sunClip, y);
-      for (let i = 0; i < SUN_STRIPES * 2; i += 2) cy -= overlap(gaps[i], gaps[i + 1], y);
+      for (let i = 0; i < SUN_STRIPES * 2; i += 2) {
+        cy -= overlap(gaps[i], gaps[i + 1], y);
+      }
     }
     rows[o + 3] = clamp(cy, 0, 1);
 
-    // Haze, then scanlines: (mix(col, haze, h)) * s = col * a + rgb.
+    // Haze, then scanlines: (mix(col, haze, h)) * scan = col * a + rgb.
     const h = 0.45 * Math.max(0, 1 - Math.abs(y - hy) / hazeH);
-    const s = scanPeriod > 0 && Math.floor(y) % scanPeriod < scanThick ? 0.84 : 1;
-    rows[o + 4] = haze[0] * h * s;
-    rows[o + 5] = haze[1] * h * s;
-    rows[o + 6] = haze[2] * h * s;
-    rows[o + 7] = (1 - h) * s;
+    const scan = scanPeriod > 0 && Math.floor(y) % scanPeriod < scanThick ? 0.84 : 1;
+    rows[o + 4] = haze[0] * h * scan;
+    rows[o + 5] = haze[1] * h * scan;
+    rows[o + 6] = haze[2] * h * scan;
+    rows[o + 7] = (1 - h) * scan;
 
     // Horizontal grid lines at evenly spaced depths. Separate strokes in 2D, so they add.
     const dy = y - hy;
@@ -475,7 +485,9 @@ export function fillRows(rows: Float32Array, n: number, s: RowScene, c: RowColor
       const j0 = Math.floor((z - zPhase) / cell);
       for (let j = j0 - 2; j <= j0 + 2; j++) {
         const zj = zPhase + j * cell;
-        if (zj <= 0 || zj >= zMax) continue;
+        if (zj <= 0 || zj >= zMax) {
+          continue;
+        }
         const yj = hy + k / zj;
         const th = clamp(1.2 / zj, 0.35, 1.8);
         const fade = smoothstep(0, 0.3, (yj - hy) / groundH);

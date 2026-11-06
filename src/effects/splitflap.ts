@@ -39,6 +39,10 @@ const FONT_FAMILY = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "Dej
 /** Cap height as a fraction of the cell height, and the widest a glyph may be. */
 const CAP_FRACTION = 0.56;
 const MAX_GLYPH_WIDTH = 0.82;
+
+/** A text metric, or `fallback` when it's missing, zero or NaN. */
+const metricOr = (value: number | undefined, fallback: number) =>
+  value === undefined || value === 0 || Number.isNaN(value) ? fallback : value;
 /** Housing corner radius, in cell heights. */
 const HOUSING_RADIUS = 0.14;
 /** Card corner radius and split gap half-width, in reference (1080p) px. */
@@ -308,7 +312,9 @@ export const splitflap = defineEffect(splitflapMeta, {
           Math.ceil(GLYPH_COUNT / ATLAS_COLS) * tileH,
         );
         const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Split-Flap Board: no 2D context for the glyph atlas");
+        if (!ctx) {
+          throw new Error("Split-Flap Board: no 2D context for the glyph atlas");
+        }
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#fff";
@@ -319,16 +325,18 @@ export const splitflap = defineEffect(splitflapMeta, {
         ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
         // Typed loosely: the tests' fake 2D context returns undefined from every method.
         const capMetrics = ctx.measureText("H") as TextMetrics | undefined;
-        const capRatio = (capMetrics?.actualBoundingBoxAscent || 0.72 * size) / size;
+        const capRatio = metricOr(capMetrics?.actualBoundingBoxAscent, 0.72 * size) / size;
         size = (CAP_FRACTION * ch) / Math.max(0.5, capRatio);
         ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
         const cap = capRatio * size;
         Array.from(GLYPHS).forEach((g, i) => {
-          if (g === " ") return;
+          if (g === " ") {
+            return;
+          }
           const x = (i % ATLAS_COLS) * tileW + ATLAS_PAD;
           const y = Math.floor(i / ATLAS_COLS) * tileH + ATLAS_PAD;
           const metrics = ctx.measureText(g) as TextMetrics | undefined;
-          const w = metrics?.width || 0;
+          const w = metricOr(metrics?.width, 0);
           const squeeze = w > MAX_GLYPH_WIDTH * cw ? (MAX_GLYPH_WIDTH * cw) / w : 1;
           ctx.save();
           ctx.beginPath();
@@ -377,7 +385,9 @@ export const splitflap = defineEffect(splitflapMeta, {
         }
         const size = textRows * BOARD_COLS;
         targets.set(pageGlyphs.subarray(page * size, (page + 1) * size), row * BOARD_COLS);
-        if (setTargets(board, targets, rows * BOARD_COLS, change)) change++;
+        if (setTargets(board, targets, rows * BOARD_COLS, change)) {
+          change++;
+        }
       };
 
       return {
@@ -409,12 +419,18 @@ export const splitflap = defineEffect(splitflapMeta, {
             still = 0;
             dirty = true;
           }
-          if (p.clock && tickClock(clock, Date.now(), localMinutes)) dirty = true;
-          if (dirty) retarget(rows, p.clock);
+          if (p.clock && tickClock(clock, Date.now(), localMinutes)) {
+            dirty = true;
+          }
+          if (dirty) {
+            retarget(rows, p.clock);
+          }
 
           const moving = stepBoard(board, step, count);
           // The step that lands the last cell still changed the data.
-          if (moving || wasMoving) uploadNeeded = true;
+          if (moving || wasMoving) {
+            uploadNeeded = true;
+          }
           wasMoving = moving;
           if (moving) {
             still = 0;

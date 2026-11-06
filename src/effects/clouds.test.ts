@@ -218,8 +218,9 @@ describe("layerUniforms", () => {
         layerUniforms(offA, detail, params, o, layer, t * 0.01, t, 1.2, 0.8);
         // Texture offsets, wrapped to [0, 1): the base pair and the detail layer's.
         for (const v of [...offA.subarray(o, o + 4), detail[o], detail[o + 1]]) {
-          if (!(v >= 0 && v < 1))
+          if (!(v >= 0 && v < 1)) {
             bad.push(`offset ${String(v)} at t = ${String(t)}, layer ${String(layer)}`);
+          }
         }
         // Plain comparisons in the hot loop; toBeCloseTo(_, 6) is within half of 1e-6.
         const ok =
@@ -294,7 +295,9 @@ describe("lightWeight", () => {
     for (let t = 0; t < 280; t += 0.05, n++) {
       layerUniforms(offA, detail, params, 0, 0, 0, t, 1, 1);
       worst = Math.max(worst, Math.abs(detail[3] - lightWeight(params[1])));
-      if (detail[3] > 0 && detail[3] < 1) both++;
+      if (detail[3] > 0 && detail[3] < 1) {
+        both++;
+      }
     }
     expect(worst).toBeLessThan(1e-5);
     expect(both / n).toBeCloseTo(2 * LIGHT_BLEND, 1);

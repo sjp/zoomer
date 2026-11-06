@@ -88,7 +88,9 @@ describe("buildBlades", () => {
         Number.isInteger(out[o + 5]) &&
         out[o + 5] >= SWAY_CYCLES_MIN &&
         out[o + 5] < SWAY_CYCLES_MAX;
-      if (!ok) bad.push(j);
+      if (!ok) {
+        bad.push(j);
+      }
     }
     expect(bad).toEqual([]);
   });
@@ -96,8 +98,9 @@ describe("buildBlades", () => {
   it("keeps existing blades when the count grows", () => {
     const key = (out: Float32Array) => {
       const s = new Set<string>();
-      for (let o = 0; o < out.length; o += BLADE_FLOATS)
+      for (let o = 0; o < out.length; o += BLADE_FLOATS) {
         s.add(`${String(out[o])},${String(out[o + 1])}`);
+      }
       return s;
     };
     const small = key(build(3, 1000).out);
@@ -135,8 +138,9 @@ describe("wind", () => {
   });
 
   it("waves stay in [-1, 1] and the rate rises with wind", () => {
-    for (let i = 0; i < 100; i++)
+    for (let i = 0; i < 100; i++) {
       expect(Math.abs(windWave(i * 1.7, i * 0.3, i * 0.01))).toBeLessThanOrEqual(1);
+    }
     expect(windRate(1)).toBeGreaterThan(windRate(0));
     expect(windRate(0)).toBeGreaterThan(0);
   });
@@ -161,7 +165,9 @@ describe("bend curve", () => {
       expect(chord).toBeLessThanOrEqual(lastChord + 1e-12);
       lastChord = chord;
       // Lateral displacement grows towards the tip.
-      for (let k = 1; k <= SEGMENTS; k++) expect(pts[2 * k]).toBeGreaterThanOrEqual(pts[2 * k - 2]);
+      for (let k = 1; k <= SEGMENTS; k++) {
+        expect(pts[2 * k]).toBeGreaterThanOrEqual(pts[2 * k - 2]);
+      }
     }
   });
 

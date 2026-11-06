@@ -104,7 +104,9 @@ describe("flame motion", () => {
   /** Largest |dv/dt| over the samples. */
   const maxRate = (v: number[]) => {
     let r = 0;
-    for (let k = 1; k < v.length; k++) r = Math.max(r, Math.abs(v[k] - v[k - 1]) / DT);
+    for (let k = 1; k < v.length; k++) {
+      r = Math.max(r, Math.abs(v[k] - v[k - 1]) / DT);
+    }
     return r;
   };
 
@@ -112,7 +114,11 @@ describe("flame motion", () => {
   const crossingHz = (v: number[]) => {
     const mean = v.reduce((a, b) => a + b, 0) / v.length;
     let crossings = 0;
-    for (let k = 1; k < v.length; k++) if (v[k] - mean > 0 !== v[k - 1] - mean > 0) crossings++;
+    for (let k = 1; k < v.length; k++) {
+      if (v[k] - mean > 0 !== v[k - 1] - mean > 0) {
+        crossings++;
+      }
+    }
     return crossings / (2 * T);
   };
 
@@ -155,7 +161,11 @@ describe("flame motion", () => {
   it("leans now and then in a draft, more often with more draft", () => {
     const leaning = (draft: number) => {
       let k = 0;
-      for (let t = 0; t < 2000; t += 0.5) if (Math.abs(draftAt(noise, t, draft)) > 0.5) k++;
+      for (let t = 0; t < 2000; t += 0.5) {
+        if (Math.abs(draftAt(noise, t, draft)) > 0.5) {
+          k++;
+        }
+      }
       return k;
     };
     const some = leaning(0.3);
@@ -174,7 +184,9 @@ describe("lighting", () => {
           const gain = lightGain(l);
           let peak = 0;
           for (let y = 0; y <= REF_HEIGHT; y += 8) {
-            for (let x = 0; x <= w; x += 8) peak = Math.max(peak, lightAt(l, x, y) * gain);
+            for (let x = 0; x <= w; x += 8) {
+              peak = Math.max(peak, lightAt(l, x, y) * gain);
+            }
           }
           expect(peak).toBeGreaterThan(TARGET_PEAK * 0.97);
           expect(peak).toBeLessThan(TARGET_PEAK * 1.03);

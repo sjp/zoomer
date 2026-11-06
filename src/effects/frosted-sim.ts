@@ -3,6 +3,7 @@
  * shapes' slow paths, the reeded-glass lens profile and the static grain texture.
  * Nothing here touches GL, so it is all unit-tested.
  */
+import { lookup } from "./lookup";
 import { buildPeriodicNoiseTexture, createRng, hash32 } from "./noise";
 import { MAX_SHAPES } from "./frosted.meta";
 
@@ -25,11 +26,7 @@ export const PALETTES = {
  */
 export function shapeColor(palette: string, custom: readonly string[], index: number): string {
   const list: readonly string[] =
-    palette === "custom" && custom.length > 0
-      ? custom
-      : Object.hasOwn(PALETTES, palette)
-        ? PALETTES[palette as keyof typeof PALETTES]
-        : PALETTES.dusk;
+    palette === "custom" && custom.length > 0 ? custom : lookup(PALETTES, palette, "dusk");
   return list[((index % list.length) + list.length) % list.length];
 }
 
@@ -57,7 +54,7 @@ export const GLASS = {
 
 /** The preset for a `glass` select value; unknown values fall back to "frosted". */
 export function glassPreset(name: string): GlassPreset {
-  return Object.hasOwn(GLASS, name) ? GLASS[name as keyof typeof GLASS] : GLASS.frosted;
+  return lookup(GLASS, name, "frosted");
 }
 
 // ---------------------------------------------------------------------------

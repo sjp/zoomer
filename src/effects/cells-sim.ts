@@ -10,6 +10,7 @@
 import { createRng } from "./noise";
 import { clamp, smoothstep } from "./math";
 import { MAX_CELLS, MIN_CELLS } from "./cells.meta";
+import { lookup } from "./lookup";
 
 export { MAX_CELLS, MIN_CELLS };
 
@@ -179,7 +180,9 @@ export function createCellsSim(
   }
   sim.n = n;
   const settle: CellsOptions = { count: n, division: 0, motion: 0, calm: opts.calm };
-  for (let s = 0; s < SETTLE_STEPS; s++) stepCells(sim, settle);
+  for (let s = 0; s < SETTLE_STEPS; s++) {
+    stepCells(sim, settle);
+  }
   sim.time = 0;
   return sim;
 }
@@ -204,7 +207,9 @@ export const CENTRE_AREA = (() => {
 
 /** Radius cell `i` settles to: its size, larger in the calm centre (same total area). */
 export function targetRadius(sim: CellsSim, i: number, rb: number, calm: boolean) {
-  if (!calm) return rb * sim.size[i];
+  if (!calm) {
+    return rb * sim.size[i];
+  }
   const c = centreWeight(sim.x[i] / sim.width);
   return ((rb * sim.size[i]) / Math.sqrt(CENTRE_AREA)) * (1 + (CENTRE_GROWTH - 1) * c);
 }
@@ -213,7 +218,9 @@ export function targetRadius(sim: CellsSim, i: number, rb: number, calm: boolean
 export function resizeCellsSim(sim: CellsSim, width: number, height: number) {
   const w = Math.max(1, width);
   const h = Math.max(1, height);
-  if (w === sim.width && h === sim.height) return;
+  if (w === sim.width && h === sim.height) {
+    return;
+  }
   const kx = w / sim.width;
   const ky = h / sim.height;
   for (let i = 0; i < sim.n; i++) {
@@ -229,7 +236,9 @@ export function resizeCellsSim(sim: CellsSim, width: number, height: number) {
  * Returns the steps taken.
  */
 export function advanceCells(sim: CellsSim, dt: number, opts: CellsOptions): number {
-  if (!(dt > 0)) return 0;
+  if (!(dt > 0)) {
+    return 0;
+  }
   sim.acc = Math.min(sim.acc + dt, MAX_STEPS * FIXED_DT);
   let steps = 0;
   while (sim.acc >= FIXED_DT) {
@@ -254,8 +263,11 @@ export function stepCells(sim: CellsSim, opts: CellsOptions) {
 export function plannedCount(sim: CellsSim): number {
   let planned = sim.n;
   for (let i = 0; i < sim.n; i++) {
-    if (sim.mode[i] === MODE_GROWING) planned++;
-    else if (sim.mode[i] === MODE_ABSORBING) planned--;
+    if (sim.mode[i] === MODE_GROWING) {
+      planned++;
+    } else if (sim.mode[i] === MODE_ABSORBING) {
+      planned--;
+    }
   }
   return planned;
 }
@@ -263,8 +275,12 @@ export function plannedCount(sim: CellsSim): number {
 function scheduleEvents(sim: CellsSim, opts: CellsOptions, target: number) {
   let planned = plannedCount(sim);
   // Count changes: births by division, deaths by absorption.
-  while (planned < target && startGrowth(sim, pickParent(sim, opts.calm))) planned++;
-  while (planned > target && startAbsorb(sim, pickVictim(sim, -1, opts.calm))) planned--;
+  while (planned < target && startGrowth(sim, pickParent(sim, opts.calm))) {
+    planned++;
+  }
+  while (planned > target && startAbsorb(sim, pickVictim(sim, -1, opts.calm))) {
+    planned--;
+  }
   // Scheduled divisions, each paired with an absorption elsewhere so the count holds.
   sim.due = Math.min(1, sim.due + (FIXED_DT * Math.max(0, opts.division)) / 60);
   if (sim.due >= 1 && planned === target) {
@@ -290,7 +306,9 @@ export function pickParent(sim: CellsSim, calm: boolean): number {
   let best = -1;
   let bestScore = -Infinity;
   for (let i = 0; i < sim.n; i++) {
-    if (!eligible(sim, i)) continue;
+    if (!eligible(sim, i)) {
+      continue;
+    }
     const score =
       (sim.size[i] + Math.min(sim.age[i], 120) / 240 + 0.6 * sim.rng()) *
       centrePenalty(sim, i, calm);
@@ -308,7 +326,9 @@ export function pickVictim(sim: CellsSim, parent: number, calm: boolean): number
   let bestScore = -Infinity;
   const diag = Math.hypot(sim.width, sim.height);
   for (let i = 0; i < sim.n; i++) {
-    if (i === parent || !eligible(sim, i)) continue;
+    if (i === parent || !eligible(sim, i)) {
+      continue;
+    }
     const far = parent >= 0 ? Math.hypot(sim.x[i] - sim.x[parent], sim.y[i] - sim.y[parent]) : 0;
     const score =
       (far / diag + Math.min(sim.age[i], 300) / 300 + 0.4 * sim.rng()) *
@@ -322,7 +342,9 @@ export function pickVictim(sim: CellsSim, parent: number, calm: boolean): number
 }
 
 function startGrowth(sim: CellsSim, i: number): boolean {
-  if (i < 0) return false;
+  if (i < 0) {
+    return false;
+  }
   sim.mode[i] = MODE_GROWING;
   sim.timer[i] = GROW_STEPS;
   sim.r0[i] = sim.r[i];
@@ -330,7 +352,9 @@ function startGrowth(sim: CellsSim, i: number): boolean {
 }
 
 function startAbsorb(sim: CellsSim, i: number): boolean {
-  if (i < 0) return false;
+  if (i < 0) {
+    return false;
+  }
   sim.mode[i] = MODE_ABSORBING;
   sim.timer[i] = GROW_STEPS;
   sim.r0[i] = sim.r[i];
@@ -343,7 +367,9 @@ function updateLifecycles(sim: CellsSim, opts: CellsOptions, target: number) {
   const relax = 1 - Math.exp(-dt / RADIUS_TAU);
   for (let i = 0; i < sim.n; i++) {
     sim.age[i] += dt;
-    if (sim.merge[i] > 0) sim.merge[i] = Math.max(0, sim.merge[i] - dt / MERGE_TIME);
+    if (sim.merge[i] > 0) {
+      sim.merge[i] = Math.max(0, sim.merge[i] - dt / MERGE_TIME);
+    }
     const mode = sim.mode[i];
     if (mode === MODE_NORMAL) {
       sim.r[i] += (targetRadius(sim, i, rb, opts.calm) - sim.r[i]) * relax;
@@ -362,7 +388,9 @@ function updateLifecycles(sim: CellsSim, opts: CellsOptions, target: number) {
   }
   // Absorptions finish before splits, so a paired event never overshoots the count.
   for (let i = sim.n - 1; i >= 0; i--) {
-    if (sim.mode[i] === MODE_ABSORBING && sim.timer[i] <= 0) removeCell(sim, i);
+    if (sim.mode[i] === MODE_ABSORBING && sim.timer[i] <= 0) {
+      removeCell(sim, i);
+    }
   }
   const n = sim.n;
   for (let i = 0; i < n; i++) {
@@ -376,7 +404,9 @@ function updateLifecycles(sim: CellsSim, opts: CellsOptions, target: number) {
 /** Removes cell `i` by moving the last cell into its slot. */
 export function removeCell(sim: CellsSim, i: number) {
   const last = sim.n - 1;
-  if (i !== last) copyCell(sim, last, i);
+  if (i !== last) {
+    copyCell(sim, last, i);
+  }
   sim.n = last;
 }
 
@@ -462,7 +492,9 @@ function move(sim: CellsSim, opts: CellsOptions, target: number) {
       const dy = y[j] - y[i];
       const reach = r[i] + r[j];
       const d2 = dx * dx + dy * dy;
-      if (d2 >= reach * reach) continue;
+      if (d2 >= reach * reach) {
+        continue;
+      }
       let d = Math.sqrt(d2);
       let ux: number;
       let uy: number;
@@ -494,10 +526,16 @@ function move(sim: CellsSim, opts: CellsOptions, target: number) {
     const lo = -m;
     const hiX = sim.width + m;
     const hiY = sim.height + m;
-    if (x[i] < lo) vx[i] += WALL * (lo - x[i]) * dt;
-    else if (x[i] > hiX) vx[i] -= WALL * (x[i] - hiX) * dt;
-    if (y[i] < lo) vy[i] += WALL * (lo - y[i]) * dt;
-    else if (y[i] > hiY) vy[i] -= WALL * (y[i] - hiY) * dt;
+    if (x[i] < lo) {
+      vx[i] += WALL * (lo - x[i]) * dt;
+    } else if (x[i] > hiX) {
+      vx[i] -= WALL * (x[i] - hiX) * dt;
+    }
+    if (y[i] < lo) {
+      vy[i] += WALL * (lo - y[i]) * dt;
+    } else if (y[i] > hiY) {
+      vy[i] -= WALL * (y[i] - hiY) * dt;
+    }
     vx[i] *= damp;
     vy[i] *= damp;
     const sp = Math.hypot(vx[i], vy[i]);
@@ -555,7 +593,9 @@ export function powerSample(
   }
   let edge = Infinity;
   for (let k = 0; k < n; k++) {
-    if (k === best) continue;
+    if (k === best) {
+      continue;
+    }
     const dx = px - cells[k * 4];
     const dy = py - cells[k * 4 + 1];
     const pd = dx * dx + dy * dy - cells[k * 4 + 2];
@@ -579,5 +619,5 @@ export const PALETTES = {
 export type PaletteId = keyof typeof PALETTES;
 
 export function palette(name: string): readonly string[] {
-  return Object.hasOwn(PALETTES, name) ? PALETTES[name as PaletteId] : PALETTES.stain;
+  return lookup(PALETTES, name, "stain");
 }

@@ -32,7 +32,9 @@ describe("voronoiSample", () => {
         bad++;
       }
       // The edge is exact near it, where effects draw lines.
-      if (b.edge < 0.2 && (Math.abs(a.edge - b.edge) > 1e-12 || a.edgeHash !== b.edgeHash)) bad++;
+      if (b.edge < 0.2 && (Math.abs(a.edge - b.edge) > 1e-12 || a.edgeHash !== b.edgeHash)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -55,9 +57,13 @@ describe("voronoiSample", () => {
         voronoiSample(0.51 * ax + 0.49 * bx, 0.51 * ay + 0.49 * by, fullOffset, v);
         // Skip points where another seed is nearer, or another edge is as near.
         const d = 0.01 * Math.hypot(bx - ax, by - ay);
-        if (v.hash !== voronoiHash(ix, iy) || Math.abs(v.edge - d) > 1e-9) continue;
+        if (v.hash !== voronoiHash(ix, iy) || Math.abs(v.edge - d) > 1e-9) {
+          continue;
+        }
         checked++;
-        if (v.edgeHash !== voronoiHash(ix + 1, iy)) bad++;
+        if (v.edgeHash !== voronoiHash(ix + 1, iy)) {
+          bad++;
+        }
       }
     }
     expect(checked).toBeGreaterThan(600);
@@ -80,7 +86,9 @@ describe("voronoiSample", () => {
       let sy = 0;
       for (let j = -1; j <= 1; j++) {
         for (let i = -1; i <= 1; i++) {
-          if (voronoiHash(cx + i, cy + j) !== v.hash) continue;
+          if (voronoiHash(cx + i, cy + j) !== v.hash) {
+            continue;
+          }
           fullOffset(v.hash, cx + i, cy + j, o);
           sx = cx + i + 0.5 + o[0];
           sy = cy + j + 0.5 + o[1];
@@ -92,20 +100,30 @@ describe("voronoiSample", () => {
           fullOffset(voronoiHash(cx + i, cy + j), cx + i, cy + j, o);
           const bx = cx + i + 0.5 + o[0];
           const by = cy + j + 0.5 + o[1];
-          if (bx === sx && by === sy) continue;
+          if (bx === sx && by === sy) {
+            continue;
+          }
           const len = Math.hypot(bx - sx, by - sy);
           // Distance from g to the bisector, toward the neighbour.
           d.push(((bx - sx) * (0.5 * (sx + bx) - gx) + (by - sy) * (0.5 * (sy + by) - gy)) / len);
         }
       }
       d.sort((a, b) => a - b);
-      if (Math.abs(v.edge - d[0]) > 1e-9 || Math.abs(v.edge2 - d[1]) > 1e-9) bad++;
-      if (Math.abs(Math.hypot(v.nx, v.ny) - 1) > 1e-12) bad++;
-      if (Math.abs(Math.hypot(v.n2x, v.n2y) - 1) > 1e-12) bad++;
+      if (Math.abs(v.edge - d[0]) > 1e-9 || Math.abs(v.edge2 - d[1]) > 1e-9) {
+        bad++;
+      }
+      if (Math.abs(Math.hypot(v.nx, v.ny) - 1) > 1e-12) {
+        bad++;
+      }
+      if (Math.abs(Math.hypot(v.n2x, v.n2y) - 1) > 1e-12) {
+        bad++;
+      }
       // The normals point from g's seed to the bisector: g plus edge times normal lies on it.
       const ex = gx + v.edge * v.nx;
       const ey = gy + v.edge * v.ny;
-      if (Math.abs(voronoiSample(ex, ey, fullOffset, createVoronoiSample()).edge) > 1e-9) bad++;
+      if (Math.abs(voronoiSample(ex, ey, fullOffset, createVoronoiSample()).edge) > 1e-9) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });

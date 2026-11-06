@@ -205,7 +205,9 @@ export function voronoiSample(
   let n2x = 0;
   let n2y = -1;
   for (let k = 0; k < n; k++) {
-    if (k === best) continue;
+    if (k === best) {
+      continue;
+    }
     const dd = (gx - sx[k]) ** 2 + (gy - sy[k]) ** 2;
     const len = Math.hypot(sx[k] - sx[best], sy[k] - sy[best]);
     const e = (dd - f1) / (2 * len);

@@ -60,7 +60,9 @@ describe("fanStrip", () => {
     const v = fanStrip(square);
     expect(v).toHaveLength((2 * 4 + 1) * 2);
     expect(v.slice(-2)).toEqual(v.slice(0, 2));
-    for (let k = 1; k < 9; k += 2) expect(v.slice(k * 2, k * 2 + 2)).toEqual([0, 0]);
+    for (let k = 1; k < 9; k += 2) {
+      expect(v.slice(k * 2, k * 2 + 2)).toEqual([0, 0]);
+    }
     const areas = triangleAreas(v).filter((a) => a !== 0);
     expect(areas).toHaveLength(4);
     expect(areas.reduce((s, a) => s + Math.abs(a), 0)).toBeCloseTo(2, 12);
@@ -98,7 +100,7 @@ describe("leaf shapes", () => {
     const real = areas.filter((_, t) => t % 2 === 0);
     const degenerate = areas.filter((_, t) => t % 2 === 1);
     expect(degenerate.every((a) => a === 0)).toBe(true);
-    expect(new Set(real.map(Math.sign))).toEqual(new Set([Math.sign(real[0])]));
+    expect(new Set(real.map((area) => Math.sign(area)))).toEqual(new Set([Math.sign(real[0])]));
     expect(Math.sign(real[0])).not.toBe(0);
     const total = real.reduce((s, a) => s + Math.abs(a), 0);
     expect(total).toBeCloseTo(polygonArea(outline), 10);
@@ -143,8 +145,12 @@ describe("gustAt", () => {
       if (!(g >= 0 && g <= 1 && Math.abs(g - prev) < 0.01) && bad.length < 10) {
         bad.push(`t ${String(t)}: ${String(prev)} -> ${String(g)}`);
       }
-      if (g < 0.1) calm++;
-      if (g > 0.4) gusty++;
+      if (g < 0.1) {
+        calm++;
+      }
+      if (g > 0.4) {
+        gusty++;
+      }
       prev = g;
     }
     expect(bad).toEqual([]);
@@ -180,12 +186,20 @@ describe("createPieces", () => {
       for (let i = 0; i < pieces.live; i++) {
         const margin = m[pieces.layer[i]];
         const [x, y] = [pieces.xs[i], pieces.ys[i]];
-        if (x < -margin || x > 1920 + margin) bad.push(`x ${String(x)} outside ${String(margin)}`);
-        if (y < -margin || y > 1080 + margin) bad.push(`y ${String(y)} outside ${String(margin)}`);
+        if (x < -margin || x > 1920 + margin) {
+          bad.push(`x ${String(x)} outside ${String(margin)}`);
+        }
+        if (y < -margin || y > 1080 + margin) {
+          bad.push(`y ${String(y)} outside ${String(margin)}`);
+        }
         if (ys[i] - y > 540) {
           respawns++;
-          if (ys[i] < 1080 + margin - 30) bad.push(`fell from ${String(ys[i])}`);
-          if (y > -margin + 30) bad.push(`respawned at ${String(y)}`);
+          if (ys[i] < 1080 + margin - 30) {
+            bad.push(`fell from ${String(ys[i])}`);
+          }
+          if (y > -margin + 30) {
+            bad.push(`respawned at ${String(y)}`);
+          }
         }
       }
     }
@@ -197,7 +211,9 @@ describe("createPieces", () => {
     for (const season of [SEASONS.autumn, SEASONS.blossom]) {
       const pieces = createPieces(MAX, 1920);
       const f = frame({ season });
-      for (let k = 0; k < 120; k++) pieces.step(1 / 60, f, data, PIECE_FLOATS);
+      for (let k = 0; k < 120; k++) {
+        pieces.step(1 / 60, f, data, PIECE_FLOATS);
+      }
       const n = pieces.step(1 / 60, f, data, PIECE_FLOATS);
       expect(n).toBeGreaterThan(0);
       expect(pieces.live).toBe(Math.floor(200 * season.countMul));
@@ -232,7 +248,9 @@ describe("createPieces", () => {
   it("fades pieces in from nothing", () => {
     const pieces = createPieces(MAX, 1920);
     expect(pieces.step(1 / 60, frame(), data, PIECE_FLOATS)).toBe(0);
-    for (let k = 0; k < 120; k++) pieces.step(1 / 60, frame(), data, PIECE_FLOATS);
+    for (let k = 0; k < 120; k++) {
+      pieces.step(1 / 60, frame(), data, PIECE_FLOATS);
+    }
     expect(pieces.step(1 / 60, frame(), data, PIECE_FLOATS)).toBe(200);
   });
 });
@@ -245,7 +263,9 @@ describe("createPieces with a spawn callback", () => {
     let spawned = 0;
     const pieces = createPieces(MAX, 1920, 3, {
       spawn(out) {
-        if (budget <= 0) return false;
+        if (budget <= 0) {
+          return false;
+        }
         budget--;
         spawned++;
         out.x = 500;
@@ -256,7 +276,9 @@ describe("createPieces with a spawn callback", () => {
     const f = frame({ count: 50 });
     // Let the count fade in with nothing spawned: nothing is drawn.
     let drawn = 0;
-    for (let k = 0; k < 120; k++) drawn += pieces.step(1 / 60, f, data, PIECE_FLOATS);
+    for (let k = 0; k < 120; k++) {
+      drawn += pieces.step(1 / 60, f, data, PIECE_FLOATS);
+    }
     expect(drawn).toBe(0);
     expect(Array.from(pieces.parked.subarray(0, 50)).every((p) => p === 1)).toBe(true);
     budget = 3;
@@ -274,7 +296,9 @@ describe("createPieces with a spawn callback", () => {
     const pieces = createPieces(MAX, 1920, 3, {
       spawn(out) {
         offered++;
-        if (refuse) return false;
+        if (refuse) {
+          return false;
+        }
         out.x = 960;
         out.y = 1000;
         return true;
@@ -284,7 +308,9 @@ describe("createPieces with a spawn callback", () => {
     pieces.step(1 / 60, f, data, PIECE_FLOATS);
     expect(offered).toBe(40);
     refuse = true;
-    for (let k = 0; k < 300; k++) pieces.step(1 / 30, f, data, PIECE_FLOATS);
+    for (let k = 0; k < 300; k++) {
+      pieces.step(1 / 30, f, data, PIECE_FLOATS);
+    }
     expect(Array.from(pieces.parked.subarray(0, 40)).every((p) => p === 1)).toBe(true);
     expect(Array.from(pieces.parked.subarray(40)).every((p) => p === 1)).toBe(true);
     expect(pieces.step(1 / 30, f, data, PIECE_FLOATS)).toBe(0);
@@ -292,7 +318,9 @@ describe("createPieces with a spawn callback", () => {
 
   it("leaves pieces without a callback unparked", () => {
     const pieces = createPieces(MAX, 1920);
-    for (let k = 0; k < 30; k++) pieces.step(1 / 60, frame(), data, PIECE_FLOATS);
+    for (let k = 0; k < 30; k++) {
+      pieces.step(1 / 60, frame(), data, PIECE_FLOATS);
+    }
     expect(pieces.parked.every((p) => p === 0)).toBe(true);
   });
 });

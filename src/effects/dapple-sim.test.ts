@@ -82,7 +82,9 @@ describe("swayOffset", () => {
 
 describe("gustLevel", () => {
   it("is exactly 1 with gusts off", () => {
-    for (let t = 0; t < 200; t += 7.1) expect(gustLevel(noise, t, 0)).toBe(1);
+    for (let t = 0; t < 200; t += 7.1) {
+      expect(gustLevel(noise, t, 0)).toBe(1);
+    }
   });
 
   it("stays in [1, 1 + GUST_MAX * gusts] and reaches gusts now and then", () => {
@@ -210,14 +212,20 @@ describe("regionMask", () => {
     };
     for (const { value } of POSITION_OPTIONS) {
       const r = layout(value);
-      for (const [x, y] of inside[value]) expect(regionMask(x, y, r)).toBe(1);
-      for (const [x, y] of outside[value]) expect(regionMask(x, y, r)).toBe(0);
+      for (const [x, y] of inside[value]) {
+        expect(regionMask(x, y, r)).toBe(1);
+      }
+      for (const [x, y] of outside[value]) {
+        expect(regionMask(x, y, r)).toBe(0);
+      }
     }
   });
 
   it("keeps the speaker's area in plain shade except for Full", () => {
     for (const { value } of POSITION_OPTIONS) {
-      if (value === "full") continue;
+      if (value === "full") {
+        continue;
+      }
       expect(regionMask(W / 2, 640, layout(value))).toBe(0);
     }
   });

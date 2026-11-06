@@ -44,7 +44,9 @@ describe("buildRun", () => {
         const a = segs[i];
         const b = segs[(i + 1) % segs.length];
         worst = Math.max(worst, Math.hypot(a.x1 - b.x0, a.y1 - b.y0));
-        if (i > 0) worst = Math.max(worst, Math.abs(segs[i - 1].s0 + segs[i - 1].len - a.s0));
+        if (i > 0) {
+          worst = Math.max(worst, Math.abs(segs[i - 1].s0 + segs[i - 1].len - a.s0));
+        }
         // pointAt agrees with the segment's ends.
         pointAt(run, a.s0, p);
         worst = Math.max(worst, Math.hypot(p[0] - a.x0, p[1] - a.y0));
@@ -78,16 +80,28 @@ describe("buildRun", () => {
     for (const { levels, run } of runs) {
       const kinds = run.segments.map((s) => s.kind);
       const rails = levels + (levels % 2);
-      if (run.rails !== rails || run.hasReturn !== (levels % 2 === 1)) bad++;
-      if (kinds.length !== 2 * rails) bad++;
+      if (run.rails !== rails || run.hasReturn !== (levels % 2 === 1)) {
+        bad++;
+      }
+      if (kinds.length !== 2 * rails) {
+        bad++;
+      }
       for (let k = 0; k < rails; k++) {
-        if (kinds[2 * k] !== SEG_ROLL) bad++;
-        if (kinds[2 * k + 1] !== (k === rails - 1 ? SEG_LIFT : SEG_DROP)) bad++;
+        if (kinds[2 * k] !== SEG_ROLL) {
+          bad++;
+        }
+        if (kinds[2 * k + 1] !== (k === rails - 1 ? SEG_LIFT : SEG_DROP)) {
+          bad++;
+        }
       }
       for (const seg of run.segments) {
-        if (!(seg.len > 0) || !(seg.rate > 0)) bad++;
+        if (!(seg.len > 0) || !(seg.rate > 0)) {
+          bad++;
+        }
         // Drops fall, rolls go down hill, the lift goes up.
-        if (seg.kind === SEG_LIFT ? seg.y1 <= seg.y0 : seg.y1 >= seg.y0) bad++;
+        if (seg.kind === SEG_LIFT ? seg.y1 <= seg.y0 : seg.y1 >= seg.y0) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -96,15 +110,21 @@ describe("buildRun", () => {
   it("fits in the frame on its side", () => {
     let bad = 0;
     for (const { side, run } of runs) {
-      if (!(run.top < 0.96)) bad++;
+      if (!(run.top < 0.96)) {
+        bad++;
+      }
       const boards = [...run.back, ...run.front];
       for (const b of boards) {
         for (const [x, y] of [
           [b.ax, b.ay],
           [b.bx, b.by],
         ]) {
-          if (x < 0 || x > ASPECT || y < 0 || y > 1) bad++;
-          if (side === "left" ? x > 0.64 : x < ASPECT - 0.64) bad++;
+          if (x < 0 || x > ASPECT || y < 0 || y > 1) {
+            bad++;
+          }
+          if (side === "left" ? x > 0.64 : x < ASPECT - 0.64) {
+            bad++;
+          }
         }
       }
     }
@@ -242,9 +262,17 @@ describe("stepMarbles", () => {
         }
         // The cyclic order never changes: exactly one wrap round the ring.
         let descents = 0;
-        for (let i = 0; i < m.count; i++) if (m.s[(i + 1) % m.count] < m.s[i]) descents++;
-        if (descents !== 1) orderBroken++;
-        if (step % 2 === 0) min = Math.min(min, closest(run, m.s, m.count));
+        for (let i = 0; i < m.count; i++) {
+          if (m.s[(i + 1) % m.count] < m.s[i]) {
+            descents++;
+          }
+        }
+        if (descents !== 1) {
+          orderBroken++;
+        }
+        if (step % 2 === 0) {
+          min = Math.min(min, closest(run, m.s, m.count));
+        }
       }
     }
     expect(orderBroken).toBe(0);

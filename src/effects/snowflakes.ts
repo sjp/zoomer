@@ -10,6 +10,7 @@ import {
   glslFloat,
   type Scope,
   TO_CLIP_GLSL,
+  typedParameters,
   withScope,
 } from "./gl";
 import { PAD_MARGIN } from "./snow-sim";
@@ -78,7 +79,7 @@ export interface FlakeRenderer {
   readonly data: Float32Array;
   readonly stride: number;
   /** Uploads the first `count` flakes. */
-  upload(count: number): void;
+  upload: (count: number) => void;
   /**
    * Draws flakes `first .. first + count - 1` in `color` on a `width` x `height`
    * canvas. Binds its program; the caller sets blending (premultiplied
@@ -88,15 +89,15 @@ export interface FlakeRenderer {
    * with unit 0 active) and scales each flake's opacity; see `flakeVertex`.
    * Without it, `mask` is ignored.
    */
-  draw(
+  draw: (
     first: number,
     count: number,
     width: number,
     height: number,
     color: Rgb,
     mask?: WebGLTexture | null,
-  ): void;
-  dispose(): void;
+  ) => void;
+  dispose: () => void;
 }
 
 export interface FlakeRendererOptions {
@@ -124,7 +125,7 @@ function buildFlakeRenderer(
   });
   const u = createUniforms(gl, program, ["uResolution", "uColor"]);
   if (fadeMask) {
-    const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+    const prevProgram = typedParameters(gl).getParameter(gl.CURRENT_PROGRAM);
     gl.useProgram(program);
     gl.uniform1i(gl.getUniformLocation(program, "uMask"), 0);
     gl.useProgram(prevProgram);

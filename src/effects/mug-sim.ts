@@ -13,6 +13,7 @@ import type { ShelfPalette } from "./bookshelf";
 import { clamp } from "./math";
 import type { DrinkId, RoomId } from "./mug.meta";
 import type { Flow } from "./smoke-sim";
+import { lookup } from "./lookup";
 
 /** Mug body radius and height, and the rim's ellipse ratio (minor / major) seen from above. */
 export const MUG_R = 0.075;
@@ -192,7 +193,7 @@ export const DRINKS: Readonly<Record<DrinkId, DrinkLook>> = {
 
 /** The look for a select value; unknown values fall back to tea. */
 export function drinkFor(id: string): DrinkLook {
-  return Object.hasOwn(DRINKS, id) ? DRINKS[id as DrinkId] : DRINKS.tea;
+  return lookup(DRINKS, id, "tea");
 }
 
 export interface RoomLook {
@@ -214,7 +215,7 @@ export const ROOMS: Readonly<Record<RoomId, RoomLook>> = {
 
 /** The room for a select value; unknown values fall back to the warm wall. */
 export function roomFor(id: string): RoomLook {
-  return Object.hasOwn(ROOMS, id) ? ROOMS[id as RoomId] : ROOMS.wall;
+  return lookup(ROOMS, id, "wall");
 }
 
 /** The "Shelves" room's bookcases (the Library Window bookshelf texture), with a fixed layout seed. */

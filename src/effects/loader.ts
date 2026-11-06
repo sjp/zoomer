@@ -3,19 +3,19 @@ import type { EffectDefinition, EffectMeta } from "./types";
 /** A registry entry: an effect's metadata plus a dynamic import of its implementation. */
 export type EffectEntry = EffectMeta & {
   /** Imports the implementation module. Call through an {@link EffectLoader}, which caches. */
-  load(): Promise<EffectDefinition>;
+  load: () => Promise<EffectDefinition>;
 };
 
 export interface EffectLoader {
   /** The implementation if it has already loaded, so a cached switch needs no async step. */
-  get(id: string): EffectDefinition | undefined;
+  get: (id: string) => EffectDefinition | undefined;
   /**
    * Loads an implementation once: repeated and concurrent calls share one promise. A
    * failed load is dropped from the cache, so the next call tries the import again.
    */
-  load(entry: EffectEntry): Promise<EffectDefinition>;
+  load: (entry: EffectEntry) => Promise<EffectDefinition>;
   /** Starts loading in the background; failures are ignored (a later `load` retries). */
-  prefetch(entry: EffectEntry): void;
+  prefetch: (entry: EffectEntry) => void;
 }
 
 export function createEffectLoader(): EffectLoader {
@@ -62,12 +62,17 @@ export function createLatest<T>() {
   return {
     run(promise: Promise<T>, onResult: (value: T) => void, onError: (err: unknown) => void) {
       const mine = ++token;
-      promise.then(
+      void promise.then(
         (value) => {
-          if (mine === token) onResult(value);
+          if (mine === token) {
+            onResult(value);
+          }
+          return undefined;
         },
         (err: unknown) => {
-          if (mine === token) onError(err);
+          if (mine === token) {
+            onError(err);
+          }
         },
       );
     },

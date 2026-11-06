@@ -321,7 +321,9 @@ export function buildGrid(sim: RainSim) {
   const { head, next, dKind } = sim;
   head.fill(-1);
   for (let i = 0; i < dKind.length; i++) {
-    if (dKind[i] === DEAD) continue;
+    if (dKind[i] === DEAD) {
+      continue;
+    }
     const c = cellOf(sim, sim.dx[i], sim.dy[i]);
     next[i] = head[c];
     head[c] = i;
@@ -358,7 +360,9 @@ export function wipeCapsule(
     for (let cx = cx0; cx <= cx1; cx++) {
       for (let i = head[cy * sim.cols + cx]; i !== -1; i = next[i]) {
         const kind = dKind[i];
-        if (kind === DEAD || (kind === TRAIL && dAge[i] < TRAIL_GRACE)) continue;
+        if (kind === DEAD || (kind === TRAIL && dAge[i] < TRAIL_GRACE)) {
+          continue;
+        }
         const px = dx[i] - x0;
         const py = dy[i] - y0;
         const t = Math.min(1, Math.max(0, (px * sx + py * sy) * inv));
@@ -366,11 +370,16 @@ export function wipeCapsule(
         const ey = py - t * sy;
         const r = dr[i];
         const reachI = radius + r * 0.5;
-        if (ex * ex + ey * ey >= reachI * reachI) continue;
+        if (ex * ex + ey * ey >= reachI * reachI) {
+          continue;
+        }
         volume += r * r * r;
         sim.wiped++;
-        if (kind === STATIC) spawnStatic(sim, i, false);
-        else dKind[i] = DEAD;
+        if (kind === STATIC) {
+          spawnStatic(sim, i, false);
+        } else {
+          dKind[i] = DEAD;
+        }
       }
     }
   }
@@ -382,7 +391,9 @@ export function wipeCapsule(
  * life and out over the last 30%; trail droplets start full and fade out.
  */
 export function dropletFade(kind: number, age: number, life: number): number {
-  if (kind === DEAD || life <= 0) return 0;
+  if (kind === DEAD || life <= 0) {
+    return 0;
+  }
   const t = Math.min(1, Math.max(0, age / life));
   if (kind === TRAIL) {
     const k = 1 - t;
@@ -408,13 +419,17 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
   // rain no longer wants fade out first (and back in if it rises again).
   const fadeStep = dt / FADE_OUT;
   const targetStatic = Math.round(rain * config.maxStatic);
-  for (let i = sim.staticCount; i < targetStatic; i++) spawnStatic(sim, i, !sim.primed);
+  for (let i = sim.staticCount; i < targetStatic; i++) {
+    spawnStatic(sim, i, !sim.primed);
+  }
   sim.staticCount = growLive(sim.staticFade, sim.staticCount, targetStatic);
   for (let i = 0; i < sim.staticCount; i++) {
     stepLife(sim.staticFade, i, targetStatic, fadeStep, fadeStep);
   }
   const staticLive = trimLive(sim.staticFade, sim.staticCount, targetStatic);
-  for (let i = staticLive; i < sim.staticCount; i++) sim.dKind[i] = DEAD;
+  for (let i = staticLive; i < sim.staticCount; i++) {
+    sim.dKind[i] = DEAD;
+  }
   sim.staticCount = staticLive;
 
   const targetRunners = Math.round(rain * config.maxRunners);
@@ -433,21 +448,31 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
   sim.runnerCount = trimLive(sim.runnerFade, sim.runnerCount, targetRunners);
   // Only once there was something to place: a start at rain 0 must not use up the
   // mid-life first fill, or raising the rain later fades every droplet in together.
-  if (targetStatic > 0 || targetRunners > 0) sim.primed = true;
+  if (targetStatic > 0 || targetRunners > 0) {
+    sim.primed = true;
+  }
 
   // Age droplets.
   const { dKind, dAge, dLife } = sim;
   for (let i = 0; i < sim.staticCount; i++) {
     const age = dAge[i] + dt;
-    if (dKind[i] === DEAD || age >= dLife[i]) spawnStatic(sim, i, false);
-    else dAge[i] = age;
+    if (dKind[i] === DEAD || age >= dLife[i]) {
+      spawnStatic(sim, i, false);
+    } else {
+      dAge[i] = age;
+    }
   }
   const trailEnd = config.maxStatic + config.maxTrails;
   for (let i = config.maxStatic; i < trailEnd; i++) {
-    if (dKind[i] === DEAD) continue;
+    if (dKind[i] === DEAD) {
+      continue;
+    }
     const age = dAge[i] + dt;
-    if (age >= dLife[i]) dKind[i] = DEAD;
-    else dAge[i] = age;
+    if (age >= dLife[i]) {
+      dKind[i] = DEAD;
+    } else {
+      dAge[i] = age;
+    }
   }
 
   buildGrid(sim);
@@ -470,7 +495,9 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     }
 
     // Stop-go: now and then pick a new pace, and ease the speed towards it.
-    if (rng() < dt * 1.5) sim.rJerk[i] = 0.25 + rng();
+    if (rng() < dt * 1.5) {
+      sim.rJerk[i] = 0.25 + rng();
+    }
     const target = BASE_SPEED * speed * (rr[i] / BREAK_MIN) * sim.rJerk[i];
     rv[i] += (target - rv[i]) * Math.min(1, dt * 4);
     const v = rv[i];
@@ -489,7 +516,9 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     let vol = rr[i] * rr[i] * rr[i];
     vol += wipeCapsule(sim, x0, y0, x1, y1, rr[i] * WIPE) * ABSORB;
     for (let j = 0; j < sim.runnerCount; j++) {
-      if (j === i || rState[j] !== RESTING) continue;
+      if (j === i || rState[j] !== RESTING) {
+        continue;
+      }
       const ex = rx[j] - x1;
       const ey = ry[j] - y1;
       const reach = rr[i] + rr[j] * 0.5;
@@ -512,8 +541,9 @@ export function stepRainSim(sim: RainSim, dtIn: number, p: RainSimParams) {
     }
     rr[i] = Math.min(MAX_RUNNER_R, r);
 
-    if (y1 - rr[i] * 2 > sim.height) spawnRunner(sim, i);
-    else if (rr[i] < STOP_R) {
+    if (y1 - rr[i] * 2 > sim.height) {
+      spawnRunner(sim, i);
+    } else if (rr[i] < STOP_R) {
       rState[i] = RESTING;
       rv[i] = 0;
       sim.rBreak[i] = BREAK_MIN + rng() * BREAK_SPREAD;
@@ -534,9 +564,13 @@ function writeDroplets(
   const statics = staticFade.length;
   for (let i = from; i < to; i++) {
     const kind = dKind[i];
-    if (kind === DEAD) continue;
+    if (kind === DEAD) {
+      continue;
+    }
     const f = dropletFade(kind, dAge[i], dLife[i]) * (i < statics ? staticFade[i] : 1);
-    if (f <= 0.01) continue;
+    if (f <= 0.01) {
+      continue;
+    }
     out[o] = dx[i] * scale;
     out[o + 1] = dy[i] * scale;
     // Evaporating droplets shrink as well as fade.
@@ -602,9 +636,13 @@ export function writeWipeStamps(
     const sx = sim.rStepX[i];
     const sy = sim.rStepY[i];
     const gap = spacing * sim.rr[i];
-    if (!(gap > 0)) continue;
+    if (!(gap > 0)) {
+      continue;
+    }
     const n = Math.min(MAX_WIPE_STAMPS + 1, Math.ceil(Math.hypot(sx, sy) / gap));
-    if (n < 2) continue;
+    if (n < 2) {
+      continue;
+    }
     const src = (sim.runnerFirst + i) * INSTANCE_STRIDE;
     for (let k = 1; k < n; k++) {
       const t = k / n;

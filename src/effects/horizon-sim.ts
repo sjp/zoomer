@@ -33,7 +33,7 @@ export interface DayClock {
    * Advances by `dt` seconds in `mode` and returns the new phase. Switching into
    * cycle mode continues from the current phase rather than jumping.
    */
-  step(dt: number, mode: TimeMode, cycleMins: number, hour: number): number;
+  step: (dt: number, mode: TimeMode, cycleMins: number, hour: number) => number;
 }
 
 /**
@@ -67,7 +67,9 @@ export function createDayClock(
           phase = fract(phase + dt / SECONDS_PER_DAY);
         }
       } else if (mode === "cycle") {
-        if (lastMode !== "cycle") days = phase;
+        if (lastMode !== "cycle") {
+          days = phase;
+        }
         days += dt / (Math.max(cycleMins, 0.01) * 60);
         phase = fract(days);
       } else {
@@ -161,15 +163,22 @@ export function sampleSky(phase: number, out: SkyState, keys: readonly SkyKey[] 
   // The segment [keys[i], keys[i + 1]] holding h, wrapping past midnight.
   let i = n - 1;
   for (let k = 0; k < n; k++) {
-    if (keys[k].hour <= h) i = k;
-    else break;
+    if (keys[k].hour <= h) {
+      i = k;
+    } else {
+      break;
+    }
   }
   const a = keys[i];
   const b = keys[(i + 1) % n];
   let span = b.hour - a.hour;
   let into = h - a.hour;
-  if (span <= 0) span += 24;
-  if (into < 0) into += 24;
+  if (span <= 0) {
+    span += 24;
+  }
+  if (into < 0) {
+    into += 24;
+  }
   const t = smoothstep(0, 1, into / span);
   lerpInto(out.zenith, a.zenith, b.zenith, t);
   lerpInto(out.horizon, a.horizon, b.horizon, t);
@@ -345,8 +354,12 @@ export function placeTrees(
     // Scattered unevenly: a share of candidates is dropped, most of them in the middle.
     const x = rand();
     const r = rand();
-    if (Math.abs(x - 0.5) < 0.2 && r < 0.85) continue;
-    if (r > 0.75) continue;
+    if (Math.abs(x - 0.5) < 0.2 && r < 0.85) {
+      continue;
+    }
+    if (r > 0.75) {
+      continue;
+    }
     const height = 14 + rand() * 22;
     const o = n * TREE_FLOATS;
     out[o] = x;

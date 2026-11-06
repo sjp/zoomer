@@ -78,7 +78,9 @@ describe("B-spline sampling", () => {
     for (let t = 0; t <= 1; t += 0.125) {
       const w = bsplineWeights(t);
       expect(w[0] + w[1] + w[2] + w[3]).toBeCloseTo(1, 12);
-      for (const x of w) expect(x).toBeGreaterThanOrEqual(0);
+      for (const x of w) {
+        expect(x).toBeGreaterThanOrEqual(0);
+      }
     }
   });
 
@@ -158,7 +160,9 @@ describe("index contours", () => {
     const every5 = [0, 1, 2, 3, 4, 5, 6, 10, 15].map((k) => isIndexLevel(k, indexInv(5)));
     expect(every5).toEqual([true, false, false, false, false, true, false, true, true]);
     for (let n = 1; n <= 10; n++) {
-      for (let k = 0; k <= 60; k++) expect(isIndexLevel(k, indexInv(n))).toBe(k % n === 0);
+      for (let k = 0; k <= 60; k++) {
+        expect(isIndexLevel(k, indexInv(n))).toBe(k % n === 0);
+      }
     }
     // In float32, as the shader computes it, too.
     for (let n = 1; n <= 10; n++) {

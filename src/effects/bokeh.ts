@@ -190,7 +190,9 @@ export const bokeh = defineEffect(bokehMeta, {
           const visible = lights.step(dt, f, batch.data, batch.stride);
 
           background.draw(bgTop(p.backgroundTop), bgBottom(p.backgroundBottom));
-          if (visible === 0) return;
+          if (visible === 0) {
+            return;
+          }
 
           batch.upload(visible);
           // "lighter": add each light's premultiplied colour.

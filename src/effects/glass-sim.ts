@@ -16,6 +16,7 @@ import {
   voronoiHash,
   voronoiSample,
 } from "./voronoi";
+import { lookup } from "./lookup";
 
 /** Largest base jitter of a seed from its cell centre, in cells (Euclidean). */
 export const JITTER = 0.3;
@@ -119,7 +120,7 @@ export type PaletteName = keyof typeof PALETTES;
 
 /** The palette for a param value, falling back to cathedral. */
 export function palette(name: string): readonly string[] {
-  return Object.hasOwn(PALETTES, name) ? PALETTES[name as PaletteName] : PALETTES.cathedral;
+  return lookup(PALETTES, name, "cathedral");
 }
 
 /** Palette index of the pane with seed hash `h`, as the shader picks it. */

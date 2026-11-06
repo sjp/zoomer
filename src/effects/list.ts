@@ -52,7 +52,7 @@ export function normalizeText(text: string): string {
 /** The words of a search query, normalised; empty when there's nothing to search for. */
 export function searchWords(query: string | undefined): string[] {
   const text = normalizeText(query ?? "");
-  return text ? text.split(" ") : [];
+  return text !== "" ? text.split(" ") : [];
 }
 
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
@@ -65,8 +65,11 @@ function nameScore(name: string, words: readonly string[]): number {
   const nameWords = name.split(" ");
   let score = 0;
   for (const w of words) {
-    if (nameWords.some((n) => n.startsWith(w))) score += 2;
-    else if (name.includes(w)) score += 1;
+    if (nameWords.some((n) => n.startsWith(w))) {
+      score += 2;
+    } else if (name.includes(w)) {
+      score += 1;
+    }
   }
   return score;
 }
@@ -89,17 +92,20 @@ export function visibleEffects<T extends ListableEffect>(
       const text = normalizeText(
         [effect.name, effect.description, effect.category, ...effect.tags].join(" "),
       );
-      if (!words.every((w) => text.includes(w))) continue;
+      if (!words.every((w) => text.includes(w))) {
+        continue;
+      }
     }
     rows.push({
       effect,
       index,
-      favourite: favourites?.has(effect.id) ? 0 : 1,
+      favourite: favourites?.has(effect.id) === true ? 0 : 1,
       score: words.length > 0 ? nameScore(name, words) : 0,
     });
   }
   const byCategory = (e: T) => categoryIndex.get(e.category) ?? EFFECT_CATEGORIES.length;
-  const byCost = (e: T) => (e.cost ? (costIndex.get(e.cost) ?? 0) : EFFECT_COSTS.length);
+  const byCost = (e: T) =>
+    e.cost !== undefined ? (costIndex.get(e.cost) ?? 0) : EFFECT_COSTS.length;
   rows.sort(
     (a, b) =>
       a.favourite - b.favourite ||
@@ -117,7 +123,9 @@ export function visibleEffects<T extends ListableEffect>(
  * starred effect, else its category when sorting by category.
  */
 export function effectGroup(effect: ListableEffect, options: ListOptions): string | undefined {
-  if (options.favourites?.has(effect.id)) return FAVOURITES_GROUP;
+  if (options.favourites?.has(effect.id) === true) {
+    return FAVOURITES_GROUP;
+  }
   return options.sort === "category" ? effect.category : undefined;
 }
 
@@ -134,17 +142,25 @@ export function stepEffect<T extends ListableEffect>(
 ): T | undefined {
   const visible = visibleEffects(effects, options);
   const n = visible.length;
-  if (n === 0) return undefined;
+  if (n === 0) {
+    return undefined;
+  }
   const i = visible.findIndex((e) => e.id === currentId);
-  if (i >= 0) return visible[(i + dir + n) % n];
+  if (i >= 0) {
+    return visible[(i + dir + n) % n];
+  }
 
   const all = visibleEffects(effects, { ...options, query: undefined });
   const from = all.findIndex((e) => e.id === currentId);
-  if (from < 0) return dir > 0 ? visible[0] : visible[n - 1];
+  if (from < 0) {
+    return dir > 0 ? visible[0] : visible[n - 1];
+  }
   const shown = new Set(visible);
   for (let k = 1; k < all.length; k++) {
     const e = all[(((from + dir * k) % all.length) + all.length) % all.length];
-    if (shown.has(e)) return e;
+    if (shown.has(e)) {
+      return e;
+    }
   }
   return undefined;
 }
@@ -158,7 +174,9 @@ export function adjacentEffects<T extends ListableEffect>(
   const out: T[] = [];
   for (const dir of [1, -1] as const) {
     const e = stepEffect(effects, options, currentId, dir);
-    if (e && e.id !== currentId && !out.includes(e)) out.push(e);
+    if (e && e.id !== currentId && !out.includes(e)) {
+      out.push(e);
+    }
   }
   return out;
 }

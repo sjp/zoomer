@@ -16,6 +16,7 @@
 import { clamp, smoothstep, wrap } from "./math";
 import { type StepClock, takeSteps } from "./reaction-sim";
 import type { SOURCE_OPTIONS } from "./smoke.meta";
+import { lookup } from "./lookup";
 
 /** Simulation steps per second, and the fixed step length. */
 export const SIM_RATE = 60;
@@ -235,7 +236,7 @@ export const SOURCES = {
 
 /** The preset for a select value; unknown values fall back to incense. */
 export function sourceFor(id: string): SourcePreset {
-  return Object.hasOwn(SOURCES, id) ? SOURCES[id as SourceId] : SOURCES.incense;
+  return lookup(SOURCES, id, "incense");
 }
 
 /** Margin kept between a source and the canvas sides, as a fraction of the width. */

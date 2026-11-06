@@ -56,7 +56,9 @@ export const RATE_SWING = 0.85;
 export function ringHeight(r: number, rho: number, halfWidth: number, k: number): number {
   const x = r - rho;
   const u = x / halfWidth;
-  if (u * u >= 1) return 0;
+  if (u * u >= 1) {
+    return 0;
+  }
   const e = 1 - u * u;
   return e * e * Math.cos(k * x);
 }
@@ -69,7 +71,9 @@ export function ringSlope(r: number, rho: number, halfWidth: number, k: number):
   const x = r - rho;
   const invW = 1 / halfWidth;
   const u = x * invW;
-  if (u * u >= 1) return 0;
+  if (u * u >= 1) {
+    return 0;
+  }
   const e = 1 - u * u;
   const ph = k * x;
   return -4 * u * e * (invW / k) * Math.cos(ph) - e * e * Math.sin(ph);
@@ -80,7 +84,9 @@ export function ringSlope(r: number, rho: number, halfWidth: number, k: number):
  * fade-in, then a quadratic fade to exactly 0 at `life`.
  */
 export function ringAmplitude(age: number, life: number): number {
-  if (!(age > 0) || !(age < life)) return 0;
+  if (!(age > 0) || !(age < life)) {
+    return 0;
+  }
   const f = age < FADE_IN ? age / FADE_IN : 1;
   const fadeIn = f * f * (3 - 2 * f);
   const t = 1 - age / life;
@@ -136,7 +142,9 @@ export function addDrop(
   b.birthDist[i] = birthDist;
   const cap = b.x.length;
   b.head = (i + 1) % cap;
-  if (b.count < cap) b.count++;
+  if (b.count < cap) {
+    b.count++;
+  }
   return i;
 }
 
@@ -156,7 +164,9 @@ export function rateAt(rate: number, variation: number, t: number): number {
 
 /** Ring lifespan to aim for at `rate`, so the buffer rarely recycles a visible ring. */
 export function targetLife(rate: number, cap = MAX_DROPS): number {
-  if (!(rate > 0)) return MAX_LIFE;
+  if (!(rate > 0)) {
+    return MAX_LIFE;
+  }
   return Math.min(MAX_LIFE, Math.max(MIN_LIFE, (FILL * cap) / rate));
 }
 
@@ -203,7 +213,9 @@ export function stepRain(
   speed: number,
   rng: () => number,
 ): void {
-  if (!(dt > 0) || !Number.isFinite(dt)) return;
+  if (!(dt > 0) || !Number.isFinite(dt)) {
+    return;
+  }
   s.time += dt;
   s.dist += Math.max(0, speed) * dt;
   const r = rateAt(Number.isFinite(rate) ? rate : 0, variation, s.time);
@@ -244,12 +256,16 @@ export function packDrops(
   for (let i = 0; i < b.count && n < max; i++) {
     const age = s.time - b.birth[i];
     const amp = RING_AMP * b.amp[i] * ringAmplitude(age, s.life);
-    if (amp <= 1e-4) continue;
+    if (amp <= 1e-4) {
+      continue;
+    }
     const rho = (s.dist - b.birthDist[i]) * pxPerRef;
     const lambda = Math.max(1e-3, wavelength * (1 + SPREAD * age) * pxPerRef);
     const w = PACKET_HALF * lambda;
     const rOut = rho + w;
-    if (rOut <= 0) continue;
+    if (rOut <= 0) {
+      continue;
+    }
     const k = TAU / lambda;
     const o = n * DROP_STRIDE;
     out[o] = b.x[i] * width;
@@ -284,10 +300,14 @@ export function rippleGradient(
     const dx = px - packed[o];
     const dy = py - packed[o + 1];
     const d2 = dx * dx + dy * dy;
-    if (d2 >= packed[o + 2]) continue;
+    if (d2 >= packed[o + 2]) {
+      continue;
+    }
     const r = Math.sqrt(d2);
     const u = (r - packed[o + 4]) * packed[o + 5];
-    if (u * u >= 1) continue;
+    if (u * u >= 1) {
+      continue;
+    }
     const e = 1 - u * u;
     const ph = (r - packed[o + 4]) * packed[o + 6];
     const slope =

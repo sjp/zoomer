@@ -38,7 +38,9 @@ describe("buildRamp", () => {
       5,
     );
     expect([...ramp.subarray(8, 12)]).toEqual([128, 128, 128, 128]);
-    for (let i = 0; i < 5; i++) expect(ramp[i * 4]).toBe(ramp[i * 4 + 3]);
+    for (let i = 0; i < 5; i++) {
+      expect(ramp[i * 4]).toBe(ramp[i * 4 + 3]);
+    }
   });
 
   it("interpolates linearly between stops and hits each stop", () => {
@@ -57,8 +59,9 @@ describe("buildRamp", () => {
   it("alpha never decreases with heat for every palette", () => {
     for (const id of ["wood", "gas", "magic"]) {
       const ramp = buildRamp(getPalette(id).ramp);
-      for (let i = 1; i < RAMP_SIZE; i++)
+      for (let i = 1; i < RAMP_SIZE; i++) {
         expect(ramp[i * 4 + 3]).toBeGreaterThanOrEqual(ramp[i * 4 - 1]);
+      }
     }
   });
 
@@ -159,7 +162,9 @@ describe("hearth profile", () => {
       const i0 = Math.floor(c);
       const i1 = Math.min(n - 1, i0 + 1);
       const v = p[i0] + (p[i1] - p[i0]) * (c - i0);
-      if (Math.abs(v - dense[i]) > 0.5) off++;
+      if (Math.abs(v - dense[i]) > 0.5) {
+        off++;
+      }
     }
     expect((off / dense.length) * 1920).toBeLessThan(12);
   });
@@ -172,18 +177,24 @@ describe("stepEmbers", () => {
 
   it("spawns nothing at rate 0", () => {
     const s = createEmberState(50);
-    for (let i = 0; i < 100; i++) stepEmbers(s, 1 / 60, env(0), createRng(1), noCurl);
+    for (let i = 0; i < 100; i++) {
+      stepEmbers(s, 1 / 60, env(0), createRng(1), noCurl);
+    }
     expect(s.count).toBe(0);
   });
 
   it("spawns at the requested rate and never exceeds the maximum", () => {
     const s = createEmberState(500);
     const rng = createRng(2);
-    for (let i = 0; i < 60; i++) stepEmbers(s, 1 / 60, env(20), rng, noCurl);
+    for (let i = 0; i < 60; i++) {
+      stepEmbers(s, 1 / 60, env(20), rng, noCurl);
+    }
     expect(s.count).toBeGreaterThanOrEqual(19);
     expect(s.count).toBeLessThanOrEqual(20);
     const small = createEmberState(5);
-    for (let i = 0; i < 60; i++) stepEmbers(small, 1 / 60, env(100), rng, noCurl);
+    for (let i = 0; i < 60; i++) {
+      stepEmbers(small, 1 / 60, env(100), rng, noCurl);
+    }
     expect(small.count).toBe(5);
   });
 
@@ -195,19 +206,27 @@ describe("stepEmbers", () => {
     const y0 = s.y[0];
     const x0 = s.x[0];
     const e = env(0);
-    for (let i = 0; i < 30; i++) stepEmbers(s, 1 / 60, e, rng, () => 1);
+    for (let i = 0; i < 30; i++) {
+      stepEmbers(s, 1 / 60, e, rng, () => 1);
+    }
     expect(s.y[0]).toBeGreaterThan(y0 + 20);
     expect(s.x[0]).toBeGreaterThan(x0);
-    for (let i = 0; i < 400; i++) stepEmbers(s, 1 / 60, e, rng, () => 1);
+    for (let i = 0; i < 400; i++) {
+      stepEmbers(s, 1 / 60, e, rng, () => 1);
+    }
     expect(s.count).toBe(0);
   });
 
   it("does nothing for a zero or negative step", () => {
     const s = createEmberState(20);
     const rng = createRng(5);
-    for (let i = 0; i < 30; i++) stepEmbers(s, 1 / 60, env(30), rng, noCurl);
+    for (let i = 0; i < 30; i++) {
+      stepEmbers(s, 1 / 60, env(30), rng, noCurl);
+    }
     const snapshot = JSON.stringify(s);
-    for (const dt of [0, -1, -1e-9]) stepEmbers(s, dt, env(1000), rng, () => 1);
+    for (const dt of [0, -1, -1e-9]) {
+      stepEmbers(s, dt, env(1000), rng, () => 1);
+    }
     expect(JSON.stringify(s)).toBe(snapshot);
   });
 
@@ -235,7 +254,9 @@ describe("stepEmbers", () => {
     expect(s.spawnDebt).toBeLessThan(1);
     expect(s.count).toBeLessThanOrEqual(8);
     // Once they have died, a normal step spawns at the normal rate.
-    for (let i = 0; i < 400; i++) stepEmbers(s, 1 / 60, env(0), rng, noCurl);
+    for (let i = 0; i < 400; i++) {
+      stepEmbers(s, 1 / 60, env(0), rng, noCurl);
+    }
     expect(s.count).toBe(0);
     stepEmbers(s, 1 / 60, env(50), rng, noCurl);
     expect(s.count).toBeLessThanOrEqual(1);
@@ -277,7 +298,9 @@ describe("emberAlpha", () => {
     for (let i = 0; i < 20_000; i++) {
       const life = 0.1 + rng() * 5;
       const a = emberAlpha(rng() * 1.2 * life, life, rng() * 7, rng() * 1000);
-      if (!(a >= 0) && negative.length < 10) negative.push(`sample ${String(i)}: ${String(a)}`);
+      if (!(a >= 0) && negative.length < 10) {
+        negative.push(`sample ${String(i)}: ${String(a)}`);
+      }
       hi = Math.max(hi, a);
     }
     expect(negative).toEqual([]);

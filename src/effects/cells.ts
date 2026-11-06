@@ -47,11 +47,11 @@ const PAL_SLOTS = 6;
 /** Every palette as PAL_SLOTS rgb triples (0..1), built once. */
 const PALETTE_DATA = new Map<readonly string[], Float32Array>(
   Object.values(PALETTES).map((colors) => {
-    const [medium, bodyA, bodyB, membrane, nucleus] = colors.map(hexToUnitRgb);
+    const [medium, bodyA, bodyB, membrane, nucleus] = colors.map((v) => hexToUnitRgb(v));
     // The scene's average colour: mostly body, some membrane and medium.
-    const mean = [0, 1, 2].map(
-      (c) => 0.3 * (bodyA[c] + bodyB[c]) + 0.2 * membrane[c] + 0.2 * medium[c],
-    ) as Rgb;
+    const average = (c: number) =>
+      0.3 * (bodyA[c] + bodyB[c]) + 0.2 * membrane[c] + 0.2 * medium[c];
+    const mean: Rgb = [average(0), average(1), average(2)];
     const data = new Float32Array(PAL_SLOTS * 3);
     [medium, bodyA, bodyB, membrane, nucleus, mean].forEach((rgb, i) => {
       data.set(rgb, i * 3);
@@ -61,7 +61,9 @@ const PALETTE_DATA = new Map<readonly string[], Float32Array>(
 );
 const paletteData = (name: string) => {
   const data = PALETTE_DATA.get(palette(name));
-  if (!data) throw new Error(`cells: no palette data for "${name}"`);
+  if (!data) {
+    throw new Error(`cells: no palette data for "${name}"`);
+  }
   return data;
 };
 
@@ -230,7 +232,9 @@ export const cells = defineEffect(cellsMeta, {
             dirty = true;
           }
           resizeCellsSim(sim, refW, REF_H);
-          if (advanceCells(sim, dt, opts) > 0) dirty = true;
+          if (advanceCells(sim, dt, opts) > 0) {
+            dirty = true;
+          }
 
           target.resize(width, height, qualityDivisor(p.quality));
           gl.useProgram(program);
@@ -238,11 +242,15 @@ export const cells = defineEffect(cellsMeta, {
           const lh = target.height;
           const px = refW / lw;
           const py = REF_H / lh;
-          if (u.f4("uPix", px, -py, 0, REF_H)) dirty = true;
+          if (u.f4("uPix", px, -py, 0, REF_H)) {
+            dirty = true;
+          }
           if (u.f4("uStyle", 1 / MEMBRANE_PX, px, p.nuclei ? 1 : 0, p.calmCentre ? 1 : 0)) {
             dirty = true;
           }
-          if (u.f2("uFrame", 1 / refW, target.direct ? 1 : 0)) dirty = true;
+          if (u.f2("uFrame", 1 / refW, target.direct ? 1 : 0)) {
+            dirty = true;
+          }
           const pal = paletteData(p.palette);
           if (pal !== lastPalette) {
             lastPalette = pal;

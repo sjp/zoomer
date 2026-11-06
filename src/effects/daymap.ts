@@ -199,7 +199,7 @@ out vec4 outColor;
 
 const float PI = 3.141592653589793;
 const float DEG = PI / 180.0;
-const vec4 WEIGHTS = vec4(${TWILIGHT_WEIGHTS.map(glslFloat).join(", ")});
+const vec4 WEIGHTS = vec4(${TWILIGHT_WEIGHTS.map((v) => glslFloat(v)).join(", ")});
 const float MASK_GAIN = ${glslFloat(MASK_GAIN)};
 const float MASK_BIAS = ${glslFloat(MASK_BIAS)};
 const float CITY_CELL = ${glslFloat(CITY_CELL)};
@@ -400,16 +400,18 @@ export const daymap = defineEffect(daymapMeta, {
       if (typeof Image !== "undefined") {
         const img = new Image();
         img.decoding = "async";
-        img.onload = () => {
+        const onLoad = () => {
           pendingMask = img;
         };
-        img.onerror = () => {
+        const onError = () => {
           console.warn(`Daylight World Map: couldn't load ${MASK_URL}`);
         };
+        img.addEventListener("load", onLoad);
+        img.addEventListener("error", onError);
         img.src = MASK_URL;
         scope.defer(() => {
-          img.onload = null;
-          img.onerror = null;
+          img.removeEventListener("load", onLoad);
+          img.removeEventListener("error", onError);
           pendingMask = undefined;
         });
       }
@@ -459,7 +461,9 @@ export const daymap = defineEffect(daymapMeta, {
           slotH = h;
         }
         const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+        if (!ctx) {
+          return;
+        }
         ctx.clearRect(0, 0, w, h * MAX_PINS);
         ctx.font = `600 ${String(Math.round(LABEL_FONT_PX * scale))}px system-ui, sans-serif`;
         ctx.textBaseline = "middle";
@@ -567,7 +571,9 @@ export const daymap = defineEffect(daymapMeta, {
           triangle.draw();
 
           const cities = PIN_PRESETS[p.pins] ?? PIN_PRESETS.none;
-          if (cities.length === 0) return;
+          if (cities.length === 0) {
+            return;
+          }
           // Labels sit right of their marker unless that would run off the right edge.
           const w = Math.ceil(SLOT_W * scale);
           const h = Math.ceil(SLOT_H * scale);
@@ -596,7 +602,9 @@ export const daymap = defineEffect(daymapMeta, {
           labelKey.set(3, sides);
           labelKey.set(4, w);
           labelKey.set(5, h);
-          if (labelKey.take()) drawLabels(p.pins, styleId, labelMs, sides);
+          if (labelKey.take()) {
+            drawLabels(p.pins, styleId, labelMs, sides);
+          }
           pins.upload(cities.length);
 
           gl.useProgram(pinProgram);

@@ -331,7 +331,9 @@ export const physarum = defineEffect(physarumMeta, {
       let gridW = 0;
       let gridH = 0;
       const deleteTargets = () => {
-        for (const t of targets) t.dispose();
+        for (const t of targets) {
+          t.dispose();
+        }
         targets = [];
       };
       scope.defer(deleteTargets);
@@ -394,7 +396,9 @@ export const physarum = defineEffect(physarumMeta, {
             agents = count;
             reseed = true;
           }
-          if (reseed) seed();
+          if (reseed) {
+            seed();
+          }
 
           if (p.palette !== paletteKey) {
             paletteKey = p.palette;

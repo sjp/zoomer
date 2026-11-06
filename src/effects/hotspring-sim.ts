@@ -10,6 +10,7 @@
  * it at both sides, their mass widening with the aspect ratio so the middle
  * third (behind the speaker) stays open water and steam.
  */
+import { lookup } from "./lookup";
 import { clamp, smoothstep, wrap } from "./math";
 import { createRng } from "./noise";
 import type { Rgb } from "./color";
@@ -120,7 +121,9 @@ function envelope(l: SpringLayout, x: number): typeof env {
   for (let i = 0; i < l.near.length; i++) {
     const b = l.near[i];
     const u = (x - b.x) / b.rx;
-    if (u <= -1 || u >= 1) continue;
+    if (u <= -1 || u >= 1) {
+      continue;
+    }
     const h = b.base + b.ry * Math.sqrt(1 - u * u);
     bottom = Math.min(bottom, b.base);
     if (h > top) {
@@ -177,7 +180,9 @@ export function springLayout(aspect: number): SpringLayout {
   };
   l.lanternY = nearTopAt(l, lanternX) - LANTERN_SINK;
   let top = l.lanternY + LANTERN_H;
-  for (const b of near) top = Math.max(top, b.base + b.ry);
+  for (const b of near) {
+    top = Math.max(top, b.base + b.ry);
+  }
   l.top = Math.min(1, top + 0.01);
   l.steam[0] = Math.max(0, l.poolX0 - STEAM_SPILL);
   l.steam[1] = WATERLINE - STEAM_BELOW;
@@ -215,7 +220,9 @@ export function buildRockTable(l: SpringLayout, out: Float32Array): void {
     for (let i = 0; i < l.far.length; i++) {
       const b = l.far[i];
       const u = (x - b.x) / b.rx;
-      if (u <= -1 || u >= 1) continue;
+      if (u <= -1 || u >= 1) {
+        continue;
+      }
       const h = b.base + b.ry * Math.sqrt(1 - u * u);
       bottom = Math.min(bottom, b.base);
       if (h > top) {
@@ -250,12 +257,16 @@ function capsAndCreases(
   let last = -1e9;
   const dist = new Float64Array(n);
   for (let c = 0; c < n; c++) {
-    if (c > 0 && meets(ids[c], ids[c - 1])) last = c - 0.5;
+    if (c > 0 && meets(ids[c], ids[c - 1])) {
+      last = c - 0.5;
+    }
     dist[c] = (c - last) * dx;
   }
   last = 1e9;
   for (let c = n - 1; c >= 0; c--) {
-    if (c < n - 1 && meets(ids[c], ids[c + 1])) last = c + 0.5;
+    if (c < n - 1 && meets(ids[c], ids[c + 1])) {
+      last = c + 0.5;
+    }
     dist[c] = Math.min(dist[c], (last - c) * dx);
   }
   for (let c = 0; c < n; c++) {
@@ -498,7 +509,7 @@ export const PALETTES: Readonly<Record<SpringTime, SpringPalette>> = {
 
 /** The palette for a select value; unknown values fall back to dusk. */
 export function paletteFor(id: string): SpringPalette {
-  return Object.hasOwn(PALETTES, id) ? PALETTES[id as SpringTime] : PALETTES.dusk;
+  return lookup(PALETTES, id, "dusk");
 }
 
 /** Index of a time value for change keys (0 dusk, 1 night, 2 day). */

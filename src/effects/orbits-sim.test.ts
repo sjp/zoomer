@@ -32,7 +32,9 @@ function presets(seeds = 40): OrbitSystem[] {
   const out: OrbitSystem[] = [];
   for (const kind of KINDS) {
     for (let n = MIN_PLANETS; n <= MAX_PLANETS; n++) {
-      for (let seed = 0; seed < seeds; seed++) out.push(createSystem(kind, n, seed));
+      for (let seed = 0; seed < seeds; seed++) {
+        out.push(createSystem(kind, n, seed));
+      }
     }
   }
   return out;
@@ -86,14 +88,18 @@ describe("orbits", () => {
     let bad = 0;
     for (const sys of ALL) {
       for (const b of sys.bodies) {
-        if (b.a === 0) continue;
+        if (b.a === 0) {
+          continue;
+        }
         const period =
           b.kind === "moon"
             ? moonPeriod(b.a)
             : b.kind === "star"
               ? planetPeriod(BINARY_A)
               : planetPeriod(b.a);
-        if (Math.abs(b.n * period - TAU) > 1e-9) bad++;
+        if (Math.abs(b.n * period - TAU) > 1e-9) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -108,13 +114,17 @@ describe("orbits", () => {
     for (let t = 0; t < 400; t += 0.05) {
       systemPositions(sys, t, a);
       systemPositions(sys, t + 0.01, b);
-      for (let i = 0; i < a.length; i++) maxStep = Math.max(maxStep, Math.abs(a[i] - b[i]));
+      for (let i = 0; i < a.length; i++) {
+        maxStep = Math.max(maxStep, Math.abs(a[i] - b[i]));
+      }
     }
     // A body's own period brings it back to the same place relative to its parent.
     const rel = [0, 0];
     const back = [0, 0];
     for (const body of sys.bodies) {
-      if (body.a === 0) continue;
+      if (body.a === 0) {
+        continue;
+      }
       const period = TAU / body.n;
       for (let t = 0; t < 100; t += 7.3) {
         orbitPoint(body.a, body.e, body.omega, solveKepler(body.m0 + body.n * t, body.e), rel);
@@ -183,23 +193,34 @@ describe("createSystem", () => {
       }
       for (let i = sys.stars; i < sys.stars + sys.planets; i++) {
         const b = sys.bodies[i];
-        if (b.a * (1 - b.e) - b.reach <= edge) bad++;
+        if (b.a * (1 - b.e) - b.reach <= edge) {
+          bad++;
+        }
         edge = b.a * (1 + b.e) + b.reach;
         maxApo = Math.max(maxApo, edge);
-        if (b.ring > 0) ringsSeen++;
-        if (b.radius < 3) bad++;
+        if (b.ring > 0) {
+          ringsSeen++;
+        }
+        if (b.radius < 3) {
+          bad++;
+        }
       }
       // Moons fit inside their planet's reach, don't touch the planet or each other.
       for (let i = sys.stars + sys.planets; i < sys.bodies.length; i++) {
         moonsSeen++;
         const m = sys.bodies[i];
         const p = sys.bodies[m.parent];
-        if (m.a * (1 + m.e) + m.radius > p.reach + 1e-9 || m.a * (1 - m.e) - m.radius <= p.radius)
+        if (m.a * (1 + m.e) + m.radius > p.reach + 1e-9 || m.a * (1 - m.e) - m.radius <= p.radius) {
           bad++;
-        if (p.ring > 0) bad++;
+        }
+        if (p.ring > 0) {
+          bad++;
+        }
         const prev = sys.bodies[i - 1];
         if (prev.kind === "moon" && prev.parent === m.parent) {
-          if (prev.a * (1 + prev.e) + prev.radius >= m.a * (1 - m.e) - m.radius) bad++;
+          if (prev.a * (1 + prev.e) + prev.radius >= m.a * (1 - m.e) - m.radius) {
+            bad++;
+          }
         }
       }
     }
@@ -241,7 +262,9 @@ describe("resolveKind", () => {
     expect(resolveKind("single", 1)).toBe("single");
     expect(resolveKind("binary", 1)).toBe("binary");
     const kinds = new Set<string>();
-    for (let s = 0; s < 20; s++) kinds.add(resolveKind("random", s));
+    for (let s = 0; s < 20; s++) {
+      kinds.add(resolveKind("random", s));
+    }
     expect(kinds).toEqual(new Set(["single", "binary"]));
     expect(resolveKind("random", 5)).toBe(resolveKind("random", 5));
   });
@@ -261,20 +284,30 @@ describe("instance data", () => {
     for (let t = 0; t < 60; t += 3.1) {
       systemPositions(sys, t, pos);
       const count = fillBodies(sys, pos, view, out, depth, order);
-      if (count !== n - 1) bad++;
+      if (count !== n - 1) {
+        bad++;
+      }
       let prevY = Infinity;
       for (let k = 0; k < count; k++) {
         const o = k * BODY_FLOATS;
         // Farther bodies have larger orbit-plane y (they tilt away), so it never increases.
         const planeY = (view.cy - out[o + 1]) / (Math.cos(view.tilt) * view.scale);
-        if (planeY > prevY + 1e-3) bad++;
+        if (planeY > prevY + 1e-3) {
+          bad++;
+        }
         prevY = planeY;
         // The light points from the body toward the star (screen y is flipped).
         const dx = view.cx - out[o];
         const dy = out[o + 1] - view.cy;
-        if (dx * out[o + 8] + dy * out[o + 9] <= 0) bad++;
-        if (Math.abs(Math.hypot(out[o + 8], out[o + 9], out[o + 10]) - 1) > 1e-5) bad++;
-        if (out[o + 3] < out[o + 2]) bad++;
+        if (dx * out[o + 8] + dy * out[o + 9] <= 0) {
+          bad++;
+        }
+        if (Math.abs(Math.hypot(out[o + 8], out[o + 9], out[o + 10]) - 1) > 1e-5) {
+          bad++;
+        }
+        if (out[o + 3] < out[o + 2]) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);

@@ -33,7 +33,9 @@ describe("caustic phases", () => {
       const expected = ((CAUSTIC_RATES[n] % TAU) + TAU) % TAU;
       expect(phases[n]).toBeCloseTo(expected, 5);
     }
-    for (let k = 0; k < 1000; k++) advancePhases(phases, 7.3);
+    for (let k = 0; k < 1000; k++) {
+      advancePhases(phases, 7.3);
+    }
     for (const v of phases) {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThan(TAU);
@@ -101,7 +103,9 @@ describe("god-ray table", () => {
     fillRayTable(a, rays, 0);
     fillRayTable(b, rays, 1 / 120);
     let maxDiff = 0;
-    for (let j = 0; j < 256; j++) maxDiff = Math.max(maxDiff, Math.abs(a[j] - b[j]));
+    for (let j = 0; j < 256; j++) {
+      maxDiff = Math.max(maxDiff, Math.abs(a[j] - b[j]));
+    }
     expect(maxDiff).toBeLessThan(0.02);
   });
 });

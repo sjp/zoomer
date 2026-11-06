@@ -26,7 +26,11 @@ const PERMUTATIONS: { order: readonly number[]; even: boolean }[] = (() => {
     if (rest.length === 0) {
       let inversions = 0;
       for (let i = 0; i < 4; i++) {
-        for (let j = i + 1; j < 4; j++) if (prefix[i] > prefix[j]) inversions++;
+        for (let j = i + 1; j < 4; j++) {
+          if (prefix[i] > prefix[j]) {
+            inversions++;
+          }
+        }
       }
       out.push({ order: prefix, even: inversions % 2 === 0 });
       return;
@@ -47,12 +51,16 @@ export function signedPermutations(base: readonly number[], evenOnly = false): n
   const seen = new Set<string>();
   const out: number[][] = [];
   for (const { order, even } of PERMUTATIONS) {
-    if (evenOnly && !even) continue;
+    if (evenOnly && !even) {
+      continue;
+    }
     const p = order.map((i) => base[i]);
     for (let signs = 0; signs < 16; signs++) {
       const v = p.map((x, i) => (signs & (1 << i) ? -x : x));
       const key = v.map((x) => x.toFixed(9)).join(",");
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       out.push(v);
     }
@@ -86,9 +94,10 @@ function generators(shape: PolytopeShape): [number[], boolean][] {
         [[1 / PHI, 1, PHI, 2], true],
       ];
     }
-    default:
-      return [[[1, 1, 1, 1], false]];
+    case "tesseract":
+      break;
   }
+  return [[[1, 1, 1, 1], false]];
 }
 
 /**
@@ -109,13 +118,19 @@ export function joinNearest(vertices: Float64Array): Uint16Array {
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const d = d2(i, j);
-      if (d > 1e-12 && d < min) min = d;
+      if (d > 1e-12 && d < min) {
+        min = d;
+      }
     }
   }
   const limit = min * (1 + 1e-6);
   const edges: number[] = [];
   for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) if (d2(i, j) <= limit) edges.push(i, j);
+    for (let j = i + 1; j < n; j++) {
+      if (d2(i, j) <= limit) {
+        edges.push(i, j);
+      }
+    }
   }
   return new Uint16Array(edges);
 }
@@ -123,11 +138,15 @@ export function joinNearest(vertices: Float64Array): Uint16Array {
 /** Builds `shape`, scaled to unit circumradius. */
 export function buildPolytope(shape: PolytopeShape): Polytope {
   const points: number[][] = [];
-  for (const [base, even] of generators(shape)) points.push(...signedPermutations(base, even));
+  for (const [base, even] of generators(shape)) {
+    points.push(...signedPermutations(base, even));
+  }
   const radius = Math.hypot(...points[0]);
   const vertices = new Float64Array(points.length * 4);
   points.forEach((p, i) => {
-    for (let k = 0; k < 4; k++) vertices[i * 4 + k] = p[k] / radius;
+    for (let k = 0; k < 4; k++) {
+      vertices[i * 4 + k] = p[k] / radius;
+    }
   });
   const edges = joinNearest(vertices);
   return { vertices, edges, vertexCount: points.length, edgeCount: edges.length / 2 };

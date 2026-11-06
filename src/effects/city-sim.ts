@@ -147,7 +147,9 @@ export function generateCity(seed: number, density: number, refWidth: number): C
     winW = 0,
     winH = 0,
   ): boolean => {
-    if (quadCount >= MAX_QUADS) return false;
+    if (quadCount >= MAX_QUADS) {
+      return false;
+    }
     const spec = LAYERS[layer];
     let cols = 0;
     let rows = 0;
@@ -187,7 +189,9 @@ export function generateCity(seed: number, density: number, refWidth: number): C
   };
 
   const addBeacon = (x: number, y: number, radius: number, phase: number) => {
-    if (beaconCount >= MAX_BEACONS) return;
+    if (beaconCount >= MAX_BEACONS) {
+      return;
+    }
     const o = beaconCount * BEACON_STRIDE;
     beacons[o] = x;
     beacons[o + 1] = y;
@@ -203,10 +207,16 @@ export function generateCity(seed: number, density: number, refWidth: number): C
     const lo = spec.lo * H;
     const hi = spec.hi * H;
     let x = 0;
-    while (x < W - minW * 0.4 && quadCount < MAX_QUADS) {
+    while (x < W - minW * 0.4) {
+      // quadCount grows in the quad helpers, which the loop condition can't see.
+      if (quadCount >= MAX_QUADS) {
+        break;
+      }
       let w = between(minW, maxW);
       // Close a narrow leftover by widening the last building to the edge.
-      if (W - (x + w) < minW * 0.4) w = W - x;
+      if (W - (x + w) < minW * 0.4) {
+        w = W - x;
+      }
       w = Math.min(w, W - x);
       // Taller toward the edges: the speaker covers the middle of the frame.
       const edge = Math.abs(((x + w / 2) / W) * 2 - 1);
@@ -233,9 +243,13 @@ export function generateCity(seed: number, density: number, refWidth: number): C
         roofW = w * between(0.5, 0.75);
         roofX = x + (w - roofW) * between(0.3, 0.7);
         bodyTop = top + stepH;
-        if (!addQuad(roofX, top, roofW, stepH, layer, grid, cellH, winW, winH)) break;
+        if (!addQuad(roofX, top, roofW, stepH, layer, grid, cellH, winW, winH)) {
+          break;
+        }
       }
-      if (!addQuad(x, bodyTop, w, H - bodyTop, layer, grid, cellH, winW, winH)) break;
+      if (!addQuad(x, bodyTop, w, H - bodyTop, layer, grid, cellH, winW, winH)) {
+        break;
+      }
       buildings.push({ layer, x, width: w, height: h });
 
       // Roof details on the taller buildings, beacons on the tallest.
@@ -246,11 +260,15 @@ export function generateCity(seed: number, density: number, refWidth: number): C
         const aw = layer === 2 ? 3 : 2;
         const ah = between(25, 70) * (layer === 2 ? 1 : 0.7);
         const ax = roofX + roofW * between(0.3, 0.7) - aw / 2;
-        if (addQuad(ax, top - ah, aw, ah, layer)) addBeacon(ax + aw / 2, top - ah, r, phase);
+        if (addQuad(ax, top - ah, aw, ah, layer)) {
+          addBeacon(ax + aw / 2, top - ah, r, phase);
+        }
       } else if (tall > (layer === 0 ? 0.85 : 0.65) && rng() < (layer === 0 ? 0.3 : 0.6)) {
         const inset = Math.min(4, roofW * 0.1);
         addBeacon(roofX + inset, top - 1, r * 0.8, phase);
-        if (roofW > 40) addBeacon(roofX + roofW - inset, top - 1, r * 0.8, phase);
+        if (roofW > 40) {
+          addBeacon(roofX + roofW - inset, top - 1, r * 0.8, phase);
+        }
       } else if (layer === 2 && tall < 0.6 && w >= 70 && rng() < 0.15) {
         // Water tower: a tank on short legs.
         const tw = between(16, 22);
@@ -310,15 +328,15 @@ export interface WindowState {
   /** Whether any fade is in progress (or just settled), so `fade` needs uploading. */
   readonly fading: boolean;
   /** Assigns new random colours and levels, then lights `litFraction` of the windows. */
-  reset(windowCount: number, seed: number, litFraction: number): void;
+  reset: (windowCount: number, seed: number, litFraction: number) => void;
   /** Lights exactly round(fraction * count) windows (instantly) and cancels fades. */
-  setLit(fraction: number): void;
+  setLit: (fraction: number) => void;
   /**
    * Advances fades and, at `rate` toggles per second, starts new ones that keep
    * the lit count near the target. Fills `dirty` with the texels that changed.
    */
-  step(dt: number, rate: number): void;
-  isLit(i: number): boolean;
+  step: (dt: number, rate: number) => void;
+  isLit: (i: number) => boolean;
 }
 
 export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
@@ -347,7 +365,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
   let untilToggle = 1;
 
   const markDirty = (i: number) => {
-    if (dirtyCount < dirty.length) dirty[dirtyCount++] = i;
+    if (dirtyCount < dirty.length) {
+      dirty[dirtyCount++] = i;
+    }
   };
 
   const clearFades = () => {
@@ -390,7 +410,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
           break;
         }
       }
-      if (slot < 0) return false;
+      if (slot < 0) {
+        return false;
+      }
       slotAge[slot] = 0;
       fade[slot] = 0;
       latest = slot;
@@ -439,7 +461,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       count = Math.max(0, Math.min(maxWindows, Math.floor(windowCount)));
       rng = createRng(seed ^ 0x5bd1e995);
       // Shuffled ranks, so the lit set for each fraction is a random subset.
-      for (let i = 0; i < count; i++) rank[i] = i;
+      for (let i = 0; i < count; i++) {
+        rank[i] = i;
+      }
       for (let i = count - 1; i > 0; i--) {
         const j = Math.floor(rng() * (i + 1));
         const t = rank[i];
@@ -466,7 +490,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       fading = active > 0;
       for (let s = 0; s < FADE_SLOTS; s++) {
         const n = slotCount[s];
-        if (n === 0) continue;
+        if (n === 0) {
+          continue;
+        }
         slotAge[s] += dt;
         fade[s] = smoothstep(0, FADE_SECONDS, slotAge[s]);
         if (slotAge[s] >= FADE_SECONDS) {
@@ -482,16 +508,24 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
           active--;
         }
       }
-      if (!(rate > 0) || count === 0) return;
+      if (!(rate > 0) || count === 0) {
+        return;
+      }
       untilToggle -= dt * rate;
       // A bounded number of toggles per frame, even after a long hitch.
       for (let n = 0; untilToggle <= 0 && n < MAX_TOGGLES_PER_FRAME; n++) {
         untilToggle += 0.4 + 1.2 * rng();
-        if (litCount > target) toggleOne(true);
-        else if (litCount < target) toggleOne(false);
-        else if (target > 0 && target < count) toggleOne(rng() < 0.5);
+        if (litCount > target) {
+          toggleOne(true);
+        } else if (litCount < target) {
+          toggleOne(false);
+        } else if (target > 0 && target < count) {
+          toggleOne(rng() < 0.5);
+        }
       }
-      if (untilToggle <= 0) untilToggle = 0.4 + 1.2 * rng();
+      if (untilToggle <= 0) {
+        untilToggle = 0.4 + 1.2 * rng();
+      }
       fading = fading || active > 0;
     },
     isLit: (i) => lit[i] === 1,
@@ -517,7 +551,7 @@ export interface Aircraft {
   y: number;
   age: number;
   /** Advances the flight, or the wait for the next one. `refWidth` is the frame width. */
-  step(dt: number, refWidth: number, enabled: boolean): void;
+  step: (dt: number, refWidth: number, enabled: boolean) => void;
 }
 
 export function createAircraft(seed: number): Aircraft {
@@ -537,7 +571,9 @@ export function createAircraft(seed: number): Aircraft {
       }
       if (!plane.active) {
         wait -= dt;
-        if (wait > 0) return;
+        if (wait > 0) {
+          return;
+        }
         // Cross the frame in about 30 s, high in the sky, either way.
         const duration = 26 + 8 * rng();
         const dir = rng() < 0.5 ? 1 : -1;
@@ -554,7 +590,9 @@ export function createAircraft(seed: number): Aircraft {
       plane.age += dt;
       plane.x += vx * dt;
       plane.y += vy * dt;
-      if (plane.x < -40 || plane.x > refWidth + 40) plane.active = false;
+      if (plane.x < -40 || plane.x > refWidth + 40) {
+        plane.active = false;
+      }
     },
   };
   return plane;

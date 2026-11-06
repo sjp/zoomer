@@ -233,7 +233,9 @@ export function fillFieldTable(out: Float32Array, seed: number): number {
   for (let i = 0; i < widths.length; i++) {
     bounds[i + 1] = bounds[i] + widths[i] * k;
     let t = Math.floor(rand() * FIELD_TONES.length);
-    if (t === prevTone) t = (t + 1) % FIELD_TONES.length;
+    if (t === prevTone) {
+      t = (t + 1) % FIELD_TONES.length;
+    }
     tones[i] = FIELD_TONES[t];
     prevTone = t;
   }
@@ -255,7 +257,9 @@ export function fillFieldTable(out: Float32Array, seed: number): number {
   let max = 0;
   for (let c = 0; c < FIELD_COLUMNS; c++) {
     const x = ((c + 0.5) / FIELD_COLUMNS) * P;
-    while (seg < widths.length - 1 && x >= bounds[seg + 1]) seg++;
+    while (seg < widths.length - 1 && x >= bounds[seg + 1]) {
+      seg++;
+    }
     let hedgeD = Infinity;
     for (let b = 0; b < widths.length; b++) {
       hedgeD = Math.min(hedgeD, Math.abs(wrapDist(x, bounds[b], P)));
@@ -265,7 +269,9 @@ export function fillFieldTable(out: Float32Array, seed: number): number {
     for (let t = 0; t < trees.length; t += 4) {
       const dx = wrapDist(x, trees[t], P);
       const r = trees[t + 1];
-      if (Math.abs(dx) >= r) continue;
+      if (Math.abs(dx) >= r) {
+        continue;
+      }
       const crown = trees[t + 2] - r + Math.sqrt(r * r - dx * dx);
       if (crown > h) {
         h = crown;
@@ -305,7 +311,9 @@ export function fillBankTable(out: Float32Array, seed: number): number {
     let tuft = 0;
     for (let i = 0; i < TUFTS; i++) {
       const u = wrapDist(x, tufts[i * 3], BANK_PERIOD) / tufts[i * 3 + 1];
-      if (Math.abs(u) >= 1) continue;
+      if (Math.abs(u) >= 1) {
+        continue;
+      }
       const q = 1 - u * u;
       tuft = Math.max(tuft, tufts[i * 3 + 2] * q * q);
     }
@@ -381,7 +389,9 @@ export function viewHouses(
     const h = i * HOUSE_FLOATS;
     const x = cx + wrap(houses[h] - pos, -FIELD_PERIOD / 2, FIELD_PERIOD) * k;
     const hw = houses[h + 1] * k;
-    if (Math.abs(x - cx) > cx + hw * 1.4 + 2) continue;
+    if (Math.abs(x - cx) > cx + hw * 1.4 + 2) {
+      continue;
+    }
     const o = n * 4;
     out[o] = x;
     out[o + 1] = hw;
@@ -427,7 +437,9 @@ export function polePositions(offset: number, refWidth: number, out: Float64Arra
   let n = 0;
   for (let k = -1; n < out.length; k++) {
     const x = k * POLE_SPACING - offset;
-    if (x > refWidth + POLE_SPACING) break;
+    if (x > refWidth + POLE_SPACING) {
+      break;
+    }
     out[n++] = x;
   }
   return n;
@@ -457,7 +469,9 @@ export const SWAY_AMP = 5;
  */
 export function swayOffset(time: number, sway: number, speed: number): number {
   const s = clamp(sway, 0, 1) * smoothstep(0, 0.2, Math.abs(speed));
-  if (s === 0) return 0;
+  if (s === 0) {
+    return 0;
+  }
   return (
     s * SWAY_AMP * (0.65 * Math.sin((TAU * time) / 3.3) + 0.35 * Math.sin((TAU * time) / 5.1 + 1.3))
   );

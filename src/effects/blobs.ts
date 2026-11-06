@@ -44,12 +44,14 @@ export const PALETTES = {
  * The hex colour of blob `index` (colours repeat when there are more blobs than
  * palette entries). "custom" uses `custom`; unknown names fall back to "dusk".
  */
+const isPaletteId = (v: string): v is keyof typeof PALETTES => Object.hasOwn(PALETTES, v);
+
 export function paletteColor(palette: string, custom: readonly string[], index: number): string {
   const list: readonly string[] =
     palette === "custom" && custom.length > 0
       ? custom
-      : Object.hasOwn(PALETTES, palette)
-        ? PALETTES[palette as keyof typeof PALETTES]
+      : isPaletteId(palette)
+        ? PALETTES[palette]
         : PALETTES.dusk;
   return list[((index % list.length) + list.length) % list.length];
 }
@@ -227,7 +229,9 @@ function renderKeyframe(
   t: number,
   render: (target: 0 | 1, t: number) => void,
 ): void {
-  if (k.held[target] === t) return;
+  if (k.held[target] === t) {
+    return;
+  }
   render(target, t);
   k.held[target] = t;
 }
@@ -252,13 +256,17 @@ export function updateKeyframes(
   interval: number,
   render: (target: 0 | 1, t: number) => void,
 ): void {
-  if (invalid) k.held.fill(Number.NaN);
+  if (invalid) {
+    k.held.fill(Number.NaN);
+  }
   if (due === 2) {
     k.mainIsA = true;
     renderKeyframe(k, 0, time, render);
     renderKeyframe(k, 1, time + speed * interval, render);
   } else if (due === 1 || speedChanged) {
-    if (due === 1) k.mainIsA = !k.mainIsA;
+    if (due === 1) {
+      k.mainIsA = !k.mainIsA;
+    }
     const lead = speed * (interval - clock.elapsed);
     renderKeyframe(k, k.mainIsA ? 1 : 0, time + lead, render);
   }
@@ -413,10 +421,14 @@ export const blobs = defineEffect(blobsMeta, {
             const l = stepLife(blobLife, i, target, fadeStep, fadeStep);
             blobWeight[i] = smoothstep(0, 1, l);
             // While a blob fades, both keyframes are re-rendered each frame (briefly).
-            if (l !== before) invalid = true;
+            if (l !== before) {
+              invalid = true;
+            }
           }
           live = trimLive(blobLife, live, target);
-          if (u.i1("uCount", count)) invalid = true;
+          if (u.i1("uCount", count)) {
+            invalid = true;
+          }
           if (p.softness !== lastSoftness) {
             lastSoftness = softness = p.softness;
             invalid = true;
@@ -433,8 +445,9 @@ export const blobs = defineEffect(blobsMeta, {
             custom[1] = lastC2 = p.color2;
             custom[2] = lastC3 = p.color3;
             custom[3] = lastC4 = p.color4;
-            for (let i = 0; i < MAX_BLOBS; i++)
+            for (let i = 0; i < MAX_BLOBS; i++) {
               colorData.set(hexToLinear(paletteColor(p.palette, custom, i)), i * 3);
+            }
             gl.uniform3fv(u.loc.uColors, colorData);
             invalid = true;
           }

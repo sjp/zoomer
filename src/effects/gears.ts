@@ -66,11 +66,18 @@ const BACKDROPS: Readonly<Record<GearBackdropId, Backdrop>> = {
   paper: { kind: 2, base: [0.6, 0.53, 0.42], alt: [0.5, 0.43, 0.33] },
 };
 
+/** Whether a `layout` select value is a known layout, e.g. not from an old or hand-edited URL. */
+const isLayoutId = (v: string): v is GearLayoutId => Object.hasOwn(LAYOUT_SPECS, v);
+
 /** The light pool's centre (frame heights) and falloff, per layout. */
 function poolFor(layout: GearLayoutId, aspect: number, out: Float64Array): Float64Array {
-  if (layout === "corner") out.set([aspect - 0.25, 0.78, 4]);
-  else if (layout === "side") out.set([aspect - 0.18, 0.62, 2.2]);
-  else out.set([aspect * 0.5, 0.8, 0.7]);
+  if (layout === "corner") {
+    out.set([aspect - 0.25, 0.78, 4]);
+  } else if (layout === "side") {
+    out.set([aspect - 0.18, 0.62, 2.2]);
+  } else {
+    out.set([aspect * 0.5, 0.8, 0.7]);
+  }
   return out;
 }
 
@@ -396,7 +403,9 @@ export const gears = defineEffect(gearsMeta, {
 
       /** Regrows the train when the layout, seed or aspect changes. */
       const ensureTrain = (layout: GearLayoutId, seed: number, aspect: number) => {
-        if (layout === trainLayout && seed === trainSeed && aspect === trainAspect) return;
+        if (layout === trainLayout && seed === trainSeed && aspect === trainAspect) {
+          return;
+        }
         trainLayout = layout;
         trainSeed = seed;
         trainAspect = aspect;
@@ -404,7 +413,11 @@ export const gears = defineEffect(gearsMeta, {
         let k = 0;
         for (let layer = 0; layer < LAYERS; layer++) {
           layerFirst[layer] = k;
-          for (let i = 0; i < train.length; i++) if (train[i].layer === layer) order[k++] = i;
+          for (let i = 0; i < train.length; i++) {
+            if (train[i].layer === layer) {
+              order[k++] = i;
+            }
+          }
           layerCount[layer] = k - layerFirst[layer];
         }
         drawnBackdrop = "";
@@ -421,8 +434,7 @@ export const gears = defineEffect(gearsMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const aspect = width / height;
-          const layout: GearLayoutId =
-            p.layout in LAYOUT_SPECS ? (p.layout as GearLayoutId) : "corner";
+          const layout = isLayoutId(p.layout) ? p.layout : "corner";
           ensureTrain(layout, p.seed, aspect);
           poolFor(layout, aspect, pool);
           advanceDrive(drive, dt, (p.speed * TAU) / 60, p.tick);
@@ -454,7 +466,9 @@ export const gears = defineEffect(gearsMeta, {
 
           // 2. The gears: angle and colour per instance, back to front.
           const n = train.length;
-          if (n === 0) return;
+          if (n === 0) {
+            return;
+          }
           const d = batch.data;
           const stride = batch.stride;
           for (let k = 0; k < n; k++) {
@@ -497,7 +511,9 @@ export const gears = defineEffect(gearsMeta, {
           const sy = -LIGHT_DIR[1] * SHADOW_OFFSET;
           for (let layer = 0; layer < LAYERS; layer++) {
             const count = layerCount[layer];
-            if (count === 0) continue;
+            if (count === 0) {
+              continue;
+            }
             // Shadows fall on the plate and on the layers below, then the gears go on top.
             gu.f4("uShadow", sx, sy, SHADOW_BLUR, 1);
             batch.draw(layerFirst[layer], count);

@@ -170,13 +170,13 @@ export interface Bubbles {
   /** Bubbles the count asks for in the last step (count times the mode's density). */
   readonly target: number;
   /** Scales x positions by `k`, keeping bubbles in place relative to a resized width. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances `dt` seconds and writes the visible bubbles to `data`, far to near,
    * BUBBLE_FLOATS at `stride` floats apart (the last two are the sprite's spin
    * pair). Returns how many.
    */
-  step(dt: number, f: BubbleFrame, data: Float32Array, stride: number): number;
+  step: (dt: number, f: BubbleFrame, data: Float32Array, stride: number) => number;
 }
 
 /** Apparent radius factor and opacity for depth `d` (0 far, 1 near). */
@@ -224,7 +224,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
   };
   const reroll = (i: number) => {
     sizeU[i] = rng();
-    if (sizeMode) spread(i, sizeMode);
+    if (sizeMode) {
+      spread(i, sizeMode);
+    }
     zigPhase[i] = rng() * TAU;
     zigRate[i] = TAU * (0.35 + rng() * 0.3);
     wobPhase[i] = rng() * TAU;
@@ -240,14 +242,18 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
     streamKey[i] = fract(i * 0.6180339887 + 0.31);
     reroll(i);
   }
-  const order = Uint16Array.from({ length: max }, (_, i) => i).sort((a, b) => depth[a] - depth[b]);
+  const order = Uint16Array.from({ length: max }, (_, i) => i).toSorted(
+    (a, b) => depth[a] - depth[b],
+  );
 
   /** Radius at 1080p (before depth) for bubble `i`. */
   const baseRadius = (i: number, f: BubbleFrame) => f.size * sizeK[i];
   /** Emitter of bubble `i`, or -1 when it isn't a stream bubble. */
   const emitterOf = (i: number, f: BubbleFrame, n: number) => {
     const share = f.mode.streamShare;
-    if (!f.streams || n === 0 || streamKey[i] >= share) return -1;
+    if (!f.streams || n === 0 || streamKey[i] >= share) {
+      return -1;
+    }
     return Math.min(n - 1, Math.floor((streamKey[i] / share) * n));
   };
   /** Stream bubbles share their emitter's depth, so a stream reads as one line. */
@@ -267,7 +273,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
       return target;
     },
     rescaleX(k) {
-      for (let i = 0; i < max; i++) xs[i] *= k;
+      for (let i = 0; i < max; i++) {
+        xs[i] *= k;
+      }
     },
     step(dt, f, data, stride) {
       const { refWidth, scale, mode } = f;
@@ -282,16 +290,22 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
       const jitter = mode.emitJitter ?? 3;
       if (sizeMode !== mode) {
         sizeMode = mode;
-        for (let i = 0; i < max; i++) spread(i, mode);
+        for (let i = 0; i < max; i++) {
+          spread(i, mode);
+        }
       }
 
       if (!primed) {
         primed = true;
         for (let i = 0; i < max; i++) {
           const e = emitterOf(i, f, nEmit);
-          if (e < 0) continue;
+          if (e < 0) {
+            continue;
+          }
           xs[i] = mode.emitters[e] * refWidth;
-          if (mode.emitY !== undefined) ys[i] *= clamp(mode.emitY, 0, 1);
+          if (mode.emitY !== undefined) {
+            ys[i] *= clamp(mode.emitY, 0, 1);
+          }
         }
       }
 
@@ -300,13 +314,17 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
       sizeSum.fill(0);
       for (let i = 0; i < target; i++) {
         const e = emitterOf(i, f, nEmit);
-        if (e < 0) continue;
+        if (e < 0) {
+          continue;
+        }
         perEmitter[e]++;
         sizeSum[e] += baseRadius(i, f) * depthScale(emitterDepth(e));
       }
       for (let e = 0; e < MAX_EMITTERS; e++) {
         rates[e] = 0;
-        if (e >= nEmit || perEmitter[e] === 0 || speed <= 0) continue;
+        if (e >= nEmit || perEmitter[e] === 0 || speed <= 0) {
+          continue;
+        }
         const r = sizeSum[e] / perEmitter[e];
         const transit = ((emitAt ?? 1080) + 4 * r) / (riseSpeed(r) * speed);
         rates[e] = (perEmitter[e] / transit) * EMIT_SLACK;
@@ -314,7 +332,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
           // The next parked bubble of this stream, if any is waiting.
           for (let s = 0; s < target; s++) {
             const i = (cursor[e] + s) % target;
-            if (parked[i] === 0 || emitterOf(i, f, nEmit) !== e) continue;
+            if (parked[i] === 0 || emitterOf(i, f, nEmit) !== e) {
+              continue;
+            }
             cursor[e] = i + 1;
             parked[i] = 0;
             reroll(i);
@@ -330,11 +350,15 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
       let visible = 0;
       for (let k = 0; k < max; k++) {
         const i = order[k];
-        if (i >= n) continue;
+        if (i >= n) {
+          continue;
+        }
         const e = emitterOf(i, f, nEmit);
         const l = stepLife(life, i, target, fadeStep, outStep);
         if (parked[i] === 1) {
-          if (e >= 0) continue;
+          if (e >= 0) {
+            continue;
+          }
           // No longer a stream bubble (streams off, or the mode changed): rejoin at random.
           parked[i] = 0;
           ys[i] = 1080 + 1080 * rng() * 0.3;
@@ -366,7 +390,9 @@ export function createBubbles(max: number, initialWidth: number, seed = 0xb0b1):
         ys[i] = y;
 
         const alpha = depthAlpha(d) * l * l;
-        if (alpha <= 0.003 || y > 1080 + extent) continue;
+        if (alpha <= 0.003 || y > 1080 + extent) {
+          continue;
+        }
         const flat = wob * (0.7 + 0.3 * Math.sin(wp));
         const a = r * (1 + flat);
         const flip = 1 / ((1 + flat) * (1 + flat));

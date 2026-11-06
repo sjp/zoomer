@@ -34,7 +34,9 @@ describe("projection", () => {
     for (const cam of Object.values(CAMERAS)) {
       for (let y = cam.horizon + 0.002; y <= 1; y += 0.01) {
         for (let x = -0.9; x <= 0.9; x += 0.05) {
-          if (!groundFromScreen(x, y, cam, g)) worst = Infinity;
+          if (!groundFromScreen(x, y, cam, g)) {
+            worst = Infinity;
+          }
           screenFromGround(g[0], g[1], cam, s);
           worst = Math.max(worst, Math.abs(s[0] - x), Math.abs(s[1] - y));
         }
@@ -53,7 +55,9 @@ describe("projection", () => {
     let monotone = true;
     for (let y = 1; y > cam.horizon + 0.001; y -= 0.01) {
       groundFromScreen(0.3, y, cam, g);
-      if (!(g[1] > lastZ)) monotone = false;
+      if (!(g[1] > lastZ)) {
+        monotone = false;
+      }
       lastZ = g[1];
     }
     expect(monotone).toBe(true);
@@ -123,7 +127,9 @@ describe("plates", () => {
       const gy = GRID_ORIGIN + rng() * 40;
       voronoiSample(gx, gy, offset, a, 1);
       voronoiSample(gx, gy, offset, b, 3);
-      if (a.hash !== b.hash || (b.edge < 0.3 && Math.abs(a.edge - b.edge) > 1e-12)) bad++;
+      if (a.hash !== b.hash || (b.edge < 0.3 && Math.abs(a.edge - b.edge) > 1e-12)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -161,7 +167,9 @@ describe("glow", () => {
     // Integrated over distance, the box-filtered core is the same at any footprint.
     const integrate = (fp: number) => {
       let sum = 0;
-      for (let e = 0; e < 2; e += 0.0005) sum += seamGlow(e, fp, 0, 1, 1, 1) * 0.0005;
+      for (let e = 0; e < 2; e += 0.0005) {
+        sum += seamGlow(e, fp, 0, 1, 1, 1) * 0.0005;
+      }
       return sum;
     };
     expect(integrate(0.05) / integrate(0.002)).toBeCloseTo(1, 1);
@@ -193,8 +201,12 @@ describe("glow", () => {
 
 describe("presets", () => {
   it("every option has a preset, and unknown values fall back", () => {
-    for (const o of SKY_OPTIONS) expect(sky(o.value)).toBe(SKIES[o.value]);
-    for (const o of CAMERA_OPTIONS) expect(camera(o.value)).toBe(CAMERAS[o.value]);
+    for (const o of SKY_OPTIONS) {
+      expect(sky(o.value)).toBe(SKIES[o.value]);
+    }
+    for (const o of CAMERA_OPTIONS) {
+      expect(camera(o.value)).toBe(CAMERAS[o.value]);
+    }
     expect(sky("nope")).toBe(SKIES.night);
     expect(camera("toString")).toBe(CAMERAS.low);
   });

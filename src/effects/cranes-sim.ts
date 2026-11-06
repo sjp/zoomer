@@ -10,9 +10,11 @@
  * Screen space for rotations is x right, y up, z towards the viewer.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
+import { lookup } from "./lookup";
 import { clamp } from "./math";
 import { createRng } from "./noise";
-import { MAX_CRANES, MIN_CRANES, MOBILE_CRANES, PALETTE_OPTIONS, SKY_OPTIONS } from "./cranes.meta";
+import type { PALETTE_OPTIONS, SKY_OPTIONS } from "./cranes.meta";
+import { MAX_CRANES, MIN_CRANES, MOBILE_CRANES } from "./cranes.meta";
 
 const TAU = Math.PI * 2;
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -175,7 +177,9 @@ export function buildCraneVertices(): Float32Array {
       out.set(t.v[k], o);
       out[o + 3] = t.side;
       out.set(normals[i], o + 4);
-      for (let e = 0; e < 3; e++) out.set(normals[nb[e]], o + 7 + e * 3);
+      for (let e = 0; e < 3; e++) {
+        out.set(normals[nb[e]], o + 7 + e * 3);
+      }
     }
   });
   return out;
@@ -419,7 +423,24 @@ export function createCranes(seed: number, aspect: number, count: number): Crane
   const active = clamp(Math.round(count), MIN_CRANES, MAX_CRANES);
   const flyers: Flyer[] = [];
   for (let i = 0; i < MAX_CRANES; i++) {
-    const f = {} as Flyer;
+    // Every field but x is drawn by launch.
+    const f: Flyer = {
+      parked: false,
+      x: 0,
+      lane: 0,
+      depth: 0,
+      dir: 0,
+      speed: 0,
+      turn: 0,
+      bob: 0,
+      bobRate: 0,
+      sway: 0,
+      swayRate: 0,
+      tint: 0,
+      flapAge: 0,
+      flapCycles: 0,
+      flapWait: 0,
+    };
     launch(f, rand);
     const m = craneMargin(f.depth);
     // Stratified, so the opening frame isn't clumped.
@@ -604,7 +625,9 @@ const printed = (base: string, print: string, pattern: number): PaperColour => (
 
 /** Paper colours per palette, in the `papercut.ts` tones where they overlap. */
 export const PALETTES: Record<(typeof PALETTE_OPTIONS)[number]["value"], readonly PaperColour[]> = {
-  pastel: ["#f4978e", "#ffd6a5", "#cfe3f0", "#7d8fcf", "#b8e0d2", "#f6c6ea", "#fbf3c4"].map(plain),
+  pastel: ["#f4978e", "#ffd6a5", "#cfe3f0", "#7d8fcf", "#b8e0d2", "#f6c6ea", "#fbf3c4"].map((v) =>
+    plain(v),
+  ),
   washi: [
     printed("#c8553d", "#f3e6c8", PATTERN_DOTS),
     printed("#13426b", "#f2b84b", PATTERN_STRIPES),
@@ -614,12 +637,12 @@ export const PALETTES: Record<(typeof PALETTE_OPTIONS)[number]["value"], readonl
     printed("#4a2340", "#fbd3a2", PATTERN_STRIPES),
     plain("#f6dcc0"),
   ],
-  white: ["#fbf7ee", "#f3efe6", "#ffffff", "#f2efe8"].map(plain),
-  rainbow: ["#e5604f", "#f4a261", "#e9c46a", "#7cb87f", "#4f8fc0", "#8a6bb5"].map(plain),
+  white: ["#fbf7ee", "#f3efe6", "#ffffff", "#f2efe8"].map((v) => plain(v)),
+  rainbow: ["#e5604f", "#f4a261", "#e9c46a", "#7cb87f", "#4f8fc0", "#8a6bb5"].map((v) => plain(v)),
 };
 
 export function paletteFor(id: string): readonly PaperColour[] {
-  return id in PALETTES ? PALETTES[id as keyof typeof PALETTES] : PALETTES.pastel;
+  return lookup(PALETTES, id, "pastel");
 }
 
 export const paperFor = (palette: readonly PaperColour[], tint: number) =>
@@ -637,7 +660,7 @@ export const SKIES: Record<(typeof SKY_OPTIONS)[number]["value"], Sky> = {
 };
 
 export function skyFor(id: string): Sky {
-  return id in SKIES ? SKIES[id as keyof typeof SKIES] : SKIES.dawn;
+  return lookup(SKIES, id, "dawn");
 }
 
 /** Thread colour and half width (px at 1080p). */
@@ -678,7 +701,9 @@ export interface InstanceScratch {
 
 export function createInstanceScratch(): InstanceScratch {
   const poses: Pose[] = [];
-  for (let i = 0; i < MAX_INSTANCES; i++) poses.push(createPose());
+  for (let i = 0; i < MAX_INSTANCES; i++) {
+    poses.push(createPose());
+  }
   return {
     poses,
     order: new Int32Array(MAX_INSTANCES),
@@ -706,7 +731,9 @@ export function writeInstances(
   const aspect = width / height;
   let n = 0;
   for (const f of c.flyers) {
-    if (f.parked) continue;
+    if (f.parked) {
+      continue;
+    }
     flyerPose(f, s.poses[n]);
     n++;
   }

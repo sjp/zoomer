@@ -87,7 +87,7 @@ export type CentreName = (typeof CENTRES)[number];
 
 /** Centre mode index for a name; Off-centre for an unknown name. */
 export function centreIndex(name: string): number {
-  const i = CENTRES.indexOf(name as CentreName);
+  const i = (CENTRES as readonly string[]).indexOf(name);
   return i < 0 ? 1 : i;
 }
 
@@ -151,8 +151,9 @@ export function writeWaves(
 /** The pattern value at device px (x, y), in [-1, 1], as the shader computes it. */
 export function patternValue(waves: Float32Array, n: number, x: number, y: number): number {
   let s = 0;
-  for (let k = 0; k < n; k++)
+  for (let k = 0; k < n; k++) {
     s += Math.cos(x * waves[3 * k] + y * waves[3 * k + 1] + waves[3 * k + 2]);
+  }
   return s / n;
 }
 
@@ -189,14 +190,18 @@ export const PALETTE_STOPS = 4;
 
 const PALETTE_DATA = new Map<string, Float32Array>();
 
+const isPaletteName = (name: string): name is PaletteName => Object.hasOwn(PALETTES, name);
+
 /** The named palette's stops as 4 packed unit-RGB vec3s, built once; Pastel for an unknown name. */
 export function paletteData(name: string): Float32Array {
-  const key = name in PALETTES ? name : "pastel";
+  const key: PaletteName = isPaletteName(name) ? name : "pastel";
   let d = PALETTE_DATA.get(key);
   if (!d) {
     d = new Float32Array(3 * PALETTE_STOPS);
-    const stops = PALETTES[key as PaletteName];
-    for (let i = 0; i < PALETTE_STOPS; i++) d.set(hexToUnitRgb(stops[i]), 3 * i);
+    const stops = PALETTES[key];
+    for (let i = 0; i < PALETTE_STOPS; i++) {
+      d.set(hexToUnitRgb(stops[i]), 3 * i);
+    }
     PALETTE_DATA.set(key, d);
   }
   return d;

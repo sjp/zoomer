@@ -41,8 +41,14 @@ function triangles(mesh: Int16Array): [number, number][][] {
  * loop: `toEqual` on a quarter-million bytes takes most of a second.
  */
 function firstDiff(a: Uint8Array, b: Uint8Array): number {
-  if (a.length !== b.length) return Math.min(a.length, b.length);
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i;
+  if (a.length !== b.length) {
+    return Math.min(a.length, b.length);
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return i;
+    }
+  }
   return -1;
 }
 const decode = (code: number) => [(code % 3) - 1, Math.floor(code / 3) - 1];
@@ -56,7 +62,9 @@ describe("buildMesh", () => {
 
   it("has two triangles per cell of the trapezoid, about 27k in all", () => {
     let cells = 0;
-    for (let r = 0; r < ROWS; r++) cells += 2 * rowHalfWidth(r) + 1;
+    for (let r = 0; r < ROWS; r++) {
+      cells += 2 * rowHalfWidth(r) + 1;
+    }
     expect(triangleCount()).toBe(2 * cells);
     expect(mesh.length).toBe(triangleCount() * 3 * VERTEX_SHORTS);
     expect(triangleCount()).toBeGreaterThan(20000);
@@ -80,8 +88,9 @@ describe("buildMesh", () => {
         const [bx, bz] = decode(mesh[o + 3]);
         const nextOk = mesh[o] + ax === mesh[next] && mesh[o + 1] + az === mesh[next + 1];
         const lastOk = mesh[o] + bx === mesh[last] && mesh[o + 1] + bz === mesh[last + 1];
-        if (!(nextOk && lastOk) && wrong.length < 10)
+        if (!(nextOk && lastOk) && wrong.length < 10) {
           wrong.push(`triangle at ${String(v)}, corner ${String(i)}`);
+        }
       }
     }
     expect(wrong).toEqual([]);
@@ -95,14 +104,23 @@ describe("buildMesh", () => {
       const xs = [...tris[i], ...tris[i + 1]].map((p) => p[0]);
       const zs = [...tris[i], ...tris[i + 1]].map((p) => p[1]);
       const key = `${String(Math.min(...xs))},${String(Math.min(...zs))}`;
-      if (seen.has(key)) fail(`cell ${key} covered twice`);
+      if (seen.has(key)) {
+        fail(`cell ${key} covered twice`);
+      }
       seen.add(key);
-      if (Math.max(...xs) - Math.min(...xs) !== 1) fail(`cell ${key} is not one wide`);
-      if (Math.max(...zs) - Math.min(...zs) !== 1) fail(`cell ${key} is not one deep`);
+      if (Math.max(...xs) - Math.min(...xs) !== 1) {
+        fail(`cell ${key} is not one wide`);
+      }
+      if (Math.max(...zs) - Math.min(...zs) !== 1) {
+        fail(`cell ${key} is not one deep`);
+      }
     }
     for (const t of tris) {
-      for (const [x] of t)
-        if (!(Math.abs(x) < PERIOD / 2)) fail(`x ${String(x)} outside the period`);
+      for (const [x] of t) {
+        if (!(Math.abs(x) < PERIOD / 2)) {
+          fail(`x ${String(x)} outside the period`);
+        }
+      }
     }
     expect(wrong).toEqual([]);
   });
@@ -121,8 +139,9 @@ describe("buildMesh", () => {
       const dist = col >= 0 ? col : -col;
       // Lexicographic (row, dist) never increases.
       const descending = row < prev.row || (row === prev.row && dist <= prev.dist);
-      if (!descending && wrong.length < 10)
+      if (!descending && wrong.length < 10) {
         wrong.push(`cell ${String(col)},${String(row)} after ${String(prev.row)}`);
+      }
       prev = { row, dist };
       // The camera is behind row 0 inside column 0; take a far, sideways sample of it.
       for (const cam of [
@@ -168,7 +187,9 @@ describe("cameraAt", () => {
         Math.abs(pose.y - CAM_HEIGHT) <= SWAY_Y + 1e-12 &&
         Math.abs(pose.yaw) <= SWAY_YAW + 1e-12 &&
         Math.abs(pose.horizon - HORIZON_NDC) <= SWAY_HORIZON + 1e-12;
-      if (!ok && outside.length < 10) outside.push(`t ${String(t)}: ${JSON.stringify(pose)}`);
+      if (!ok && outside.length < 10) {
+        outside.push(`t ${String(t)}: ${JSON.stringify(pose)}`);
+      }
     }
     expect(outside).toEqual([]);
   });
@@ -206,8 +227,9 @@ describe("cameraMeshZ", () => {
       const world = Math.floor(d) + z;
       // toBeCloseTo(0.037, 9): within half of 1e-9.
       const smooth = Math.abs(world - prevWorld - 0.037) < 5e-10;
-      if (!(behind && smooth) && wrong.length < 10)
+      if (!(behind && smooth) && wrong.length < 10) {
         wrong.push(`d ${String(d)}: z ${String(z)}, step ${String(world - prevWorld)}`);
+      }
       prevWorld = world;
     }
     expect(wrong).toEqual([]);
@@ -227,7 +249,9 @@ describe("octave ring buffer", () => {
         write(filledTo, ring, ringRow(filledTo) * PERIOD * 4);
       }
       // Every row the mesh reads is in place.
-      if (filledTo - PERIOD > row) missing.push(row);
+      if (filledTo - PERIOD > row) {
+        missing.push(row);
+      }
     }
     expect(missing).toEqual([]);
     expect(firstDiff(ring, buildOctaves(5, filledTo - PERIOD))).toBe(-1);
@@ -257,7 +281,9 @@ describe("buildOctaves", () => {
       for (let i = c; i < a.length; i += 4) {
         min = Math.min(min, a[i]);
         max = Math.max(max, a[i]);
-        if (a[i] === 128 || a[i] === 127) mid++;
+        if (a[i] === 128 || a[i] === 127) {
+          mid++;
+        }
       }
       expect(min).toBeLessThan(60);
       expect(max).toBeGreaterThan(195);
@@ -273,7 +299,9 @@ describe("octaveWeights", () => {
     for (const r of [0, 0.5, 1]) {
       const amp = octaveWeights(r, w);
       expect(w.reduce((s, v) => s + v, 0)).toBeCloseTo(amp * 1.4, 9);
-      for (let i = 1; i < 4; i++) expect(w[i]).toBeLessThan(w[i - 1]);
+      for (let i = 1; i < 4; i++) {
+        expect(w[i]).toBeLessThan(w[i - 1]);
+      }
     }
     const smooth = octaveWeights(0, w) && w[3] / w[0];
     const rough = octaveWeights(1, w) && w[3] / w[0];
@@ -307,7 +335,9 @@ describe("buildRamp", () => {
     for (let i = 0; i < RAMP_SIZE; i++) {
       const t = i / (RAMP_SIZE - 1);
       const f = Math.min(1, Math.max(0, (t - 0.25) / 0.5));
-      for (let c = 0; c < 4; c++) expect(out[i * 4 + c]).toBeCloseTo(f, 5);
+      for (let c = 0; c < 4; c++) {
+        expect(out[i * 4 + c]).toBeCloseTo(f, 5);
+      }
     }
   });
 });

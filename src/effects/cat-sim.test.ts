@@ -47,13 +47,25 @@ describe("catLayout", () => {
           const left = l.x - CUSHION_RX * size;
           const right = l.x + CUSHION_RX * size;
           const base = l.y + (CUSHION_Y - CUSHION_RY) * size;
-          if (left < 0 || right > aspect) bad++;
-          if (Math.abs(base - CUSHION_REST_Y) > 1e-9) bad++;
-          if (base < SILL_FRONT_Y || base > SILL_BACK_Y) bad++;
-          if (value === "left" ? l.x > aspect / 2 : l.x < aspect / 2) bad++;
+          if (left < 0 || right > aspect) {
+            bad++;
+          }
+          if (Math.abs(base - CUSHION_REST_Y) > 1e-9) {
+            bad++;
+          }
+          if (base < SILL_FRONT_Y || base > SILL_BACK_Y) {
+            bad++;
+          }
+          if (value === "left" ? l.x > aspect / 2 : l.x < aspect / 2) {
+            bad++;
+          }
           // The box covers the cushion, and the cat above it.
-          if (l.box[0] > left || l.box[2] < right || l.box[1] > base) bad++;
-          if (l.box[3] < Math.min(1, l.y + 0.45 * size)) bad++;
+          if (l.box[0] > left || l.box[2] < right || l.box[1] > base) {
+            bad++;
+          }
+          if (l.box[3] < Math.min(1, l.y + 0.45 * size)) {
+            bad++;
+          }
         }
       }
     }
@@ -112,12 +124,16 @@ describe("event tracks", () => {
       for (let t = 0; t < 3000; t += 0.5) {
         const last = track.last;
         advanceTrack(track, t);
-        if (track.last !== last) starts.push(track.last);
+        if (track.last !== last) {
+          starts.push(track.last);
+        }
       }
       let bad = 0;
       for (let i = 1; i < starts.length; i++) {
         const gap = starts[i] - starts[i - 1];
-        if (gap < lo || gap > hi) bad++;
+        if (gap < lo || gap > hi) {
+          bad++;
+        }
       }
       expect(starts.length).toBeGreaterThan(3000 / hi - 2);
       expect(starts[0]).toBeGreaterThanOrEqual(3);
@@ -129,7 +145,9 @@ describe("event tracks", () => {
   it("is deterministic per seed and catches up after a long jump", () => {
     const a = createTrack(7, 20, 40, 5, 10);
     const b = createTrack(7, 20, 40, 5, 10);
-    for (let t = 0; t < 600; t += 0.25) advanceTrack(a, t);
+    for (let t = 0; t < 600; t += 0.25) {
+      advanceTrack(a, t);
+    }
     advanceTrack(b, 599.75);
     expect(b.last).toBe(a.last);
     expect(b.next).toBe(a.next);
@@ -146,10 +164,18 @@ describe("poses", () => {
     for (let tau = -0.5; tau < TAIL_DURATION + 0.5; tau += dt) {
       const e = earTwitch(tau);
       const f = tailFlick(tau);
-      if ((tau <= 0 || tau >= EAR_DURATION) && e !== 0) bad++;
-      if ((tau <= 0 || tau >= TAIL_DURATION) && f !== 0) bad++;
-      if (Math.abs(earTwitch(tau + dt) - e) > 0.025) bad++;
-      if (Math.abs(tailFlick(tau + dt) - f) > 0.01) bad++;
+      if ((tau <= 0 || tau >= EAR_DURATION) && e !== 0) {
+        bad++;
+      }
+      if ((tau <= 0 || tau >= TAIL_DURATION) && f !== 0) {
+        bad++;
+      }
+      if (Math.abs(earTwitch(tau + dt) - e) > 0.025) {
+        bad++;
+      }
+      if (Math.abs(tailFlick(tau + dt) - f) > 0.01) {
+        bad++;
+      }
       maxEar = Math.max(maxEar, e);
       maxTail = Math.max(maxTail, f);
     }
@@ -174,15 +200,21 @@ describe("poses", () => {
       catPose(clock, t, pose);
       const ear = pose.earNear !== 0 || pose.earFar !== 0;
       const tail = pose.tail !== 0;
-      if (pose.earNear !== 0 && pose.earFar !== 0) bad++;
+      if (pose.earNear !== 0 && pose.earFar !== 0) {
+        bad++;
+      }
       if (ear && !wasEar) {
         earStarts++;
-        if (t - lastEar < EAR_GAP[0] - 0.1) bad++;
+        if (t - lastEar < EAR_GAP[0] - 0.1) {
+          bad++;
+        }
         lastEar = t;
       }
       if (tail && !wasTail) {
         tailStarts++;
-        if (t - lastTail < TAIL_GAP[0] - 0.1) bad++;
+        if (t - lastTail < TAIL_GAP[0] - 0.1) {
+          bad++;
+        }
         lastTail = t;
       }
       wasEar = ear;
@@ -217,8 +249,12 @@ describe("motes", () => {
     for (let t = 0; t < 120; t += 0.05) {
       stepMotes(m, beam, t, 0.05);
       for (let i = 0; i < MAX_MOTES; i++) {
-        if (!(m.along[i] >= 0 && m.along[i] <= 1)) bad++;
-        if (!(m.across[i] >= -1 && m.across[i] <= 1)) bad++;
+        if (!(m.along[i] >= 0 && m.along[i] <= 1)) {
+          bad++;
+        }
+        if (!(m.across[i] >= -1 && m.across[i] <= 1)) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -226,9 +262,15 @@ describe("motes", () => {
     let litHalf = 0;
     let litAll = 0;
     for (let i = 0; i < MAX_MOTES; i++) {
-      if (moteBrightness(m, beam, i, 10, 0) > 0) lit0++;
-      if (moteBrightness(m, beam, i, 10, 0.5) > 0) litHalf++;
-      if (moteBrightness(m, beam, i, 10, 1) > 0) litAll++;
+      if (moteBrightness(m, beam, i, 10, 0) > 0) {
+        lit0++;
+      }
+      if (moteBrightness(m, beam, i, 10, 0.5) > 0) {
+        litHalf++;
+      }
+      if (moteBrightness(m, beam, i, 10, 1) > 0) {
+        litAll++;
+      }
     }
     expect(lit0).toBe(0);
     expect(litHalf).toBeLessThanOrEqual(MAX_MOTES / 2);
@@ -238,8 +280,12 @@ describe("motes", () => {
 
 describe("palettes", () => {
   it("has a look for every option, and falls back for unknown values", () => {
-    for (const { value } of COAT_OPTIONS) expect(coatFor(value)).toBe(COATS[value]);
-    for (const { value } of TIME_OPTIONS) expect(timeFor(value)).toBe(TIMES[value]);
+    for (const { value } of COAT_OPTIONS) {
+      expect(coatFor(value)).toBe(COATS[value]);
+    }
+    for (const { value } of TIME_OPTIONS) {
+      expect(timeFor(value)).toBe(TIMES[value]);
+    }
     expect(coatFor("tiger")).toBe(COATS.ginger);
     expect(timeFor("midnight")).toBe(TIMES.afternoon);
   });

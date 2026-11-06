@@ -79,7 +79,7 @@ const YELLOW = [1, 0.78, 0.32] as const;
 /** Glow intensity that reaches the yellow end of the ramp. */
 const RAMP_TOP = 1.2;
 
-const vec3 = (c: readonly number[]) => `vec3(${c.map(glslFloat).join(", ")})`;
+const vec3 = (c: readonly number[]) => `vec3(${c.map((v) => glslFloat(v)).join(", ")})`;
 
 /**
  * Sky and smoke, at 1/SKY_DIVISOR resolution: a zenith-to-horizon gradient and
@@ -309,7 +309,9 @@ export const lava = defineEffect(lavaMeta, {
             skyTarget?.dispose();
             skyTarget = null;
             skyTarget = createRenderTarget(gl, sw, sh, gl.RGBA8);
-            if (!skyTarget) throw new Error("Lava field: RGBA8 is not renderable");
+            if (!skyTarget) {
+              throw new Error("Lava field: RGBA8 is not renderable");
+            }
           }
         },
         frame(dt, p) {

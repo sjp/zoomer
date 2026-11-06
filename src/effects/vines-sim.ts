@@ -182,7 +182,9 @@ const bump = (t: number, at: number, width: number) => Math.exp(-((angleTo(t, at
 /** Samples `r(θ)` around the origin, scaled so the largest radius is 1. */
 function polar(r: (theta: number) => number): number[] {
   const radii: number[] = [];
-  for (let k = 0; k < OUTLINE_POINTS; k++) radii.push(r((k * TAU) / OUTLINE_POINTS));
+  for (let k = 0; k < OUTLINE_POINTS; k++) {
+    radii.push(r((k * TAU) / OUTLINE_POINTS));
+  }
   const max = Math.max(...radii);
   const out: number[] = [];
   radii.forEach((radius, k) => {
@@ -217,8 +219,9 @@ export function vineOutline(shape: number): number[] {
           [-0.75, 0.55],
           [Math.PI + 0.75, 0.55],
         ];
-        for (const [a, len] of lobes)
+        for (const [a, len] of lobes) {
           r = Math.max(r, len * Math.cos(Math.min(1.5, angleTo(t, a) * 1.9)));
+        }
         return Math.max(r * (1 - 0.3 * bump(t, DOWN, 0.18)), petiole(t, 0.72));
       });
     case SHAPE_FLOWER:
@@ -280,11 +283,11 @@ export const PLANTS: Readonly<Record<string, PlantType>> = {
     leafSize: 13,
     leafSpacing: 17,
     leafAngle: 1.1,
-    palette: ["#2f5a2a", "#3b6b2f", "#2a4d27", "#46773a"].map(hex),
+    palette: ["#2f5a2a", "#3b6b2f", "#2a4d27", "#46773a"].map((v) => hex(v)),
     vein: 1,
     flowerShape: SHAPE_FLOWER,
     flowerSize: 6,
-    flowerPalette: ["#d8d79a", "#c9cf86"].map(hex),
+    flowerPalette: ["#d8d79a", "#c9cf86"].map((v) => hex(v)),
     core: hex("#8e9a4c"),
     coreAmount: 0.6,
     raceme: false,
@@ -299,11 +302,11 @@ export const PLANTS: Readonly<Record<string, PlantType>> = {
     leafSize: 15,
     leafSpacing: 30,
     leafAngle: 0.9,
-    palette: ["#4f8a35", "#5e9a3e", "#46802f"].map(hex),
+    palette: ["#4f8a35", "#5e9a3e", "#46802f"].map((v) => hex(v)),
     vein: 1,
     flowerShape: SHAPE_FLOWER,
     flowerSize: 13,
-    flowerPalette: ["#4f6fd8", "#7a54c9", "#c95a9e", "#5d86e0"].map(hex),
+    flowerPalette: ["#4f6fd8", "#7a54c9", "#c95a9e", "#5d86e0"].map((v) => hex(v)),
     core: hex("#f4f0e6"),
     coreAmount: 1,
     raceme: false,
@@ -318,11 +321,11 @@ export const PLANTS: Readonly<Record<string, PlantType>> = {
     leafSize: 8,
     leafSpacing: 12,
     leafAngle: 1.2,
-    palette: ["#5d7f34", "#6a8c3b", "#56772f"].map(hex),
+    palette: ["#5d7f34", "#6a8c3b", "#56772f"].map((v) => hex(v)),
     vein: 0.6,
     flowerShape: SHAPE_FLORET,
     flowerSize: 5,
-    flowerPalette: ["#9b87d6", "#b49ee0", "#8a73c9"].map(hex),
+    flowerPalette: ["#9b87d6", "#b49ee0", "#8a73c9"].map((v) => hex(v)),
     core: hex("#efe6fb"),
     coreAmount: 0.5,
     raceme: true,
@@ -381,25 +384,25 @@ export interface Vines {
   readonly leafSprites: number;
   readonly flowerSprites: number;
   /** Sets the screen width (ref px); call before the first `step` and on resize. */
-  resize(refWidth: number): void;
+  resize: (refWidth: number) => void;
   /** Advances `dt` real seconds. */
-  step(dt: number, f: VineFrame): void;
+  step: (dt: number, f: VineFrame) => void;
   /** Starts a new plant, recycling the oldest when every slot is in use. Returns its slot. */
-  spawn(f: VineFrame): number;
+  spawn: (f: VineFrame) => number;
   /** Marks every plant's segments clean, after the caller has uploaded the dirty ranges. */
-  clearDirty(): void;
+  clearDirty: () => void;
   /**
    * Writes the visible leaves, then flowers, to `data` (`SPRITE_FLOATS` then the
    * spin pair at `spinOffset`, `stride` floats apart) in device px at `scale`.
    * Returns the total; see `leafSprites` and `flowerSprites` for the groups.
    */
-  writeSprites(
+  writeSprites: (
     data: Float32Array,
     stride: number,
     spinOffset: number,
     scale: number,
     type: PlantType,
-  ): number;
+  ) => number;
 }
 
 /** Density grid cell (ref px) and size: wide enough for a 4.4:1 frame. */
@@ -521,8 +524,12 @@ export function createVines(seed = 0x7173): Vines {
 
   const markDirty = (p: number, slot: number) => {
     const k = slot - p * PLANT_SEGS;
-    if (k < dirtyLo[p]) dirtyLo[p] = k;
-    if (k > dirtyHi[p]) dirtyHi[p] = k;
+    if (k < dirtyLo[p]) {
+      dirtyLo[p] = k;
+    }
+    if (k > dirtyHi[p]) {
+      dirtyHi[p] = k;
+    }
   };
 
   /** Writes segment `slot` of plant `p` from strand `i`'s last point to its tip. */
@@ -558,9 +565,13 @@ export function createVines(seed = 0x7173): Vines {
     width: number,
     maxLen: number,
   ) => {
-    if (strandCount[p] >= PLANT_STRANDS) return -1;
+    if (strandCount[p] >= PLANT_STRANDS) {
+      return -1;
+    }
     const slot = allocSlot(p);
-    if (slot < 0) return -1;
+    if (slot < 0) {
+      return -1;
+    }
     const i = p * PLANT_STRANDS + strandCount[p]++;
     sAlive[i] = 1;
     sKind[i] = kind;
@@ -585,7 +596,9 @@ export function createVines(seed = 0x7173): Vines {
 
   /** Stops strand `i`, tapering its end to a point. */
   const killStrand = (p: number, i: number) => {
-    if (!sAlive[i]) return;
+    if (!sAlive[i]) {
+      return;
+    }
     sAlive[i] = 0;
     if (sSince[i] > 0.5) {
       writeSeg(p, i, sSlot[i], 0);
@@ -597,7 +610,9 @@ export function createVines(seed = 0x7173): Vines {
   };
 
   const addLeaf = (p: number, i: number, type: PlantType) => {
-    if (leafCount[p] >= PLANT_LEAVES) return;
+    if (leafCount[p] >= PLANT_LEAVES) {
+      return;
+    }
     const j = p * PLANT_LEAVES + leafCount[p]++;
     const side = (sLeafSide[i] = -sLeafSide[i]);
     const r = type.leafSize * (0.8 + 0.4 * rng()) * (sKind[i] === KIND_MAIN ? 1 : 0.88);
@@ -617,7 +632,9 @@ export function createVines(seed = 0x7173): Vines {
   };
 
   const addFlower = (p: number, i: number, type: PlantType) => {
-    if (flowerCount[p] >= PLANT_FLOWERS) return;
+    if (flowerCount[p] >= PLANT_FLOWERS) {
+      return;
+    }
     const j = p * PLANT_FLOWERS + flowerCount[p]++;
     const side = -sLeafSide[i];
     const r = type.flowerSize * (0.85 + 0.3 * rng());
@@ -638,7 +655,9 @@ export function createVines(seed = 0x7173): Vines {
     writeSeg(p, i, slot, w);
     const cell = cellOf(sx[i] + anchor[p] * refWidth, sy[i]);
     segCell[slot] = cell;
-    if (grid[cell] < 65535) grid[cell]++;
+    if (grid[cell] < 65535) {
+      grid[cell]++;
+    }
     sLast[i] = slot;
     ax[i] = sx[i];
     ay[i] = sy[i];
@@ -653,7 +672,9 @@ export function createVines(seed = 0x7173): Vines {
     }
     sSlot[i] = next;
     writeSeg(p, i, next, w);
-    if (kind === KIND_TENDRIL) return;
+    if (kind === KIND_TENDRIL) {
+      return;
+    }
 
     const type = f.type;
     if (sArc[i] >= sLeafNext[i]) {
@@ -661,7 +682,9 @@ export function createVines(seed = 0x7173): Vines {
       sLeafNext[i] = sArc[i] + type.leafSpacing * (0.8 + 0.4 * rng());
     }
     const late = age[p] > 0.45 * growDur[p];
-    if (late && f.flowers > 0 && rng() < f.flowers * 0.035) addFlower(p, i, type);
+    if (late && f.flowers > 0 && rng() < f.flowers * 0.035) {
+      addFlower(p, i, type);
+    }
     // Branches fork off at 0.5–0.9 rad; branches of branches are rarer.
     const remaining = sMax[i] - sArc[i];
     if (remaining > CURL_LEN && rng() < 0.02 * type.branchiness * (kind === KIND_MAIN ? 1 : 0.4)) {
@@ -681,8 +704,9 @@ export function createVines(seed = 0x7173): Vines {
    */
   const freeCurvature = (i: number, type: PlantType) => {
     const s = sArc[i];
-    if (sKind[i] === KIND_TENDRIL)
+    if (sKind[i] === KIND_TENDRIL) {
       return sSign[i] * Math.min(KAPPA_MAX[KIND_TENDRIL], 0.02 + 0.004 * s);
+    }
     const wander = noise.noise2(s * 0.006, sNoise[i]) * 0.014 * type.wander;
     const remaining = sMax[i] - s;
     const curl = remaining < CURL_LEN ? sSign[i] * 0.045 * (1 - remaining / CURL_LEN) : 0;
@@ -710,9 +734,13 @@ export function createVines(seed = 0x7173): Vines {
     const inside = Math.min(left, right, top);
     const wi = clamp((inside + MARGIN) / MARGIN, 0, 1);
     if (wi > 0) {
-      if (inside === left) dx -= wi;
-      else if (inside === right) dx += wi;
-      else dy -= wi;
+      if (inside === left) {
+        dx -= wi;
+      } else if (inside === right) {
+        dx += wi;
+      } else {
+        dy -= wi;
+      }
     }
     // Back into the frame.
     dx += clamp((10 - qx) / 50, 0, 1) - clamp((qx - refWidth + 10) / 50, 0, 1);
@@ -742,7 +770,9 @@ export function createVines(seed = 0x7173): Vines {
     let alive = 0;
     for (let k = 0; k < n; k++) {
       const i = p * PLANT_STRANDS + k;
-      if (!sAlive[i]) continue;
+      if (!sAlive[i]) {
+        continue;
+      }
       const kind = sKind[i];
       const kmax = KAPPA_MAX[kind];
       const dist = KIND_SPEED[kind] * pdt;
@@ -768,8 +798,12 @@ export function createVines(seed = 0x7173): Vines {
         sh[i] = h;
         sArc[i] += ds;
         sSince[i] += ds;
-        if (sSince[i] >= SEG_LEN[kind]) commit(p, i, f);
-        if (sAlive[i] && sArc[i] >= sMax[i]) killStrand(p, i);
+        if (sSince[i] >= SEG_LEN[kind]) {
+          commit(p, i, f);
+        }
+        if (sAlive[i] && sArc[i] >= sMax[i]) {
+          killStrand(p, i);
+        }
       }
       if (sAlive[i]) {
         writeSeg(p, i, sSlot[i], widthAt(i, sArc[i]));
@@ -780,7 +814,9 @@ export function createVines(seed = 0x7173): Vines {
   };
 
   const endGrowth = (p: number) => {
-    for (let k = 0; k < strandCount[p]; k++) killStrand(p, p * PLANT_STRANDS + k);
+    for (let k = 0; k < strandCount[p]; k++) {
+      killStrand(p, p * PLANT_STRANDS + k);
+    }
     growing[p] = 0;
     endGrow[p] = Math.max(age[p], 1);
     witherStart[p] = age[p] + holdDur[p];
@@ -790,7 +826,9 @@ export function createVines(seed = 0x7173): Vines {
     const base = p * PLANT_SEGS;
     for (let k = 0; k < segUsed[p]; k++) {
       const c = segCell[base + k];
-      if (c >= 0 && grid[c] > 0) grid[c]--;
+      if (c >= 0 && grid[c] > 0) {
+        grid[c]--;
+      }
       segCell[base + k] = -1;
     }
     segData.fill(0, base * SEG_FLOATS, (base + PLANT_SEGS) * SEG_FLOATS);
@@ -798,7 +836,9 @@ export function createVines(seed = 0x7173): Vines {
       dirtyLo[p] = 0;
       dirtyHi[p] = segUsed[p] - 1;
     }
-    for (let k = 0; k < strandCount[p]; k++) sAlive[p * PLANT_STRANDS + k] = 0;
+    for (let k = 0; k < strandCount[p]; k++) {
+      sAlive[p * PLANT_STRANDS + k] = 0;
+    }
     segUsed[p] = 0;
     strandCount[p] = 0;
     leafCount[p] = 0;
@@ -848,7 +888,11 @@ export function createVines(seed = 0x7173): Vines {
     if (p < 0) {
       // Every slot in use: recycle the oldest plant.
       p = 0;
-      for (let q = 1; q < MAX_PLANTS; q++) if (order[q] < order[p]) p = q;
+      for (let q = 1; q < MAX_PLANTS; q++) {
+        if (order[q] < order[p]) {
+          p = q;
+        }
+      }
       retire(p);
     }
     // The best of a few candidate starts: furthest from other plants' starts.
@@ -861,7 +905,9 @@ export function createVines(seed = 0x7173): Vines {
       pickStart();
       let d = 1e9;
       for (let q = 0; q < MAX_PLANTS; q++) {
-        if (!active[q]) continue;
+        if (!active[q]) {
+          continue;
+        }
         d = Math.min(
           d,
           Math.hypot(startX[q] + anchor[q] * refWidth - start.x, startY[q] - start.y),
@@ -901,7 +947,9 @@ export function createVines(seed = 0x7173): Vines {
     lOn[j] = 0;
     const g = fallNext;
     fallNext = (fallNext + 1) % MAX_FALLING;
-    if (!gOn[g]) falling++;
+    if (!gOn[g]) {
+      falling++;
+    }
     gOn[g] = 1;
     gx[g] = lx[j] + anchor[p] * refWidth;
     gy[g] = ly[j];
@@ -935,7 +983,9 @@ export function createVines(seed = 0x7173): Vines {
 
   const stepFalling = (dt: number) => {
     for (let g = 0; g < MAX_FALLING; g++) {
-      if (!gOn[g]) continue;
+      if (!gOn[g]) {
+        continue;
+      }
       gAge[g] += dt;
       const psi = gAge[g] * gRate[g];
       gy[g] += FALL_PX * gPace[g] * fallFactor(psi) * dt;
@@ -974,26 +1024,36 @@ export function createVines(seed = 0x7173): Vines {
       return flowerSprites;
     },
     resize(w) {
-      if (w === refWidth) return;
+      if (w === refWidth) {
+        return;
+      }
       refWidth = w;
       // Rebuild the density grid at the new world positions.
       grid.fill(0);
       for (let p = 0; p < MAX_PLANTS; p++) {
-        if (!active[p]) continue;
+        if (!active[p]) {
+          continue;
+        }
         const xOff = anchor[p] * refWidth;
         for (let k = 0; k < segUsed[p]; k++) {
           const slot = p * PLANT_SEGS + k;
-          if (segCell[slot] < 0) continue;
+          if (segCell[slot] < 0) {
+            continue;
+          }
           const o = slot * SEG_FLOATS;
           const cell = cellOf(segData[o + 2] + xOff, segData[o + 3]);
           segCell[slot] = cell;
-          if (grid[cell] < 65535) grid[cell]++;
+          if (grid[cell] < 65535) {
+            grid[cell]++;
+          }
         }
       }
     },
     spawn,
     step(dt, f) {
-      if (!(dt > 0)) dt = 0;
+      if (!(dt > 0)) {
+        dt = 0;
+      }
       time += dt;
       border = clamp(f.border, 0, 1);
       currentType = f.type;
@@ -1007,12 +1067,16 @@ export function createVines(seed = 0x7173): Vines {
       }
 
       for (let p = 0; p < MAX_PLANTS; p++) {
-        if (!active[p]) continue;
+        if (!active[p]) {
+          continue;
+        }
         age[p] += pdt;
         const a = age[p];
         if (growing[p]) {
           const alive = grow(p, pdt, f);
-          if (a >= growDur[p] || alive === 0) endGrowth(p);
+          if (a >= growDur[p] || alive === 0) {
+            endGrowth(p);
+          }
         }
         const ws = witherStart[p];
         if (a >= ws) {
@@ -1026,7 +1090,9 @@ export function createVines(seed = 0x7173): Vines {
           }
           for (let k = 0; k < leafCount[p]; k++) {
             const j = p * PLANT_LEAVES + k;
-            if (lOn[j] && a >= ws + lWither[j] * WITHER_SPREAD + YELLOW) drop(p, j, currentType);
+            if (lOn[j] && a >= ws + lWither[j] * WITHER_SPREAD + YELLOW) {
+              drop(p, j, currentType);
+            }
           }
           if (a >= ws + RETIRE_AFTER) {
             retire(p);
@@ -1050,15 +1116,21 @@ export function createVines(seed = 0x7173): Vines {
       let n = 0;
       // Attached leaves.
       for (let p = 0; p < MAX_PLANTS; p++) {
-        if (!active[p]) continue;
+        if (!active[p]) {
+          continue;
+        }
         const a = age[p];
         const ws = witherStart[p];
         const xOff = anchor[p] * refWidth;
         for (let k = 0; k < leafCount[p]; k++) {
           const j = p * PLANT_LEAVES + k;
-          if (!lOn[j]) continue;
+          if (!lOn[j]) {
+            continue;
+          }
           const g = leafGrow((a - lb[j]) / LEAF_GROW);
-          if (g <= 0) continue;
+          if (g <= 0) {
+            continue;
+          }
           const w = a >= ws ? witherCurve((a - ws - lWither[j] * WITHER_SPREAD) / YELLOW) : 0;
           leafColor(j, type, w);
           const o = n * stride;
@@ -1078,7 +1150,9 @@ export function createVines(seed = 0x7173): Vines {
       }
       // Falling leaves, in front of the attached ones.
       for (let g = 0; g < MAX_FALLING; g++) {
-        if (!gOn[g]) continue;
+        if (!gOn[g]) {
+          continue;
+        }
         const t = gAge[g];
         const psi = t * gRate[g];
         const c = Math.cos(t * gFlipRate[g]);
@@ -1101,10 +1175,14 @@ export function createVines(seed = 0x7173): Vines {
       const florets = type.raceme ? RACEME : 1;
       const pal = type.flowerPalette;
       for (let p = 0; p < MAX_PLANTS; p++) {
-        if (!active[p]) continue;
+        if (!active[p]) {
+          continue;
+        }
         const a = age[p];
         const fade = 1 - witherCurve((a - witherStart[p]) / 6);
-        if (fade <= 0) continue;
+        if (fade <= 0) {
+          continue;
+        }
         const xOff = anchor[p] * refWidth;
         for (let k = 0; k < flowerCount[p]; k++) {
           const j = p * PLANT_FLOWERS + k;
@@ -1112,7 +1190,9 @@ export function createVines(seed = 0x7173): Vines {
           const sway = Math.sin(time * 0.5 + fPick[j] * 20);
           for (let q = 0; q < florets; q++) {
             const open = leafGrow((a - fb[j] - q * 0.6) / FLOWER_OPEN) * fade;
-            if (open <= 0) continue;
+            if (open <= 0) {
+              continue;
+            }
             const r = fr[j] * (1 - 0.09 * q);
             const lighten = 0.07 * q;
             const o = n * stride;

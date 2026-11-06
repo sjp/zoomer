@@ -52,7 +52,9 @@ describe("sector counts", () => {
           const phi = rand() * TAU;
           const fast = trailsAt(r, phi, s);
           maxDiff = Math.max(maxDiff, Math.abs(fast - trailsAtBruteForce(r, phi, s)));
-          if (fast > 0) lit++;
+          if (fast > 0) {
+            lit++;
+          }
         }
         expect(maxDiff).toBeLessThan(1e-9);
         expect(lit).toBeGreaterThan(10);
@@ -178,7 +180,9 @@ describe("foreground", () => {
     for (let c = 0; c < FG_COLUMNS; c++) {
       const bare = hillHeightAt(profiles, MIN_LAYERS - 1, c / (FG_COLUMNS - 1)) - 0.04;
       below = Math.min(below, trees[c] - bare);
-      if (trees[c] > bare + 10 / 1080) above++;
+      if (trees[c] > bare + 10 / 1080) {
+        above++;
+      }
     }
     expect(below).toBeGreaterThan(-1e-6);
     expect(above).toBeGreaterThan(FG_COLUMNS * 0.4);

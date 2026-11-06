@@ -26,7 +26,9 @@ import {
 describe("drop ring buffer", () => {
   it("keeps at most the cap and recycles the oldest drop", () => {
     const b = createDropBuffer(4);
-    for (let i = 0; i < 4; i++) addDrop(b, i / 10, 0, 1, i, 0);
+    for (let i = 0; i < 4; i++) {
+      addDrop(b, i / 10, 0, 1, i, 0);
+    }
     expect(b.count).toBe(4);
     expect(b.head).toBe(0);
     // The fifth drop replaces the first (oldest), the sixth the second.
@@ -42,7 +44,9 @@ describe("rain", () => {
     const rng = createRng(11);
     const s = createRainState(rng);
     const dt = 1 / 60;
-    for (let t = 0; t < seconds; t += dt) stepRain(s, dt, rate, variation, 55, rng);
+    for (let t = 0; t < seconds; t += dt) {
+      stepRain(s, dt, rate, variation, 55, rng);
+    }
     return s;
   };
 
@@ -131,7 +135,9 @@ describe("ring profile", () => {
 describe("packed rings", () => {
   const rng = createRng(5);
   const s = createRainState(rng);
-  for (let i = 0; i < 300; i++) stepRain(s, 1 / 60, 8, 0, 55, rng);
+  for (let i = 0; i < 300; i++) {
+    stepRain(s, 1 / 60, 8, 0, 55, rng);
+  }
   const packed = new Float32Array(MAX_DROPS * DROP_STRIDE);
   const n = packDrops(packed, s, 400, 225, 400 / 1920, 20);
 
@@ -167,7 +173,9 @@ describe("packed rings", () => {
           (rippleHeight(packed, n, px, py + e) - rippleHeight(packed, n, px, py - e)) / (2 * e);
         expect(g[0]).toBeCloseTo(fx, 3);
         expect(g[1]).toBeCloseTo(fy, 3);
-        if (Math.hypot(g[0], g[1]) > 1e-3) checked++;
+        if (Math.hypot(g[0], g[1]) > 1e-3) {
+          checked++;
+        }
       }
     }
     expect(checked).toBeGreaterThan(10);
@@ -185,7 +193,9 @@ describe("branch mask", () => {
     expect(at(0.5, 0.5)).toBe(0);
     expect(at(0.5, 0.05)).toBe(0);
     let covered = 0;
-    for (const v of m) covered += v / 255;
+    for (const v of m) {
+      covered += v / 255;
+    }
     expect(covered / m.length).toBeGreaterThan(0.03);
     expect(covered / m.length).toBeLessThan(0.3);
   });

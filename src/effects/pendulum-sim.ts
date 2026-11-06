@@ -132,10 +132,12 @@ export function placementBox(
 ): { x0: number; x1: number; y0: number; y1: number } {
   const w = refWidth;
   const h = REF_HEIGHT;
-  if (placement === "left")
+  if (placement === "left") {
     return { x0: 0.04 * w, x1: w / 3 - 0.03 * w, y0: 0.08 * h, y1: 0.82 * h };
-  if (placement === "right")
+  }
+  if (placement === "right") {
     return { x0: (2 * w) / 3 + 0.03 * w, x1: 0.96 * w, y0: 0.08 * h, y1: 0.82 * h };
+  }
   return { x0: 0.06 * w, x1: 0.94 * w, y0: 0.06 * h, y1: 0.48 * h };
 }
 
@@ -179,9 +181,9 @@ export function createPendulumRig() {
     barRadius: 0,
     /** Whole swings of the slowest pendulum per cycle, and its eased value for the lengths. */
     n: 0,
-    nShown: NaN,
+    nShown: Number.NaN,
     /** Eased amplitude, radians. */
-    amplitude: NaN,
+    amplitude: Number.NaN,
     /** Fit: reference px = offset + k * projected. */
     k: 1,
     ox: 0,
@@ -195,7 +197,7 @@ export function createPendulumRig() {
     barCount: 0,
     shadowCount: 0,
   };
-  let fittedN = NaN;
+  let fittedN = Number.NaN;
   let configured = false;
   let builtFinish = "";
 
@@ -305,7 +307,9 @@ export function createPendulumRig() {
       state.barRadius = Math.max(0.42 * state.radius, 4);
       state.barLength = spacing * n;
       state.longest = 0.85 * boxH;
-      for (let i = 0; i < n; i++) pivotX[i] = spacing * (i + 0.5 - n / 2);
+      for (let i = 0; i < n; i++) {
+        pivotX[i] = spacing * (i + 0.5 - n / 2);
+      }
 
       // The left rig is mirrored: its light comes from the frame's centre side, and
       // its yaw turns the backdrop the opposite way, so the shadows stay near the rig.
@@ -356,7 +360,7 @@ export function createPendulumRig() {
       state.key[2] = d / kl;
 
       configured = true;
-      fittedN = NaN;
+      fittedN = Number.NaN;
       builtFinish = "";
     },
 
@@ -366,11 +370,19 @@ export function createPendulumRig() {
       state.n = n;
       const target = clamp(p.amplitude, 0, MAX_AMPLITUDE) * DEG;
       const e = 1 - Math.exp(-Math.max(0, dt) * EASE_RATE);
-      if (Number.isNaN(state.nShown)) state.nShown = n;
-      else state.nShown += (n - state.nShown) * e;
-      if (Math.abs(state.nShown - n) < 1e-4) state.nShown = n;
-      if (Number.isNaN(state.amplitude)) state.amplitude = target;
-      else state.amplitude += (target - state.amplitude) * e;
+      if (Number.isNaN(state.nShown)) {
+        state.nShown = n;
+      } else {
+        state.nShown += (n - state.nShown) * e;
+      }
+      if (Math.abs(state.nShown - n) < 1e-4) {
+        state.nShown = n;
+      }
+      if (Number.isNaN(state.amplitude)) {
+        state.amplitude = target;
+      } else {
+        state.amplitude += (target - state.amplitude) * e;
+      }
       advanceClock(clock, dt, p.cycle, n);
       for (let i = 0; i < state.count; i++) {
         length[i] = state.longest * lengthRatio(i, state.nShown);
@@ -391,10 +403,16 @@ export function createPendulumRig() {
       bar: Float32Array,
       shadows: Float32Array,
     ): void {
-      if (!configured) throw new Error("Pendulum rig: configure before fill");
-      if (fittedN !== state.nShown) fit();
+      if (!configured) {
+        throw new Error("Pendulum rig: configure before fill");
+      }
+      if (fittedN !== state.nShown) {
+        fit();
+      }
       const f = resolveFinish(finish);
-      if (f !== builtFinish) buildTints(f);
+      if (f !== builtFinish) {
+        buildTints(f);
+      }
       const n = state.count;
       const k = state.k * scale;
       const ox = state.ox * scale;

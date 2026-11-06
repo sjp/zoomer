@@ -73,7 +73,7 @@ describe("swing", () => {
       swingState(t + eps, AMP, state);
       const after = [state[0], state[1]];
       // Every angle is (near) zero on both sides of the impact.
-      worst = Math.max(worst, ...before.map(Math.abs), ...after.map(Math.abs));
+      worst = Math.max(worst, ...before.map((v) => Math.abs(v)), ...after.map((v) => Math.abs(v)));
       // The arriving group (n - 1) stops, the other end leaves.
       const arriving = (n - 1) & 1;
       const leaving = n & 1;
@@ -100,8 +100,12 @@ describe("swing", () => {
     let moving = 0;
     for (let t = 0; t < 40; t += 0.013) {
       swingState(t, AMP, state);
-      if (state[0] !== 0 && state[1] !== 0) both++;
-      if (state[0] > 1e-3 || state[1] > 1e-3) moving++;
+      if (state[0] !== 0 && state[1] !== 0) {
+        both++;
+      }
+      if (state[0] > 1e-3 || state[1] > 1e-3) {
+        moving++;
+      }
     }
     expect(both).toBe(0);
     expect(moving).toBeGreaterThan(2500);
@@ -122,11 +126,17 @@ describe("swing", () => {
         let right = false;
         for (let i = 0; i < count; i++) {
           const a = ballAngle(i, count, lifted, state);
-          if (i < lifted && a !== 0) left = true;
-          else if (i >= count - lifted && a !== 0) right = true;
-          else if (Math.abs(a) > WOBBLE * AMP + 1e-12) bigMiddle++;
+          if (i < lifted && a !== 0) {
+            left = true;
+          } else if (i >= count - lifted && a !== 0) {
+            right = true;
+          } else if (Math.abs(a) > WOBBLE * AMP + 1e-12) {
+            bigMiddle++;
+          }
         }
-        if (left && right) leftAndRight++;
+        if (left && right) {
+          leftAndRight++;
+        }
       }
       expect([count, lifted, leftAndRight, bigMiddle]).toEqual([count, lifted, 0, 0]);
     }
@@ -138,8 +148,12 @@ describe("swing", () => {
     for (let t = 0; t < 4 * HALF_PERIOD; t += 0.05) {
       swingState(t, AMP, state);
       const a = ballAngle(1, 3, 2, state);
-      if (a < -0.05) leftSide++;
-      if (a > 0.05) rightSide++;
+      if (a < -0.05) {
+        leftSide++;
+      }
+      if (a > 0.05) {
+        rightSide++;
+      }
     }
     expect(leftSide).toBeGreaterThan(0);
     expect(rightSide).toBeGreaterThan(0);
@@ -186,8 +200,12 @@ describe("params", () => {
   });
 
   it("has a palette for every scene and finish, falling back for unknown ids", () => {
-    for (const o of SCENE_OPTIONS) expect(sceneOf(o.value)).toBe(SCENES[o.value]);
-    for (const o of FINISH_OPTIONS) expect(finishOf(o.value)).toBe(FINISHES[o.value]);
+    for (const o of SCENE_OPTIONS) {
+      expect(sceneOf(o.value)).toBe(SCENES[o.value]);
+    }
+    for (const o of FINISH_OPTIONS) {
+      expect(finishOf(o.value)).toBe(FINISHES[o.value]);
+    }
     expect(sceneOf("nope")).toBe(SCENES.studio);
     expect(finishOf("toString")).toBe(FINISHES.chrome);
   });

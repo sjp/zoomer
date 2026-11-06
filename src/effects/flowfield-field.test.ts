@@ -79,7 +79,9 @@ describe("createFlowField", () => {
     // Paused time finishes building the next slice at most once, then stops.
     field.update(fn, X0, Y0, X1, Y1, 2);
     const settled = state.calls;
-    for (let i = 0; i < 10; i++) field.update(fn, X0, Y0, X1, Y1, 2);
+    for (let i = 0; i < 10; i++) {
+      field.update(fn, X0, Y0, X1, Y1, 2);
+    }
     expect(state.calls).toBe(settled);
   });
 

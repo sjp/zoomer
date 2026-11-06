@@ -52,9 +52,13 @@ describe("duneShape", () => {
       max = Math.max(max, v);
       // Change in slope across one step: the sharp crest flips it at once.
       const jump = Math.abs(duneShape(u + d, s) - 2 * v + duneShape(u - d, s)) / d;
-      if (u > 0.4 && u < 0.9) maxJump = Math.max(maxJump, jump);
+      if (u > 0.4 && u < 0.9) {
+        maxJump = Math.max(maxJump, jump);
+      }
       const sharp = Math.abs(duneShape(u + d) - 2 * duneShape(u) + duneShape(u - d)) / d;
-      if (u > 0.4 && u < 0.9) sharpJump = Math.max(sharpJump, sharp);
+      if (u > 0.4 && u < 0.9) {
+        sharpJump = Math.max(sharpJump, sharp);
+      }
     }
     expect(max).toBeCloseTo(1, 6);
     expect(maxJump).toBeLessThan(0.05);
@@ -77,7 +81,7 @@ describe("fillRidgeTable", () => {
     fillRidgeTable(b, 4, 16 / 9, 1, scratch);
     expect(b).toEqual(a);
     expect(buildTable(4, 16 / 9, 2)).not.toEqual(a);
-    expect(a.every(Number.isFinite)).toBe(true);
+    expect(a.every((v) => Number.isFinite(v))).toBe(true);
   });
 
   it.each([3, 4, 5])("keeps %i ridges ordered, receding toward the horizon", (count) => {
@@ -131,16 +135,22 @@ describe("crest softness beyond the smooth min", () => {
     const n = 400;
     const h = new Float64Array(n);
     const tmp = new Float64Array(n);
-    for (let i = 0; i < n; i++) h[i] = i % 50 < 25 ? 0 : 1;
+    for (let i = 0; i < n; i++) {
+      h[i] = i % 50 < 25 ? 0 : 1;
+    }
     blurProfile(h, tmp, 6);
     expect(Math.min(...h)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...h)).toBeLessThanOrEqual(1);
     // A step becomes a ramp several samples wide.
     expect(h[25]).toBeGreaterThan(0.2);
     expect(h[25]).toBeLessThan(0.8);
-    for (let i = 0; i < n; i++) h[i] = 0.01 * i;
+    for (let i = 0; i < n; i++) {
+      h[i] = 0.01 * i;
+    }
     blurProfile(h, tmp, 6);
-    for (let i = 30; i < n - 30; i++) expect(h[i]).toBeCloseTo(0.01 * i, 9);
+    for (let i = 30; i < n - 30; i++) {
+      expect(h[i]).toBeCloseTo(0.01 * i, 9);
+    }
   });
 
   it("keeps the ridges in range and turns the crests more gradually at the top of the slider", () => {
@@ -180,10 +190,15 @@ describe("horizonAngles", () => {
     const right = new Float64Array(n).fill(-Math.PI / 2);
     for (let j = 0; j < n; j++) {
       for (let k = 0; k < n; k++) {
-        if (k === j) continue;
+        if (k === j) {
+          continue;
+        }
         const a = Math.atan2(h[k] - h[j], Math.abs(k - j) * dx);
-        if (k < j) left[j] = Math.max(left[j], a);
-        else right[j] = Math.max(right[j], a);
+        if (k < j) {
+          left[j] = Math.max(left[j], a);
+        } else {
+          right[j] = Math.max(right[j], a);
+        }
       }
     }
     return { left, right };
@@ -214,8 +229,12 @@ describe("horizonAngles", () => {
     let open = 0;
     for (let j = 0; j < TABLE_COLUMNS; j++) {
       const hz = t[j * TABLE_CHANNELS + 2];
-      if (hz > 0.3) shadowed++;
-      if (hz < 0.1) open++;
+      if (hz > 0.3) {
+        shadowed++;
+      }
+      if (hz < 0.1) {
+        open++;
+      }
     }
     expect(shadowed).toBeGreaterThan(20);
     expect(open).toBeGreaterThan(20);
@@ -235,10 +254,14 @@ describe("fillLayout", () => {
         expect(out[o + 1]).toBeGreaterThan(0);
         expect(out[o + 2]).toBeGreaterThan(out[o + 2 - LAYOUT_FLOATS]);
       }
-      for (let i = 2; i < count; i++) expect(out[i * LAYOUT_FLOATS + 3]).toBe(0);
+      for (let i = 2; i < count; i++) {
+        expect(out[i * LAYOUT_FLOATS + 3]).toBe(0);
+      }
       expect(out.subarray(count * LAYOUT_FLOATS).every((v) => v === 0)).toBe(true);
       fillLayout(out, count, 0);
-      for (let i = 0; i < count; i++) expect(out[i * LAYOUT_FLOATS + 3]).toBe(0);
+      for (let i = 0; i < count; i++) {
+        expect(out[i * LAYOUT_FLOATS + 3]).toBe(0);
+      }
     }
   });
 });

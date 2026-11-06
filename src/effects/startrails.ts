@@ -43,7 +43,6 @@ import {
   END_TAPER,
   FG_COLUMNS,
   FOREGROUND_KINDS,
-  type ForegroundKind,
   HEAD_LENGTH,
   maxSectors,
   polePosition,
@@ -241,7 +240,7 @@ export const startrails = defineEffect(startrailsMeta, {
           beginFrame(gl, width, height);
           rot = advanceRotation(rot, dt, p.speed);
           const refWidth = width / scale;
-          const kind = FOREGROUND_KINDS.indexOf(p.foreground as ForegroundKind);
+          const kind = (FOREGROUND_KINDS as readonly string[]).indexOf(p.foreground);
           const seed = Math.floor(p.seed);
           if (seed !== lastSeed) {
             lastSeed = seed;

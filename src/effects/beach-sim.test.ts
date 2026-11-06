@@ -127,8 +127,9 @@ describe("createWaveScheduler", () => {
       expect(maxAge).toBeLessThan(LIFETIME);
       const minGap = Math.max(MIN_WAVE_TIME, Math.min(waveTime, MAX_WAVE_TIME)) * SPACING_MIN;
       let minSeen = Infinity;
-      for (let k = 1; k < starts.length; k++)
+      for (let k = 1; k < starts.length; k++) {
         minSeen = Math.min(minSeen, starts[k] - starts[k - 1]);
+      }
       expect(minSeen).toBeGreaterThanOrEqual(minGap - 1e-9);
       expect(starts.length).toBeGreaterThan(10);
     }
@@ -140,7 +141,9 @@ describe("createWaveScheduler", () => {
     const sched = createWaveScheduler(1);
     sched.step(0, 9, 0.1);
     expect(sched.count).toBe(1);
-    for (let i = 0; i < 500; i++) sched.step(0.1, 6, 0.1);
+    for (let i = 0; i < 500; i++) {
+      sched.step(0.1, 6, 0.1);
+    }
     for (let k = 1; k < sched.count; k++) {
       expect(sched.waves[k].start).toBeGreaterThan(sched.waves[k - 1].start);
     }
@@ -158,7 +161,9 @@ describe("createWaveScheduler", () => {
 describe("packWaves", () => {
   it("packs each live wave's front and offsets", () => {
     const sched = createWaveScheduler(2);
-    for (let i = 0; i < 300; i++) sched.step(0.1, 7, 0.12);
+    for (let i = 0; i < 300; i++) {
+      sched.step(0.1, 7, 0.12);
+    }
     const out = new Float32Array(MAX_WAVES * WAVE_FLOATS);
     const offsets = new Float32Array(MAX_WAVES * 2);
     const n = packWaves(sched, 1, out, offsets);
@@ -167,7 +172,9 @@ describe("packWaves", () => {
       const w = sched.waves[i];
       expect(out[i * WAVE_FLOATS]).toBeCloseTo(waveFront(sched.time - w.start, w.reach), 5);
       expect(offsets[i * 2]).toBeCloseTo(w.offX, 6);
-      expect(out.slice(i * WAVE_FLOATS, (i + 1) * WAVE_FLOATS).every(Number.isFinite)).toBe(true);
+      expect(
+        out.slice(i * WAVE_FLOATS, (i + 1) * WAVE_FLOATS).every((v) => Number.isFinite(v)),
+      ).toBe(true);
     }
   });
 });
@@ -189,7 +196,9 @@ describe("buildShapeTable", () => {
   it("fills four bounded channels", () => {
     const t = buildShapeTable(54);
     expect(t.length).toBe(SHAPE_COLUMNS * 4);
-    for (const v of t) expect(Math.abs(v)).toBeLessThanOrEqual(1);
+    for (const v of t) {
+      expect(Math.abs(v)).toBeLessThanOrEqual(1);
+    }
     expect(t.some((v) => Math.abs(v) > 0.1)).toBe(true);
   });
 });

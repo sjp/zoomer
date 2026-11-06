@@ -181,7 +181,9 @@ describe("mugDraft", () => {
     const n = 4000;
     for (let i = 0; i < n; i++) {
       const v = mugDraft(1, i * 0.1, 1) - DRAFT_LEAN;
-      if (Math.abs(v) < 0.25 * DRAFT_GUST) calm++;
+      if (Math.abs(v) < 0.25 * DRAFT_GUST) {
+        calm++;
+      }
       pos ||= v > 0.5 * DRAFT_GUST;
       neg ||= v < -0.5 * DRAFT_GUST;
     }
@@ -197,8 +199,12 @@ describe("mugDraft", () => {
 
 describe("palettes", () => {
   it("has a look for every drink and room option, with fallbacks", () => {
-    for (const o of DRINK_OPTIONS) expect(DRINKS[o.value]).toBeDefined();
-    for (const o of ROOM_OPTIONS) expect(ROOMS[o.value]).toBeDefined();
+    for (const o of DRINK_OPTIONS) {
+      expect(DRINKS[o.value]).toBeDefined();
+    }
+    for (const o of ROOM_OPTIONS) {
+      expect(ROOMS[o.value]).toBeDefined();
+    }
     expect(drinkFor("nope")).toBe(DRINKS.tea);
     expect(roomFor("nope")).toBe(ROOMS.wall);
     expect(roomFor("__proto__")).toBe(ROOMS.wall);

@@ -359,13 +359,17 @@ export const biolum = defineEffect(biolumMeta, {
           sizeKey.set(0, width);
           sizeKey.set(1, height);
           sizeKey.set(2, divisor);
-          if (sizeKey.take()) target.resize(width, height, divisor);
+          if (sizeKey.take()) {
+            target.resize(width, height, divisor);
+          }
 
           const interval = p.interval;
           if (p.seed !== seed) {
             seed = p.seed;
             sched.reset(seed);
-            for (let t = 0; t < PRIME_SECONDS; t += PRIME_STEP) sched.step(PRIME_STEP, interval);
+            for (let t = 0; t < PRIME_SECONDS; t += PRIME_STEP) {
+              sched.step(PRIME_STEP, interval);
+            }
           }
           sched.step(dt, interval);
           const count = packWaves(sched, aspect, waveData);

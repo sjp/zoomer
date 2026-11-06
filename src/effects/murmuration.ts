@@ -364,7 +364,9 @@ export const murmuration = defineEffect(murmurationMeta, {
       let gridW = 0;
       let gridH = 0;
       const deleteTargets = () => {
-        for (const t of targets) t.dispose();
+        for (const t of targets) {
+          t.dispose();
+        }
         targets = [];
       };
       scope.defer(deleteTargets);
@@ -415,7 +417,9 @@ export const murmuration = defineEffect(murmurationMeta, {
             seeded = true;
           }
           const [w, h] = gridSize(aspect);
-          if (w !== gridW || h !== gridH) regrid(w, h);
+          if (w !== gridW || h !== gridH) {
+            regrid(w, h);
+          }
           birdCounts(p.birds, p.quality, counts);
           const skyColors = skyFor(p.sky);
 

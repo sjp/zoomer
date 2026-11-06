@@ -97,7 +97,9 @@ describe("createWindowState", () => {
     s.reset(4000, 1, 0.3);
     expect(s.litCount).toBe(1200);
     let counted = 0;
-    for (let i = 0; i < 4000; i++) counted += s.isLit(i) ? 1 : 0;
+    for (let i = 0; i < 4000; i++) {
+      counted += s.isLit(i) ? 1 : 0;
+    }
     expect(counted).toBe(1200);
     s.setLit(0);
     expect(s.litCount).toBe(0);
@@ -114,8 +116,9 @@ describe("createWindowState", () => {
       for (let t = 0; t < 3000; t += 1 / 30) {
         s.step(1 / 30, 2);
         const err = Math.abs(litFraction(s) - target);
-        if (!(err < 0.002) && off.length < 10)
+        if (!(err < 0.002) && off.length < 10) {
           off.push(`t ${String(t)}: lit ${String(litFraction(s))}`);
+        }
       }
       expect(off, `target ${String(target)}`).toEqual([]);
     }
@@ -129,7 +132,9 @@ describe("createWindowState", () => {
       s.step(1 / 60, 0.5);
       for (let n = 0; n < s.dirtyCount; n++) {
         // A fade start has a slot; a settle has none.
-        if (s.data[s.dirty[n] * 4 + 3] !== 0) toggles++;
+        if (s.data[s.dirty[n] * 4 + 3] !== 0) {
+          toggles++;
+        }
       }
     }
     expect(toggles).toBeGreaterThan(250);
@@ -140,7 +145,9 @@ describe("createWindowState", () => {
     for (let t = 0; t < 60; t += 1 / 60) {
       s.step(1 / 60, MAX_TOGGLE_RATE);
       for (let n = 0; n < s.dirtyCount; n++) {
-        if (s.data[s.dirty[n] * 4 + 3] !== 0) toggles++;
+        if (s.data[s.dirty[n] * 4 + 3] !== 0) {
+          toggles++;
+        }
       }
     }
     expect(toggles).toBeGreaterThan(MAX_TOGGLE_RATE * 60 * 0.85);
@@ -159,7 +166,9 @@ describe("createWindowState", () => {
     for (let t = 0; t < 30 && window < 0; t += 1 / 60) {
       s.step(1 / 60, 2);
       for (let n = 0; n < s.dirtyCount; n++) {
-        if (s.data[s.dirty[n] * 4 + 3] !== 0) window = s.dirty[n];
+        if (s.data[s.dirty[n] * 4 + 3] !== 0) {
+          window = s.dirty[n];
+        }
       }
     }
     expect(window).toBeGreaterThanOrEqual(0);
@@ -221,7 +230,9 @@ describe("lights", () => {
         start = t;
         heights.push(plane.y);
       }
-      if (!plane.active && wasActive) durations.push(t - start);
+      if (!plane.active && wasActive) {
+        durations.push(t - start);
+      }
       wasActive = plane.active;
     }
     expect(Math.max(...heights)).toBeLessThan(0.35 * REF_HEIGHT);

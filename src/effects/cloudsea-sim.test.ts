@@ -112,7 +112,9 @@ describe("cycle", () => {
   });
 
   it("inverts on the brightening half", () => {
-    for (let p = 0; p <= 0.5; p += 0.05) expect(cyclePhaseFor(cycleHour(p))).toBeCloseTo(p, 6);
+    for (let p = 0; p <= 0.5; p += 0.05) {
+      expect(cyclePhaseFor(cycleHour(p))).toBeCloseTo(p, 6);
+    }
     expect(cyclePhaseFor(0)).toBe(0);
     expect(cyclePhaseFor(24)).toBeCloseTo(0.5);
   });
@@ -125,7 +127,9 @@ describe("createDawnClock", () => {
     const first = clock.step(1 / 60, "golden", 8);
     expect(first).toBeGreaterThan(DAWN_HOURS.sunrise);
     expect(first - DAWN_HOURS.sunrise).toBeLessThan(0.01);
-    for (let i = 0; i < 600; i++) clock.step(1 / 60, "golden", 8);
+    for (let i = 0; i < 600; i++) {
+      clock.step(1 / 60, "golden", 8);
+    }
     expect(clock.hour).toBe(DAWN_HOURS.golden);
   });
 
@@ -135,7 +139,9 @@ describe("createDawnClock", () => {
     const h1 = clock.step(1 / 60, "cycle", 2);
     expect(Math.abs(h1 - h0)).toBeLessThan(0.01);
     // Back to the same hour one full loop (two minutes) later.
-    for (let i = 0; i < 120 * 60; i++) clock.step(1 / 60, "cycle", 2);
+    for (let i = 0; i < 120 * 60; i++) {
+      clock.step(1 / 60, "cycle", 2);
+    }
     expect(clock.hour).toBeCloseTo(h1, 3);
   });
 
@@ -268,7 +274,9 @@ describe("peaks", () => {
       expect(Math.abs(table[column(p.x) * PEAK_FLOATS + 1])).toBeLessThan(0.01);
     }
     fillPeakTable(table, [], 16 / 9);
-    for (let c = 0; c < PEAK_COLUMNS; c++) expect(table[c * PEAK_FLOATS]).toBe(none);
+    for (let c = 0; c < PEAK_COLUMNS; c++) {
+      expect(table[c * PEAK_FLOATS]).toBe(none);
+    }
   });
 
   it("fades the side bands out before the centre third", () => {

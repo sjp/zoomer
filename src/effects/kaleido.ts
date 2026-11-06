@@ -189,7 +189,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
       const batch = scope.own(
         createSpriteBatch(gl, MAX_CHIPS, INSTANCE_ATTRIBUTES, [QUAD], { rotation: true }),
       );
-      if (batch.stride !== INSTANCE_STRIDE) throw new Error("kaleido: instance layout mismatch");
+      if (batch.stride !== INSTANCE_STRIDE) {
+        throw new Error("kaleido: instance layout mismatch");
+      }
       const chipProgram = scope.add(
         createProgram(gl, chipVertex(batch.spinLocation), CHIP_FRAGMENT),
         (p) => {
@@ -215,7 +217,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
       gl.useProgram(program);
       u.i1("uSource", 0);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const maxSize = Math.max(1, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number);
+      // A number, or null once the context is lost (which Math.max treated as 0).
+      const maxTextureSize: unknown = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      const maxSize = Math.max(1, typeof maxTextureSize === "number" ? maxTextureSize : 0);
 
       let target: RenderTarget | null = null;
       scope.defer(() => {
@@ -246,7 +250,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
           sim = createKaleido(segments, s);
           dirty = true;
         }
-        if (target && segments === layoutSegments && radiusPx === layoutRadius) return;
+        if (target && segments === layoutSegments && radiusPx === layoutRadius) {
+          return;
+        }
         layoutSegments = segments;
         layoutRadius = radiusPx;
         const l = sourceLayout(wedgeAngle(segments), radiusPx, maxSize);
@@ -255,7 +261,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
           target?.dispose();
           target = null;
           target = createRenderTarget(gl, l.width, l.height, gl.RGBA8);
-          if (!target) throw new Error("kaleido: RGBA8 render target unavailable");
+          if (!target) {
+            throw new Error("kaleido: RGBA8 render target unavailable");
+          }
         }
         dirty = true;
       }
@@ -274,7 +282,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
           const s = sim;
           const l = layout;
           const t = target;
-          if (!s || !l || !t) throw new Error("kaleido: ensure left no sim, layout or target");
+          if (!s || !l || !t) {
+            throw new Error("kaleido: ensure left no sim, layout or target");
+          }
           const pal = paletteData(p.palette);
           if (pal !== lastPalette) {
             lastPalette = pal;

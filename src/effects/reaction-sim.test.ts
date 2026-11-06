@@ -92,7 +92,9 @@ describe("presets", () => {
         let cells = 0;
         let max = 0;
         for (const v of b) {
-          if (v > 0.1) cells++;
+          if (v > 0.1) {
+            cells++;
+          }
           max = Math.max(max, v);
         }
         // Alive (not decayed to the blank state) and spread well past the 36-cell seed.
@@ -112,7 +114,9 @@ describe("drift path", () => {
     driftedFeedKill(p, 1, 0, a);
     let phase = 0;
     const dt = 1 / 60;
-    for (let t = 0; t < DRIFT_PERIOD * 60; t++) phase = advanceDrift(phase, dt);
+    for (let t = 0; t < DRIFT_PERIOD * 60; t++) {
+      phase = advanceDrift(phase, dt);
+    }
     driftedFeedKill(p, 1, phase, b);
     expect(b[0]).toBeCloseTo(a[0], 6);
     expect(b[1]).toBeCloseTo(a[1], 6);
@@ -147,7 +151,9 @@ describe("takeSteps", () => {
     const clock: StepClock = { acc: 0 };
     let total = 0;
     // 100 steps/s at 120 fps is 0.8333 steps per frame.
-    for (let i = 0; i < 120; i++) total += takeSteps(clock, 100, 1 / 120, 16);
+    for (let i = 0; i < 120; i++) {
+      total += takeSteps(clock, 100, 1 / 120, 16);
+    }
     expect(total).toBeGreaterThanOrEqual(99);
     expect(total).toBeLessThanOrEqual(100);
     expect(clock.acc).toBeGreaterThanOrEqual(0);
@@ -259,21 +265,31 @@ describe("life cycle", () => {
     const c = createCycle();
     const run = (steps: number, dt = 0) => {
       let reseed = false;
-      for (let i = 0; i < steps; i += 10) reseed = advanceCycle(c, 10, dt, W, 3, true) || reseed;
+      for (let i = 0; i < steps; i += 10) {
+        reseed = advanceCycle(c, 10, dt, W, 3, true) || reseed;
+      }
       return reseed;
     };
     expect(cycleFront(c, W)).toBeLessThan(-FRONT_BAND);
     // Growth is capped in seconds of running simulation; paused time doesn't count.
-    for (let i = 0; i < 1000; i++) advanceCycle(c, 0, 1, W, 3, true);
+    for (let i = 0; i < 1000; i++) {
+      advanceCycle(c, 0, 1, W, 3, true);
+    }
     expect(c.phase).toBe("grow");
-    for (let i = 0; i < GROW_FALLBACK_SECONDS - 1; i++) advanceCycle(c, 1, 1, W, 3, true);
+    for (let i = 0; i < GROW_FALLBACK_SECONDS - 1; i++) {
+      advanceCycle(c, 1, 1, W, 3, true);
+    }
     expect(c.phase).toBe("grow");
     advanceCycle(c, 1, 1, W, 3, true);
     expect(c.phase).toBe("hold");
     // The hold counts seconds, but only while stepping.
-    for (let i = 0; i < 100; i++) advanceCycle(c, 0, 1, W, 3, true);
+    for (let i = 0; i < 100; i++) {
+      advanceCycle(c, 0, 1, W, 3, true);
+    }
     expect(c.phase).toBe("hold");
-    for (let i = 0; i < 31; i++) advanceCycle(c, 1, 0.1, W, 3, true);
+    for (let i = 0; i < 31; i++) {
+      advanceCycle(c, 1, 0.1, W, 3, true);
+    }
     expect(c.phase).toBe("retreat");
     // The front sweeps out from the centre, past the edges.
     let prev = cycleFront(c, W);
@@ -295,7 +311,9 @@ describe("life cycle", () => {
 
   it("stays put when regrowing is off", () => {
     const c = createCycle();
-    for (let i = 0; i < 1000; i++) advanceCycle(c, 1000, 1, W, 0, false);
+    for (let i = 0; i < 1000; i++) {
+      advanceCycle(c, 1000, 1, W, 0, false);
+    }
     expect(c.phase).toBe("grow");
     expect(cycleFront(c, W)).toBeLessThan(-FRONT_BAND);
   });
@@ -304,7 +322,9 @@ describe("life cycle", () => {
     const c = createCycle();
     const st = createStats();
     const sample = (cov: number, maxB = 0.4) => {
-      for (let i = 0; i < SAMPLE_STEPS; i++) advanceCycle(c, 1, 0, W, 5, true);
+      for (let i = 0; i < SAMPLE_STEPS; i++) {
+        advanceCycle(c, 1, 0, W, 5, true);
+      }
       expect(wantsSample(c)).toBe(true);
       st.tiles.fill(cov);
       st.coverage = cov;
@@ -312,29 +332,41 @@ describe("life cycle", () => {
       return sampleCycle(c, st, true);
     };
     // Growing: coverage climbs fast.
-    for (let k = 0; k < 10; k++) expect(sample(0.05 * k + 0.05)).toBe(false);
+    for (let k = 0; k < 10; k++) {
+      expect(sample(0.05 * k + 0.05)).toBe(false);
+    }
     expect(c.phase).toBe("grow");
     // A few clusters still growing keep it growing...
     for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS; k++) {
-      for (let i = 0; i < SAMPLE_STEPS; i++) advanceCycle(c, 1, 0, W, 5, true);
+      for (let i = 0; i < SAMPLE_STEPS; i++) {
+        advanceCycle(c, 1, 0, W, 5, true);
+      }
       st.tiles.fill(0.5);
-      for (let t = 0; t < 40; t++) st.tiles[t * 25] = 0.1 * k;
+      for (let t = 0; t < 40; t++) {
+        st.tiles[t * 25] = 0.1 * k;
+      }
       st.coverage = 0.5;
       sampleCycle(c, st, true);
     }
     expect(c.phase).toBe("grow");
     // ...but one noisy tile doesn't.
     for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS && c.phase === "grow"; k++) {
-      for (let i = 0; i < SAMPLE_STEPS; i++) advanceCycle(c, 1, 0, W, 5, true);
+      for (let i = 0; i < SAMPLE_STEPS; i++) {
+        advanceCycle(c, 1, 0, W, 5, true);
+      }
       st.tiles.fill(0.5);
       st.tiles[7] = k % 2;
       sampleCycle(c, st, true);
     }
     expect(c.phase).toBe("hold");
     restartCycle(c);
-    for (let k = 0; k < 10; k++) expect(sample(0.05 * k + 0.05)).toBe(false);
+    for (let k = 0; k < 10; k++) {
+      expect(sample(0.05 * k + 0.05)).toBe(false);
+    }
     // Settled: the same coverage everywhere.
-    for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS && c.phase === "grow"; k++) sample(0.5);
+    for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS && c.phase === "grow"; k++) {
+      sample(0.5);
+    }
     expect(c.phase).toBe("hold");
     expect(wantsSample(c)).toBe(false);
 
@@ -397,7 +429,9 @@ describe("life cycle", () => {
           for (let y = j * ty; y < Math.min(h, (j + 1) * ty); y++) {
             for (let x = i * tx; x < Math.min(w, (i + 1) * tx); x++) {
               cells++;
-              if (b[y * w + x] > COVER_B) lit++;
+              if (b[y * w + x] > COVER_B) {
+                lit++;
+              }
               max = Math.max(max, b[y * w + x]);
             }
           }

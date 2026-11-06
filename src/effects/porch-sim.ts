@@ -64,7 +64,9 @@ export function coneMask(g: LampGeometry, x: number, y: number): number {
   const dx = x - g.x;
   const dy = y - g.y;
   const along = dx * g.ax + dy * g.ay;
-  if (along < 0) return 0;
+  if (along < 0) {
+    return 0;
+  }
   const perp = Math.abs(dx * g.ay - dy * g.ax);
   const r = perp / Math.max(along * CONE_TAN, 1e-3);
   return 1 - smoothstep(CONE_CORE, 1, r);
@@ -256,7 +258,11 @@ export function spawnSplash(s: Splashes, u: number, y: number, seed: number): vo
 }
 
 export function stepSplashes(s: Splashes, dt: number): void {
-  for (let i = 0; i < s.max; i++) if (s.age[i] < SPLASH_LIFE) s.age[i] += dt;
+  for (let i = 0; i < s.max; i++) {
+    if (s.age[i] < SPLASH_LIFE) {
+      s.age[i] += dt;
+    }
+  }
 }
 
 /**

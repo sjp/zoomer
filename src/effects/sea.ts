@@ -314,7 +314,9 @@ export const sea = defineEffect(seaMeta, {
             landColor(sky, landRgb);
           }
           const glitter = clamp(p.glitter, 0, 1) * preset.intensity * GLITTER_GAIN;
-          for (let c = 0; c < 3; c++) lightColor[c] = preset.lightColor[c] * glitter;
+          for (let c = 0; c < 3; c++) {
+            lightColor[c] = preset.lightColor[c] * glitter;
+          }
 
           // Motion: swell phases and ripple drift, wrapped.
           advanceSwellPhases(phases, waves, dt);

@@ -16,7 +16,9 @@ describe("buildMipChain", () => {
   it("halves down to 1x1 and preserves the mean", () => {
     const size = 16;
     const data = new Float32Array(size * size);
-    for (let i = 0; i < data.length; i++) data[i] = ((i * 37) % 11) / 10;
+    for (let i = 0; i < data.length; i++) {
+      data[i] = ((i * 37) % 11) / 10;
+    }
     const levels = buildMipChain(data, size);
     expect(levels.map((l) => l.length)).toEqual([256, 64, 16, 4, 1]);
     expect(levels[0]).toBe(data);

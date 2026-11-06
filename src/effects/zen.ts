@@ -76,7 +76,7 @@ const SUN_ANGLE = 20;
 const GRAIN_PERIOD = 64;
 const GRAIN_SEED = 501;
 
-const vec3 = (v: readonly number[]) => `vec3(${v.map(glslFloat).join(", ")})`;
+const vec3 = (v: readonly number[]) => `vec3(${v.map((x) => glslFloat(x)).join(", ")})`;
 
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;

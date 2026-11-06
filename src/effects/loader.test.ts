@@ -22,9 +22,9 @@ const impl = (id: string): EffectDefinition =>
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (err: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
+  const promise = new Promise<T>((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
   });
   return { promise, resolve, reject };
 }
@@ -104,12 +104,17 @@ describe("createLatest", () => {
     const c = deferred<string>();
     const results: string[] = [];
     const errors: unknown[] = [];
-    for (const d of [a, b, c])
+    for (const d of [a, b, c]) {
       latest.run(
         d.promise,
-        (v) => results.push(v),
-        (e) => errors.push(e),
+        (v) => {
+          results.push(v);
+        },
+        (e) => {
+          errors.push(e);
+        },
       );
+    }
     c.resolve("c");
     a.resolve("a");
     b.reject(new Error("b"));
@@ -126,9 +131,13 @@ describe("createLatest", () => {
     latest.run(
       Promise.reject(failure),
       () => {},
-      (e) => errors.push(e),
+      (e) => {
+        errors.push(e);
+      },
     );
-    await new Promise((r) => setTimeout(r));
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
     expect(errors).toEqual([failure]);
   });
 
@@ -137,11 +146,15 @@ describe("createLatest", () => {
     const results: string[] = [];
     latest.run(
       Promise.resolve("a"),
-      (v) => results.push(v),
+      (v) => {
+        results.push(v);
+      },
       () => {},
     );
     latest.cancel();
-    await new Promise((r) => setTimeout(r));
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
     expect(results).toEqual([]);
   });
 });

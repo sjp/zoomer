@@ -88,7 +88,9 @@ export function refractUp(
   const nz = nl;
   const ci = ix * nx + iy * ny + iz * nz;
   const t = fresnelTransmit(ci, eta);
-  if (!(t > 0)) return 0;
+  if (!(t > 0)) {
+    return 0;
+  }
   const ct = Math.sqrt(1 - eta * eta * (1 - ci * ci));
   const k = ct - eta * ci;
   out[0] = eta * ix + k * nx;
@@ -338,7 +340,9 @@ export function stepMotes(s: MoteState, dt: number, refWidth: number): void {
 
 /** Scales every mote's x by `k`, keeping motes in place relative to a resized width. */
 export function rescaleMotes(s: MoteState, k: number): void {
-  for (let i = 0; i < s.x.length; i++) s.x[i] *= k;
+  for (let i = 0; i < s.x.length; i++) {
+    s.x[i] *= k;
+  }
 }
 
 /**
@@ -398,7 +402,9 @@ export function leafReach(refWidth: number): number {
 export function leafAt(out: LeafPose, time: number, refWidth: number, seed = 0): boolean {
   const cycle = Math.floor(time / LEAF_CYCLE);
   const t = time - cycle * LEAF_CYCLE;
-  if (!(t < LEAF_CROSS)) return false;
+  if (!(t < LEAF_CROSS)) {
+    return false;
+  }
   const h1 = hash32((cycle * 3 + 1) ^ seed);
   const h2 = hash32((cycle * 3 + 2) ^ seed);
   const h3 = hash32((cycle * 3 + 3) ^ seed);

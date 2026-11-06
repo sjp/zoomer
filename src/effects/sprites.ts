@@ -19,14 +19,14 @@ export interface SpriteBatch {
   /** With `{ rotation: true }`: the spin attribute's location (`attributeSizes.length + 1`), else -1. */
   readonly spinLocation: number;
   /** Uploads the first `count` instances (at most `maxInstances`) from `data` to the GPU. */
-  upload(count: number): void;
+  upload: (count: number) => void;
   /**
    * Draws instances `first .. first + count - 1`, each as one triangle strip of
    * `shapes[shape]` (see `createSpriteBatch`). The range is clipped to the
    * batch's `maxInstances`.
    */
-  draw(first: number, count: number, shape?: number): void;
-  dispose(): void;
+  draw: (first: number, count: number, shape?: number) => void;
+  dispose: () => void;
 }
 
 /** Options for `createSpriteBatch`. */
@@ -74,7 +74,9 @@ export function polygonStrip(sides: number, angle = 0): number[] {
   const out = vertex(0);
   for (let lo = 1, hi = sides - 1; lo <= hi; lo++, hi--) {
     out.push(...vertex(lo));
-    if (hi !== lo) out.push(...vertex(hi));
+    if (hi !== lo) {
+      out.push(...vertex(hi));
+    }
   }
   return out;
 }
@@ -94,7 +96,8 @@ export function createSpriteBatch(
   options: SpriteBatchOptions = {},
 ): SpriteBatch {
   // The spin pair is just one more attribute, so a batch without it is unchanged.
-  const sizes = options.rotation ? [...attributeSizes, 2] : attributeSizes;
+  const rotation = options.rotation === true;
+  const sizes = rotation ? [...attributeSizes, 2] : attributeSizes;
   const stride = sizes.reduce((a, b) => a + b, 0);
   const strideBytes = stride * 4;
   const data = new Float32Array(maxInstances * stride);
@@ -150,12 +153,14 @@ export function createSpriteBatch(
   return {
     data,
     stride,
-    spinOffset: options.rotation ? stride - 2 : -1,
-    spinLocation: options.rotation ? sizes.length : -1,
+    spinOffset: rotation ? stride - 2 : -1,
+    spinLocation: rotation ? sizes.length : -1,
     upload(count) {
       // Past the buffer's end, bufferSubData raises INVALID_VALUE and uploads nothing.
       const n = Math.floor(Math.min(count, maxInstances));
-      if (!(n > 0)) return;
+      if (!(n > 0)) {
+        return;
+      }
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * stride);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -164,7 +169,9 @@ export function createSpriteBatch(
       first = Math.max(0, Math.floor(first));
       // Instances past the buffer's end would make the draw fail outright.
       count = Math.floor(Math.min(count, maxInstances - first));
-      if (!(count > 0)) return;
+      if (!(count > 0)) {
+        return;
+      }
       gl.bindVertexArray(vao);
       if (first !== pointedAt) {
         // WebGL2 has no base-instance draw, so offset the instance pointers instead.

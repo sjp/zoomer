@@ -323,7 +323,9 @@ export const ferro = defineEffect(ferroMeta, {
           const slabTop = maxHeight(field) * 1.001 + 1e-4;
           layoutPool(width, height, p.size, positionOf(p.position), layout);
           poolBounds(layout, slabTop, width, height, bounds);
-          if (bounds.w <= 0 || bounds.h <= 0) return;
+          if (bounds.w <= 0 || bounds.h <= 0) {
+            return;
+          }
 
           gl.enable(gl.SCISSOR_TEST);
           gl.scissor(bounds.x, bounds.y, bounds.w, bounds.h);

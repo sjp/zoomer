@@ -117,7 +117,9 @@ describe("drop scheduler", () => {
   it("refuses to spawn into a full house", () => {
     const rng = createRng(3);
     const state = createDropState();
-    for (let i = 0; i < MAX_PLUMES; i++) expect(spawnPlume(state, rng, 3)).not.toBeNull();
+    for (let i = 0; i < MAX_PLUMES; i++) {
+      expect(spawnPlume(state, rng, 3)).not.toBeNull();
+    }
     expect(spawnPlume(state, rng, 3)).toBeNull();
     expect(aliveCount(state)).toBe(MAX_PLUMES);
   });
@@ -127,7 +129,9 @@ describe("drop scheduler", () => {
     const state = createDropState();
     seedDrops(state, rng, 3);
     const timer = state.timer;
-    for (let i = 0; i < 100; i++) stepDrops(state, 0, 1, 3, rng);
+    for (let i = 0; i < 100; i++) {
+      stepDrops(state, 0, 1, 3, rng);
+    }
     expect(state.timer).toBe(timer);
     expect(state.spawned).toBe(1);
   });

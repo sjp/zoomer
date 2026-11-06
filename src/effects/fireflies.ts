@@ -39,7 +39,9 @@ const FULL_LEAN_SLOPE = Math.tan((24 * Math.PI) / 180);
  * ends of the pulse, so blinks fade in and out without a pop.
  */
 export function blink(phase: number, duty: number): number {
-  if (duty <= 0 || phase < 0 || phase >= duty) return 0;
+  if (duty <= 0 || phase < 0 || phase >= duty) {
+    return 0;
+  }
   const s = Math.sin((Math.PI * phase) / duty);
   return s * s;
 }
@@ -73,7 +75,9 @@ export function beamAcross(a: number): number {
 
 /** Along-beam profile: `v` is 0 at the top, 1 at the bottom; a gentle fade then a soft end. */
 export function beamAlong(v: number): number {
-  if (v < 0 || v > 1) return 0;
+  if (v < 0 || v > 1) {
+    return 0;
+  }
   return (1 - (1 - BEAM_TAIL) * v) * (1 - smoothstep(BEAM_END, 1, v));
 }
 
@@ -83,9 +87,13 @@ export function beamAlong(v: number): number {
  */
 export function beamMembership(x: number, y: number, b: Beam): number {
   const v = (y - b.y0) / (b.y1 - b.y0);
-  if (v < 0 || v > 1) return 0;
+  if (v < 0 || v > 1) {
+    return 0;
+  }
   const a = (x - (b.x0 + b.slope * y)) / b.halfWidth;
-  if (a <= -1 || a >= 1) return 0;
+  if (a <= -1 || a >= 1) {
+    return 0;
+  }
   return beamAcross(a) * beamAlong(v) * b.intensity;
 }
 
@@ -308,7 +316,9 @@ export const fireflies = defineEffect(firefliesMeta, {
         resize(v) {
           const newRefWidth = v.width / v.scale;
           const k = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_SPECKS; i++) xs[i] *= k;
+          for (let i = 0; i < MAX_SPECKS; i++) {
+            xs[i] *= k;
+          }
           ({ width, height, scale } = v);
           refWidth = newRefWidth;
         },
@@ -322,10 +332,16 @@ export const fireflies = defineEffect(firefliesMeta, {
           const outStep = dt / FADE_OUT;
           // Beams belong to the dust scene only; a scene change is a hard cut.
           const beamTarget = dust ? clamp(Math.round(p.beams), 1, MAX_BEAMS) : 0;
-          if (!dust) beamLive = 0;
+          if (!dust) {
+            beamLive = 0;
+          }
           const nBeams = (beamLive = growLive(beamLife, beamLive, beamTarget));
-          if (dust) layoutBeams(MAX_BEAMS, p.beamAngle, refWidth, beamShapes);
-          for (let b = 0; b < nBeams; b++) stepLife(beamLife, b, beamTarget, fadeStep, outStep);
+          if (dust) {
+            layoutBeams(MAX_BEAMS, p.beamAngle, refWidth, beamShapes);
+          }
+          for (let b = 0; b < nBeams; b++) {
+            stepLife(beamLife, b, beamTarget, fadeStep, outStep);
+          }
           beamLive = trimLive(beamLife, beamLive, beamTarget);
           const color = dust ? lightRgb(p.lightColor) : glowRgb(p.glowColor);
           const cr = color[0];
@@ -355,7 +371,9 @@ export const fireflies = defineEffect(firefliesMeta, {
             ys[i] = y;
             // The margin shrinks with the size, so a wrap can land a speck on-screen:
             // fade it in at its new place.
-            if (x !== mx || y !== my) life[i] = 0;
+            if (x !== mx || y !== my) {
+              life[i] = 0;
+            }
             const l = stepLife(life, i, target, fadeStep, outStep);
 
             let level: number;
@@ -376,7 +394,9 @@ export const fireflies = defineEffect(firefliesMeta, {
               level = blink(ph, blinkDuty[i]);
             }
             const a = level * brightK[i] * p.brightness * l * l;
-            if (a <= 0.003) continue;
+            if (a <= 0.003) {
+              continue;
+            }
             const o = visible * stride;
             data[o] = x * scale;
             data[o + 1] = y * scale;

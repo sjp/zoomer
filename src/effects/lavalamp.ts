@@ -340,7 +340,7 @@ export const lavalamp = defineEffect(lavalampMeta, {
 
       let width = 1;
       let height = 1;
-      let seedKey = NaN;
+      let seedKey = Number.NaN;
       let blobs: Blob[] = [];
       /** Lamp seconds (scaled by speed), kept in float64; only derived values reach the GPU. */
       let time = 0;
@@ -409,10 +409,14 @@ export const lavalamp = defineEffect(lavalampMeta, {
           let fading = false;
           for (let i = 0; i < n; i++) {
             const before = blobLife[i];
-            if (stepLife(blobLife, i, target, fadeStep, fadeStep) !== before) fading = true;
+            if (stepLife(blobLife, i, target, fadeStep, fadeStep) !== before) {
+              fading = true;
+            }
           }
           live = trimLive(blobLife, live, target);
-          if (fading) blobInputs.invalidate();
+          if (fading) {
+            blobInputs.invalidate();
+          }
           const baseR = BASE_RADIUS * p.size * REF_H;
           blobInputs.set(0, time);
           blobInputs.set(1, n);
@@ -420,8 +424,12 @@ export const lavalamp = defineEffect(lavalampMeta, {
           blobInputs.set(3, lampW);
           blobInputs.set(4, p.seed);
           const blobsChanged = blobInputs.take();
-          if (blobsChanged) blobVersion++;
-          if (blobsChanged) fillBlobs(blobData, blobR2, blobs, n, time, baseR, lampW, blobLife);
+          if (blobsChanged) {
+            blobVersion++;
+          }
+          if (blobsChanged) {
+            fillBlobs(blobData, blobR2, blobs, n, time, baseR, lampW, blobLife);
+          }
 
           // Tile classification pass, into the mask texture.
           const tw = (width + TILE - 1) >> TILE_SHIFT;
@@ -430,7 +438,9 @@ export const lavalamp = defineEffect(lavalampMeta, {
             mask?.dispose();
             mask = null;
             mask = createRenderTarget(gl, tw, th, gl.R8, { filter: gl.NEAREST });
-            if (!mask) throw new Error("Lava lamp: R8 mask is not renderable");
+            if (!mask) {
+              throw new Error("Lava lamp: R8 mask is not renderable");
+            }
           }
           scaleX = lampW / Math.max(1, width);
           scaleY = REF_H / Math.max(1, height);

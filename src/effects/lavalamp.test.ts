@@ -47,8 +47,10 @@ describe("makeBlobs", () => {
     const xs = makeBlobs(3)
       .slice(0, 5)
       .map((b) => b.baseX)
-      .sort((a, b) => a - b);
-    for (let i = 1; i < xs.length; i++) expect(xs[i] - xs[i - 1]).toBeGreaterThan(0.05);
+      .toSorted((a, b) => a - b);
+    for (let i = 1; i < xs.length; i++) {
+      expect(xs[i] - xs[i - 1]).toBeGreaterThan(0.05);
+    }
   });
 });
 
@@ -170,7 +172,9 @@ describe("lava lamp tile bounds", () => {
         const cy = s.height - -s.data[i * 4 + 3] / s.data[i * 4 + 1] / s.scale[1];
         const tx = Math.floor(cx / TILE);
         const ty = Math.floor(cy / TILE);
-        if (tx >= 0 && tx < tw && ty >= 0 && ty < th) tiles.push([tx, ty]);
+        if (tx >= 0 && tx < tw && ty >= 0 && ty < th) {
+          tiles.push([tx, ty]);
+        }
       }
       for (const [tx, ty] of tiles) {
         const [fMin, fMax] = tileBounds(s, tx, ty);

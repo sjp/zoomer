@@ -16,8 +16,12 @@ export const FLASH_AT = 0.9;
  * each `cycleSeconds` after the first quarter.
  */
 export function wantsHyperspace(mode: string, cycleTime: number, cycleSeconds: number): boolean {
-  if (mode === "in") return true;
-  if (mode === "out") return false;
+  if (mode === "in") {
+    return true;
+  }
+  if (mode === "out") {
+    return false;
+  }
   const phase = (cycleTime % cycleSeconds) / cycleSeconds;
   return phase >= 0.25 && phase < 0.85;
 }
@@ -28,7 +32,7 @@ export interface Jump {
   /** Flash level, 1 at the moment of the jump fading to 0. */
   readonly flash: number;
   /** Advances by `dt` seconds, a jump taking `jumpSeconds` either way. */
-  step(dt: number, mode: string, jumpSeconds: number, cycleSeconds: number): void;
+  step: (dt: number, mode: string, jumpSeconds: number, cycleSeconds: number) => void;
 }
 
 export function createJump(): Jump {
@@ -46,10 +50,14 @@ export function createJump(): Jump {
       cycleTime += dt;
       const target = wantsHyperspace(mode, cycleTime, cycleSeconds) ? 1 : 0;
       // The first frame starts in its target state rather than jumping into it.
-      if (progress < 0) progress = target;
+      if (progress < 0) {
+        progress = target;
+      }
       const before = progress;
       progress = approach(progress, target, dt / jumpSeconds);
-      if (before < FLASH_AT && progress >= FLASH_AT) flash = 1;
+      if (before < FLASH_AT && progress >= FLASH_AT) {
+        flash = 1;
+      }
       flash = Math.max(0, flash - dt / FLASH_SECONDS);
     },
   };

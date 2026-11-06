@@ -277,7 +277,7 @@ export const flowfield = defineEffect(flowfieldMeta, {
       let frameNo = 0;
       /** Particles simulated: the count plus any still fading out after it dropped. */
       let active = 0;
-      let seedKey = NaN;
+      let seedKey = Number.NaN;
       let noise3 = createNoise(1).noise3;
       const field = createFlowField();
       let rng = createRng(1);
@@ -288,7 +288,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
       const background = unitRgbMemo();
 
       const deleteTargets = () => {
-        for (const t of targets) t.dispose();
+        for (const t of targets) {
+          t.dispose();
+        }
         targets = [];
       };
       scope.defer(deleteTargets);
@@ -304,7 +306,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
        * MAX_TEXTURE_SIZE or out of memory doesn't reallocate every frame.
        */
       const ensureTargets = () => {
-        if (targetW === width && targetH === height) return;
+        if (targetW === width && targetH === height) {
+          return;
+        }
         deleteTargets();
         for (let i = 0; i < 2; i++) {
           let t = makeTarget(use10);
@@ -315,8 +319,10 @@ export const flowfield = defineEffect(flowfieldMeta, {
             i = -1;
             continue;
           }
-          if (!t) t = makeTarget(false);
-          if (!t) break;
+          t ??= makeTarget(false);
+          if (!t) {
+            break;
+          }
           targets.push(t);
         }
         if (targets.length < 2) {
@@ -346,7 +352,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
       const reseed = (seed: number, count: number) => {
         noise3 = createNoise(seed * 131 + 17).noise3;
         rng = createRng(seed * 7907 + 3);
-        for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
+        for (let i = 0; i < MAX_PARTICLES; i++) {
+          spawn(i, true);
+        }
         active = Math.min(Math.round(count), MAX_PARTICLES);
         countFade.fill(1, 0, active);
         lightMode = undefined;
@@ -358,7 +366,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
           width = Math.max(1, Math.round(width));
           height = Math.max(1, Math.round(height));
           // Resizing clears the layer; respawn so no trail spans the old and new size.
-          for (let i = 0; i < MAX_PARTICLES; i++) spawn(i, true);
+          for (let i = 0; i < MAX_PARTICLES; i++) {
+            spawn(i, true);
+          }
           lightMode = undefined;
         },
         frame(dt, p) {
@@ -368,7 +378,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
             reseed(p.seed, p.count);
           }
           ensureTargets();
-          if (targets.length < 2) return;
+          if (targets.length < 2) {
+            return;
+          }
 
           gl.activeTexture(gl.TEXTURE0);
 
@@ -402,7 +414,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
 
           // Newly enabled particles start fresh so they fade in where they appear.
           const target = Math.min(Math.round(p.count), MAX_PARTICLES);
-          for (let i = active; i < target; i++) spawn(i, false);
+          for (let i = active; i < target; i++) {
+            spawn(i, false);
+          }
           const n = (active = growLive(countFade, active, target));
           const fadeStep = dt / FADE_OUT;
 
@@ -449,7 +463,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
             const life = lives[i];
             const f =
               smoothstep(0, LIFE_FADE, age) * smoothstep(life, life - LIFE_FADE, age) * kept;
-            if (f <= 0 || step === 0) continue;
+            if (f <= 0 || step === 0) {
+              continue;
+            }
             const o = count * STRIDE;
             instances[o] = x;
             instances[o + 1] = y;
@@ -488,8 +504,11 @@ export const flowfield = defineEffect(flowfieldMeta, {
           gl.useProgram(compProgram);
           gl.bindTexture(gl.TEXTURE_2D, dst.texture);
           comp.v3("uBackground", bg);
-          if (light) comp.f3("uLayerScale", -bg[0], -bg[1], -bg[2]);
-          else comp.f3("uLayerScale", 1 - bg[0], 1 - bg[1], 1 - bg[2]);
+          if (light) {
+            comp.f3("uLayerScale", -bg[0], -bg[1], -bg[2]);
+          } else {
+            comp.f3("uLayerScale", 1 - bg[0], 1 - bg[1], 1 - bg[2]);
+          }
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },

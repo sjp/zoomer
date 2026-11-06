@@ -64,9 +64,15 @@ describe("koi steering", () => {
           const x = s.x[i];
           const y = s.y[i];
           const m = HARD_MARGIN;
-          if (x < -m || x > REF_WIDTH + m || y < -m || y > 1080 + m) outside++;
-          if (x < 0 || x > REF_WIDTH || y < 0 || y > 1080) offFrame++;
-          if (x > REF_WIDTH / 3 && x < (REF_WIDTH * 2) / 3) centre++;
+          if (x < -m || x > REF_WIDTH + m || y < -m || y > 1080 + m) {
+            outside++;
+          }
+          if (x < 0 || x > REF_WIDTH || y < 0 || y > 1080) {
+            offFrame++;
+          }
+          if (x > REF_WIDTH / 3 && x < (REF_WIDTH * 2) / 3) {
+            centre++;
+          }
         }
       },
       1 / 15,
@@ -86,9 +92,13 @@ describe("koi steering", () => {
     const f: FishFrame = { refWidth: REF_WIDTH, count: 15, size: 130, speed: 0 };
     const noise = createNoise(1);
     const rng = createRng(2);
-    for (let k = 0; k < 20; k++) stepFish(fish, 1 / 60, f, noise, rng);
+    for (let k = 0; k < 20; k++) {
+      stepFish(fish, 1 / 60, f, noise, rng);
+    }
     f.speed = 1;
-    for (let k = 0; k < 20; k++) stepFish(fish, 1 / 60, f, noise, rng);
+    for (let k = 0; k < 20; k++) {
+      stepFish(fish, 1 / 60, f, noise, rng);
+    }
     const out = new Float32Array(15 * VERTS_PER_FISH * VERTEX_FLOATS);
     const scratch = createStripScratch();
     for (let i = 0; i < 15; i++) {
@@ -104,7 +114,7 @@ describe("koi steering", () => {
       );
     }
     for (const arr of [fish.x, fish.y, fish.heading, fish.speed, fish.spine, out]) {
-      expect(arr.every(Number.isFinite)).toBe(true);
+      expect(arr.every((v) => Number.isFinite(v))).toBe(true);
     }
   });
 
@@ -133,7 +143,9 @@ describe("koi steering", () => {
     expect(fish.live).toBe(10);
     expect(fish.life[9]).toBeLessThan(0.1);
     f.count = 3;
-    for (let k = 0; k < 120; k++) stepFish(fish, 1 / 60, f, createNoise(1), createRng(1));
+    for (let k = 0; k < 120; k++) {
+      stepFish(fish, 1 / 60, f, createNoise(1), createRng(1));
+    }
     expect(fish.live).toBe(3);
   });
 });
@@ -239,7 +251,7 @@ describe("koi ripples", () => {
     r.time += RIPPLE_LIFE;
     expect(rippleAge(r, 0)).toBe(-1);
     writeRipples(r, 2, 1, out);
-    expect(Array.from(out)).toEqual(new Array(16).fill(0));
+    expect(Array.from(out)).toEqual(Array.from({ length: 16 }, () => 0));
   });
 
   it("are spawned by fish near the surface", () => {
@@ -248,7 +260,12 @@ describe("koi ripples", () => {
     const noise = createNoise(3);
     const rng = createRng(4);
     let spawned = 0;
-    for (let k = 0; k < 30 * 120; k++) stepFish(fish, 1 / 30, f, noise, rng, () => spawned++);
+    const onSurface = () => {
+      spawned++;
+    };
+    for (let k = 0; k < 30 * 120; k++) {
+      stepFish(fish, 1 / 30, f, noise, rng, onSurface);
+    }
     expect(spawned).toBeGreaterThan(5);
     // Now and then, not constantly: under one a second for the whole pond.
     expect(spawned).toBeLessThan(120);
@@ -275,7 +292,9 @@ describe("lily pads", () => {
 
   it("drift within the padded frame and fade with the count", () => {
     const pads = createPads(20, REF_WIDTH);
-    for (let k = 0; k < 600; k++) stepPads(pads, 1 / 10, 8, REF_WIDTH);
+    for (let k = 0; k < 600; k++) {
+      stepPads(pads, 1 / 10, 8, REF_WIDTH);
+    }
     expect(pads.live).toBe(8);
     for (let i = 0; i < 8; i++) {
       const m = pads.r[i] * 1.6;

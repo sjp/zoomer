@@ -111,7 +111,9 @@ export function swellGradient(
 /** Upper bound of |swellHeight| at `scale`. */
 export function swellBound(waves: readonly SwellWave[], scale: number): number {
   let b = 0;
-  for (const w of waves) b += Math.abs(scale * w.amp);
+  for (const w of waves) {
+    b += Math.abs(scale * w.amp);
+  }
   return b;
 }
 
@@ -271,9 +273,14 @@ export const seaPreset = (time: string): SeaPreset => lookup(SEA_PRESETS, time, 
 
 /** Fills `out` with the sky for `preset`. */
 export function presetSky(preset: SeaPreset, out: SkyState): SkyState {
-  if (typeof preset.sky === "number") sampleSky(preset.sky / 24, out);
-  else sampleSky(0.5, out, preset.sky);
-  if (preset.glowStrength !== undefined) out.glowStrength = preset.glowStrength;
+  if (typeof preset.sky === "number") {
+    sampleSky(preset.sky / 24, out);
+  } else {
+    sampleSky(0.5, out, preset.sky);
+  }
+  if (preset.glowStrength !== undefined) {
+    out.glowStrength = preset.glowStrength;
+  }
   if (preset.glow) {
     out.glow[0] = preset.glow[0];
     out.glow[1] = preset.glow[1];
@@ -284,7 +291,9 @@ export function presetSky(preset: SeaPreset, out: SkyState): SkyState {
 
 /** The distant headland's silhouette colour: the horizon sky, darkened and slightly hazed. */
 export function landColor(sky: SkyState, out: Rgb): Rgb {
-  for (let c = 0; c < 3; c++) out[c] = sky.horizon[c] * 0.38 + sky.zenith[c] * 0.12;
+  for (let c = 0; c < 3; c++) {
+    out[c] = sky.horizon[c] * 0.38 + sky.zenith[c] * 0.12;
+  }
   return out;
 }
 

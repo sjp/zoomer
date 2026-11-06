@@ -54,7 +54,9 @@ describe("createDayClock", () => {
     clock.step(0, "cycle", 2, 0);
     // A 2-minute day: 24 s is a fifth of it.
     let phase = 0;
-    for (let i = 0; i < 240; i++) phase = clock.step(0.1, "cycle", 2, 0);
+    for (let i = 0; i < 240; i++) {
+      phase = clock.step(0.1, "cycle", 2, 0);
+    }
     expect(phase).toBeCloseTo(0.1, 9);
     expect(phase).toBeGreaterThanOrEqual(0);
     expect(phase).toBeLessThan(1);
@@ -79,12 +81,15 @@ describe("createDayClock", () => {
     expect(clock.step(0.016, "local", 10, 0)).toBe(0.5);
     expect(reads).toBe(1);
     let phase = 0.5;
-    for (let i = 0; i < 9; i++) phase = clock.step(0.1, "local", 10, 0);
+    for (let i = 0; i < 9; i++) {
+      phase = clock.step(0.1, "local", 10, 0);
+    }
     expect(reads).toBe(1);
     expect(phase).toBeCloseTo(0.5 + 0.9 / 86400, 12);
     wall = 0.6;
-    for (let t = 0; t < CLOCK_READ_INTERVAL + 0.2; t += 0.1)
+    for (let t = 0; t < CLOCK_READ_INTERVAL + 0.2; t += 0.1) {
       phase = clock.step(0.1, "local", 10, 0);
+    }
     expect(reads).toBe(2);
     expect(phase).toBeGreaterThanOrEqual(0.6);
   });
@@ -98,7 +103,9 @@ describe("createDayClock", () => {
     expect(phase).toBeCloseTo(0.05 / 86400, 9);
     wall = 1.5 / 86400;
     let next = phase;
-    for (let i = 0; i < 12; i++) next = clock.step(0.1, "local", 10, 0);
+    for (let i = 0; i < 12; i++) {
+      next = clock.step(0.1, "local", 10, 0);
+    }
     expect(next).toBeLessThan(0.001);
   });
 });
@@ -233,7 +240,9 @@ describe("buildHills", () => {
   };
   const mean = (out: Float32Array, l: number) => {
     let s = 0;
-    for (let c = 0; c < HILL_COLUMNS; c++) s += out[l * HILL_COLUMNS + c];
+    for (let c = 0; c < HILL_COLUMNS; c++) {
+      s += out[l * HILL_COLUMNS + c];
+    }
     return s / HILL_COLUMNS;
   };
 
@@ -282,7 +291,9 @@ describe("placeTrees", () => {
       const o = i * TREE_FLOATS;
       expect(trees[o + 1]).toBeCloseTo(hillHeightAt(out, 3, trees[o]), 6);
       expect(trees[o + 2]).toBeGreaterThan(trees[o + 3]);
-      if (Math.abs(trees[o] - 0.5) < 0.2) middle++;
+      if (Math.abs(trees[o] - 0.5) < 0.2) {
+        middle++;
+      }
     }
     expect(middle).toBeLessThan(n * 0.25);
     const again = new Float32Array(48 * TREE_FLOATS);

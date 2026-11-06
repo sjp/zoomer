@@ -32,7 +32,9 @@ describe("favourites", () => {
     const favourites = createFavourites(() => memoryStorage());
     const before = favourites.get();
     let calls = 0;
-    const unsubscribe = favourites.subscribe(() => calls++);
+    const unsubscribe = favourites.subscribe(() => {
+      calls++;
+    });
     favourites.toggle("warp");
     expect(favourites.get()).not.toBe(before);
     expect(before.has("warp")).toBe(false);

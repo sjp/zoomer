@@ -25,6 +25,8 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
     expect(EFFECT_CATEGORIES).toContain(entry.category);
     expect(EFFECT_COSTS).toContain(entry.cost);
     expect(entry.tags.length).toBeGreaterThan(0);
-    for (const tag of entry.tags) expect(tag).toMatch(/^[a-z0-9][a-z0-9 '-]*$/);
+    for (const tag of entry.tags) {
+      expect(tag).toMatch(/^[a-z0-9][a-z0-9 '-]*$/);
+    }
   });
 });

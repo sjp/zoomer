@@ -55,7 +55,7 @@ const LIGHT_STEP = 0.02;
 const SKY_DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
 
 const DAY = PRESETS.day;
-const vec3 = (c: Rgb) => `vec3(${c.map(glslFloat).join(", ")})`;
+const vec3 = (c: Rgb) => `vec3(${c.map((v) => glslFloat(v)).join(", ")})`;
 const lightLen = Math.hypot(DAY.lightX, DAY.lightY);
 /** Step towards the light in texture space, where x is squashed by STRETCH_X (as in `clouds.ts`). */
 const SUN_STEP_X = (DAY.lightX / lightLen) * STRETCH_X * LIGHT_STEP;
@@ -222,7 +222,9 @@ export const kite = defineEffect(kiteMeta, {
       const bu = createUniforms(gl, target.program, ["uAspect"]);
       const tu = createUniforms(gl, triProgram, ["uResolution"]);
       const batch = scope.own(createSpriteBatch(gl, MAX_TRIS, [4, 4, 4]));
-      if (batch.stride !== TRI_FLOATS) throw new Error("kite: instance layout mismatch");
+      if (batch.stride !== TRI_FLOATS) {
+        throw new Error("kite: instance layout mismatch");
+      }
       const backLines = scope.own(createStreakRenderer(gl, MAX_BACK_STREAKS, { blend: "alpha" }));
       const frontLines = scope.own(createStreakRenderer(gl, MAX_FRONT_STREAKS, { blend: "alpha" }));
 

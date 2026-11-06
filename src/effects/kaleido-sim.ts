@@ -162,7 +162,8 @@ export function paletteData(name: string): PaletteData {
       (c) => (chips.reduce((s, rgb) => s + rgb[c], 0) / chips.length) * p.opacity * MEAN_COVERAGE,
     );
     // Screen of the backlight and the average chip light, as the composite does.
-    const mean: Rgb = [0, 1, 2].map((c) => 1 - (1 - bg[c]) * (1 - avg[c])) as Rgb;
+    const screen = (c: number) => 1 - (1 - bg[c]) * (1 - avg[c]);
+    const mean: Rgb = [screen(0), screen(1), screen(2)];
     d = { bg, surround: hexToUnitRgb(p.surround), chips, opacity: p.opacity, mean };
     DATA.set(p, d);
   }
@@ -204,13 +205,13 @@ export interface KaleidoSim {
   /** Bounding radius of each chip, in units. */
   readonly bound: Float64Array;
   /** Advances by `dt` seconds of sim time (already scaled by speed). */
-  step(dt: number): void;
+  step: (dt: number) => void;
   /**
    * Writes every chip's instance (`INSTANCE_STRIDE` floats: centre, half extents,
    * colour and opacity, shape, then rotation and flip) with the given palette.
    * Returns the number of instances.
    */
-  write(data: Float32Array, pal: PaletteData): number;
+  write: (data: Float32Array, pal: PaletteData) => number;
 }
 
 /** Glass chips in the wedge for `segments` mirrored segments; deterministic per seed. */
@@ -275,7 +276,9 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
     const round = shape[i] === SHAPE_BEAD;
     tumble[i] = round ? 0 : rng() * TAU;
     tumbleRate[i] = round ? 0 : 0.05 + 0.15 * rng();
-    for (let k = 0; k < 4; k++) wander[i * 4 + k] = k < 2 ? 0.05 + 0.1 * rng() : rng() * TAU;
+    for (let k = 0; k < 4; k++) {
+      wander[i * 4 + k] = k < 2 ? 0.05 + 0.1 * rng() : rng() * TAU;
+    }
     confine(i);
   }
 
@@ -294,14 +297,19 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
     if (r > rMax) {
       r = rMax;
       hitRim = true;
-    } else if (r < rMin) r = rMin;
+    } else if (r < rMin) {
+      r = rMin;
+    }
     const aMin = Math.asin(Math.min(1, pad / r));
     let hitFirst = false;
     let hitSecond = false;
     // Measure from the bisector, so a point anywhere outside goes to the nearer mirror.
     let d = a - w / 2;
-    if (d > Math.PI) d -= TAU;
-    else if (d <= -Math.PI) d += TAU;
+    if (d > Math.PI) {
+      d -= TAU;
+    } else if (d <= -Math.PI) {
+      d += TAU;
+    }
     a = w / 2 + d;
     if (a < aMin) {
       a = aMin;
@@ -312,9 +320,15 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
     }
     x[i] = r * Math.cos(a);
     y[i] = r * Math.sin(a);
-    if (hitFirst) bounce(i, 0, 1);
-    if (hitSecond) bounce(i, sinW, -cosW);
-    if (hitRim) bounce(i, -x[i] / r, -y[i] / r);
+    if (hitFirst) {
+      bounce(i, 0, 1);
+    }
+    if (hitSecond) {
+      bounce(i, sinW, -cosW);
+    }
+    if (hitRim) {
+      bounce(i, -x[i] / r, -y[i] / r);
+    }
   }
 
   /** Reverses (with restitution) the velocity component against inward normal (nx, ny). */
@@ -329,7 +343,9 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
   /** Soft spring from a wall at distance d (inward normal n) once inside the band past the pad. */
   function push(i: number, d: number, pad: number, nx: number, ny: number, dt: number) {
     const depth = pad + SOFT_BAND - d;
-    if (depth <= 0) return;
+    if (depth <= 0) {
+      return;
+    }
     vx[i] += SOFT_SPRING * depth * nx * dt;
     vy[i] += SOFT_SPRING * depth * ny * dt;
   }
@@ -342,7 +358,9 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
     y,
     bound,
     step(dt) {
-      if (!(dt > 0)) return;
+      if (!(dt > 0)) {
+        return;
+      }
       time += dt;
       const relax = 1 - Math.exp(-dt / RELAX);
       for (let i = 0; i < count; i++) {
@@ -355,7 +373,9 @@ export function createKaleido(segments: number, seed: number): KaleidoSim {
         const r = Math.hypot(x[i], y[i]);
         push(i, y[i], pad, 0, 1, dt);
         push(i, x[i] * sinW - y[i] * cosW, pad, sinW, -cosW, dt);
-        if (r > 0) push(i, 1 - r, pad, -x[i] / r, -y[i] / r, dt);
+        if (r > 0) {
+          push(i, 1 - r, pad, -x[i] / r, -y[i] / r, dt);
+        }
         x[i] += vx[i] * dt;
         y[i] += vy[i] * dt;
         confine(i);

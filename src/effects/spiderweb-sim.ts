@@ -210,7 +210,9 @@ export function webRadius(size: number, refWidth: number): number {
  * by `dy`, bowed down by `sagY` at its middle (y = y0 + t dy + 4 t (1 - t) sagY).
  */
 export function bowLowestT(dy: number, sagY: number): number {
-  if (sagY < 1e-6) return dy > 0 ? 1 : 0;
+  if (sagY < 1e-6) {
+    return dy > 0 ? 1 : 0;
+  }
   return clamp(0.5 + dy / (8 * sagY), 0, 1);
 }
 
@@ -257,7 +259,9 @@ export function buildWeb(o: WebOptions): WebGeometry {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const len = Math.hypot(dx, dy);
-    if (len < 1e-3) return;
+    if (len < 1e-3) {
+      return;
+    }
     const sub = SUBDIVISIONS[kind];
     const [sx, sy] = bowVector(dx, dy, len, SAG[kind]);
     const firstSeg = segs.length / 9;
@@ -280,7 +284,9 @@ export function buildWeb(o: WebOptions): WebGeometry {
       pw = qw;
     }
     const spacing = DROP_SPACING[kind];
-    if (spacing <= 0) return;
+    if (spacing <= 0) {
+      return;
+    }
     const lowT = bowLowestT(dy, sy);
     let s = rng() * spacing;
     while (s < len) {
@@ -316,8 +322,8 @@ export function buildWeb(o: WebOptions): WebGeometry {
     fAngle.push(a);
   }
   // Frame threads in screen space; keep their bows for the spoke ends and the ring.
-  const fx = fu.map(toX);
-  const fy = fv.map(toY);
+  const fx = fu.map((v) => toX(v));
+  const fy = fv.map((v) => toY(v));
   const ring: number[] = [];
   const frameSub = SUBDIVISIONS[KIND_FRAME];
   for (let j = 0; j < frameCount; j++) {
@@ -418,19 +424,25 @@ export function buildWeb(o: WebOptions): WebGeometry {
           continue;
         }
         spokePoint(k, r, b);
-        if (have) addThread(a[0], a[1], a[2], b[0], b[1], b[2], kind);
+        if (have) {
+          addThread(a[0], a[1], a[2], b[0], b[1], b[2], kind);
+        }
         a[0] = b[0];
         a[1] = b[1];
         a[2] = b[2];
         have = true;
       }
-      if (!any) break;
+      if (!any) {
+        break;
+      }
     }
   };
   spiral(0.02 * R, 0.018 * R, 0.1 * R, 0.5, KIND_HUB);
   const turns = 15 + Math.floor(rng() * 7);
   let maxLen = 0;
-  for (let k = 0; k < spokes; k++) maxLen = Math.max(maxLen, spokeLen[k]);
+  for (let k = 0; k < spokes; k++) {
+    maxLen = Math.max(maxLen, spokeLen[k]);
+  }
   spiral(
     SPIRAL_START * R,
     ((SPIRAL_REACH - SPIRAL_START) * R) / turns,
@@ -474,24 +486,24 @@ export function buildWeb(o: WebOptions): WebGeometry {
     boxY1: flipY ? REF_HEIGHT : BOX_HEIGHT,
   };
   for (let i = 0; i < n; i++) {
-    const o = i * 9;
-    g.ax[i] = segs[o];
-    g.ay[i] = segs[o + 1];
-    g.aw[i] = segs[o + 2];
-    g.bx[i] = segs[o + 3];
-    g.by[i] = segs[o + 4];
-    g.bw[i] = segs[o + 5];
-    g.nx[i] = segs[o + 6];
-    g.ny[i] = segs[o + 7];
-    g.kind[i] = segs[o + 8];
+    const s = i * 9;
+    g.ax[i] = segs[s];
+    g.ay[i] = segs[s + 1];
+    g.aw[i] = segs[s + 2];
+    g.bx[i] = segs[s + 3];
+    g.by[i] = segs[s + 4];
+    g.bw[i] = segs[s + 5];
+    g.nx[i] = segs[s + 6];
+    g.ny[i] = segs[s + 7];
+    g.kind[i] = segs[s + 8];
   }
   for (let i = 0; i < g.drops; i++) {
-    const o = i * 5;
-    g.dropSeg[i] = drops[o];
-    g.dropT[i] = drops[o + 1];
-    g.dropR[i] = drops[o + 2];
-    g.dropPhase[i] = drops[o + 3];
-    g.dropRank[i] = drops[o + 4];
+    const d = i * 5;
+    g.dropSeg[i] = drops[d];
+    g.dropT[i] = drops[d + 1];
+    g.dropR[i] = drops[d + 2];
+    g.dropPhase[i] = drops[d + 3];
+    g.dropRank[i] = drops[d + 4];
   }
   return g;
 }
@@ -524,8 +536,12 @@ function bowPoint(
 
 /** How far a ray from p along d (one axis) can go and stay within [lo, hi]. */
 function rayLimit(p: number, d: number, lo: number, hi: number): number {
-  if (d > 1e-9) return (hi - p) / d;
-  if (d < -1e-9) return (lo - p) / d;
+  if (d > 1e-9) {
+    return (hi - p) / d;
+  }
+  if (d < -1e-9) {
+    return (lo - p) / d;
+  }
   return Infinity;
 }
 
@@ -543,7 +559,9 @@ function rayHitsSegment(
   const ex = bx - ax;
   const ey = by - ay;
   const den = dx * ey - dy * ex;
-  if (Math.abs(den) < 1e-12) return -1;
+  if (Math.abs(den) < 1e-12) {
+    return -1;
+  }
   const wx = ax - ox;
   const wy = ay - oy;
   const t = (wx * ey - wy * ex) / den;
@@ -646,7 +664,9 @@ export function writeDrops(g: WebGeometry, f: WebFrame, out: Float32Array): numb
   const max = Math.floor(out.length / DROP_FLOATS);
   let n = 0;
   for (let i = 0; i < g.drops && n < max; i++) {
-    if (g.dropRank[i] >= f.dew) continue;
+    if (g.dropRank[i] >= f.dew) {
+      continue;
+    }
     const seg = g.dropSeg[i];
     const t = g.dropT[i];
     const aw = g.aw[seg];

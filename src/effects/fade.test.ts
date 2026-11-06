@@ -4,7 +4,9 @@ import { growLive, stepLife, trimLive } from "./fade";
 /** One frame of the documented loop; returns the new live count. */
 function frame(life: Float32Array, live: number, target: number, step: number): number {
   live = growLive(life, live, target);
-  for (let i = 0; i < live; i++) stepLife(life, i, target, step, step);
+  for (let i = 0; i < live; i++) {
+    stepLife(life, i, target, step, step);
+  }
   return trimLive(life, live, target);
 }
 
@@ -14,7 +16,9 @@ describe("count fades", () => {
     let live = frame(life, 0, 2, 0.25);
     expect(live).toBe(2);
     expect([...life]).toEqual([0.25, 0.25, 1, 1]);
-    for (let k = 0; k < 10; k++) live = frame(life, live, 2, 0.25);
+    for (let k = 0; k < 10; k++) {
+      live = frame(life, live, 2, 0.25);
+    }
     expect(life[0]).toBe(1);
   });
 

@@ -21,7 +21,7 @@ describe("createSpriteBatch", () => {
     calls.length = 0;
     batch.upload(0);
     batch.upload(-3);
-    batch.upload(NaN);
+    batch.upload(Number.NaN);
     expect(calls).toHaveLength(0);
   });
 

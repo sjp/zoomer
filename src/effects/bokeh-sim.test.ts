@@ -36,14 +36,18 @@ describe("createLights", () => {
           [xs[i], lights.xs[i], 1920],
           [ys[i], lights.ys[i], 1080],
         ]) {
-          if (b < -margin || b > size + margin)
+          if (b < -margin || b > size + margin) {
             bad.push(`light ${String(i)} left the padded span: ${String(b)}`);
+          }
           if (Math.abs(b - a) > size / 2) {
             wraps++;
             // Before and after the jump, the whole sprite (radius < margin) is out of view.
-            if (!(a <= -margin + 30 || a >= size + margin - 30))
+            if (!(a <= -margin + 30 || a >= size + margin - 30)) {
               bad.push(`jumped from ${String(a)}`);
-            if (!(b <= -margin + 30 || b >= size + margin - 30)) bad.push(`jumped to ${String(b)}`);
+            }
+            if (!(b <= -margin + 30 || b >= size + margin - 30)) {
+              bad.push(`jumped to ${String(b)}`);
+            }
           }
         }
       }
@@ -54,7 +58,9 @@ describe("createLights", () => {
 
   it("emits device-pixel instances with opacity in (0, 1]", () => {
     const lights = createLights(MAX, 1920, createRng(2));
-    for (let k = 0; k < 200; k++) lights.step(1 / 60, frame(), data, LIGHT_FLOATS);
+    for (let k = 0; k < 200; k++) {
+      lights.step(1 / 60, frame(), data, LIGHT_FLOATS);
+    }
     const n = lights.step(1 / 60, frame(), data, LIGHT_FLOATS);
     expect(n).toBeGreaterThan(30);
     for (let i = 0; i < n; i++) {
@@ -75,7 +81,9 @@ describe("createLights", () => {
     const dt = 1 / 60;
     lights.step(dt, f, data, LIGHT_FLOATS);
     expect(lights.life[0]).toBeCloseTo(dt / FADE_IN, 6);
-    for (let t = 0; t < FADE_IN; t += dt) lights.step(dt, f, data, LIGHT_FLOATS);
+    for (let t = 0; t < FADE_IN; t += dt) {
+      lights.step(dt, f, data, LIGHT_FLOATS);
+    }
     expect(lights.life[49]).toBe(1);
     f.target = 80;
     // Opacity rises as life squared, so an added light starts out invisible.
@@ -87,12 +95,16 @@ describe("createLights", () => {
   it("fades removed lights out before it stops simulating them", () => {
     const lights = createLights(MAX, 1920, createRng(4));
     const f = frame({ target: 80 });
-    for (let k = 0; k < 200; k++) lights.step(1 / 60, f, data, LIGHT_FLOATS);
+    for (let k = 0; k < 200; k++) {
+      lights.step(1 / 60, f, data, LIGHT_FLOATS);
+    }
     f.target = 40;
     lights.step(1 / 60, f, data, LIGHT_FLOATS);
     expect(lights.live).toBe(80);
     expect(lights.life[60]).toBeGreaterThan(0.9);
-    for (let k = 0; k < 60; k++) lights.step(1 / 60, f, data, LIGHT_FLOATS);
+    for (let k = 0; k < 60; k++) {
+      lights.step(1 / 60, f, data, LIGHT_FLOATS);
+    }
     expect(lights.live).toBe(40);
   });
 

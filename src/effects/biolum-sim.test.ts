@@ -106,7 +106,9 @@ describe("createBiolumScheduler", () => {
     for (let t = 0; t < seconds; t += dt) {
       const before = s.spawned;
       s.step(dt, interval);
-      if (s.spawned > before) starts.push(s.waves[s.count - 1].start);
+      if (s.spawned > before) {
+        starts.push(s.waves[s.count - 1].start);
+      }
       maxCount = Math.max(maxCount, s.count);
     }
     return { s, starts, maxCount };
@@ -179,7 +181,7 @@ describe("createBiolumScheduler", () => {
       }
     }
     expect(bad).toEqual([]);
-    expect([...dirs].sort((a, b) => a - b)).toEqual([-1, 1]);
+    expect([...dirs].toSorted((a, b) => a - b)).toEqual([-1, 1]);
   });
 });
 

@@ -81,6 +81,8 @@ export function ParamControl({ id, def, value, onChange }: Props) {
       );
     case "text":
       return <TextControl inputId={inputId} def={def} value={String(value)} onChange={onChange} />;
+    default:
+      return null;
   }
 }
 
@@ -116,8 +118,11 @@ function TextControl({ inputId, def, value, onChange }: TextProps) {
           onChange(sanitizeText(def, e.currentTarget.value));
         }}
         onChange={(e) => {
-          if (composing !== null) setComposing(e.target.value);
-          else onChange(sanitizeText(def, e.target.value));
+          if (composing !== null) {
+            setComposing(e.target.value);
+          } else {
+            onChange(sanitizeText(def, e.target.value));
+          }
         }}
       />
     </div>

@@ -28,7 +28,7 @@ const contains = (outer: Rect, inner: Rect, eps = 1e-9) =>
 
 describe("window layouts", () => {
   it("maps every select option, with fallbacks for unknown values", () => {
-    expect(LAYOUTS.map(layoutId)).toEqual(LAYOUTS);
+    expect(LAYOUTS.map((v) => layoutId(v))).toEqual(LAYOUTS);
     expect(layoutId("nope")).toBe("four");
     expect(SCENE_OPTIONS.map((o) => sceneIndex(o.value))).toEqual([0, 1, 2]);
     expect(sceneIndex("nope")).toBe(0);
@@ -41,22 +41,30 @@ describe("window layouts", () => {
       for (const layout of LAYOUTS) {
         const panes = windowPanes(layoutId(layout), aspect);
         const tag = `${layout} @ ${aspect.toFixed(2)}`;
-        if (panes.length < 1 || panes.length > MAX_PANES)
+        if (panes.length < 1 || panes.length > MAX_PANES) {
           bad.push(`${tag}: ${String(panes.length)} panes`);
+        }
         let sum = 0;
         for (let i = 0; i < panes.length; i++) {
           const p = panes[i];
-          if (!(p[2] > p[0] && p[3] > p[1])) bad.push(`${tag}: empty pane ${String(i)}`);
-          if (!contains(open, p)) bad.push(`${tag}: pane ${String(i)} outside the opening`);
+          if (!(p[2] > p[0] && p[3] > p[1])) {
+            bad.push(`${tag}: empty pane ${String(i)}`);
+          }
+          if (!contains(open, p)) {
+            bad.push(`${tag}: pane ${String(i)} outside the opening`);
+          }
           sum += area(p);
           for (let j = 0; j < i; j++) {
-            if (overlap(p, panes[j]) > 1e-12)
+            if (overlap(p, panes[j]) > 1e-12) {
               bad.push(`${tag}: panes ${String(i)} and ${String(j)} overlap`);
+            }
           }
         }
         // Glass plus bars fills the opening: bars are at most a few BAR-wide strips.
         const glass = sum / area(open);
-        if (glass < 0.8 || glass > 1 + 1e-9) bad.push(`${tag}: glass covers ${String(glass)}`);
+        if (glass < 0.8 || glass > 1 + 1e-9) {
+          bad.push(`${tag}: glass covers ${String(glass)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -68,7 +76,9 @@ describe("window layouts", () => {
       const face = faceArea(aspect);
       for (const layout of ["four", "frame"] as const) {
         const panes = windowPanes(layout, aspect);
-        if (!panes.some((p) => contains(p, face))) bad.push(`${layout} @ ${aspect.toFixed(2)}`);
+        if (!panes.some((p) => contains(p, face))) {
+          bad.push(`${layout} @ ${aspect.toFixed(2)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -126,9 +136,12 @@ describe("condensation mask", () => {
         const left = texel(out, x0 + inset, y0 + inset);
         const right = texel(out, x1 - inset, y0 + inset);
         const mid = texel(out, (x0 + x1) / 2, (y0 + y1) / 2);
-        if (!(left > 0.6 && right > 0.6))
+        if (!(left > 0.6 && right > 0.6)) {
           bad.push(`${layout}: corners ${String(left)}, ${String(right)}`);
-        if (!(mid < left && mid < right && mid < 0.2)) bad.push(`${layout}: middle ${String(mid)}`);
+        }
+        if (!(mid < left && mid < right && mid < 0.2)) {
+          bad.push(`${layout}: middle ${String(mid)}`);
+        }
       }
       const [ix0, iy0] = interior(aspect);
       if (texel(out, ix0 / 2, 0.5) !== 0 || texel(out, aspect / 2, iy0 / 2) !== 0) {
@@ -145,7 +158,9 @@ describe("condensation mask", () => {
     for (let o = 0; o < out.length; o += 4) {
       if (out[o + 1] >= 128) {
         drops++;
-        if (out[o] < 60) stray++;
+        if (out[o] < 60) {
+          stray++;
+        }
       }
     }
     // Some texels of droplet, but nowhere near the whole pane.

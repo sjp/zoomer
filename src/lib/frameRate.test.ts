@@ -7,7 +7,9 @@ function countFrames(hz: number, fps: number | undefined, seconds = 10) {
   let drawn = 0;
   for (let i = 0; i < hz * seconds; i++) {
     const jitter = (Math.random() - 0.5) * 1.5;
-    if (shouldDraw(1000 + (i * 1000) / hz + jitter, fps)) drawn++;
+    if (shouldDraw(1000 + (i * 1000) / hz + jitter, fps)) {
+      drawn++;
+    }
   }
   return drawn / seconds;
 }

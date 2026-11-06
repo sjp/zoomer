@@ -116,7 +116,9 @@ export function swaySpeed(wind: number): number {
 export const SEGMENTS = 16;
 export const STEM_STRIP: readonly number[] = (() => {
   const out: number[] = [];
-  for (let i = 0; i <= SEGMENTS; i++) out.push(i, -1, i, 1);
+  for (let i = 0; i <= SEGMENTS; i++) {
+    out.push(i, -1, i, 1);
+  }
   return out;
 })();
 /** Strips run from just below the frame to just above it. */
@@ -296,7 +298,7 @@ export function buildStems(
   let n = 0;
   for (let l = 0; l < LAYERS.length; l++) {
     const layer = LAYERS[l];
-    const rng = createRng((Math.floor(seed) * 7919 + l * 104729 + 96) | 0);
+    const rng = createRng(Math.floor(seed) * 7919 + l * 104729 + 96);
     const want = Math.max(
       0,
       Math.min(layerCount(layer, density), Math.floor(out.length / STEM_FLOATS) - n),
@@ -314,7 +316,9 @@ export function buildStems(
       let x = -1;
       for (let tries = 0; tries < 64 && x < 0; tries++) {
         const c = X_MARGIN + (1 - 2 * X_MARGIN) * rng();
-        if (Math.abs(c - 0.5) >= clear && rng() < edgeWeight(c)) x = c;
+        if (Math.abs(c - 0.5) >= clear && rng() < edgeWeight(c)) {
+          x = c;
+        }
       }
       if (x < 0) {
         const e = X_MARGIN + 0.08 * rng();
@@ -337,8 +341,11 @@ export function buildStems(
     }
     // Thin (further) stems first within the layer, so it draws far to near.
     order.length = 0;
-    for (let k = 0; k < want; k++) order.push(k);
-    order.sort((a, b) => out[(n + a) * STEM_FLOATS + 3] - out[(n + b) * STEM_FLOATS + 3]);
+    for (let k = 0; k < want; k++) {
+      order.push(k);
+    }
+    const first = n;
+    order.sort((a, b) => out[(first + a) * STEM_FLOATS + 3] - out[(first + b) * STEM_FLOATS + 3]);
     const block = out.slice(n * STEM_FLOATS, (n + want) * STEM_FLOATS);
     for (let k = 0; k < want; k++) {
       tmp.set(block.subarray(order[k] * STEM_FLOATS, (order[k] + 1) * STEM_FLOATS));
@@ -396,7 +403,7 @@ export function buildLeaves(
   const counts: number[] = [];
   const starts: number[] = [];
   const cap = Math.floor(out.length / LEAF_FLOATS);
-  const rng = createRng((Math.floor(seed) * 31337 + 960) | 0);
+  const rng = createRng(Math.floor(seed) * 31337 + 960);
   let n = 0;
   for (let l = 0; l < LAYERS.length; l++) {
     const layer = LAYERS[l];
@@ -411,7 +418,9 @@ export function buildLeaves(
         layer.clustersMin + Math.floor(rng() * (layer.clustersMax - layer.clustersMin + 1));
       for (let c = 0; c < clusters; c++) {
         const leaves = LEAVES_MIN + Math.floor(rng() * (LEAVES_MAX - LEAVES_MIN + 1));
-        if (n + leaves + 1 > cap) break;
+        if (n + leaves + 1 > cap) {
+          break;
+        }
         const attach = CLUSTER_TOP + (bottom - CLUSTER_TOP) * ((c + rng()) / clusters);
         // Twigs mostly reach towards the frame's edge, away from the opening.
         const side = rng() < (x < 0.5 ? 0.3 : 0.7) ? 1 : -1;
@@ -421,6 +430,7 @@ export function buildLeaves(
         const ty = Math.sin(twigAngle) * twigLen;
         const tone = rng();
         const write = (
+          index: number,
           dx: number,
           dy: number,
           angle: number,
@@ -428,7 +438,7 @@ export function buildLeaves(
           hw: number,
           kind: number,
         ) => {
-          const o = n * LEAF_FLOATS;
+          const o = index * LEAF_FLOATS;
           out[o] = x;
           out[o + 1] = ground;
           out[o + 2] = stems[so + 2];
@@ -445,18 +455,17 @@ export function buildLeaves(
           out[o + 13] = FLUTTER_MIN + Math.floor(rng() * (FLUTTER_MAX - FLUTTER_MIN + 1));
           out[o + 14] = clamp(tone + 0.25 * (rng() - 0.5), 0, 1);
           out[o + 15] = kind;
-          n++;
         };
         // The twig, from the stem to the fan.
         const twigDir = side > 0 ? twigAngle : Math.PI - twigAngle;
-        write(0, 0, twigDir, twigLen, Math.max(0.6, 1.4 * s), 1);
+        write(n++, 0, 0, twigDir, twigLen, Math.max(0.6, 1.4 * s), 1);
         for (let i = 0; i < leaves; i++) {
           // Droop down and out from the twig's end, a few back over the stem.
           const dir = rng() < 0.8 ? side : -side;
-          const droop = 0.25 + 1.0 * rng();
+          const droop = 0.25 + rng();
           const angle = dir > 0 ? droop : Math.PI - droop;
           const len = s * (55 + 35 * rng());
-          write(tx, ty, angle, len, len * (0.07 + 0.03 * rng()), 0);
+          write(n++, tx, ty, angle, len, len * (0.07 + 0.03 * rng()), 0);
         }
       }
     }

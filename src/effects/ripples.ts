@@ -197,22 +197,38 @@ export const ripples = defineEffect(ripplesMeta, {
           lastVariant = vi;
           lastW = tw;
           lastH = th;
-          if (u.f2("uInvSize", 1 / tw, 1 / th)) dirty = true;
+          if (u.f2("uInvSize", 1 / tw, 1 / th)) {
+            dirty = true;
+          }
           const k = (DISPLACE_REF * vpScale) / Math.max(1, height);
-          if (u.f2("uDisp", (k * height) / Math.max(1, width), k)) dirty = true;
+          if (u.f2("uDisp", (k * height) / Math.max(1, width), k)) {
+            dirty = true;
+          }
           // The ramp is in uv: aspect-correct the direction so it reads as a diagonal.
           const aspect = width / Math.max(1, height);
           const rx = SKY_DIR[0] * aspect * SKY_SPAN;
           const ry = SKY_DIR[1] * SKY_SPAN;
-          if (u.f3("uSkyRamp", rx, ry, 0.5 - 0.5 * (rx + ry))) dirty = true;
-          if (u.rgb("uWater", p.water)) dirty = true;
-          if (u.rgb("uSky", p.skyTint)) dirty = true;
-          if (u.f1("uDither", target.direct ? 1 : 0)) dirty = true;
-          if (u.i1("uCount", count)) dirty = true;
+          if (u.f3("uSkyRamp", rx, ry, 0.5 - 0.5 * (rx + ry))) {
+            dirty = true;
+          }
+          if (u.rgb("uWater", p.water)) {
+            dirty = true;
+          }
+          if (u.rgb("uSky", p.skyTint)) {
+            dirty = true;
+          }
+          if (u.f1("uDither", target.direct ? 1 : 0)) {
+            dirty = true;
+          }
+          if (u.i1("uCount", count)) {
+            dirty = true;
+          }
 
           // Still water renders once; only the blit runs until the next drop.
           if (dirty || count > 0 || lastCount !== 0 || target.direct) {
-            if (count > 0) gl.uniform4fv(u.loc.uDrops, packed);
+            if (count > 0) {
+              gl.uniform4fv(u.loc.uDrops, packed);
+            }
             if (vi === 1) {
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, mask);

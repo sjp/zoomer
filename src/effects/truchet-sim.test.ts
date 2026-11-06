@@ -55,7 +55,9 @@ describe("grid layout", () => {
           g.rows * t - h < 2 * t &&
           Math.abs(g.ox + (g.cols * t) / 2 - w / 2) < 1e-9 &&
           Math.abs(g.oy + (g.rows * t) / 2 - h / 2) < 1e-9;
-        if (!ok) bad.push(`${String(w)}x${String(h)} @ ${String(tile)}`);
+        if (!ok) {
+          bad.push(`${String(w)}x${String(h)} @ ${String(tile)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -117,7 +119,9 @@ describe("path labelling", () => {
     let changedUntouched = 0;
     let checked = 0;
     for (let trial = 0; trial < 40; trial++) {
-      for (let t = 0; t < orient.length; t++) orient[t] = rng() < 0.5 ? 0 : 1;
+      for (let t = 0; t < orient.length; t++) {
+        orient[t] = rng() < 0.5 ? 0 : 1;
+      }
       labelPaths(cols, rows, orient, before);
       const t = Math.floor(rng() * orient.length);
       const i = t % cols;
@@ -127,9 +131,13 @@ describe("path labelling", () => {
       orient[t] ^= 1;
       labelPaths(cols, rows, orient, after);
       for (let a = 0; a < after.length; a++) {
-        if (touched.has(before[a])) continue;
+        if (touched.has(before[a])) {
+          continue;
+        }
         checked++;
-        if (after[a] !== before[a]) changedUntouched++;
+        if (after[a] !== before[a]) {
+          changedUntouched++;
+        }
       }
       // Labels are smallest midpoints: no arc end is below its path's label.
       for (let k = 0; k < orient.length; k++) {
@@ -137,7 +145,9 @@ describe("path labelling", () => {
         const kj = (k - ki) / cols;
         for (let arc = 0; arc < 2; arc++) {
           arcEnds(cols, rows, ki, kj, orient[k], arc, ends);
-          if (Math.min(ends[0], ends[1]) < after[2 * k + arc]) changedUntouched++;
+          if (Math.min(ends[0], ends[1]) < after[2 * k + arc]) {
+            changedUntouched++;
+          }
         }
       }
       expect(i + j * cols).toBe(t);
@@ -148,14 +158,18 @@ describe("path labelling", () => {
 
   it("gives tones in range, deterministic per seed", () => {
     let bad = 0;
-    const counts = new Array(TONES).fill(0);
+    const counts = Array.from({ length: TONES }, () => 0);
     for (let label = 0; label < 3000; label++) {
       const a = pathTone(label, 3);
-      if (!(a >= 0 && a < TONES && Number.isInteger(a)) || a !== pathTone(label, 3)) bad++;
+      if (!(a >= 0 && a < TONES && Number.isInteger(a)) || a !== pathTone(label, 3)) {
+        bad++;
+      }
       counts[a]++;
     }
     expect(bad).toBe(0);
-    for (const c of counts) expect(c).toBeGreaterThan(800);
+    for (const c of counts) {
+      expect(c).toBeGreaterThan(800);
+    }
   });
 });
 
@@ -169,10 +183,16 @@ function run(sim: TruchetSim, seconds: number, rate: number): string[] {
     const seen = new Set<number>();
     for (let s = 1; s <= MAX_FLIPS; s++) {
       const t = sim.slotTile[s];
-      if (t < 0) continue;
-      if (seen.has(t)) problems.push(`tile ${String(t)} in two slots`);
+      if (t < 0) {
+        continue;
+      }
+      if (seen.has(t)) {
+        problems.push(`tile ${String(t)} in two slots`);
+      }
       seen.add(t);
-      if (sim.tileSlot[t] !== s) problems.push(`tile ${String(t)} slot mismatch`);
+      if (sim.tileSlot[t] !== s) {
+        problems.push(`tile ${String(t)} slot mismatch`);
+      }
       const prev = startOf[t];
       // A flipping tile is never restarted before its flip ends.
       if (!Number.isNaN(prev) && prev !== sim.slotStart[s] && sim.time - prev < FLIP_DURATION) {
@@ -180,7 +200,9 @@ function run(sim: TruchetSim, seconds: number, rate: number): string[] {
       }
       startOf[t] = sim.slotStart[s];
     }
-    if (problems.length > 5) break;
+    if (problems.length > 5) {
+      break;
+    }
   }
   return problems;
 }
@@ -217,9 +239,14 @@ describe("flip scheduler", () => {
     const sim = createTruchet({ cols: 4, rows: 2, seed: 1 });
     const before = Array.from(sim.orient);
     let flags = 0;
-    for (let k = 0; k < 600; k++) flags |= sim.step(DT, 0);
-    flags |= sim.step(Number.NaN, Number.NaN);
-    flags |= sim.step(-1, -5);
+    for (let k = 0; k < 600; k++) {
+      const f = sim.step(DT, 0);
+      flags |= f;
+    }
+    const nan = sim.step(Number.NaN, Number.NaN);
+    flags |= nan;
+    const negative = sim.step(-1, -5);
+    flags |= negative;
     expect(flags).toBe(0);
     expect(sim.started).toBe(0);
     expect(Array.from(sim.orient)).toEqual(before);
@@ -228,7 +255,9 @@ describe("flip scheduler", () => {
   it("toggles a tile once its flip completes, easing in and out", () => {
     const sim = createTruchet({ cols: 6, rows: 4, seed: 2 });
     let flags = 0;
-    while (!(flags & STARTED)) flags = sim.step(DT, 1);
+    while (!(flags & STARTED)) {
+      flags = sim.step(DT, 1);
+    }
     const s = sim.slotTile.findIndex((t, i) => i > 0 && t >= 0);
     const tile = sim.slotTile[s];
     const o = sim.orient[tile];
@@ -243,7 +272,11 @@ describe("flip scheduler", () => {
     expect(sim.tileSlot[tile]).toBe(0);
     expect(sim.ease(s)).toBe(0);
     let monotonic = true;
-    for (let k = 1; k < eases.length; k++) if (eases[k] < eases[k - 1]) monotonic = false;
+    for (let k = 1; k < eases.length; k++) {
+      if (eases[k] < eases[k - 1]) {
+        monotonic = false;
+      }
+    }
     expect(monotonic).toBe(true);
     expect(eases.length).toBeGreaterThanOrEqual(Math.floor(FLIP_DURATION / DT) - 7);
     expect(easeInOut(0)).toBe(0);
@@ -263,19 +296,27 @@ describe("colours and encoding", () => {
       if (flags & COMPLETED) {
         labelPaths(sim.cols, sim.rows, sim.orient, fresh);
         for (let a = 0; a < fresh.length; a++) {
-          if (fresh[a] !== sim.labels[a] || sim.toneTo[a] !== pathTone(fresh[a], sim.seed)) bad++;
+          if (fresh[a] !== sim.labels[a] || sim.toneTo[a] !== pathTone(fresh[a], sim.seed)) {
+            bad++;
+          }
         }
       }
-      for (let t = 0; t < sim.fade.length; t++) {
-        if (sim.fade[t] < 1) fadeSeen = true;
-        if (!(sim.fade[t] >= 0 && sim.fade[t] <= 1)) bad++;
+      for (const fade of sim.fade) {
+        if (fade < 1) {
+          fadeSeen = true;
+        }
+        if (!(fade >= 0 && fade <= 1)) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
     expect(fadeSeen).toBe(true);
     // With no new flips, the running ones complete and every fade finishes.
     const settle = Math.ceil((FLIP_DURATION + FADE_DURATION) / DT) + 2;
-    for (let k = 0; k < settle; k++) sim.step(DT, 0);
+    for (let k = 0; k < settle; k++) {
+      sim.step(DT, 0);
+    }
     expect(Math.min(...sim.fade)).toBe(1);
   });
 
@@ -285,17 +326,29 @@ describe("colours and encoding", () => {
     let bad = 0;
     for (let k = 0; k < 900; k++) {
       sim.step(DT, 3);
-      if (k % 10) continue;
+      if (k % 10) {
+        continue;
+      }
       sim.encode(data);
       for (let t = 0; t < 48; t++) {
         const r = data[4 * t];
         const g = data[4 * t + 1];
         const slot = r >> 2;
-        if ((r & 1) !== sim.orient[t] || slot !== sim.tileSlot[t]) bad++;
-        if (slot && ((r >> 1) & 1) !== sim.slotDir[slot]) bad++;
-        if ((g & 3) !== sim.toneFrom[2 * t] || ((g >> 2) & 3) !== sim.toneTo[2 * t]) bad++;
-        if (((g >> 4) & 3) !== sim.toneFrom[2 * t + 1] || g >> 6 !== sim.toneTo[2 * t + 1]) bad++;
-        if (Math.abs(data[4 * t + 2] / 255 - sim.fade[t]) > 0.5 / 255 + 1e-6) bad++;
+        if ((r & 1) !== sim.orient[t] || slot !== sim.tileSlot[t]) {
+          bad++;
+        }
+        if (slot && ((r >> 1) & 1) !== sim.slotDir[slot]) {
+          bad++;
+        }
+        if ((g & 3) !== sim.toneFrom[2 * t] || ((g >> 2) & 3) !== sim.toneTo[2 * t]) {
+          bad++;
+        }
+        if (((g >> 4) & 3) !== sim.toneFrom[2 * t + 1] || g >> 6 !== sim.toneTo[2 * t + 1]) {
+          bad++;
+        }
+        if (Math.abs(data[4 * t + 2] / 255 - sim.fade[t]) > 0.5 / 255 + 1e-6) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -303,24 +356,34 @@ describe("colours and encoding", () => {
 
   it("carries orientations over to a resized grid, matched from the centre", () => {
     const a = createTruchet({ cols: 10, rows: 6, seed: 6 });
-    for (let k = 0; k < 1200; k++) a.step(DT, 3);
+    for (let k = 0; k < 1200; k++) {
+      a.step(DT, 3);
+    }
     const b = createTruchet({ cols: 14, rows: 4, seed: 6, from: a });
     let bad = 0;
     for (let j = 0; j < 4; j++) {
       for (let i = 0; i < 14; i++) {
         const pi = i - 2;
         const pj = j + 1;
-        if (pi < 0 || pi >= 10) continue;
-        if (b.orient[i + j * 14] !== a.orient[pi + pj * 10]) bad++;
+        if (pi < 0 || pi >= 10) {
+          continue;
+        }
+        if (b.orient[i + j * 14] !== a.orient[pi + pj * 10]) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
   });
 
   it("has palettes and styles for every option, with fallbacks", () => {
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(STYLE_OPTIONS.map((o) => o.value)).toEqual([...STYLES]);
-    for (const p of Object.values(PALETTES)) expect(p.bands.length).toBe(TONES);
+    for (const p of Object.values(PALETTES)) {
+      expect(p.bands.length).toBe(TONES);
+    }
     expect(palette("nope")).toBe(PALETTES.slate);
     expect(styleIndex("shaded")).toBe(2);
     expect(styleIndex("nope")).toBe(0);

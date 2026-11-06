@@ -64,7 +64,9 @@ export function pulseCurve(phase: number): number {
 /** Thrust for pulse `phase` (period 1), in [0, 1]: a sin² push, then coasting. */
 export function thrustCurve(phase: number): number {
   const p = phase - Math.floor(phase);
-  if (p >= THRUST_SPAN) return 0;
+  if (p >= THRUST_SPAN) {
+    return 0;
+  }
   const s = Math.sin(Math.PI * (p / THRUST_SPAN));
   return s * s;
 }
@@ -144,7 +146,7 @@ export function stepChain(
     const qy = y;
     let dx = x - px;
     let dy = y - py;
-    const len = Math.sqrt(dx * dx + dy * dy);
+    const len = Math.hypot(dx, dy);
     if (len > 1e-6) {
       dx *= seg / len;
       dy *= seg / len;
@@ -218,14 +220,16 @@ export function writeStrip(
     const b = base + Math.min(n - 1, k + 1) * 2;
     const tx = pos[b] - pos[a];
     const ty = pos[b + 1] - pos[a + 1];
-    const len = Math.sqrt(tx * tx + ty * ty);
+    const len = Math.hypot(tx, ty);
     if (len > 1e-6) {
       nx = -ty / len;
       ny = tx / len;
     }
     const t = k / (n - 1);
     let w = s.width * (1 - s.taper * t);
-    if (s.frill > 0) w *= 1 - s.frill + s.frill * Math.abs(Math.sin(k * 1.9 + s.frillPhase));
+    if (s.frill > 0) {
+      w *= 1 - s.frill + s.frill * Math.abs(Math.sin(k * 1.9 + s.frillPhase));
+    }
     w = Math.max(w, s.minWidth) * scale;
     const f = (1 - t) ** s.fade;
     const x = pos[base + k * 2] * scale;
@@ -261,10 +265,10 @@ export function writeStrip(
 // --- Palettes ------------------------------------------------------------------
 
 export const PALETTES: Record<string, readonly Rgb[]> = {
-  moon: ["#a8dcff", "#cdeaff", "#8cc8ff"].map(hexToUnitRgb),
-  violet: ["#b58cff", "#d8a8ff", "#9a86ff"].map(hexToUnitRgb),
-  sunset: ["#ff9ccf", "#ffb46b", "#ff8fa6"].map(hexToUnitRgb),
-  mixed: ["#a8dcff", "#c19bff", "#ff9ccf", "#ffbf73"].map(hexToUnitRgb),
+  moon: ["#a8dcff", "#cdeaff", "#8cc8ff"].map((v) => hexToUnitRgb(v)),
+  violet: ["#b58cff", "#d8a8ff", "#9a86ff"].map((v) => hexToUnitRgb(v)),
+  sunset: ["#ff9ccf", "#ffb46b", "#ff8fa6"].map((v) => hexToUnitRgb(v)),
+  mixed: ["#a8dcff", "#c19bff", "#ff9ccf", "#ffbf73"].map((v) => hexToUnitRgb(v)),
 };
 
 /** The palette named `name`, or "mixed" for an unknown name. */
@@ -325,20 +329,20 @@ export interface Swarm {
   /** Total wraps so far (for tests). */
   readonly wraps: number;
   /** Rescales x positions (and tentacles) by `k` after a width change. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances the swarm by `dt` seconds, then writes the visible bells into
    * `bellData` (`bellStride` floats each, the spin pair at `spinOffset`) and the
    * tentacle strips into `strips`, in device px.
    */
-  step(
+  step: (
     dt: number,
     f: SwarmFrame,
     bellData: Float32Array,
     bellStride: number,
     spinOffset: number,
     strips: Float32Array,
-  ): void;
+  ) => void;
 }
 
 export function createSwarm(rng: () => number, refWidth: number): Swarm {
@@ -462,8 +466,12 @@ export function createSwarm(rng: () => number, refWidth: number): Swarm {
       return wraps;
     },
     rescaleX(k) {
-      for (let i = 0; i < n; i++) x[i] *= k;
-      for (let p = 0; p < pos.length; p += 2) pos[p] *= k;
+      for (let i = 0; i < n; i++) {
+        x[i] *= k;
+      }
+      for (let p = 0; p < pos.length; p += 2) {
+        pos[p] *= k;
+      }
     },
     step(dt, f, bellData, bellStride, spinOffset, strips) {
       time += dt;
@@ -507,7 +515,9 @@ export function createSwarm(rng: () => number, refWidth: number): Swarm {
         let nx = wrap(mx, -margin, f.refWidth + 2 * margin);
         const ny = wrap(my, -margin, 1080 + 2 * margin);
         // Re-enter from the bottom (or top) toward the sides, not behind the speaker.
-        if (ny !== my) nx = sideX(f.refWidth);
+        if (ny !== my) {
+          nx = sideX(f.refWidth);
+        }
         x[i] = nx;
         y[i] = ny;
         if (nx !== mx || ny !== my) {
@@ -533,19 +543,25 @@ export function createSwarm(rng: () => number, refWidth: number): Swarm {
         // Tentacles and oral arms.
         const sway = Math.sin(time * 0.6 + seed[i]);
         for (let c = 0; c < CHAINS_PER_JELLY; c++) {
-          if (!chainActive(i, c)) continue;
+          if (!chainActive(i, c)) {
+            continue;
+          }
           const ci = i * CHAINS_PER_JELLY + c;
           const arm = c >= MAX_TENTACLES;
           const len = (arm ? armLen : tentLen) * chainLen[ci];
           const seg = len / (CHAIN_POINTS - 1);
           anchor(i, c);
-          if (fresh[i]) resetChain(pos, vel, ci, CHAIN_POINTS, anchorX, anchorY, seg);
+          if (fresh[i]) {
+            resetChain(pos, vel, ci, CHAIN_POINTS, anchorX, anchorY, seg);
+          }
           const fx = SWAY * radius * Math.sin(time * 0.9 + chainSeed[ci]) * (0.5 + 0.5 * sway);
           stepChain(pos, vel, ci, CHAIN_POINTS, anchorX, anchorY, seg, dt, fx, HANG * radius, damp);
         }
 
         fresh[i] = 0;
-        if (l <= 0) continue;
+        if (l <= 0) {
+          continue;
+        }
 
         // Colour: palette, then far ones dimmer and bluer.
         const base = palette[Math.floor(colour[i] * palette.length) % palette.length];
@@ -571,10 +587,14 @@ export function createSwarm(rng: () => number, refWidth: number): Swarm {
         const tentAlpha = (0.45 + 0.4 * glow) * smoothTent(tent);
         const armAlpha = 0.4 + 0.35 * glow;
         for (let c = 0; c < CHAINS_PER_JELLY; c++) {
-          if (!chainActive(i, c)) continue;
+          if (!chainActive(i, c)) {
+            continue;
+          }
           const arm = c >= MAX_TENTACLES;
           const a = arm ? armAlpha : tentAlpha;
-          if (a <= 0) continue;
+          if (a <= 0) {
+            continue;
+          }
           style.width = arm ? radius * 0.09 : Math.max(1.6, radius * 0.03);
           style.taper = arm ? 0.6 : 0.45;
           style.minWidth = arm ? 1.6 : 1.3;

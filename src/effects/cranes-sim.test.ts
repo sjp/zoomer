@@ -59,7 +59,9 @@ describe("crane mesh", () => {
     let bad = 0;
     for (const t of CRANE_TRIANGLES) {
       const n = triangleNormal(t.v[0], t.v[1], t.v[2]);
-      if (!(Math.abs(Math.hypot(...n) - 1) < 1e-9)) bad++;
+      if (!(Math.abs(Math.hypot(...n) - 1) < 1e-9)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -69,9 +71,13 @@ describe("crane mesh", () => {
     CRANE_NEIGHBOURS.forEach((nb, i) => {
       for (let k = 0; k < 3; k++) {
         const j = nb[k];
-        if (j < 0 || j === i || CRANE_TRIANGLES[j].part !== CRANE_TRIANGLES[i].part) bad++;
+        if (j < 0 || j === i || CRANE_TRIANGLES[j].part !== CRANE_TRIANGLES[i].part) {
+          bad++;
+        }
         // Symmetric: the neighbour lists this triangle back.
-        else if (!CRANE_NEIGHBOURS[j].includes(i)) bad++;
+        else if (!CRANE_NEIGHBOURS[j].includes(i)) {
+          bad++;
+        }
       }
     });
     expect(bad).toBe(0);
@@ -80,8 +86,8 @@ describe("crane mesh", () => {
     const count = new Map<string, number>();
     for (const t of CRANE_TRIANGLES) {
       for (let k = 0; k < 3; k++) {
-        const a = `${String(t.part)}:${t.v[k].join()}>${t.v[(k + 1) % 3].join()}`;
-        const b = `${String(t.part)}:${t.v[(k + 1) % 3].join()}>${t.v[k].join()}`;
+        const a = `${String(t.part)}:${t.v[k].join(",")}>${t.v[(k + 1) % 3].join(",")}`;
+        const b = `${String(t.part)}:${t.v[(k + 1) % 3].join(",")}>${t.v[k].join(",")}`;
         count.set(a, (count.get(a) ?? 0) + 1);
         count.set(b, count.get(b) ?? 0);
       }
@@ -90,13 +96,15 @@ describe("crane mesh", () => {
     for (const [key, n] of count) {
       const [part, edge] = key.split(":");
       const [a, b] = edge.split(">");
-      if (n === 0 || n !== count.get(`${part}:${b}>${a}`)) unmatched++;
+      if (n === 0 || n !== count.get(`${part}:${b}>${a}`)) {
+        unmatched++;
+      }
     }
     expect(unmatched).toBe(0);
   });
 
   it("has outward-facing body faces", () => {
-    for (const t of CRANE_TRIANGLES.filter((t) => t.part === 0)) {
+    for (const t of CRANE_TRIANGLES.filter((tri) => tri.part === 0)) {
       const n = triangleNormal(t.v[0], t.v[1], t.v[2]);
       const c = [0, 1, 2].map((a) => (t.v[0][a] + t.v[1][a] + t.v[2][a]) / 3);
       expect(n[0] * c[0] + n[1] * c[1] + n[2] * c[2]).toBeGreaterThan(0);
@@ -119,7 +127,9 @@ describe("crane mesh", () => {
           const v = t.v[k];
           // Root corners lie on the hinge, inside the body, and don't move.
           if (v[2] === 0) {
-            if (!inBody(moved[k])) detached++;
+            if (!inBody(moved[k])) {
+              detached++;
+            }
             if (Math.hypot(moved[k][0] - v[0], moved[k][1] - v[1], moved[k][2] - v[2]) > 1e-12) {
               detached++;
             }
@@ -129,7 +139,9 @@ describe("crane mesh", () => {
           const m = moved[(k + 1) % 3];
           const before = Math.hypot(v[0] - w[0], v[1] - w[1], v[2] - w[2]);
           const after = Math.hypot(moved[k][0] - m[0], moved[k][1] - m[1], moved[k][2] - m[2]);
-          if (Math.abs(before - after) > 1e-9) stretched++;
+          if (Math.abs(before - after) > 1e-9) {
+            stretched++;
+          }
         }
       }
     }
@@ -138,14 +150,16 @@ describe("crane mesh", () => {
     // Every wing triangle reaches the hinge line, and each wing meets it along an edge.
     let unrooted = 0;
     for (const t of wings) {
-      if (!t.v.some((v) => v[2] === 0 && v[1] === HINGE_Y)) unrooted++;
+      if (!t.v.some((v) => v[2] === 0 && v[1] === HINGE_Y)) {
+        unrooted++;
+      }
     }
     expect(unrooted).toBe(0);
     for (const side of [1, -1]) {
       const roots = new Set(
         wings
           .filter((t) => t.side === side)
-          .flatMap((t) => t.v.filter((v) => v[2] === 0).map((v) => v.join())),
+          .flatMap((t) => t.v.filter((v) => v[2] === 0).map((v) => v.join(","))),
       );
       expect(roots.size).toBe(2);
     }
@@ -173,7 +187,9 @@ describe("crane mesh", () => {
     const o = (t * 3 + 2) * VERTEX_FLOATS + 7 + 3;
     const nb = CRANE_TRIANGLES[j];
     const n = triangleNormal(nb.v[0], nb.v[1], nb.v[2]);
-    for (let a = 0; a < 3; a++) expect(v[o + a]).toBeCloseTo(n[a]);
+    for (let a = 0; a < 3; a++) {
+      expect(v[o + a]).toBeCloseTo(n[a]);
+    }
   });
 });
 
@@ -193,7 +209,9 @@ describe("crane rotation", () => {
     for (let a = 0; a < 3; a++) {
       for (let b = 0; b < 3; b++) {
         const d = m[a * 3] * m[b * 3] + m[a * 3 + 1] * m[b * 3 + 1] + m[a * 3 + 2] * m[b * 3 + 2];
-        if (Math.abs(d - (a === b ? 1 : 0)) > 1e-12) bad++;
+        if (Math.abs(d - (a === b ? 1 : 0)) > 1e-12) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -224,7 +242,9 @@ describe("flapping", () => {
       let prev = flapAngle(0, cycles);
       for (let i = 1; i <= 2000; i++) {
         const a = flapAngle(i / 2000, cycles);
-        if (a < FLAP_MIN - 1e-9 || a > FLAP_MAX + 1e-9) outside++;
+        if (a < FLAP_MIN - 1e-9 || a > FLAP_MAX + 1e-9) {
+          outside++;
+        }
         maxStep = Math.max(maxStep, Math.abs(a - prev));
         prev = a;
       }
@@ -266,26 +286,38 @@ describe("flight", () => {
     // Wingbeats turn the wings by up to about 5.2 radians per second.
     for (let step = 0; step < 60 * 240; step++) {
       stepCranes(c, 1 / 60, ASPECT, 1, MAX_CRANES);
-      c.flyers.forEach((f, i) => {
+      for (const [i, f] of c.flyers.entries()) {
         flyerPose(f, pose);
         const p = prev[i];
         if (pose.size !== p.size) {
           // A new flight (each draws a new depth): the old and new positions are both off-screen.
           respawns++;
-          if (!off(p.x, p.size) || !off(pose.x, pose.size)) badRespawns++;
+          if (!off(p.x, p.size) || !off(pose.x, pose.size)) {
+            badRespawns++;
+          }
         } else {
-          if (Math.hypot(pose.x - p.x, pose.y - p.y) > 0.002) jumps++;
-          if (Math.abs(pose.flap - p.flap) > 0.1) jumps++;
-          if (Math.abs(Math.sin(pose.yaw - p.yaw)) > 0.02) jumps++;
+          if (Math.hypot(pose.x - p.x, pose.y - p.y) > 0.002) {
+            jumps++;
+          }
+          if (Math.abs(pose.flap - p.flap) > 0.1) {
+            jumps++;
+          }
+          if (Math.abs(Math.sin(pose.yaw - p.yaw)) > 0.02) {
+            jumps++;
+          }
         }
-        if (pose.y > BOTTOM_LANE[1] + 0.03 && pose.y < TOP_LANE[0] - 0.03) inBand++;
-        if (pose.flap !== GLIDE) flaps++;
+        if (pose.y > BOTTOM_LANE[1] + 0.03 && pose.y < TOP_LANE[0] - 0.03) {
+          inBand++;
+        }
+        if (pose.flap !== GLIDE) {
+          flaps++;
+        }
         p.x = pose.x;
         p.y = pose.y;
         p.flap = pose.flap;
         p.yaw = pose.yaw;
         p.size = pose.size;
-      });
+      }
     }
     expect(respawns).toBeGreaterThan(10);
     expect(badRespawns).toBe(0);
@@ -304,8 +336,12 @@ describe("flight", () => {
     const check = () => {
       c.flyers.forEach((f, i) => {
         // Parking happens off-screen; so does launching.
-        if (f.parked && !wasParked[i] && onScreen(lastX[i])) popped++;
-        if (!f.parked && wasParked[i] && onScreen(f.x)) popped++;
+        if (f.parked && !wasParked[i] && onScreen(lastX[i])) {
+          popped++;
+        }
+        if (!f.parked && wasParked[i] && onScreen(f.x)) {
+          popped++;
+        }
         wasParked[i] = f.parked;
         lastX[i] = f.x;
       });
@@ -325,7 +361,9 @@ describe("flight", () => {
   it("stands still at speed 0", () => {
     const c = createCranes(1, ASPECT, 9);
     const before = c.flyers.map((f) => f.x);
-    for (let i = 0; i < 100; i++) stepCranes(c, DT, ASPECT, 0, 9);
+    for (let i = 0; i < 100; i++) {
+      stepCranes(c, DT, ASPECT, 0, 9);
+    }
     expect(c.flyers.map((f) => f.x)).toEqual(before);
   });
 });
@@ -342,11 +380,17 @@ describe("mobile", () => {
         hangerPose(h, t, ASPECT, pose, tie, m);
         const x = pose.x + HANG_SIZE * (m[0] * TIE_POINT[0] + m[3] * TIE_POINT[1]);
         const y = pose.y + HANG_SIZE * (m[1] * TIE_POINT[0] + m[4] * TIE_POINT[1]);
-        if (Math.hypot(x - tie[0], y - tie[1]) > 1e-12) off++;
+        if (Math.hypot(x - tie[0], y - tie[1]) > 1e-12) {
+          off++;
+        }
         // The thread hangs from the top edge, clear of the middle third.
         const ax = h.anchor * ASPECT;
-        if (ax > ASPECT / 3 && ax < (2 * ASPECT) / 3) off++;
-        if (!(tie[1] < 1 && tie[1] > 0.6)) off++;
+        if (ax > ASPECT / 3 && ax < (2 * ASPECT) / 3) {
+          off++;
+        }
+        if (!(tie[1] < 1 && tie[1] > 0.6)) {
+          off++;
+        }
       }
     }
     expect(off).toBe(0);
@@ -359,7 +403,9 @@ describe("instances", () => {
     const c = createCranes(2, ASPECT, MAX_CRANES);
     const s = createInstanceScratch();
     const out = new Float32Array(MAX_INSTANCES * INSTANCE_FLOATS);
-    for (let i = 0; i < 90; i++) stepCranes(c, DT, ASPECT, 1, MAX_CRANES);
+    for (let i = 0; i < 90; i++) {
+      stepCranes(c, DT, ASPECT, 1, MAX_CRANES);
+    }
     const n = writeInstances(c, true, paletteFor("washi"), 1920, 1080, s, out);
     expect(n).toBe(MAX_CRANES + MOBILE_CRANES);
     expect(writeInstances(c, false, paletteFor("washi"), 1920, 1080, s, out)).toBe(MAX_CRANES);
@@ -382,8 +428,10 @@ describe("instances", () => {
 
 describe("palettes and skies", () => {
   it("covers every option", () => {
-    expect(Object.keys(PALETTES).sort()).toEqual(PALETTE_OPTIONS.map((o) => o.value).sort());
-    expect(Object.keys(SKIES).sort()).toEqual(SKY_OPTIONS.map((o) => o.value).sort());
+    expect(Object.keys(PALETTES).toSorted()).toEqual(
+      PALETTE_OPTIONS.map((o) => o.value).toSorted(),
+    );
+    expect(Object.keys(SKIES).toSorted()).toEqual(SKY_OPTIONS.map((o) => o.value).toSorted());
     expect(paletteFor("nope")).toBe(PALETTES.pastel);
     expect(skyFor("nope")).toBe(SKIES.dawn);
   });

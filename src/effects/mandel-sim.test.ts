@@ -117,7 +117,7 @@ describe("targets", () => {
     const t = TARGETS[n];
     const loop = loopDoublings(t);
     const diffs: number[] = [];
-    for (let j = 0; j < 9; j++)
+    for (let j = 0; j < 9; j++) {
       for (let i = 0; i < 16; i++) {
         const px = ((i + 0.5) / 16 - 0.5) * (32 / 9);
         const py = ((j + 0.5) / 9 - 0.5) * 2;
@@ -125,6 +125,7 @@ describe("targets", () => {
         const b = indexAt(t, loop, px, py, DEFAULT_DETAIL);
         diffs.push(Math.abs(a - b));
       }
+    }
     diffs.sort((x, y) => x - y);
     // Median index difference well under a tenth of a palette cycle.
     expect(diffs[diffs.length >> 1]).toBeLessThan(0.1 * t.cycle);
@@ -135,7 +136,9 @@ describe("zoom schedule", () => {
   it("advances log-scale linearly and wraps to the loop", () => {
     const loop = 3;
     let u = 0;
-    for (let k = 0; k < 600; k++) u = advanceZoom(u, 0.1, 10, loop);
+    for (let k = 0; k < 600; k++) {
+      u = advanceZoom(u, 0.1, 10, loop);
+    }
     // 60 s at 10 s per doubling: 6 doublings, two whole loops.
     expect(Math.min(u, loop - u)).toBeCloseTo(0, 9);
     expect(advanceZoom(1, 5, 10, loop)).toBeCloseTo(1.5, 12);
@@ -187,21 +190,35 @@ describe("zoom schedule", () => {
       writePaletteMap(t, u, map);
       const cap = iterCap(t, u, DEFAULT_DETAIL);
       const w = fadeWeight(t, u);
-      if (!(w >= 0 && w <= 1)) bad++;
-      if (w > 0) fades++;
+      if (!(w >= 0 && w <= 1)) {
+        bad++;
+      }
+      if (w > 0) {
+        fades++;
+      }
       if (u < before) {
         wraps++;
         // At the loop point the fade had finished, and the new view carries on
         // from where the incoming one was.
-        if (prev.w < 0.999) bad++;
-        if (w !== 0) bad++;
+        if (prev.w < 0.999) {
+          bad++;
+        }
+        if (w !== 0) {
+          bad++;
+        }
         worst = Math.max(worst, delta(view, viewB, map, mapB) / step);
-        if (Math.abs(cap - capB) > 1) bad++;
+        if (Math.abs(cap - capB) > 1) {
+          bad++;
+        }
       } else {
         worst = Math.max(worst, delta(view, prev.view, map, prev.map) / step);
-        if (Math.abs(cap - prev.cap) > 1) bad++;
+        if (Math.abs(cap - prev.cap) > 1) {
+          bad++;
+        }
         // The fade weight eases in without jumps.
-        if (Math.abs(w - prev.w) > (2 * step) / t.fade) bad++;
+        if (Math.abs(w - prev.w) > (2 * step) / t.fade) {
+          bad++;
+        }
       }
       prev.view.set(view);
       prev.map.set(map);
@@ -297,7 +314,9 @@ describe("smooth escape count", () => {
       const s = k / 4000;
       const nu = smoothIter(-2.2 + 1.4 * s, 1.6 - 1.1 * s, 500);
       worst = Math.max(worst, Math.abs(nu - last));
-      if (Math.floor(nu) !== lastInt) bands++;
+      if (Math.floor(nu) !== lastInt) {
+        bands++;
+      }
       last = nu;
       lastInt = Math.floor(nu);
     }
@@ -338,7 +357,9 @@ describe("palettes", () => {
     let jump = 0;
     for (let k = 0; k < PALETTE_SIZE; k++) {
       const j = (k + 1) % PALETTE_SIZE;
-      for (let c = 0; c < 3; c++) jump = Math.max(jump, Math.abs(tex[4 * k + c] - tex[4 * j + c]));
+      for (let c = 0; c < 3; c++) {
+        jump = Math.max(jump, Math.abs(tex[4 * k + c] - tex[4 * j + c]));
+      }
     }
     expect(jump).toBeLessThan(16);
     // Brightness stays moderate, and the interior is the darkest colour.

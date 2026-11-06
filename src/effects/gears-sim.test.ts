@@ -57,7 +57,9 @@ describe("growTrain", () => {
   });
 
   it("still grows something in a portrait frame", () => {
-    for (const layout of LAYOUTS) expect(growTrain(layout, 9 / 16, 3).length).toBeGreaterThan(2);
+    for (const layout of LAYOUTS) {
+      expect(growTrain(layout, 9 / 16, 3).length).toBeGreaterThan(2);
+    }
   });
 
   it("is deterministic per seed", () => {
@@ -70,19 +72,33 @@ describe("growTrain", () => {
     let meshes = 0;
     for (const { gears } of trains) {
       for (const g of gears) {
-        if (g.parent < 0) continue;
+        if (g.parent < 0) {
+          continue;
+        }
         const p = gears[g.parent];
         if (g.axle) {
-          if (g.ratio !== p.ratio || g.x !== p.x || g.y !== p.y || g.layer === p.layer) bad++;
+          if (g.ratio !== p.ratio || g.x !== p.x || g.y !== p.y || g.layer === p.layer) {
+            bad++;
+          }
           continue;
         }
         meshes++;
         const d = Math.hypot(g.x - p.x, g.y - p.y);
-        if (Math.abs(d - (g.pitchR + p.pitchR)) > 1e-12) bad++;
-        if (Math.abs(g.ratio * g.teeth + p.ratio * p.teeth) > 1e-9) bad++;
-        if (Math.sign(g.ratio) === Math.sign(p.ratio)) bad++;
-        if (g.layer !== p.layer) bad++;
-        if (Math.abs(g.ratio) > MAX_RATIO) bad++;
+        if (Math.abs(d - (g.pitchR + p.pitchR)) > 1e-12) {
+          bad++;
+        }
+        if (Math.abs(g.ratio * g.teeth + p.ratio * p.teeth) > 1e-9) {
+          bad++;
+        }
+        if (Math.sign(g.ratio) === Math.sign(p.ratio)) {
+          bad++;
+        }
+        if (g.layer !== p.layer) {
+          bad++;
+        }
+        if (Math.abs(g.ratio) > MAX_RATIO) {
+          bad++;
+        }
       }
     }
     expect(meshes).toBeGreaterThan(200);
@@ -94,7 +110,9 @@ describe("growTrain", () => {
     let checks = 0;
     for (const { gears } of trains.filter((_, i) => i % 3 === 0)) {
       for (const g of gears) {
-        if (g.parent < 0 || g.axle) continue;
+        if (g.parent < 0 || g.axle) {
+          continue;
+        }
         const p = gears[g.parent];
         const alpha = Math.atan2(g.y - p.y, g.x - p.x);
         for (let k = 0; k < 40; k++) {
@@ -106,7 +124,9 @@ describe("growTrain", () => {
           };
           const sum = w(p, alpha) + w(g, alpha + Math.PI);
           checks++;
-          if (Math.abs(sum - 0.5) > 1e-6) bad++;
+          if (Math.abs(sum - 0.5) > 1e-6) {
+            bad++;
+          }
         }
       }
     }
@@ -119,7 +139,9 @@ describe("growTrain", () => {
     let samples = 0;
     for (const { gears } of trains.filter((_, i) => i % 6 === 0)) {
       for (const g of gears) {
-        if (g.parent < 0 || g.axle) continue;
+        if (g.parent < 0 || g.axle) {
+          continue;
+        }
         const p = gears[g.parent];
         const alpha = Math.atan2(g.y - p.y, g.x - p.x);
         const ux = Math.cos(alpha);
@@ -135,7 +157,9 @@ describe("growTrain", () => {
               const x = p.x + ux * along - uy * across;
               const y = p.y + uy * along + ux * across;
               samples++;
-              if (inside(p, drive, x, y) && inside(g, drive, x, y)) overlaps++;
+              if (inside(p, drive, x, y) && inside(g, drive, x, y)) {
+                overlaps++;
+              }
             }
           }
         }
@@ -149,10 +173,12 @@ describe("growTrain", () => {
     const bad: string[] = [];
     for (const { layout, aspect, seed, gears } of trains) {
       gears.forEach((g, i) => {
-        if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)))
+        if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g))) {
           bad.push(`${layout} ${String(seed)} #${String(i)} out`);
-        if (g.layer < 0 || g.layer >= LAYERS)
+        }
+        if (g.layer < 0 || g.layer >= LAYERS) {
           bad.push(`${layout} ${String(seed)} #${String(i)} layer`);
+        }
         for (let j = 0; j < i; j++) {
           const o = gears[j];
           if (o.layer !== g.layer || (g.parent === j && !g.axle) || (o.parent === i && !o.axle)) {
@@ -206,7 +232,9 @@ describe("drive", () => {
     expect(tickEase(0)).toBe(0);
     expect(tickEase(1)).toBeCloseTo(1, 12);
     let peak = 0;
-    for (let u = 0; u <= 1; u += 0.01) peak = Math.max(peak, tickEase(u));
+    for (let u = 0; u <= 1; u += 0.01) {
+      peak = Math.max(peak, tickEase(u));
+    }
     expect(peak).toBeGreaterThan(1.02);
     expect(peak).toBeLessThan(1.15);
   });
@@ -223,7 +251,9 @@ describe("drive", () => {
       const a = driveAngle(d);
       maxLag = Math.max(maxLag, Math.abs(a - d.smooth));
       // Only the settle may move it back, and only a little.
-      if (a < last - 0.2 * omega * TICK_PERIOD) backwards++;
+      if (a < last - 0.2 * omega * TICK_PERIOD) {
+        backwards++;
+      }
       last = a;
     }
     expect(backwards).toBe(0);
@@ -269,8 +299,12 @@ describe("drive", () => {
     for (let i = 0; i < 240; i++) {
       advanceDrive(d, 1 / 60, 0.1, true);
       const b = balanceAngle(d);
-      if (b > 1) pos++;
-      if (b < -1) neg++;
+      if (b > 1) {
+        pos++;
+      }
+      if (b < -1) {
+        neg++;
+      }
     }
     expect(pos).toBeGreaterThan(30);
     expect(neg).toBeGreaterThan(30);

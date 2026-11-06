@@ -234,7 +234,9 @@ export function buildColourScale(palette: RadarPalette, out: Uint8Array): Uint8A
     const ca = k === 0 ? 1 : t;
     const alo = k === 0 ? 0 : palette.alpha[k - 1];
     const o = j * 4;
-    for (let c = 0; c < 3; c++) out[o + c] = Math.round(a[c] + (b[c] - a[c]) * ca);
+    for (let c = 0; c < 3; c++) {
+      out[o + c] = Math.round(a[c] + (b[c] - a[c]) * ca);
+    }
     out[o + 3] = Math.round(255 * (alo + (palette.alpha[k] - alo) * t));
   }
   return out;
@@ -359,16 +361,30 @@ export function placeLabels(terrain: Float32Array, aspect: number, seed: number)
   for (let tries = 0; tries < 400 && labels.length < LABEL_COUNT; tries++) {
     const x = 0.05 + rng() * Math.max(0, aspect - LABEL_WIDTH - 0.1);
     const y = 0.08 + rng() * 0.84;
-    if (inSpeakerZone(x, aspect) || inSpeakerZone(x + LABEL_WIDTH, aspect)) continue;
-    if (x + LABEL_WIDTH > aspect - 0.4 && y < 0.12) continue;
-    if (Math.hypot(x - cx, y - CENTRE_Y) < 0.12) continue;
-    if (sampleTerrain(terrain, x, y) < LABEL_MIN_HEIGHT) continue;
+    if (inSpeakerZone(x, aspect) || inSpeakerZone(x + LABEL_WIDTH, aspect)) {
+      continue;
+    }
+    if (x + LABEL_WIDTH > aspect - 0.4 && y < 0.12) {
+      continue;
+    }
+    if (Math.hypot(x - cx, y - CENTRE_Y) < 0.12) {
+      continue;
+    }
+    if (sampleTerrain(terrain, x, y) < LABEL_MIN_HEIGHT) {
+      continue;
+    }
     let clear = true;
     for (const l of labels) {
-      if (Math.abs(l.y - y) < 0.06 && Math.abs(l.x - x) < LABEL_WIDTH + 0.02) clear = false;
-      if (Math.hypot(l.x - x, l.y - y) < LABEL_SPACING) clear = false;
+      if (Math.abs(l.y - y) < 0.06 && Math.abs(l.x - x) < LABEL_WIDTH + 0.02) {
+        clear = false;
+      }
+      if (Math.hypot(l.x - x, l.y - y) < LABEL_SPACING) {
+        clear = false;
+      }
     }
-    if (!clear) continue;
+    if (!clear) {
+      continue;
+    }
     const pick = Math.floor(rng() * names.length);
     labels.push({ name: names[pick], x, y });
     names.splice(pick, 1);

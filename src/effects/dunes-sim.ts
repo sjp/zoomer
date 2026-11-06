@@ -87,7 +87,9 @@ export const BLUR_PER_SOFTNESS = 0.03;
  */
 export function duneShape(u: number, softness = 0): number {
   const k = clamp(softness, 0, SMOOTH_MIN_SOFTNESS);
-  if (k <= 0) return roundedDune(u, 0);
+  if (k <= 0) {
+    return roundedDune(u, 0);
+  }
   return roundedDune(u, k) / crestPeak(k);
 }
 
@@ -97,7 +99,9 @@ function roundedDune(u: number, k: number): number {
   const b = (1 - u) / (1 - WINDWARD);
   const wind = a * a;
   const lee = b * b;
-  if (k <= 0) return Math.min(wind, lee);
+  if (k <= 0) {
+    return Math.min(wind, lee);
+  }
   // Polynomial smooth min: equal to min() where the curves are more than k apart.
   const h = Math.max(k - Math.abs(wind - lee), 0) / k;
   return Math.min(wind, lee) - h * h * k * 0.25;
@@ -110,14 +114,19 @@ let peakValue = 1;
  * cached for the last `k`: the table rebuild calls `duneShape` with one softness.
  */
 function crestPeak(k: number): number {
-  if (k === peakK) return peakValue;
+  if (k === peakK) {
+    return peakValue;
+  }
   let lo = 0.3;
   let hi = 0.95;
   for (let i = 0; i < 80; i++) {
     const m1 = lo + (hi - lo) / 3;
     const m2 = hi - (hi - lo) / 3;
-    if (roundedDune(m1, k) < roundedDune(m2, k)) lo = m1;
-    else hi = m2;
+    if (roundedDune(m1, k) < roundedDune(m2, k)) {
+      lo = m1;
+    } else {
+      hi = m2;
+    }
   }
   peakK = k;
   peakValue = roundedDune((lo + hi) / 2, k);
@@ -163,7 +172,7 @@ export function profileParams(seed: number, i: number, count: number, softness =
 export function profile(x: number, p: ProfileParams): number {
   const phase = x / p.wavelength + p.offset + 0.25 * Math.sin(x * p.warpFreq + p.warpPhase);
   const n = Math.floor(phase);
-  const height = 0.55 + 0.45 * (hash32(p.salt ^ (n | 0)) / 4294967296);
+  const height = 0.55 + 0.45 * (hash32(p.salt ^ n) / 4294967296);
   const main = duneShape(phase - n, p.softness) * height;
   const detail = duneShape(fract(phase * 2.7 + p.detailOffset), p.softness);
   const swell = 0.5 + 0.5 * Math.sin(x * p.swellFreq + p.swellPhase);
@@ -196,11 +205,14 @@ export function horizonAngles(
         const b = stack[top - 2];
         const sa = (h[a] - h[j]) / Math.abs(j - a);
         const sb = (h[b] - h[j]) / Math.abs(j - b);
-        if (sa > sb) break;
+        if (sa > sb) {
+          break;
+        }
         top--;
       }
-      if (top === 0) out[j] = -Math.PI / 2;
-      else {
+      if (top === 0) {
+        out[j] = -Math.PI / 2;
+      } else {
         const a = stack[top - 1];
         out[j] = Math.atan2(h[a] - h[j], Math.abs(j - a) * dx);
       }
@@ -218,13 +230,17 @@ export function horizonAngles(
 export function blurProfile(h: Float64Array, tmp: Float64Array, sigma: number): void {
   // Three box passes of radius r have variance r (r + 1).
   const r = Math.round((Math.sqrt(1 + 4 * sigma * sigma) - 1) / 2);
-  if (!(r >= 1)) return;
+  if (!(r >= 1)) {
+    return;
+  }
   const n = h.length;
   const last = n - 1;
   const inv = 1 / (2 * r + 1);
   for (let pass = 0; pass < 3; pass++) {
     let sum = 0;
-    for (let k = -r; k <= r; k++) sum += h[Math.min(last, Math.max(0, k))];
+    for (let k = -r; k <= r; k++) {
+      sum += h[Math.min(last, Math.max(0, k))];
+    }
     for (let j = 0; j < n; j++) {
       tmp[j] = sum * inv;
       sum += h[Math.min(last, j + r + 1)] - h[Math.max(0, j - r)];

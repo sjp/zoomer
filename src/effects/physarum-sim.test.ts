@@ -48,7 +48,9 @@ function run(seed: number, steps: number, overrides: Partial<StepConfig> = {}) {
   };
   const maxes: number[] = [];
   for (let s = 0; s < steps; s++) {
-    if (cfg.food) foodPositions(s / STEP_RATE, cfg.food);
+    if (cfg.food) {
+      foodPositions(s / STEP_RATE, cfg.food);
+    }
     cfg.salt = stepSalt(s);
     physarumStep(trail, next, W, H, agents, count, cfg);
     [trail, next] = [next, trail];
@@ -79,7 +81,9 @@ describe("physarumStep", () => {
       expect(Number.isFinite(v)).toBe(true);
     }
     // The diffuse pass clamps to TRAIL_MAX; at most every agent's deposit lands on top.
-    for (const m of maxes) expect(m).toBeLessThanOrEqual(TRAIL_MAX + count * cfg.deposit);
+    for (const m of maxes) {
+      expect(m).toBeLessThanOrEqual(TRAIL_MAX + count * cfg.deposit);
+    }
     // The deposit normalisation holds the mean near MEAN_TRAIL (the calm centre's extra decay
     // pulls it a little lower).
     const mean = trail.reduce((a, b) => a + b, 0) / trail.length;
@@ -99,7 +103,9 @@ describe("physarumStep", () => {
       salt: 0,
     };
     physarumStep(trail, out, W, H, new Float32Array(0), 0, cfg);
-    for (const v of out) expect(v).toBeCloseTo(0.9, 6);
+    for (const v of out) {
+      expect(v).toBeCloseTo(0.9, 6);
+    }
   });
 
   it("is deterministic per seed", () => {
@@ -156,7 +162,9 @@ describe("step clock", () => {
   it("runs STEP_RATE steps a second at display rate", () => {
     const clock: StepClock = { acc: 0 };
     let total = 0;
-    for (let i = 0; i < 120; i++) total += takeSteps(clock, STEP_RATE, 1 / 120, MAX_STEPS);
+    for (let i = 0; i < 120; i++) {
+      total += takeSteps(clock, STEP_RATE, 1 / 120, MAX_STEPS);
+    }
     expect(total).toBe(STEP_RATE);
   });
   it("caps the steps in one long frame and drops the excess", () => {
@@ -195,8 +203,12 @@ describe("palettes", () => {
     const luma = (i: number) => lut[i * 4] * 0.3 + lut[i * 4 + 1] * 0.59 + lut[i * 4 + 2] * 0.11;
     expect(luma(0)).toBeLessThan(12);
     expect(luma(LUT_SIZE - 1)).toBeGreaterThan(200);
-    for (let i = 1; i < LUT_SIZE; i++) expect(luma(i)).toBeGreaterThanOrEqual(luma(i - 1) - 0.5);
-    for (let i = 0; i < LUT_SIZE; i++) expect(lut[i * 4 + 3]).toBe(255);
+    for (let i = 1; i < LUT_SIZE; i++) {
+      expect(luma(i)).toBeGreaterThanOrEqual(luma(i - 1) - 0.5);
+    }
+    for (let i = 0; i < LUT_SIZE; i++) {
+      expect(lut[i * 4 + 3]).toBe(255);
+    }
   });
 
   it("starts each palette at its first stop and falls back to gold", () => {
@@ -227,6 +239,8 @@ describe("food", () => {
   it("drifts slowly", () => {
     const a = foodPositions(100, new Float32Array(FOOD_COUNT * 2));
     const b = foodPositions(100 + 1 / STEP_RATE, new Float32Array(FOOD_COUNT * 2));
-    for (let i = 0; i < a.length; i++) expect(Math.abs(a[i] - b[i])).toBeLessThan(0.001);
+    for (let i = 0; i < a.length; i++) {
+      expect(Math.abs(a[i] - b[i])).toBeLessThan(0.001);
+    }
   });
 });

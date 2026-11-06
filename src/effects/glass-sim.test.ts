@@ -36,7 +36,9 @@ describe("search bound", () => {
         const out = Math.min(2.5 - x, x + 1.5, 2.5 - y, y + 1.5);
         const d: number[] = [];
         for (let j = -1; j <= 1; j++) {
-          for (let i = -1; i <= 1; i++) d.push(Math.hypot(x - i - 0.5, y - j - 0.5));
+          for (let i = -1; i <= 1; i++) {
+            d.push(Math.hypot(x - i - 0.5, y - j - 0.5));
+          }
         }
         d.sort((a, b) => a - b);
         minSlack = Math.min(minSlack, out - d[1]);
@@ -133,8 +135,12 @@ describe("determinism", () => {
 
 describe("palettes", () => {
   it("have PALETTE_SIZE colours each and an option per palette", () => {
-    for (const p of Object.values(PALETTES)) expect(p).toHaveLength(PALETTE_SIZE);
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    for (const p of Object.values(PALETTES)) {
+      expect(p).toHaveLength(PALETTE_SIZE);
+    }
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
   });
 
   it("falls back to cathedral", () => {
@@ -145,7 +151,9 @@ describe("palettes", () => {
 
   it("uses every colour across a window", () => {
     const seen = new Set<number>();
-    for (let i = 0; i < 64; i++) seen.add(paneColorIndex(seedHash(GRID_ORIGIN + i, GRID_ORIGIN)));
+    for (let i = 0; i < 64; i++) {
+      seen.add(paneColorIndex(seedHash(GRID_ORIGIN + i, GRID_ORIGIN)));
+    }
     expect(seen.size).toBe(PALETTE_SIZE);
   });
 });

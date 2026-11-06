@@ -234,7 +234,9 @@ export const blinds = defineEffect(blindsMeta, {
           const light = lightRgb(p.lightColor);
           const wall = wallRgb(p.wallColor);
           sunColor(sunRgb, light, level, SUN_GAIN);
-          for (let i = 0; i < 3; i++) wallSun[i] = wall[i] * sunRgb[i];
+          for (let i = 0; i < 3; i++) {
+            wallSun[i] = wall[i] * sunRgb[i];
+          }
 
           gl.useProgram(program);
           const inv = 1 / scale;
@@ -278,7 +280,9 @@ export const blinds = defineEffect(blindsMeta, {
             // A gentle glint as each mote tumbles.
             const glint = 0.7 + 0.3 * Math.sin(time * 1.1 + seed[i]);
             const k = blindsLightBand(xn, w, shape) * glint * l * l;
-            if (k <= 0.004) continue;
+            if (k <= 0.004) {
+              continue;
+            }
             const x = shape.cx + xn * shape.halfW;
             const y = shape.cy + w * shape.bandH + shape.slope * (x - shape.cx);
             const o = visible * stride;

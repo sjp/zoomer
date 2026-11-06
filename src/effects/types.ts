@@ -72,15 +72,22 @@ export interface Viewport {
 }
 
 export interface EffectInstance<V> {
-  resize(viewport: Viewport): void;
-  /** Draws one frame. `dt` is seconds since the previous frame, clamped by the host to [0, 0.1]. */
+  resize: (viewport: Viewport) => void;
+  /**
+   * Draws one frame. `dt` is seconds since the previous frame, clamped by the host to [0, 0.1].
+   *
+   * Declared as a method on purpose: method parameters are bivariant, which lets an
+   * effect for a specific schema be stored as a plain `EffectDefinition`. The host
+   * only ever passes values parsed from that same effect's own `params`.
+   */
+  // oxlint-disable-next-line typescript/method-signature-style -- bivariance is needed to erase the schema type, see above
   frame(dt: number, params: V): void;
   /**
    * Releases resources such as GPU buffers, textures and programs. Called when the
    * effect changes or the canvas unmounts. Not called after a lost WebGL context,
    * since the context's resources are already gone.
    */
-  dispose?(): void;
+  dispose?: () => void;
 }
 
 /** Rendering context types an effect can draw with, keyed by `getContext` name. */
@@ -144,7 +151,7 @@ export interface EffectMetaWebGL2<S extends ParamSchema = ParamSchema> extends E
 export type EffectMeta<S extends ParamSchema = ParamSchema> = EffectMeta2D<S> | EffectMetaWebGL2<S>;
 
 export interface Effect2D<S extends ParamSchema = ParamSchema> extends EffectMeta2D<S> {
-  create(ctx: CanvasRenderingContext2D): EffectInstance<ParamValues<S>>;
+  create: (ctx: CanvasRenderingContext2D) => EffectInstance<ParamValues<S>>;
 }
 
 export interface EffectWebGL2<S extends ParamSchema = ParamSchema> extends EffectMetaWebGL2<S> {
@@ -153,7 +160,7 @@ export interface EffectWebGL2<S extends ParamSchema = ParamSchema> extends Effec
    * GPU resources here. GL state persists across effects sharing a canvas, so set
    * every piece of state you rely on rather than assuming defaults.
    */
-  create(gl: WebGL2RenderingContext): EffectInstance<ParamValues<S>>;
+  create: (gl: WebGL2RenderingContext) => EffectInstance<ParamValues<S>>;
 }
 
 /** A loaded effect: its metadata plus the `create` from its implementation module. */

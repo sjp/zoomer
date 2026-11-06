@@ -10,7 +10,9 @@ import "./index.css";
 effectLoader.prefetch(stateFromHash(window.location.hash, effects, defaultEffect).effect);
 
 const root = document.getElementById("root");
-if (!root) throw new Error("Missing #root element");
+if (!root) {
+  throw new Error("Missing #root element");
+}
 
 createRoot(root).render(
   <StrictMode>

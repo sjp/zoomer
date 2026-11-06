@@ -10,6 +10,7 @@ import {
   nearTopAt,
   paletteFor,
   PALETTES,
+  type SpringPalette,
   RIPPLE_PERIOD,
   ripplePhases,
   ROCK_CHANNELS,
@@ -24,6 +25,10 @@ import {
   WATERLINE,
 } from "./hotspring-sim";
 import { FLAKE_FLOATS, type FlakeFrame, createFlakes } from "./snow-sim";
+import type { Rgb } from "./color";
+
+/** A palette's fields, typed so `Object.values` sees through the interface. */
+const paletteFields = (p: SpringPalette): Readonly<Record<string, number | Rgb>> => ({ ...p });
 
 const ASPECTS = { "4:3": 4 / 3, "16:9": 16 / 9, "21:9": 21 / 9 };
 
@@ -84,13 +89,19 @@ describe("springLayout", () => {
     for (let c = 0; c < ROCK_COLUMNS; c++) {
       const x = ((c + 0.5) / ROCK_COLUMNS) * aspect;
       const o = c * ROCK_CHANNELS;
-      if (Math.abs(data[o] - nearTopAt(l, x)) > 1e-6) bad++;
+      if (Math.abs(data[o] - nearTopAt(l, x)) > 1e-6) {
+        bad++;
+      }
       // Caps are never deeper than the rock, and creases stay in 0..1.
-      if (data[o + 2] < 0 || data[o + 2] > 0.03 || data[o + 3] < 0 || data[o + 3] > 1) bad++;
+      if (data[o + 2] < 0 || data[o + 2] > 0.03 || data[o + 3] < 0 || data[o + 3] > 1) {
+        bad++;
+      }
       const far = (ROCK_COLUMNS + c) * ROCK_CHANNELS;
       if (data[far] > data[far + 1]) {
         farStones++;
-        if (data[far] > WATERLINE + 0.06 || data[far + 1] < WATERLINE - 0.02) bad++;
+        if (data[far] > WATERLINE + 0.06 || data[far + 1] < WATERLINE - 0.02) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -151,7 +162,9 @@ describe("snow fade mask", () => {
           if (prevA[i] >= 0 && y > prevY[i]) {
             worstDrop = Math.max(worstDrop, prevA[i] - a);
             worstRise = Math.max(worstRise, a - prevA[i]);
-            if (a === 0 && prevA[i] > 0) melted++;
+            if (a === 0 && prevA[i] > 0) {
+              melted++;
+            }
           }
           prevA[i] = a;
           prevY[i] = y;
@@ -223,7 +236,9 @@ describe("ripplePhases", () => {
     const b = new Float64Array(4);
     ripplePhases(12.5, a);
     ripplePhases(12.5 + RIPPLE_PERIOD, b);
-    for (let i = 0; i < 4; i++) expect(b[i]).toBeCloseTo(a[i], 9);
+    for (let i = 0; i < 4; i++) {
+      expect(b[i]).toBeCloseTo(a[i], 9);
+    }
   });
 });
 
@@ -235,7 +250,7 @@ describe("palettes", () => {
 
   it("keeps colours in range, and night darker than day", () => {
     const out = Object.values(PALETTES)
-      .flatMap((p) => Object.values(p).flatMap((v: number | readonly number[]) => v))
+      .flatMap((p) => Object.values(paletteFields(p)).flat())
       .filter((c) => !(c >= 0 && c <= 1.2));
     expect(out).toEqual([]);
     expect(PALETTES.night.snow[1]).toBeLessThan(PALETTES.day.snow[1]);

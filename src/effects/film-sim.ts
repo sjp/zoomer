@@ -157,7 +157,9 @@ export function buildFilmTable(mode: string, saturation: number, out?: Uint8Arra
   }
   const inv = maxC > 0 ? 1 / maxC : 0;
   let maxL = 0;
-  for (let i = 0; i < TABLE_SIZE; i++) maxL = Math.max(maxL, lum[i]);
+  for (let i = 0; i < TABLE_SIZE; i++) {
+    maxL = Math.max(maxL, lum[i]);
+  }
   const invL = maxL > 0 ? 1 / maxL : 0;
   for (let i = 0; i < TABLE_SIZE; i++) {
     for (let c = 0; c < 3; c++) {

@@ -37,7 +37,9 @@ const STALL_GRACE_MS = 2000;
 
 /** Whether this browser can encode the canvas as H.264 through WebCodecs. */
 export async function canRecordMp4(width: number, height: number, opts: Mp4Options) {
-  if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") return false;
+  if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+    return false;
+  }
   try {
     return await canEncodeVideo("avc", {
       width: even(width),
@@ -78,17 +80,22 @@ export async function recordMp4(
     let done = false;
     // Encodes run one after another, each waiting for the encoder to take the last.
     let queue = Promise.resolve();
-    let stall: ReturnType<typeof setTimeout> | undefined;
     let unsubscribe = () => {};
 
-    const stop = async (err?: unknown) => {
-      if (done) return;
+    const stop = async (reason?: unknown) => {
+      if (done) {
+        return;
+      }
       done = true;
       unsubscribe();
       clearTimeout(stall);
       try {
-        if (err === undefined && frames === 0) err = new Error("Recording captured no frames.");
-        if (err !== undefined) throw toError(err);
+        if (reason === undefined && frames === 0) {
+          reason = new Error("Recording captured no frames.");
+        }
+        if (reason !== undefined) {
+          throw toError(reason);
+        }
         await queue;
         await output.finalize();
         resolve(new Blob([target.buffer ?? new ArrayBuffer(0)], { type: "video/mp4" }));
@@ -98,14 +105,25 @@ export async function recordMp4(
       }
     };
 
+    const stall = setTimeout(() => void stop(), opts.seconds * 1000 + STALL_GRACE_MS);
+
     unsubscribe = subscribe((now) => {
-      if (done) return;
+      if (done) {
+        return;
+      }
       start ??= now;
       const time = (now - start) / 1000;
-      if (time >= opts.seconds) return void stop();
+      if (time >= opts.seconds) {
+        void stop();
+        return;
+      }
       // A small tolerance so a frame a hair early (rAF jitter) still counts.
-      if (frames > 0 && now - lastKept < interval * 0.8) return;
-      if (pending >= MAX_PENDING) return;
+      if (frames > 0 && now - lastKept < interval * 0.8) {
+        return;
+      }
+      if (pending >= MAX_PENDING) {
+        return;
+      }
       lastKept = now;
       let sample: VideoSample;
       try {
@@ -116,7 +134,8 @@ export async function recordMp4(
         });
         sample = new VideoSample(frame);
       } catch (err) {
-        return void stop(err);
+        void stop(err);
+        return;
       }
       frames++;
       pending++;
@@ -128,7 +147,5 @@ export async function recordMp4(
         });
       queue.catch((err: unknown) => void stop(err));
     });
-
-    stall = setTimeout(() => void stop(), opts.seconds * 1000 + STALL_GRACE_MS);
   });
 }

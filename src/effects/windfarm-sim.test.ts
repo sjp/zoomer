@@ -35,7 +35,7 @@ const SIDES = SIDE_OPTIONS.map((o) => o.value);
 
 describe("palettes", () => {
   it("has one per time of day and falls back to midday", () => {
-    expect(TIME_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(TIME_OPTIONS.map((o) => o.value).toSorted()).toEqual(Object.keys(PALETTES).toSorted());
     expect(paletteFor("evening")).toBe(PALETTES.evening);
     expect(paletteFor("nope")).toBe(PALETTES.midday);
     expect(paletteFor("toString")).toBe(PALETTES.midday);
@@ -46,7 +46,9 @@ describe("palettes", () => {
     fillHillColors(out, PALETTES.midday);
     const dist = (i: number) =>
       Math.hypot(...[0, 1, 2].map((c) => out[i * 3 + c] - PALETTES.midday.haze[c]));
-    for (let i = 1; i < HILL_LAYERS; i++) expect(dist(i)).toBeLessThan(dist(i - 1));
+    for (let i = 1; i < HILL_LAYERS; i++) {
+      expect(dist(i)).toBeLessThan(dist(i - 1));
+    }
   });
 });
 
@@ -67,7 +69,7 @@ describe("hill table", () => {
       expect(hi).toBeCloseTo(HILLS[i].base + HILLS[i].amp, 5);
     }
     const bases = HILLS.map((h) => h.base);
-    expect(bases).toEqual([...bases].sort((x, y) => x - y));
+    expect(bases).toEqual([...bases].toSorted((x, y) => x - y));
   });
 
   it("wraps with its span", () => {
@@ -132,12 +134,20 @@ describe("layoutFarm", () => {
           for (const n of [MIN_TURBINES, 9, MAX_TURBINES]) {
             const placed = layoutFarm(farm, t, aspect, n, side, seed);
             placedTotal += placed;
-            if (placed < 1 || placed > n || farm.count !== placed) failures++;
+            if (placed < 1 || placed > n || farm.count !== placed) {
+              failures++;
+            }
             for (let i = 0; i < placed; i++) {
               const ground = hillHeightAt(t, farm.layer[i], farm.x[i]);
-              if (Math.abs(farm.base[i] + SINK * farm.size[i] - ground) > 1e-9) failures++;
-              if (i > 0 && farm.layer[i] > farm.layer[i - 1]) failures++;
-              if (farm.angle[i] < 0 || farm.angle[i] >= Math.PI * 2) failures++;
+              if (Math.abs(farm.base[i] + SINK * farm.size[i] - ground) > 1e-9) {
+                failures++;
+              }
+              if (i > 0 && farm.layer[i] > farm.layer[i - 1]) {
+                failures++;
+              }
+              if (farm.angle[i] < 0 || farm.angle[i] >= Math.PI * 2) {
+                failures++;
+              }
               for (let j = 0; j < i; j++) {
                 const hit = turbinesClash(
                   farm.x[i],
@@ -149,7 +159,9 @@ describe("layoutFarm", () => {
                   farm.size[j],
                   farm.layer[j],
                 );
-                if (hit) failures++;
+                if (hit) {
+                  failures++;
+                }
               }
             }
           }
@@ -176,7 +188,9 @@ describe("layoutFarm", () => {
           const wrongSide =
             (side === "left" && farm.x[i] > aspect / 2) ||
             (side === "right" && farm.x[i] < aspect / 2);
-          if (inBand || wrongSide) failures++;
+          if (inBand || wrongSide) {
+            failures++;
+          }
         }
       }
     }
@@ -210,14 +224,18 @@ describe("rotors", () => {
       advanceRotors(farm, 1 / 60, 3);
       for (let i = 0; i < farm.count; i++) {
         const a = farm.angle[i];
-        if (!(a >= 0 && a < TAU)) failures++;
+        if (!(a >= 0 && a < TAU)) {
+          failures++;
+        }
         // Clockwise: the step, taken modulo a turn, is small and negative.
         let d = a - prev[i];
         if (d > Math.PI) {
           d -= TAU;
           wraps++;
         }
-        if (!(d < 0 && d > -0.1)) failures++;
+        if (!(d < 0 && d > -0.1)) {
+          failures++;
+        }
         prev[i] = a;
       }
     }

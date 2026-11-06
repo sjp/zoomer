@@ -27,7 +27,9 @@ export function advancePhases(
 ): void {
   for (let n = 0; n < rates.length; n++) {
     let v = (phases[n] + dt * rates[n]) % TAU;
-    if (v < 0) v += TAU;
+    if (v < 0) {
+      v += TAU;
+    }
     phases[n] = v;
   }
 }
@@ -38,7 +40,9 @@ export function advancePhases(
  * invisible on soft filaments), clamped to 256..1024.
  */
 export function tileResolution(screenPx: number): number {
-  if (!Number.isFinite(screenPx) || screenPx <= 0) return 256;
+  if (!Number.isFinite(screenPx) || screenPx <= 0) {
+    return 256;
+  }
   const exp = Math.round(Math.log2(screenPx / 1.4));
   return Math.min(1024, Math.max(256, 2 ** exp));
 }
@@ -83,8 +87,7 @@ export function createRays(rng: () => number, count: number): Ray[] {
 export function fillRayTable(out: Float32Array, rays: readonly Ray[], time: number): void {
   const n = out.length;
   out.fill(0);
-  for (let k = 0; k < rays.length; k++) {
-    const ray = rays[k];
+  for (const ray of rays) {
     const c = ray.center + ray.sway * Math.sin(time * ray.swayFreq + ray.swayPhase);
     const a = ray.amp * (0.65 + 0.35 * Math.sin(time * ray.pulseFreq + ray.pulsePhase));
     const inv = 1 / ray.width;
@@ -96,7 +99,11 @@ export function fillRayTable(out: Float32Array, rays: readonly Ray[], time: numb
       out[j] += a * Math.exp(-d * d);
     }
   }
-  for (let j = 0; j < n; j++) if (out[j] > 1) out[j] = 1;
+  for (let j = 0; j < n; j++) {
+    if (out[j] > 1) {
+      out[j] = 1;
+    }
+  }
 }
 
 /** Second layer: larger cells, rotated, so the two tilings never line up. */
@@ -230,7 +237,9 @@ export function stepBubbles(
 
 /** Scales every bubble's x by `k`, keeping bubbles in place relative to a resized width. */
 export function rescaleBubbles(s: BubbleState, k: number): void {
-  for (let i = 0; i < s.x.length; i++) s.x[i] *= k;
+  for (let i = 0; i < s.x.length; i++) {
+    s.x[i] *= k;
+  }
 }
 
 /** Drawn x of bubble `i` at `time`: a gentle side-to-side wobble about its track. */

@@ -60,9 +60,11 @@ function paramSets(schema: ParamSchema): AnyParamValues[] {
       // Empty, and every line full of mixed characters, some with no glyph.
       atMin[key] = "";
       const line = "Wa9 #?\u00e9\u6771".repeat(def.maxLength);
-      atMax[key] = sanitizeText(def, Array(def.maxLines).fill(line).join("\n"));
+      atMax[key] = sanitizeText(def, Array.from({ length: def.maxLines }, () => line).join("\n"));
     } else {
-      for (const o of def.options) sets.push({ ...base, [key]: o.value });
+      for (const o of def.options) {
+        sets.push({ ...base, [key]: o.value });
+      }
     }
   }
   sets.push(base);
@@ -73,10 +75,12 @@ function paramSets(schema: ParamSchema): AnyParamValues[] {
 function frameEndProblems(fake: FakeGl): string[] {
   const s = fake.state;
   const out: string[] = [];
-  if (s.drawFramebuffer !== null)
+  if (s.drawFramebuffer !== null) {
     out.push(`draw framebuffer ${String(s.drawFramebuffer.id)} left bound`);
-  if (s.readFramebuffer !== null)
+  }
+  if (s.readFramebuffer !== null) {
     out.push(`read framebuffer ${String(s.readFramebuffer.id)} left bound`);
+  }
   if (s.blendEquationRgb !== "FUNC_ADD" || s.blendEquationAlpha !== "FUNC_ADD") {
     out.push(`blend equation left as ${s.blendEquationRgb}/${s.blendEquationAlpha}`);
   }
@@ -97,7 +101,9 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
   instance.resize(viewport(640, 360));
   frames(3, sets[0], 0);
   frames(3, sets[0]);
-  for (const params of sets) frames(2, params);
+  for (const params of sets) {
+    frames(2, params);
+  }
   // A resize mid-run, a long hitch, then a tiny canvas and back.
   instance.resize(viewport(1280, 720));
   frames(2, sets[0], 0.1);
@@ -122,7 +128,7 @@ describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
   it.each([
     ["without", []],
     ["with", ["EXT_color_buffer_float"]],
-  ])("follows the GL rules %s float render targets", (_, extensions) => {
+  ])("follows the GL rules %s float render targets", (_floats, extensions) => {
     const { fake, problems, draws } = run(effect, { extensions });
     expect(fake.errors).toEqual([]);
     expect([...new Set(problems)]).toEqual([]);
@@ -149,7 +155,9 @@ describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
       expect(message).toMatch(/failed to compile/);
       expect(fake.errors).toEqual([]);
       expect(fake.live().map((o) => `${o.kind} ${String(o.id)}`)).toEqual([]);
-      if (error === undefined) break;
+      if (error === undefined) {
+        break;
+      }
     }
   });
 });

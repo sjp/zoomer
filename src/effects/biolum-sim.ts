@@ -92,7 +92,9 @@ export function wetFade(tau: number): number {
  */
 export function biolumWetness(n: number, tau: number, reach: number): number {
   const m = tau < T_STOP ? biolumFront(tau, reach) : reach;
-  if (m <= 0 || n > m) return 0;
+  if (m <= 0 || n > m) {
+    return 0;
+  }
   const since = washSinceUncovered(n, tau, m);
   return Math.exp(-Math.max(0, since) / T_DRY) * wetFade(tau);
 }
@@ -124,9 +126,9 @@ export interface BiolumScheduler {
   /** Total waves spawned since the last reset. */
   readonly spawned: number;
   /** Advances the clock, retires finished waves and starts a new one when due. */
-  step(dt: number, interval: number): void;
+  step: (dt: number, interval: number) => void;
   /** Clears every wave and restarts the clock with a new seed. */
-  reset(seed: number): void;
+  reset: (seed: number) => void;
 }
 
 export function createBiolumScheduler(seed: number): BiolumScheduler {
@@ -169,7 +171,9 @@ export function createBiolumScheduler(seed: number): BiolumScheduler {
       // Waves share one lifetime, so they retire in start order from the front.
       while (count > 0 && time - waves[0].start >= LIFETIME) {
         const done = waves[0];
-        for (let i = 1; i < count; i++) waves[i - 1] = waves[i];
+        for (let i = 1; i < count; i++) {
+          waves[i - 1] = waves[i];
+        }
         waves[count - 1] = done;
         count--;
       }

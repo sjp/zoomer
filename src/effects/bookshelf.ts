@@ -95,7 +95,9 @@ export function layoutShelves(seed: number): Spine[] {
         const w = SPINE_W[0] + (SPINE_W[1] - SPINE_W[0]) * rng() * rng() * 1.4;
         let x1 = x + Math.min(w, SPINE_W[1]);
         if (x1 > SHELF_PANEL_U) {
-          if (SHELF_PANEL_U - x < SPINE_W[0] * 0.6) break;
+          if (SHELF_PANEL_U - x < SPINE_W[0] * 0.6) {
+            break;
+          }
           x1 = SHELF_PANEL_U;
         }
         spines.push({
@@ -121,8 +123,10 @@ export function layoutShelves(seed: number): Spine[] {
 
 /** Fraction of each shelf's span [0, SHELF_PANEL_U] covered by books, per side and row. */
 export function shelfCoverage(spines: readonly Spine[]): number[] {
-  const out = new Array<number>(2 * SHELF_ROWS).fill(0);
-  for (const s of spines) out[s.side * SHELF_ROWS + s.row] += (s.x1 - s.x0) / SHELF_PANEL_U;
+  const out = Array.from({ length: 2 * SHELF_ROWS }, () => 0);
+  for (const s of spines) {
+    out[s.side * SHELF_ROWS + s.row] += (s.x1 - s.x0) / SHELF_PANEL_U;
+  }
   return out;
 }
 
@@ -202,7 +206,9 @@ export function bakeShelves(
     const v0 = shelfRowBottom(s.row) + SHELF_BOARD;
     fill(s.side, s.x0, s.x1, v0, v0 + cavity * s.top, c, (fu, fv) => {
       let k = s.tone * (0.68 + 0.32 * Math.sin(Math.PI * fu));
-      if (s.bands && ((fv > 0.1 && fv < 0.14) || (fv > 0.84 && fv < 0.88))) k *= 1.35;
+      if (s.bands && ((fv > 0.1 && fv < 0.14) || (fv > 0.84 && fv < 0.88))) {
+        k *= 1.35;
+      }
       // A touch of shadow at the foot and the head of each book.
       k *= 0.85 + 0.15 * Math.min(1, fv * 8, (1 - fv) * 8);
       return k;
@@ -214,7 +220,7 @@ export function bakeShelves(
 export interface BookshelfTexture {
   readonly texture: WebGLTexture;
   /** Rebakes the texture (and its mipmaps) for a layout seed and palette. */
-  update(seed: number, palette: ShelfPalette): void;
+  update: (seed: number, palette: ShelfPalette) => void;
 }
 
 /**

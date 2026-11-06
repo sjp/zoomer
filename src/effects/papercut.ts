@@ -290,7 +290,9 @@ export const papercut = defineEffect(papercutMeta, {
       // CPU-side, back first.
       const backColors = new Float32Array(MAX_STACK * 3);
       const offsets: Float64Array[] = [];
-      for (let i = 0; i < MAX_STACK; i++) offsets.push(new Float64Array(2));
+      for (let i = 0; i < MAX_STACK; i++) {
+        offsets.push(new Float64Array(2));
+      }
       const placed = new Float64Array(4);
       const sceneKey = createChangeKey(2);
 

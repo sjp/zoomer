@@ -11,8 +11,7 @@
  * right-hand branch onto the screen.
  */
 import type { Rgb } from "./color";
-import type { SpawnPoint } from "./leaves-sim";
-import { SHAPE_PETAL, SHAPE_ROUND_PETAL, type Season } from "./leaves-sim";
+import { type SpawnPoint, SHAPE_PETAL, SHAPE_ROUND_PETAL, type Season } from "./leaves-sim";
 import { createRng } from "./noise";
 import { createSwell, swayAt, type Swell } from "./sway";
 import type { BlossomId, CornerId, SkyId } from "./blossom.meta";
@@ -163,7 +162,9 @@ export function buildBranch(seed: number, side: number): Segment[] {
       const x1 = x + Math.cos(angle) * length;
       const y1 = y + Math.sin(angle) * length;
       const r1 = Math.min(r, r0 + (spec.rEnd - r0) * ((k + 1) / n));
-      if (!fits(x1, y1, r1)) break;
+      if (!fits(x1, y1, r1)) {
+        break;
+      }
       const parentOf: number = k === 0 ? parent : out[k - 1];
       segs.push({
         parent: parentOf,
@@ -181,7 +182,9 @@ export function buildBranch(seed: number, side: number): Segment[] {
         gain: DEPTH_GAIN[depth] * (0.8 + 0.4 * rng()),
         tip: true,
       });
-      if (parentOf >= 0) segs[parentOf].tip = false;
+      if (parentOf >= 0) {
+        segs[parentOf].tip = false;
+      }
       out.push(segs.length - 1);
       x = x1;
       y = y1;
@@ -192,12 +195,16 @@ export function buildBranch(seed: number, side: number): Segment[] {
 
   /** Forks twigs from the joints of a chain, recursively. */
   const fork = (indices: readonly number[], depth: number) => {
-    if (depth >= CHAIN.length) return;
+    if (depth >= CHAIN.length) {
+      return;
+    }
     const chance = CHAIN[depth - 1].fork;
     // Every joint but the chain's own tip, alternating up and down with some randomness.
     let up = rng() < 0.5;
     for (let k = 0; k < indices.length - 1; k++) {
-      if (rng() >= chance) continue;
+      if (rng() >= chance) {
+        continue;
+      }
       const s = segs[indices[k]];
       up = rng() < 0.75 ? !up : up;
       const turn = (0.45 + rng() * 0.45) * (up ? -1 : 1);
@@ -245,11 +252,15 @@ export function placeBlossoms(
     weights.push(total);
   }
   const out: Blossom[] = [];
-  if (!(total > 0)) return out;
+  if (!(total > 0)) {
+    return out;
+  }
   for (let n = 0; n < count; n++) {
     const pick = rng() * total;
     let k = 0;
-    while (k < weights.length - 1 && weights[k] <= pick) k++;
+    while (k < weights.length - 1 && weights[k] <= pick) {
+      k++;
+    }
     const segment = first + k;
     const s = segments[segment];
     const t = Math.pow(rng(), 0.6);
@@ -294,7 +305,9 @@ export function buildScene(corner: CornerId, seed: number, density: number): Sce
   }
   const open: number[] = [];
   blossoms.forEach((b, i) => {
-    if (b.kind === KIND_BLOSSOM) open.push(i);
+    if (b.kind === KIND_BLOSSOM) {
+      open.push(i);
+    }
   });
   return { segments, blossoms, open };
 }
@@ -406,17 +419,17 @@ export interface BlossomPalette {
 
 export const BLOSSOM_PALETTES: Readonly<Record<BlossomId, BlossomPalette>> = {
   pink: {
-    petals: ["#f7c4d3", "#f9d3de", "#f2b2c6"].map(hex),
+    petals: ["#f7c4d3", "#f9d3de", "#f2b2c6"].map((v) => hex(v)),
     bud: hex("#e27f9f"),
     centre: hex("#fff3e6"),
   },
   white: {
-    petals: ["#fdf6f7", "#f8eaee", "#ffffff"].map(hex),
+    petals: ["#fdf6f7", "#f8eaee", "#ffffff"].map((v) => hex(v)),
     bud: hex("#f0bccb"),
     centre: hex("#fbf3dc"),
   },
   deep: {
-    petals: ["#ec8fae", "#e8799f", "#f2a3bc"].map(hex),
+    petals: ["#ec8fae", "#e8799f", "#f2a3bc"].map((v) => hex(v)),
     bud: hex("#c94f7a"),
     centre: hex("#fde0e6"),
   },
@@ -519,9 +532,9 @@ export interface Shedder {
   /** Petals due but not yet taken. */
   readonly pending: number;
   /** Advances `dt` seconds at `rate` petals per second (a Poisson process). */
-  advance(dt: number, rate: number): void;
+  advance: (dt: number, rate: number) => void;
   /** Takes one due petal, if any. */
-  take(): boolean;
+  take: () => boolean;
 }
 
 /**
@@ -539,16 +552,22 @@ export function createShedder(seed: number): Shedder {
       return pending;
     },
     advance(dt, rate) {
-      if (!(dt > 0) || !(rate > 0) || !Number.isFinite(dt * rate)) return;
+      if (!(dt > 0) || !(rate > 0) || !Number.isFinite(dt * rate)) {
+        return;
+      }
       clock += dt * rate;
       while (clock >= next) {
         clock -= next;
         next = wait();
-        if (pending < MAX_PENDING) pending++;
+        if (pending < MAX_PENDING) {
+          pending++;
+        }
       }
     },
     take() {
-      if (pending <= 0) return false;
+      if (pending <= 0) {
+        return false;
+      }
       pending--;
       return true;
     },
@@ -567,9 +586,13 @@ export function createPetalSource(
 ): (out: SpawnPoint, layer: number) => boolean {
   const rng = createRng(seed);
   return (out, layer) => {
-    if (layer === 0) return false;
+    if (layer === 0) {
+      return false;
+    }
     const { scene, pose } = state;
-    if (scene.open.length === 0 || !shedder.take()) return false;
+    if (scene.open.length === 0 || !shedder.take()) {
+      return false;
+    }
     const j = scene.open[Math.floor(rng() * scene.open.length)];
     out.x = pose.bx[j];
     out.y = pose.by[j];
@@ -628,7 +651,9 @@ export function writeBackdrop(
     data[o + 3] = canopy ? 0.45 : 0.3;
     const tint = canopy ? bloom : sky.bark;
     const mix = canopy ? 0.45 : 0.3;
-    for (let k = 0; k < 3; k++) data[o + 4 + k] = haze[k] + (tint[k] - haze[k]) * mix;
+    for (let k = 0; k < 3; k++) {
+      data[o + 4 + k] = haze[k] + (tint[k] - haze[k]) * mix;
+    }
   }
   return BACKDROP.length;
 }

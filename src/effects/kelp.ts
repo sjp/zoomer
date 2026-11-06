@@ -448,7 +448,9 @@ export const kelp = defineEffect(kelpMeta, {
             uf.v3("uDeep", pal.deep);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, profile.texture);
-            if (layout) fronds.draw(layout.starts[l], layout.counts[l]);
+            if (layout) {
+              fronds.draw(layout.starts[l], layout.counts[l]);
+            }
 
             if (l === FISH_LAYER && fishCount > 0) {
               gl.useProgram(fishProgram);

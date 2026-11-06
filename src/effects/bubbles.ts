@@ -134,8 +134,8 @@ export const bubbles = defineEffect(bubblesMeta, {
           }
 
           if (visible > 0) {
-            // Source-over with premultiplied output: the body darkens what is behind
-            // it (alpha > 0) and the rim and highlights add light (rgb beyond rgb * a),
+            // Source-over with premultiplied output: the body darkens what is behind,
+            // where alpha > 0, and the rim and highlights add light (rgb beyond rgb * a),
             // all in one draw and one program.
             gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
             batch.upload(visible);

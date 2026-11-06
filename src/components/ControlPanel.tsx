@@ -7,6 +7,10 @@ import type { Store } from "../lib/store";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { ParamControl } from "./ParamControl";
 import { StarButton } from "./StarButton";
+import { has } from "../effects/lookup";
+
+const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
+const isFrameRate = (v: string): v is FrameRate => has(FRAME_RATES, v);
 
 /** The effect list's state, owned by the app because ← / → follow it too. */
 export type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose"> & {
@@ -98,7 +102,7 @@ export function ControlPanel(props: Props) {
           onClose={closeList}
         />
       )}
-      {!listOpen && filter && (
+      {!listOpen && filter !== "" && (
         <p className="hint filter-hint">
           ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}{" "}
           for “{filter}”{" "}
@@ -119,7 +123,7 @@ export function ControlPanel(props: Props) {
           Loading…
         </p>
       )}
-      {props.error && (
+      {props.error !== undefined && props.error !== "" && (
         <div className="effect-error" role="alert">
           <p>{props.error}</p>
           {props.onReload && (
@@ -153,7 +157,10 @@ export function ControlPanel(props: Props) {
             disabled={recording}
             title={recording ? "Locked while recording" : undefined}
             onChange={(e) => {
-              props.onResolutionChange(e.target.value as Resolution);
+              const value = e.target.value;
+              if (isResolution(value)) {
+                props.onResolutionChange(value);
+              }
             }}
           >
             {Object.entries(RESOLUTIONS).map(([key, r]) => (
@@ -169,7 +176,10 @@ export function ControlPanel(props: Props) {
             id="frame-rate"
             value={props.frameRate}
             onChange={(e) => {
-              props.onFrameRateChange(e.target.value as FrameRate);
+              const value = e.target.value;
+              if (isFrameRate(value)) {
+                props.onFrameRateChange(value);
+              }
             }}
           >
             {Object.entries(FRAME_RATES).map(([key, r]) => (
@@ -240,7 +250,9 @@ function FpsMeter({
   target: number | undefined;
 }) {
   const current = useSyncExternalStore(stats.subscribe, stats.get);
-  if (!current) return null;
+  if (!current) {
+    return null;
+  }
   const budget = 1000 / (target ?? 60);
   const load = current.frameMs / budget;
   const level = load > 1 ? "bad" : load > 0.75 ? "warn" : "ok";

@@ -16,6 +16,7 @@
  * Arc A is always the one around a bottom corner.
  */
 import { createRng, hash32 } from "./noise";
+import { lookup } from "./lookup";
 
 export interface TruchetPalette {
   /** Background tones of the two region parities (the regions between arcs are two-colourable). */
@@ -39,7 +40,7 @@ export const TONES = 3;
 
 /** The named palette, or Slate for an unknown name. */
 export function palette(name: string): TruchetPalette {
-  return name in PALETTES ? PALETTES[name as PaletteName] : PALETTES.slate;
+  return lookup(PALETTES, name, "slate");
 }
 
 export const STYLES = ["bands", "outlines", "shaded"] as const;
@@ -47,7 +48,7 @@ export type StyleName = (typeof STYLES)[number];
 
 /** Shader index of a style name; Bands for an unknown name. */
 export function styleIndex(name: string): number {
-  return Math.max(0, STYLES.indexOf(name as StyleName));
+  return Math.max(0, (STYLES as readonly string[]).indexOf(name));
 }
 
 /** Seconds a tile takes to turn 90 degrees. */
@@ -162,7 +163,9 @@ export function labelPaths(
   parent: Int32Array = new Int32Array(nodeCount(cols, rows)),
 ): number {
   const n = nodeCount(cols, rows);
-  for (let k = 0; k < n; k++) parent[k] = k;
+  for (let k = 0; k < n; k++) {
+    parent[k] = k;
+  }
   let paths = n;
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
@@ -171,9 +174,14 @@ export function labelPaths(
         arcEnds(cols, rows, i, j, o, arc, ends);
         const a = find(parent, ends[0]);
         const b = find(parent, ends[1]);
-        if (a === b) continue;
-        if (a < b) parent[b] = a;
-        else parent[a] = b;
+        if (a === b) {
+          continue;
+        }
+        if (a < b) {
+          parent[b] = a;
+        } else {
+          parent[a] = b;
+        }
         paths--;
       }
     }
@@ -242,11 +250,11 @@ export interface TruchetSim {
    * starts new flips. Returns STARTED | COMPLETED | FADING flags for whatever
    * changed the tile texture. Allocates nothing.
    */
-  step(dt: number, rate: number): number;
+  step: (dt: number, rate: number) => number;
   /** Eased progress (0..1) of slot `s`'s flip; 0 for a free slot. */
-  ease(s: number): number;
+  ease: (s: number) => number;
   /** Writes the eased progress of every slot (index 0 = 0) to `out`, `MAX_FLIPS + 1` long. */
-  flipProgress(out: Float32Array): Float32Array;
+  flipProgress: (out: Float32Array) => Float32Array;
   /**
    * Writes the tile texels (RGBA8UI, `4 * cols * rows` bytes), row 0 at the bottom:
    *
@@ -254,7 +262,7 @@ export interface TruchetSim {
    * - G: arc A's from and to tones (bits 0-1, 2-3), arc B's (bits 4-5, 6-7);
    * - B: colour fade progress, 0..255.
    */
-  encode(out: Uint8Array): Uint8Array;
+  encode: (out: Uint8Array) => Uint8Array;
 }
 
 export function createTruchet(options: TruchetOptions): TruchetSim {
@@ -277,8 +285,9 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
   const unitWait = () => -Math.log(1 - rng());
 
   for (let j = 0; j < rows; j++) {
-    for (let i = 0; i < cols; i++)
+    for (let i = 0; i < cols; i++) {
       orient[i + j * cols] = initialOrientation(i, j, cols, rows, seed);
+    }
   }
   const from = options.from;
   if (from) {
@@ -287,10 +296,14 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
     const dj = (from.rows - rows) / 2;
     for (let j = 0; j < rows; j++) {
       const pj = j + dj;
-      if (pj < 0 || pj >= from.rows) continue;
+      if (pj < 0 || pj >= from.rows) {
+        continue;
+      }
       for (let i = 0; i < cols; i++) {
         const pi = i + di;
-        if (pi >= 0 && pi < from.cols) orient[i + j * cols] = from.orient[pi + pj * from.cols];
+        if (pi >= 0 && pi < from.cols) {
+          orient[i + j * cols] = from.orient[pi + pj * from.cols];
+        }
       }
     }
   }
@@ -313,11 +326,15 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
         toneFrom[2 * t + 1] = toneTo[2 * t + 1] = b;
         continue;
       }
-      if (a === toneTo[2 * t] && b === toneTo[2 * t + 1]) continue;
+      if (a === toneTo[2 * t] && b === toneTo[2 * t + 1]) {
+        continue;
+      }
       // Fade from what is on screen now (the nearer end of a fade in progress).
       const late = fade[t] >= 0.5;
       for (let k = 2 * t; k < 2 * t + 2; k++) {
-        if (late) toneFrom[k] = toneTo[k];
+        if (late) {
+          toneFrom[k] = toneTo[k];
+        }
       }
       toneTo[2 * t] = a;
       toneTo[2 * t + 1] = b;
@@ -335,10 +352,14 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
         break;
       }
     }
-    if (slot === 0) return false;
+    if (slot === 0) {
+      return false;
+    }
     for (let k = 0; k < PICK_TRIES; k++) {
       const t = Math.min(n - 1, Math.floor(rng() * n));
-      if (tileSlot[t] !== 0) continue;
+      if (tileSlot[t] !== 0) {
+        continue;
+      }
       tileSlot[t] = slot;
       slotTile[slot] = t;
       slotStart[slot] = at;
@@ -407,7 +428,9 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
           flags |= COMPLETED;
         }
       }
-      if (flags & COMPLETED) relabel(false);
+      if (flags & COMPLETED) {
+        relabel(false);
+      }
 
       if (fading) {
         let any = false;
@@ -419,19 +442,23 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
           }
         }
         fading = any;
-        if (any) flags |= FADING;
+        if (any) {
+          flags |= FADING;
+        }
       }
 
       clock += r * d;
-      while (r > 0 && clock >= nextEvent) {
-        // Back-date the flip to the event's own time within this step.
-        const at = time - (clock - nextEvent) / r;
-        nextEvent += unitWait();
-        if (start(at)) {
-          started++;
-          flags |= STARTED;
-        } else {
-          dropped++;
+      if (r > 0) {
+        while (clock >= nextEvent) {
+          // Back-date the flip to the event's own time within this step.
+          const at = time - (clock - nextEvent) / r;
+          nextEvent += unitWait();
+          if (start(at)) {
+            started++;
+            flags |= STARTED;
+          } else {
+            dropped++;
+          }
         }
       }
       return flags;
@@ -439,7 +466,9 @@ export function createTruchet(options: TruchetOptions): TruchetSim {
     ease,
     flipProgress(out) {
       out[0] = 0;
-      for (let s = 1; s <= MAX_FLIPS; s++) out[s] = ease(s);
+      for (let s = 1; s <= MAX_FLIPS; s++) {
+        out[s] = ease(s);
+      }
       return out;
     },
     encode(out) {

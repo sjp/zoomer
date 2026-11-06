@@ -80,7 +80,7 @@ const KIND_RING = 1;
 const KIND_GLOW = 2;
 const MAX_SPRITES = DRIP_COUNT + MAX_SPLASHES * (1 + SPLASH_DROPS) + 1;
 
-const vec3 = (c: readonly number[]) => `vec3(${c.map(glslFloat).join(", ")})`;
+const vec3 = (c: readonly number[]) => `vec3(${c.map((v) => glslFloat(v)).join(", ")})`;
 
 /** The light cone and falloff; mirrors `coneMask` / `lampLight` in porch-sim.ts. */
 const LIGHT_GLSL = /* glsl */ `
@@ -402,7 +402,9 @@ export const porch = defineEffect(porchMeta, {
               (0.4 + 0.6 * depth) *
               fade *
               part;
-            if (k < 0.002) continue;
+            if (k < 0.002) {
+              continue;
+            }
             const o = n * STREAK_FLOATS;
             sd[o] = tx * scale;
             sd[o + 1] = ty * scale;
@@ -432,7 +434,9 @@ export const porch = defineEffect(porchMeta, {
           gl.disable(gl.SCISSOR_TEST);
 
           // 4. Drips, splashes and the lamp's glow: additive sprites.
-          if (p.drips) stepDrips(drips, splashes, dt, 0.5 + rainAmount);
+          if (p.drips) {
+            stepDrips(drips, splashes, dt, 0.5 + rainAmount);
+          }
           stepSplashes(splashes, Math.min(dt, 1));
           m = 0;
           // Water catches the lamp's colour, lifted a little towards white.
@@ -462,7 +466,9 @@ export const porch = defineEffect(porchMeta, {
           if (p.splashes) {
             for (let i = 0; i < splashes.max; i++) {
               const age = splashes.age[i];
-              if (age >= SPLASH_LIFE) continue;
+              if (age >= SPLASH_LIFE) {
+                continue;
+              }
               const x = splashes.u[i] * refWidth;
               const y = splashes.y[i];
               const t = age / SPLASH_LIFE;
@@ -472,7 +478,9 @@ export const porch = defineEffect(porchMeta, {
               put(x, y, rr, rr * SPLASH_FLAT, wr * kr, wg * kr, wb * kr, KIND_RING);
               const kd = light * (1 - t);
               for (let j = 0; j < SPLASH_DROPS; j++) {
-                if (!splashDroplet(droplet, splashes.seed[i], j, age)) continue;
+                if (!splashDroplet(droplet, splashes.seed[i], j, age)) {
+                  continue;
+                }
                 put(
                   x + droplet[0],
                   y + droplet[1],

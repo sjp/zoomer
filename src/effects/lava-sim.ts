@@ -10,6 +10,7 @@
  * screen row; it sits off the frame centre by shifting the principal point.
  */
 import { SEARCH_BOUND } from "./voronoi";
+import { lookup } from "./lookup";
 
 export interface Camera {
   /** Eye height above the ground, in cells. */
@@ -31,7 +32,7 @@ export type CameraName = keyof typeof CAMERAS;
 
 /** The camera for a param value, falling back to low. */
 export function camera(name: string): Camera {
-  return Object.hasOwn(CAMERAS, name) ? CAMERAS[name as CameraName] : CAMERAS.low;
+  return lookup(CAMERAS, name, "low");
 }
 
 /** Farthest ground distance the shader evaluates, in cells; rows nearer the horizon clamp to it. */
@@ -49,7 +50,9 @@ export const minDrop = (cam: Camera) => (cam.height * cam.focal) / Z_MAX;
  */
 export function groundFromScreen(x: number, y: number, cam: Camera, out: number[]): boolean {
   const drop = y - cam.horizon;
-  if (!(drop > 0)) return false;
+  if (!(drop > 0)) {
+    return false;
+  }
   const z = (cam.height * cam.focal) / drop;
   out[0] = (x * z) / cam.focal;
   out[1] = z;
@@ -217,5 +220,5 @@ export type SkyName = keyof typeof SKIES;
 
 /** The sky for a param value, falling back to night. */
 export function sky(name: string): SkyPreset {
-  return Object.hasOwn(SKIES, name) ? SKIES[name as SkyName] : SKIES.night;
+  return lookup(SKIES, name, "night");
 }

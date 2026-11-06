@@ -50,7 +50,9 @@ describe("gravelTop", () => {
     let bad = 0;
     for (let k = 0; k <= 100; k++) {
       const g = gravelTop(k / 100);
-      if (!(g > 0.74 && g < 0.82)) bad++;
+      if (!(g > 0.74 && g < 0.82)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(gravelTop(0)).toBeLessThan(gravelTop(0.5));
@@ -69,13 +71,21 @@ describe("hardscape", () => {
       const h = buildHardscape(s);
       for (let i = 0; i < MAX_ROCKS; i++) {
         const u = h.rocks[i * 4];
-        if (u > 0.3 && u < 0.7) bad++;
-        if (!(h.rocks[i * 4 + 3] > 0 && h.rocks[i * 4 + 3] <= h.rocks[i * 4 + 2])) bad++;
+        if (u > 0.3 && u < 0.7) {
+          bad++;
+        }
+        if (!(h.rocks[i * 4 + 3] > 0 && h.rocks[i * 4 + 3] <= h.rocks[i * 4 + 2])) {
+          bad++;
+        }
       }
       for (let i = 0; i < 2; i++) {
-        if (h.wood[i * 4 + 3] >= h.wood[i * 4 + 1]) bad++;
+        if (h.wood[i * 4 + 3] >= h.wood[i * 4 + 1]) {
+          bad++;
+        }
         const top = h.wood[i * 4 + 2];
-        if (top > 0.33 && top < 0.67) bad++;
+        if (top > 0.33 && top < 0.67) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -110,11 +120,19 @@ describe("plants", () => {
     for (let i = 0; i < a.backCount + a.frontCount; i++) {
       const o = i * PLANT_FLOATS;
       const u = full[o];
-      if (u > 0.36 && u < 0.64) centre++;
-      if (!(u >= 0 && u <= 1 && full[o + 2] > 0 && full[o + 3] > 0 && full[o + 5] > 0)) bad++;
+      if (u > 0.36 && u < 0.64) {
+        centre++;
+      }
+      if (!(u >= 0 && u <= 1 && full[o + 2] > 0 && full[o + 3] > 0 && full[o + 5] > 0)) {
+        bad++;
+      }
       const kind = Math.floor(full[o + 7]);
-      if (kind !== 0 && kind !== 1) bad++;
-      if (i >= a.backCount && u > 0.1 && u < 0.9) bad++;
+      if (kind !== 0 && kind !== 1) {
+        bad++;
+      }
+      if (i >= a.backCount && u > 0.1 && u < 0.9) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(centre).toBeLessThanOrEqual(3);
@@ -126,7 +144,9 @@ describe("light presets", () => {
     let bad = 0;
     for (const l of Object.values(LIGHTS)) {
       for (const c of [l.top, l.deep, l.wall, l.gravelA, l.gravelB, l.rock, l.light]) {
-        if (c.some((v) => !(v >= 0 && v <= 1))) bad++;
+        if (c.some((v) => !(v >= 0 && v <= 1))) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -153,7 +173,9 @@ describe("air-stone bubbles", () => {
       const n = sim.step(1 / 20, f, data, BUBBLE_FLOATS);
       for (let k = 0; k < n; k++) {
         const o = k * BUBBLE_FLOATS;
-        if (Math.abs(data[o] - x0) > 40 || data[o + 1] > airstoneY() * 1080) bad++;
+        if (Math.abs(data[o] - x0) > 40 || data[o + 1] > airstoneY() * 1080) {
+          bad++;
+        }
       }
       drawn += n;
     }
@@ -190,14 +212,24 @@ describe("fish", () => {
           for (let i = 0; i < sim.live; i++) {
             maxF = Math.max(maxF, Math.hypot(sim.fx[i], sim.fy[i]));
             const sp = Math.hypot(sim.vx[i], sim.vy[i]);
-            if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) issues.push(`speed ${String(sp)}`);
+            if (sp > DART_MAX + 1e-6 || sp < SPEED_MIN - 1e-6) {
+              issues.push(`speed ${String(sp)}`);
+            }
             const x = sim.x[i];
             const y = sim.y[i];
-            if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) issues.push(`x ${String(x)}`);
-            if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) issues.push(`y ${String(y)}`);
-            if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) issues.push(`z ${String(sim.z[i])}`);
+            if (x < TANK_X - 1e-6 || x > aspect - TANK_X + 1e-6) {
+              issues.push(`x ${String(x)}`);
+            }
+            if (y < TANK_TOP - 1e-6 || y > TANK_BOTTOM + 1e-6) {
+              issues.push(`y ${String(y)}`);
+            }
+            if (!(sim.z[i] >= 0 && sim.z[i] <= 1)) {
+              issues.push(`z ${String(sim.z[i])}`);
+            }
           }
-          if (issues.length > 5) break;
+          if (issues.length > 5) {
+            break;
+          }
         }
         expect(maxF).toBeLessThanOrEqual(FORCE_MAX + 1e-6);
       }
@@ -210,7 +242,11 @@ describe("fish", () => {
     stepFishSim(sim, 1 / 30, env({ aspect: 21 / 9, count: 20 }));
     stepFishSim(sim, 1 / 30, env({ aspect: 1, count: 20 }));
     let out = 0;
-    for (let i = 0; i < sim.live; i++) if (sim.x[i] > 1 - TANK_X + 1e-6) out++;
+    for (let i = 0; i < sim.live; i++) {
+      if (sim.x[i] > 1 - TANK_X + 1e-6) {
+        out++;
+      }
+    }
     expect(out).toBe(0);
   });
 
@@ -225,10 +261,14 @@ describe("fish", () => {
       stepFishSim(sim, 1 / 30, e);
       for (let i = 0; i < sim.live; i++) {
         const u = sim.x[i] / e.aspect;
-        if (u > 0.4 && u < 0.6) centre++;
+        if (u > 0.4 && u < 0.6) {
+          centre++;
+        }
         samples++;
         const sd = u < 0.5 ? -1 : 1;
-        if (side[i] !== 0 && side[i] !== sd) crossings++;
+        if (side[i] !== 0 && side[i] !== sd) {
+          crossings++;
+        }
         side[i] = sd;
       }
     }
@@ -242,7 +282,9 @@ describe("fish", () => {
     const sim = createFishSim(11, MAX_FISH);
     const e = env({ count: MAX_FISH });
     const prev = new Float64Array(MAX_FISH);
-    for (let i = 0; i < MAX_FISH; i++) prev[i] = turnScale(sim.turn[i]);
+    for (let i = 0; i < MAX_FISH; i++) {
+      prev[i] = turnScale(sim.turn[i]);
+    }
     const dt = 1 / 60;
     // |d cos(theta)| <= |d theta| = pi / TURN_TIME * dt.
     const limit = (Math.PI / TURN_TIME) * dt + 1e-6;
@@ -254,8 +296,12 @@ describe("fish", () => {
       for (let i = 0; i < sim.live; i++) {
         const s = turnScale(sim.turn[i]);
         worst = Math.max(worst, Math.abs(s - prev[i]));
-        if (Math.sign(s) !== Math.sign(prev[i]) && prev[i] !== 0) flips++;
-        if (Math.abs(s) < 0.5) partial++;
+        if (Math.sign(s) !== Math.sign(prev[i]) && prev[i] !== 0) {
+          flips++;
+        }
+        if (Math.abs(s) < 0.5) {
+          partial++;
+        }
         prev[i] = s;
       }
     }
@@ -290,15 +336,21 @@ describe("fish", () => {
     expect(sim.live).toBe(10);
     stepFishSim(sim, 1 / 30, env({ count: 20 }));
     expect(sim.life[15]).toBeLessThan(0.1);
-    for (let i = 0; i < 90; i++) stepFishSim(sim, 1 / 30, env({ count: 20 }));
+    for (let i = 0; i < 90; i++) {
+      stepFishSim(sim, 1 / 30, env({ count: 20 }));
+    }
     expect(sim.life[15]).toBe(1);
     stepFishSim(sim, 1 / 30, env({ count: 5 }));
     expect(sim.live).toBe(20);
-    for (let i = 0; i < 60; i++) stepFishSim(sim, 1 / 30, env({ count: 5 }));
+    for (let i = 0; i < 60; i++) {
+      stepFishSim(sim, 1 / 30, env({ count: 5 }));
+    }
     expect(sim.live).toBe(5);
 
     const x = Array.from(sim.x.subarray(0, 5));
-    for (let i = 0; i < 30; i++) stepFishSim(sim, 1 / 30, env({ count: 5, speed: 0 }));
+    for (let i = 0; i < 30; i++) {
+      stepFishSim(sim, 1 / 30, env({ count: 5, speed: 0 }));
+    }
     expect(Array.from(sim.x.subarray(0, 5))).toEqual(x);
     expect(fishInstances(sim, env({ count: 5 }), out)).toBe(5);
   });
@@ -311,16 +363,26 @@ describe("fish", () => {
     for (let step = 0; step < 300; step++) {
       stepFishSim(sim, 1 / 30, e);
       const n = fishInstances(sim, e, out);
-      if (n !== 33) bad++;
+      if (n !== 33) {
+        bad++;
+      }
       let lastZ = -1;
       for (let k = 0; k < n; k++) {
         const o = k * FISH_FLOATS;
-        for (let j = 0; j < FISH_FLOATS; j++) if (!Number.isFinite(out[o + j])) bad++;
+        for (let j = 0; j < FISH_FLOATS; j++) {
+          if (!Number.isFinite(out[o + j])) {
+            bad++;
+          }
+        }
         // Fog falls as depth rises.
         const fog = out[o + 5];
-        if (lastZ >= 0 && fog > lastZ + 1e-6) bad++;
+        if (lastZ >= 0 && fog > lastZ + 1e-6) {
+          bad++;
+        }
         lastZ = fog;
-        if (k < sim.farCount !== fog > 0.6 * 0.25 - 1e-6) bad++;
+        if (k < sim.farCount !== fog > 0.6 * 0.25 - 1e-6) {
+          bad++;
+        }
         if (!(out[o + 2] > 0 && Math.abs(out[o + 3]) <= 1 && out[o + 7] > 0 && out[o + 7] <= 1)) {
           bad++;
         }

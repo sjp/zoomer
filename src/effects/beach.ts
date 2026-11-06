@@ -87,7 +87,7 @@ uniform vec4 uCaustic;
 out vec4 outColor;
 
 const int MAX_WAVES = ${String(MAX_WAVES)};
-const vec4 SHORE_W = vec4(${SHORE_WEIGHTS.map(glslFloat).join(", ")});
+const vec4 SHORE_W = vec4(${SHORE_WEIGHTS.map((v) => glslFloat(v)).join(", ")});
 const float SHORE_AMP = ${glslFloat(SHORE_AMP)};
 const float INV_SPAN = ${glslFloat(1 / SHAPE_SPAN)};
 const float T_DRAIN = ${glslFloat(T_DRAIN)};
@@ -324,7 +324,9 @@ export const beach = defineEffect(beachMeta, {
             lastSand = p.sand;
             const sand = toRgb(p.sand);
             // Wet sand: darker and a little more saturated.
-            for (let k = 0; k < 3; k++) wetSand[k] = sand[k] * (0.65 + 0.35 * sand[k]) * 0.68;
+            for (let k = 0; k < 3; k++) {
+              wetSand[k] = sand[k] * (0.65 + 0.35 * sand[k]) * 0.68;
+            }
           }
           u.rgb("uSand", p.sand);
           u.v3("uWetSand", wetSand);

@@ -68,12 +68,12 @@ export interface Flakes {
   /** First instance of the near layer in the last `step`, drawn in front of the mist. */
   readonly nearStart: number;
   /** Scales x positions by `k`, keeping flakes in place relative to a resized width. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances `dt` seconds and writes the visible flakes to `data`, far layer
    * first, FLAKE_FLOATS at `stride` floats apart. Returns how many.
    */
-  step(dt: number, f: FlakeFrame, data: Float32Array, stride: number): number;
+  step: (dt: number, f: FlakeFrame, data: Float32Array, stride: number) => number;
 }
 
 export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): Flakes {
@@ -101,7 +101,9 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
   // Interleave layers by index so any flake count keeps the same proportions.
   const pattern: number[] = [];
   for (let l = 0; l < LAYERS.length; l++) {
-    for (let k = 0; k < Math.round(LAYERS[l].share * 50); k++) pattern.push(l);
+    for (let k = 0; k < Math.round(LAYERS[l].share * 50); k++) {
+      pattern.push(l);
+    }
   }
   for (let i = pattern.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -135,7 +137,9 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
       return nearStart;
     },
     rescaleX(k) {
-      for (let i = 0; i < max; i++) xs[i] *= k;
+      for (let i = 0; i < max; i++) {
+        xs[i] *= k;
+      }
     },
     step(dt, f, data, stride) {
       time += dt;
@@ -155,7 +159,9 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
       let visible = 0;
       nearStart = 0;
       for (let l = 0; l < LAYERS.length; l++) {
-        if (l === 2) nearStart = visible;
+        if (l === 2) {
+          nearStart = visible;
+        }
         const L = LAYERS[l];
         const softness = layerSoftness(l, f.depthBlur);
         const pad = spritePad(softness);
@@ -169,7 +175,9 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
         const alphaLayer = L.alpha * f.brightness;
 
         for (let i = 0; i < n; i++) {
-          if (layer[i] !== l) continue;
+          if (layer[i] !== l) {
+            continue;
+          }
 
           // A little local variation so the flakes don't move as one sheet.
           const local = noise.noise2(xs[i] * 0.0007 + time * 0.05, ys[i] * 0.0009);
@@ -177,12 +185,17 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
           const vy = fallPx * L.pace * paceJitter[i];
           let x = xs[i] + vx * dt;
           let y = ys[i] + vy * dt;
-          if (x < -margin) x += spanX;
-          else if (x > refWidth + margin) x -= spanX;
+          if (x < -margin) {
+            x += spanX;
+          } else if (x > refWidth + margin) {
+            x -= spanX;
+          }
           if (y > 1080 + margin) {
             y -= spanY;
             x = -margin + rng() * spanX;
-          } else if (y < -margin) y += spanY;
+          } else if (y < -margin) {
+            y += spanY;
+          }
           xs[i] = x;
           ys[i] = y;
 
@@ -192,7 +205,9 @@ export function createFlakes(max: number, initialWidth: number, seed = 0x5e0f): 
           const tumble = Math.cos(time * tumbleRate[i] + tumblePhase[i]);
           const turn = 0.8 + 0.2 * Math.abs(tumble);
           const alpha = alphaLayer * shade[i] * (0.85 + 0.15 * turn) * life01 * life01;
-          if (alpha <= 0.003) continue;
+          if (alpha <= 0.003) {
+            continue;
+          }
 
           const sx = x + Math.sin(time * swayRate[i] + swayPhase[i]) * amp * sizeJitter[i];
           const half = baseRadius * sizeJitter[i] * pad * scale;

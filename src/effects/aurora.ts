@@ -121,7 +121,11 @@ export function buildRayTable(cols: number = RAY_COLS, seed = 7): Float32Array {
       max = Math.max(max, v);
     }
   }
-  if (max > 0) for (let i = 0; i < out.length; i++) out[i] /= max;
+  if (max > 0) {
+    for (let i = 0; i < out.length; i++) {
+      out[i] /= max;
+    }
+  }
   return out;
 }
 
@@ -137,7 +141,9 @@ export function buildHorizonTable(
   seed = 11,
 ): Float32Array {
   const out = new Float32Array(cols * 2);
-  if (kind === "none" || cols < 1) return out;
+  if (kind === "none" || cols < 1) {
+    return out;
+  }
   const noise = createNoise(seed);
   const colW = aspect / cols;
   const xAt = (i: number) => (i + 0.5) * colW;
@@ -148,12 +154,16 @@ export function buildHorizonTable(
     }
   } else {
     const ground = (x: number) => 0.035 + 0.018 * fbm2(noise, x * 1.4, 8.1, 2);
-    for (let i = 0; i < cols; i++) h[i] = ground(xAt(i));
+    for (let i = 0; i < cols; i++) {
+      h[i] = ground(xAt(i));
+    }
     const rng = createRng(seed + 1);
     const tiers = 5;
     for (let x = -0.08; x < aspect + 0.08; x += 0.012 + 0.04 * rng()) {
       // Occasional clearings.
-      if (rng() < 0.08) continue;
+      if (rng() < 0.08) {
+        continue;
+      }
       const height = 0.04 + 0.1 * rng() ** 1.4;
       const base = ground(x);
       const halfW = height * (0.24 + 0.08 * rng());
@@ -186,7 +196,9 @@ export function buildHorizonTable(
 /** Highest silhouette point in a horizon table, as a fraction of canvas height. */
 export function horizonMax(table: Float32Array): number {
   let max = 0;
-  for (let i = 0; i < table.length; i += 2) max = Math.max(max, table[i]);
+  for (let i = 0; i < table.length; i += 2) {
+    max = Math.max(max, table[i]);
+  }
   return max;
 }
 
@@ -227,7 +239,9 @@ export function buildStars(
     const radius = 0.7 + 1.1 * big * big * big;
     const col = Math.min(cols - 1, Math.floor(x * cols));
     const ground = cols > 0 ? horizon[col * 2] : 0;
-    if (y < ground + radius / 1080 + 0.006) continue;
+    if (y < ground + radius / 1080 + 0.006) {
+      continue;
+    }
     const o = n * STAR_STRIDE;
     out[o] = x;
     out[o + 1] = y;
@@ -241,7 +255,10 @@ export function buildStars(
 }
 
 let rayTable: Float32Array | undefined;
-const getRayTable = () => (rayTable ??= buildRayTable());
+const getRayTable = () => {
+  rayTable ??= buildRayTable();
+  return rayTable;
+};
 
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -439,7 +456,9 @@ export const aurora = defineEffect(auroraMeta, {
 
       return {
         resize(v) {
-          if (v.width !== width || v.height !== height) sizeDirty = true;
+          if (v.width !== width || v.height !== height) {
+            sizeDirty = true;
+          }
           ({ width, height, scale } = v);
         },
         frame(dt, p) {
@@ -507,8 +526,11 @@ export const aurora = defineEffect(auroraMeta, {
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, rays.texture);
           gl.activeTexture(gl.TEXTURE0);
-          if (pathDirty) path.upload();
-          else gl.bindTexture(gl.TEXTURE_2D, path.texture);
+          if (pathDirty) {
+            path.upload();
+          } else {
+            gl.bindTexture(gl.TEXTURE_2D, path.texture);
+          }
           triangle.draw();
 
           if (starCount > 0) {

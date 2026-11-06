@@ -345,7 +345,9 @@ export const plasma = defineEffect(plasmaMeta, {
         const depth = 0.8 + 0.1 * (pts[o + 2] + pts[o + 5]);
         const t = s * Math.sqrt(s);
         const k0 = intensity * depth;
-        for (let c = 0; c < 3; c++) segColor[c] = pal.root[c] + (pal.tip[c] - pal.root[c]) * t;
+        for (let c = 0; c < 3; c++) {
+          segColor[c] = pal.root[c] + (pal.tip[c] - pal.root[c]) * t;
+        }
         const data = streaks.data;
         for (let l = 0; l < LEVELS; l++) {
           const i = streakCount++ * STREAK_FLOATS;
@@ -458,7 +460,9 @@ export const plasma = defineEffect(plasmaMeta, {
           const fixed = PALETTES[p.colour] ?? PALETTES.violet;
           for (let i = 0; i < MAX_FILAMENTS; i++) {
             const b = filamentBrightness(sim, i);
-            if (b <= 1e-3) continue;
+            if (b <= 1e-3) {
+              continue;
+            }
             const pal = isRainbow ? rainbowPalette(sim, i, rainbow) : fixed;
             filamentPath(sim, i, path);
             for (let k = 0; k < PATH_SEGMENTS; k++) {

@@ -122,7 +122,9 @@ export const ROOF_CODE: Readonly<Record<RoofId, number>> = { hidden: 0, arched: 
  * "hidden". Mirrored by `EAVE_GLSL`.
  */
 export function eaveY(roof: RoofId, u: number): number {
-  if (roof === "hidden") return -1;
+  if (roof === "hidden") {
+    return -1;
+  }
   const c = clamp(2 * u - 1, -1, 1);
   const shape = roof === "arched" ? Math.sqrt(Math.max(0, 1 - c * c)) : 1 - Math.abs(c);
   return EAVE_EDGE + (EAVE_CENTRE[roof] - EAVE_EDGE) * shape;
@@ -151,7 +153,9 @@ export interface Roof {
 
 /** The roof for a kind and aspect ratio; null for "hidden". */
 export function buildRoof(roof: RoofId, aspect: number): Roof | null {
-  if (roof === "hidden") return null;
+  if (roof === "hidden") {
+    return null;
+  }
   const a = Number.isFinite(aspect) && aspect > 0.1 ? aspect : 16 / 9;
   const panes = Math.max(2, Math.round(a * PANES_PER_ASPECT));
   const footX = new Float64Array(panes + 1);
@@ -201,12 +205,16 @@ export const MAX_BARS = (Math.round(4 * PANES_PER_ASPECT) + 1) * (2 + PURLINS);
 
 /** Writes the roof's glazing bars into `out` (`BAR_FLOATS` each); returns the count. */
 export function writeBars(roof: Roof | null, out: Float32Array): number {
-  if (!roof) return 0;
+  if (!roof) {
+    return 0;
+  }
   let n = 0;
   const p: [number, number] = [0, 0];
   const q: [number, number] = [0, 0];
   const put = (ax: number, ay: number, bx: number, by: number, w: number, shade: number) => {
-    if (n >= MAX_BARS || (n + 1) * BAR_FLOATS > out.length) return;
+    if (n >= MAX_BARS || (n + 1) * BAR_FLOATS > out.length) {
+      return;
+    }
     const o = n * BAR_FLOATS;
     out[o] = ax;
     out[o + 1] = ay;
@@ -331,13 +339,17 @@ function spawnRivulet(riv: Rivulets, roof: Roof, i: number, randomHead: boolean)
  * a slow stop-go; a rivulet respawns once its whole trail has drained off the eave.
  */
 export function stepRivulets(riv: Rivulets, roof: Roof | null, dt: number, rain: number): void {
-  if (!roof) return;
+  if (!roof) {
+    return;
+  }
   const step = clamp(Number.isFinite(dt) ? dt : 0, 0, 0.1);
   const active = Math.round(clamp(rain, 0, 1) * MAX_RIVULETS);
   for (let i = 0; i < MAX_RIVULETS; i++) {
     if (!riv.alive[i]) {
       // Stagger new arrivals instead of spawning them all in one frame.
-      if (i < active && riv.rng() < step * 0.8) spawnRivulet(riv, roof, i, false);
+      if (i < active && riv.rng() < step * 0.8) {
+        spawnRivulet(riv, roof, i, false);
+      }
       continue;
     }
     riv.age[i] += step;
@@ -349,7 +361,9 @@ export function stepRivulets(riv: Rivulets, roof: Roof | null, dt: number, rain:
     riv.f[i] -= (v * step) / Math.max(0.05, span);
     if (riv.f[i] + riv.trail[i] <= 0) {
       riv.alive[i] = 0;
-      if (i < active) spawnRivulet(riv, roof, i, false);
+      if (i < active) {
+        spawnRivulet(riv, roof, i, false);
+      }
     }
   }
 }
@@ -369,17 +383,23 @@ export function writeRivulets(
   out: Float32Array,
   first = 0,
 ): number {
-  if (!roof) return 0;
+  if (!roof) {
+    return 0;
+  }
   let n = first;
   const max = Math.floor(out.length / STREAK_FLOATS);
   const p: [number, number] = [0, 0];
   const hw = RIVULET_WIDTH * scale;
   for (let i = 0; i < MAX_RIVULETS; i++) {
-    if (!riv.alive[i]) continue;
+    if (!riv.alive[i]) {
+      continue;
+    }
     const fade = Math.min(1, riv.age[i] / RIVULET_FADE);
     const head = Math.max(0, riv.f[i]);
     const tail = Math.min(riv.start[i], riv.f[i] + riv.trail[i]);
-    if (!(tail > head)) continue;
+    if (!(tail > head)) {
+      continue;
+    }
     let fa = head;
     roofPoint(roof, rivuletR(riv, i, fa), fa, p);
     let ax = p[0] * height;
@@ -453,10 +473,14 @@ export function stepDrips(
 ): void {
   const step = clamp(Number.isFinite(dt) ? dt : 0, 0, 0.1);
   for (let i = 0; i < MAX_DRIPS; i++) {
-    if (!d.alive[i]) continue;
+    if (!d.alive[i]) {
+      continue;
+    }
     d.v[i] += DRIP_GRAVITY * step;
     d.y[i] += d.v[i] * step;
-    if (d.y[i] - d.y0[i] > DRIP_FALL) d.alive[i] = 0;
+    if (d.y[i] - d.y0[i] > DRIP_FALL) {
+      d.alive[i] = 0;
+    }
   }
   if (!roof || !on) {
     d.debt = 0;
@@ -466,7 +490,9 @@ export function stepDrips(
   while (d.debt >= 1) {
     d.debt -= 1;
     const i = d.alive.indexOf(0);
-    if (i < 0) break;
+    if (i < 0) {
+      break;
+    }
     // Skip the two outermost feet, which sit on the frame's edge.
     const foot = 1 + Math.floor(d.rng() * Math.max(1, roof.panes - 1));
     d.alive[i] = 1;
@@ -488,7 +514,9 @@ export function writeDrips(
   let n = first;
   const max = Math.floor(out.length / STREAK_FLOATS);
   for (let i = 0; i < MAX_DRIPS && n < max; i++) {
-    if (!d.alive[i]) continue;
+    if (!d.alive[i]) {
+      continue;
+    }
     const fall = (d.y[i] - d.y0[i]) / DRIP_FALL;
     const w = 1.6 * smoothstep(0, 0.05, fall) * (1 - smoothstep(0.4, 1, fall));
     const o = n * STREAK_FLOATS;
@@ -590,7 +618,9 @@ export const MAX_LEAVES = LEAF_LAYERS.reduce(
 export const LEAF_SEGMENTS = 16;
 export const LEAF_STRIP: readonly number[] = (() => {
   const out: number[] = [];
-  for (let i = 0; i <= LEAF_SEGMENTS; i++) out.push(i, -1, i, 1);
+  for (let i = 0; i <= LEAF_SEGMENTS; i++) {
+    out.push(i, -1, i, 1);
+  }
   return out;
 })();
 
@@ -660,11 +690,15 @@ const range = (rng: () => number, r: readonly [number, number]) => r[0] + (r[1] 
 /** Picks a leaf kind index (0 broad, 1 monstera, 2 palm, 3 fern) from a palette's shares. */
 function pickKind(rng: () => number, shares: readonly number[]): number {
   let total = 0;
-  for (const s of shares) total += s;
+  for (const s of shares) {
+    total += s;
+  }
   let x = rng() * total;
   for (let k = 0; k < shares.length; k++) {
     x -= shares[k];
-    if (x < 0) return k;
+    if (x < 0) {
+      return k;
+    }
   }
   return shares.length - 1;
 }
@@ -674,7 +708,9 @@ function staysClear(leaf: Leaf): boolean {
   const p: [number, number] = [0, 0];
   for (let s = 1; s <= 20; s++) {
     leafPoint(leaf, s / 20, LAYOUT_ASPECT, p);
-    if (inCentre(p[0], p[1])) return false;
+    if (inCentre(p[0], p[1])) {
+      return false;
+    }
   }
   return true;
 }
@@ -770,11 +806,15 @@ export function buildLeaves(seed: number, density: number, palette: PaletteId): 
             phase: (x0 / LAYOUT_ASPECT) * (SWELL_TRAVEL / GREENHOUSE_SWELL.period) + 0.02 * cut,
             lag: LAG_PER_LENGTH * length + lagJitter,
           };
-          if (staysClear(leaf)) placed = leaf;
+          if (staysClear(leaf)) {
+            placed = leaf;
+          }
           length *= 0.85;
           angle *= 1.06;
         }
-        if (placed) leaves.push(placed);
+        if (placed) {
+          leaves.push(placed);
+        }
       }
     }
     counts.push(leaves.length - starts[l]);
@@ -861,7 +901,9 @@ export function stepBobs(b: Bobs, dt: number, rate: number, out?: Float32Array):
     const w = b.omega[i];
     let x = b.x[i];
     let v = b.v[i];
-    if (p > 0 && b.rng() < p) v += BOB_KICK * w * (0.6 + 0.4 * b.rng());
+    if (p > 0 && b.rng() < p) {
+      v += BOB_KICK * w * (0.6 + 0.4 * b.rng());
+    }
     for (let s = 0; s < steps; s++) {
       v += (-w * w * x - 2 * BOB_DAMPING * w * v) * h;
       x += v * h;
@@ -872,6 +914,8 @@ export function stepBobs(b: Bobs, dt: number, rate: number, out?: Float32Array):
     }
     b.x[i] = x;
     b.v[i] = v;
-    if (out) out[i * LEAF_FLOATS + BOB_OFFSET] = x;
+    if (out) {
+      out[i * LEAF_FLOATS + BOB_OFFSET] = x;
+    }
   }
 }

@@ -54,7 +54,9 @@ describe("cell count", () => {
     let off = 0;
     for (let s = 0; s < SPS * 90; s++) {
       stepCells(sim, o);
-      if (sim.n !== 64) off++;
+      if (sim.n !== 64) {
+        off++;
+      }
     }
     expect(off).toBe(0);
     // About 12 per minute for 1.5 minutes.
@@ -71,9 +73,13 @@ describe("cell count", () => {
       // Births need idle parents, so a big jump takes a few rounds of division.
       for (let s = 0; s < GROW_STEPS * 12 && (sim.n !== t || plannedCount(sim) !== t); s++) {
         stepCells(sim, o);
-        if (sim.n > MAX_CELLS || sim.n < MIN_CELLS) bad++;
+        if (sim.n > MAX_CELLS || sim.n < MIN_CELLS) {
+          bad++;
+        }
       }
-      if (sim.n !== t) bad++;
+      if (sim.n !== t) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -111,8 +117,12 @@ describe("division", () => {
     for (let s = 0; s < 60 && parent < 0; s++) {
       stepCells(sim, o);
       for (let i = 0; i < sim.n; i++) {
-        if (sim.mode[i] === MODE_GROWING) parent = i;
-        if (sim.mode[i] === MODE_ABSORBING) victim = i;
+        if (sim.mode[i] === MODE_GROWING) {
+          parent = i;
+        }
+        if (sim.mode[i] === MODE_ABSORBING) {
+          victim = i;
+        }
       }
     }
     expect(parent).toBeGreaterThanOrEqual(0);
@@ -121,7 +131,9 @@ describe("division", () => {
     const r0 = sim.r0[parent];
     const v0 = sim.r[victim];
     const timer = sim.timer[parent];
-    for (let s = 1; s < timer; s++) stepCells(sim, o);
+    for (let s = 1; s < timer; s++) {
+      stepCells(sim, o);
+    }
     // One step before the split: grown to (almost) twice the area; the victim almost gone.
     expect(sim.r[parent] / r0).toBeGreaterThan(Math.SQRT2 * 0.999);
     expect(sim.r[victim] / v0).toBeLessThan(0.01);
@@ -142,19 +154,25 @@ describe("packing", () => {
     let pairs = 0;
     for (let s = 0; s < SPS * 120; s++) {
       stepCells(sim, o);
-      if (s % 30) continue;
+      if (s % 30) {
+        continue;
+      }
       for (let i = 0; i < sim.n; i++) {
         for (let j = i + 1; j < sim.n; j++) {
           const d = Math.hypot(sim.x[i] - sim.x[j], sim.y[i] - sim.y[j]);
           const sisters = sim.merge[i] > 0 && sim.sister[i] === sim.sister[j];
-          if (!sisters) minD = Math.min(minD, d);
+          if (!sisters) {
+            minD = Math.min(minD, d);
+          }
           const settled =
             !sisters &&
             sim.mode[i] === MODE_NORMAL &&
             sim.mode[j] === MODE_NORMAL &&
             sim.merge[i] === 0 &&
             sim.merge[j] === 0;
-          if (!settled) continue;
+          if (!settled) {
+            continue;
+          }
           const ov = Math.max(0, (sim.r[i] + sim.r[j] - d) / (sim.r[i] + sim.r[j]));
           maxOverlap = Math.max(maxOverlap, ov);
           overlapSum += ov;
@@ -177,7 +195,9 @@ describe("packing", () => {
       stepCells(sim, o);
       for (let i = 0; i < sim.n; i++) {
         // Daughters may briefly start a little further out, when the parent was at the edge.
-        if (sim.merge[i] > 0) continue;
+        if (sim.merge[i] > 0) {
+          continue;
+        }
         const out = Math.max(-sim.x[i], sim.x[i] - W, -sim.y[i], sim.y[i] - H);
         worst = Math.max(worst, out);
       }
@@ -234,7 +254,9 @@ describe("stepping", () => {
     expect(advanceCells(sim, Number.NaN, opts())).toBe(0);
     expect(advanceCells(sim, 10, opts())).toBe(MAX_STEPS);
     let steps = 0;
-    for (let f = 0; f < 120; f++) steps += advanceCells(sim, 1 / 120, opts());
+    for (let f = 0; f < 120; f++) {
+      steps += advanceCells(sim, 1 / 120, opts());
+    }
     expect(Math.abs(steps - 1 / FIXED_DT)).toBeLessThanOrEqual(1);
   });
 
@@ -276,8 +298,12 @@ describe("power diagram", () => {
 
 describe("palettes", () => {
   it("has an option per palette, five colours each, and falls back to stain", () => {
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
-    for (const colors of Object.values(PALETTES)) expect(colors).toHaveLength(5);
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
+    for (const colors of Object.values(PALETTES)) {
+      expect(colors).toHaveLength(5);
+    }
     expect(palette("nope")).toBe(PALETTES.stain);
     expect(palette("mono")).toBe(PALETTES.mono);
   });

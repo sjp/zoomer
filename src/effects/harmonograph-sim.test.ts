@@ -93,8 +93,9 @@ describe("createHarmonograph", () => {
       const target = h.figure.seg;
       const segments = h.figure.segments;
       // Draw the whole first figure in one go, at 10 s per figure.
-      for (let k = 0; k < 100 && h.live < segments - 1; k++)
+      for (let k = 0; k < 100 && h.live < segments - 1; k++) {
         h.step(0.1, { ...settings, drawTime: 10 });
+      }
       const n = h.live;
       expect(n).toBeGreaterThan(segments * 0.9);
       let worst = 0;
@@ -105,7 +106,9 @@ describe("createHarmonograph", () => {
         const len = Math.hypot(h.data[o + 2] - h.data[o], h.data[o + 3] - h.data[o + 1]);
         worst = Math.max(worst, Math.abs(len / target - 1));
         // Consecutive segments join up.
-        if (i > 0 && (h.data[o] !== h.data[o - 4] || h.data[o + 1] !== h.data[o - 3])) gaps++;
+        if (i > 0 && (h.data[o] !== h.data[o - 4] || h.data[o + 1] !== h.data[o - 3])) {
+          gaps++;
+        }
       }
       expect(worst).toBeLessThan(0.1);
       expect(gaps).toBe(0);
@@ -114,12 +117,16 @@ describe("createHarmonograph", () => {
 
   it("stays inside the normalised box, give or take sampling", () => {
     const h = createHarmonograph(16384, createRng(3));
-    for (let k = 0; k < 150; k++) h.step(0.1, { ...settings, drawTime: 5 });
+    for (let k = 0; k < 150; k++) {
+      h.step(0.1, { ...settings, drawTime: 5 });
+    }
     let reach = 0;
     let phaseLo = Infinity;
     let phaseHi = -Infinity;
     for (let i = 0; i < h.capacity * SEG_FLOATS; i += SEG_FLOATS) {
-      for (let j = 0; j < 4; j++) reach = Math.max(reach, Math.abs(h.data[i + j]));
+      for (let j = 0; j < 4; j++) {
+        reach = Math.max(reach, Math.abs(h.data[i + j]));
+      }
       phaseLo = Math.min(phaseLo, h.data[i + 5]);
       phaseHi = Math.max(phaseHi, h.data[i + 5]);
     }
@@ -134,20 +141,21 @@ describe("createHarmonograph", () => {
     const data = h.data;
     const figure = h.figure;
     let created = 0;
-    for (const name of ["Float32Array", "Float64Array", "Int32Array", "Uint32Array"] as const) {
+    const names = ["Float32Array", "Float64Array", "Int32Array", "Uint32Array"] as const;
+    const counting: ProxyHandler<(typeof globalThis)[(typeof names)[number]]> = {
+      construct(target, args) {
+        created++;
+        return Reflect.construct(target, args) as object;
+      },
+    };
+    for (const name of names) {
       const Original = globalThis[name];
-      vi.stubGlobal(
-        name,
-        new Proxy(Original, {
-          construct(target, args) {
-            created++;
-            return Reflect.construct(target, args) as object;
-          },
-        }),
-      );
+      vi.stubGlobal(name, new Proxy(Original, counting));
     }
     // Several figures, drawn fast.
-    for (let k = 0; k < 400; k++) h.step(0.1, { drawTime: 5, complexity: (k % 7) / 6 });
+    for (let k = 0; k < 400; k++) {
+      h.step(0.1, { drawTime: 5, complexity: (k % 7) / 6 });
+    }
     expect(created).toBe(0);
     expect(h.data).toBe(data);
     expect(h.figure).toBe(figure);
@@ -165,7 +173,9 @@ describe("createHarmonograph", () => {
       expect(n).toBeLessThanOrEqual(cap);
       expect(n === 0 || h.dirtyStart === before).toBe(true);
       expect(h.head).toBe((before + n) % cap);
-      if (h.head < before) wrapped = true;
+      if (h.head < before) {
+        wrapped = true;
+      }
       written += n;
       expect(h.live).toBeLessThanOrEqual(cap);
       h.clearDirty();
@@ -184,7 +194,9 @@ describe("createHarmonograph", () => {
 
   it("expires segments past the fade age and stores wrapped birth times", () => {
     const h = createHarmonograph(16384, createRng(11));
-    for (let k = 0; k < 300; k++) h.step(0.1, { ...settings, drawTime: 10 });
+    for (let k = 0; k < 300; k++) {
+      h.step(0.1, { ...settings, drawTime: 10 });
+    }
     expect(h.live).toBeGreaterThan(0);
     for (let i = 0; i < h.live; i++) {
       const slot = (h.head - 1 - i + h.capacity) % h.capacity;

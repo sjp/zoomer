@@ -4,6 +4,7 @@
  * frame. Pure functions and plain state, so they can be tested without WebGL.
  */
 import type { Rgb } from "./color";
+import { lookup } from "./lookup";
 import { fract, smoothstep, wrap } from "./math";
 import { hash32 } from "./noise";
 import { MAX_SEEDS, type PhylloPositionId, type PhylloStyleId } from "./phyllotaxis.meta";
@@ -107,7 +108,7 @@ export const STYLES: Record<PhylloStyleId, PhylloStyle> = {
 
 /** The style for a select value, falling back to the sunflower for an unknown one. */
 export function styleFor(id: string): PhylloStyle {
-  return Object.hasOwn(STYLES, id) ? STYLES[id as PhylloStyleId] : STYLES.sunflower;
+  return lookup(STYLES, id, "sunflower");
 }
 
 export interface HeadLayout {
@@ -181,7 +182,9 @@ export function stepHead(
   h.time += dt;
   const k = 1 - Math.exp(-dt / COUNT_EASE);
   h.count += (targetCount - h.count) * k;
-  if (Math.abs(targetCount - h.count) < 0.01) h.count = targetCount;
+  if (Math.abs(targetCount - h.count) < 0.01) {
+    h.count = targetCount;
+  }
 }
 
 /** Seeds currently shown: every j with age j + fract(s) below the count. */

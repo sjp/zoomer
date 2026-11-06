@@ -41,8 +41,12 @@ describe("magnet", () => {
       for (let i = 1; i <= n; i++) {
         const u = i / n;
         const m = magnet(u, r);
-        if (!(m >= 0 && m <= 1)) bad++;
-        if (Math.abs(magnet(u + 3, r) - m) > 1e-9 || Math.abs(magnet(u - 1, r) - m) > 1e-9) bad++;
+        if (!(m >= 0 && m <= 1)) {
+          bad++;
+        }
+        if (Math.abs(magnet(u + 3, r) - m) > 1e-9 || Math.abs(magnet(u - 1, r) - m) > 1e-9) {
+          bad++;
+        }
         maxJump = Math.max(maxJump, Math.abs(m - prev));
         prev = m;
       }
@@ -73,16 +77,24 @@ describe("height field", () => {
         const z = (rng() * 2 - 1) * 1.6;
         const h = heightAt(x, z, f);
         const r2 = x * x + z * z;
-        if (r2 >= 1 && h !== 0) bad++;
-        if (r2 < 1 && !(h > 0)) bad++;
-        if (h > top + 1e-12 || h > boundAt(r2, f) + 1e-12) bad++;
+        if (r2 >= 1 && h !== 0) {
+          bad++;
+        }
+        if (r2 < 1 && !(h > 0)) {
+          bad++;
+        }
+        if (h > top + 1e-12 || h > boundAt(r2, f) + 1e-12) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
   });
 
   it("peaks at the centre spike", () => {
-    for (const f of FIELDS) expect(heightAt(0, 0, f)).toBeCloseTo(maxHeight(f), 12);
+    for (const f of FIELDS) {
+      expect(heightAt(0, 0, f)).toBeCloseTo(maxHeight(f), 12);
+    }
   });
 
   it("is continuous within its Lipschitz bound", () => {
@@ -120,7 +132,9 @@ describe("height field", () => {
         const err = Math.hypot(fx - g[0], fz - g[1]);
         const fx2 = (heightAt(x + 2 * e, z, f) - heightAt(x, z, f)) / (2 * e);
         const fz2 = (heightAt(x, z + 2 * e, f) - heightAt(x, z, f)) / (2 * e);
-        if (Math.abs(fx2 - fx) > 1e-3 || Math.abs(fz2 - fz) > 1e-3) continue;
+        if (Math.abs(fx2 - fx) > 1e-3 || Math.abs(fz2 - fz) > 1e-3) {
+          continue;
+        }
         worst = Math.max(worst, err);
       }
     }
@@ -159,7 +173,9 @@ describe("clock", () => {
       const rhythm = i < 1500 ? "pulse" : "breathe";
       const before = s.amp;
       stepState(s, 1 / 60, 6, rhythm);
-      if (!(s.phase >= 0 && s.phase < 1 && s.angle >= 0 && s.angle < LATTICE_PERIOD)) bad++;
+      if (!(s.phase >= 0 && s.phase < 1 && s.angle >= 0 && s.angle < LATTICE_PERIOD)) {
+        bad++;
+      }
       maxStep = Math.max(maxStep, Math.abs(s.amp - before));
     }
     stepState(s, Number.NaN, 6, "hold");
@@ -190,14 +206,18 @@ describe("layout", () => {
           layoutPool(w, h, size, pos, layout);
           const top = maxHeight(field(1, 3));
           poolBounds(layout, top, w, h, rect);
-          if (rect.x < 0 || rect.y < 0 || rect.x + rect.w > w || rect.y + rect.h > h) bad++;
+          if (rect.x < 0 || rect.y < 0 || rect.x + rect.w > w || rect.y + rect.h > h) {
+            bad++;
+          }
           for (let i = 0; i < 64; i++) {
             const a = (i / 64) * Math.PI * 2;
             // Rim: on screen, clear of the frame's edges.
             project(Math.cos(a), 0, Math.sin(a), layout.focal, q);
             const sx = layout.anchorX + q[0];
             const sy = layout.anchorY + q[1];
-            if (sx < -1e-6 || sx > w + 1e-6 || sy < -1e-6) bad++;
+            if (sx < -1e-6 || sx > w + 1e-6 || sy < -1e-6) {
+              bad++;
+            }
             // Random points of the drawn volume, inside the bounds where on screen.
             const r = Math.sqrt(rng());
             const onFloor = rng() < 0.5;
@@ -205,8 +225,12 @@ describe("layout", () => {
             project(rr * Math.cos(a), onFloor ? 0 : rng() * top, rr * Math.sin(a), layout.focal, q);
             const px = layout.anchorX + q[0];
             const py = layout.anchorY + q[1];
-            if (px < 0 || px > w || py < 0 || py > h) continue;
-            if (px < rect.x || px > rect.x + rect.w || py < rect.y || py > rect.y + rect.h) bad++;
+            if (px < 0 || px > w || py < 0 || py > h) {
+              continue;
+            }
+            if (px < rect.x || px > rect.x + rect.w || py < rect.y || py > rect.y + rect.h) {
+              bad++;
+            }
           }
         }
       }

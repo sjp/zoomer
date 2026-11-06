@@ -237,7 +237,9 @@ export const clouds = defineEffect(cloudsMeta, {
           driftFar += step * WIND * FAR_SPEED;
           evolve += step;
           const farTarget = p.layers >= 1.5 ? 1 : 0;
-          if (Number.isNaN(farFade)) farFade = farTarget;
+          if (Number.isNaN(farFade)) {
+            farFade = farTarget;
+          }
           const fadeStep = Math.max(0, dt) / LAYER_FADE;
           farFade = approach(farFade, farTarget, fadeStep);
           // The far layer costs its fetches only while it is at all visible.

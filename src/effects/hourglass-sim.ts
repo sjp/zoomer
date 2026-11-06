@@ -16,6 +16,7 @@
  */
 import type { HourglassFrame } from "./hourglass.meta";
 import { DURATION_RANGE, SIZE_RANGE } from "./hourglass.meta";
+import { lookup as lookupOr } from "./lookup";
 import { clamp } from "./math";
 
 /** Neck radius, bulb radius and the profile's arch frequency (glass units). */
@@ -69,7 +70,7 @@ const SLICES = 256;
 /** The bulb's radius at `h` (0 at the neck, 1 at the glass end). */
 export function bulbRadius(h: number): number {
   const s = BULB_R * Math.sin(BULB_K * clamp(h, 0, 1));
-  return Math.sqrt(NECK_R * NECK_R + s * s);
+  return Math.hypot(NECK_R, s);
 }
 
 /** The sand's radius inside the glass at `h`. */
@@ -80,7 +81,9 @@ export function sandRadius(h: number): number {
 /** Volume of a bulb from the neck up to level `h` (sand resting on the neck). */
 export function topVolume(h: number): number {
   const top = clamp(h, 0, 1);
-  if (top <= 0) return 0;
+  if (top <= 0) {
+    return 0;
+  }
   const n = Math.max(8, Math.ceil(SLICES * top));
   const dh = top / n;
   let v = 0;
@@ -96,12 +99,14 @@ export function topVolume(h: number): number {
  * whose rounded apex is at `apex`. Can be negative (no sand there).
  */
 export function pileSurface(apex: number, rho: number): number {
-  return apex - PILE_SLOPE * (Math.sqrt(rho * rho + PILE_ROUND * PILE_ROUND) - PILE_ROUND);
+  return apex - PILE_SLOPE * (Math.hypot(rho, PILE_ROUND) - PILE_ROUND);
 }
 
 /** Radius of the pile's surface `depth` below its apex. */
 export function pileRadiusAt(depth: number): number {
-  if (depth <= 0) return 0;
+  if (depth <= 0) {
+    return 0;
+  }
   const t = depth / PILE_SLOPE + PILE_ROUND;
   return Math.sqrt(t * t - PILE_ROUND * PILE_ROUND);
 }
@@ -109,7 +114,9 @@ export function pileRadiusAt(depth: number): number {
 /** Volume of a pile with its apex `apex` above the glass end, clipped by the glass. */
 export function pileVolume(apex: number): number {
   const top = clamp(apex, 0, 1);
-  if (top <= 0) return 0;
+  if (top <= 0) {
+    return 0;
+  }
   const n = Math.max(8, Math.ceil(SLICES * top));
   const dc = top / n;
   let v = 0;
@@ -123,9 +130,15 @@ export function pileVolume(apex: number): number {
 
 /** Area of the part of a disc of radius `r` with x < d. */
 export function discArea(r: number, d: number): number {
-  if (r <= 0) return 0;
-  if (d >= r) return Math.PI * r * r;
-  if (d <= -r) return 0;
+  if (r <= 0) {
+    return 0;
+  }
+  if (d >= r) {
+    return Math.PI * r * r;
+  }
+  if (d <= -r) {
+    return 0;
+  }
   return r * r * Math.acos(-d / r) + d * Math.sqrt(r * r - d * d);
 }
 
@@ -146,7 +159,9 @@ export function planeVolume(upX: number, upY: number, level: number): number {
       const share =
         Math.abs(upY) < 1e-6 ? (c > 0 ? 1 : 0) : clamp(0.5 + c / (Math.abs(upY) * dy), 0, 1);
       v += Math.PI * r * r * share;
-    } else v += upX > 0 ? discArea(r, c / upX) : discArea(r, -c / upX);
+    } else {
+      v += upX > 0 ? discArea(r, c / upX) : discArea(r, -c / upX);
+    }
   }
   return v * dy;
 }
@@ -171,8 +186,11 @@ function invert(volume: (level: number) => number, target: number, lo: number, h
   let b = hi;
   for (let k = 0; k < 40; k++) {
     const m = 0.5 * (a + b);
-    if (volume(m) < target) a = m;
-    else b = m;
+    if (volume(m) < target) {
+      a = m;
+    } else {
+      b = m;
+    }
   }
   return 0.5 * (a + b);
 }
@@ -269,8 +287,9 @@ export function stepClock(c: HourglassClock, dt: number, duration: number): void
       } else {
         left -= need;
         c.time = 0;
-        if (c.phase === "settle") c.phase = "turn";
-        else {
+        if (c.phase === "settle") {
+          c.phase = "turn";
+        } else {
           c.phase = "run";
           c.top = 1;
           c.turns++;
@@ -298,7 +317,9 @@ export function turnDirection(c: HourglassClock): 1 | -1 {
 
 /** Blend from the pile's shape to a level surface during the turn (0..1). */
 export function turnBlend(c: HourglassClock): number {
-  if (c.phase !== "turn") return 0;
+  if (c.phase !== "turn") {
+    return 0;
+  }
   const u = clamp(c.time / (0.4 * TURN_TIME), 0, 1);
   return u * u * (3 - 2 * u);
 }
@@ -398,5 +419,5 @@ export const FRAMES: Readonly<Record<HourglassFrame, number>> = {
 };
 
 export function frameKind(id: string): number {
-  return Object.hasOwn(FRAMES, id) ? FRAMES[id as HourglassFrame] : FRAMES.walnut;
+  return lookupOr(FRAMES, id, "walnut");
 }

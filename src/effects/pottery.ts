@@ -52,7 +52,7 @@ const LIGHT_RGB = [1.0, 0.93, 0.82] as const;
 const AMBIENT = 0.3;
 
 const g = glslFloat;
-const vec3Of = (v: readonly number[]) => `vec3(${v.map(g).join(", ")})`;
+const vec3Of = (v: readonly number[]) => `vec3(${v.map((x) => g(x)).join(", ")})`;
 const norm = (v: readonly number[]) => {
   const l = Math.hypot(...v);
   return v.map((x) => x / l);
@@ -439,8 +439,11 @@ export const pottery = defineEffect(potteryMeta, {
 
           // The pot's profile: eased towards the cycle's shape, so param changes reshape it.
           profileAt(phase, p.form, goal);
-          if (fresh) copyProfile(goal, shown);
-          else relaxProfile(shown, goal, 1 - Math.exp(-step / RESHAPE_TIME));
+          if (fresh) {
+            copyProfile(goal, shown);
+          } else {
+            relaxProfile(shown, goal, 1 - Math.exp(-step / RESHAPE_TIME));
+          }
           fresh = false;
           gl.activeTexture(gl.TEXTURE0);
           updateDataTexture(gl, profileTex, PROFILE_N, 1, gl.RED, gl.FLOAT, shown.radius);

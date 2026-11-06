@@ -250,16 +250,30 @@ export const film = defineEffect(filmMeta, {
             off[5] = wrap(off[5] + FLOW[2][1] * sdt + fall * s2, 0, 1);
           }
           target.resize(width, height, qualityDivisor(p.quality, DIVISORS));
-          if (target.texture !== renderedTex) invalid = true;
+          if (target.texture !== renderedTex) {
+            invalid = true;
+          }
           gl.useProgram(program);
-          if (u.f1("uAspect", aspect)) invalid = true;
-          if (u.f3("uFreq", s0, s1, s2)) invalid = true;
-          if (u.f4("uOff01", off[0], off[1], off[2], off[3])) invalid = true;
-          if (u.f2("uOff2", off[4], off[5])) invalid = true;
+          if (u.f1("uAspect", aspect)) {
+            invalid = true;
+          }
+          if (u.f3("uFreq", s0, s1, s2)) {
+            invalid = true;
+          }
+          if (u.f4("uOff01", off[0], off[1], off[2], off[3])) {
+            invalid = true;
+          }
+          if (u.f2("uOff2", off[4], off[5])) {
+            invalid = true;
+          }
           const mean = clamp(p.thickness || 0, 0, MAX_THICKNESS);
           const range = clamp(p.range || 0, 0, MAX_THICKNESS);
-          if (u.f2("uThick", mean / MAX_THICKNESS, range / MAX_THICKNESS)) invalid = true;
-          if (u.f1("uDrain", setup.drain)) invalid = true;
+          if (u.f2("uThick", mean / MAX_THICKNESS, range / MAX_THICKNESS)) {
+            invalid = true;
+          }
+          if (u.f1("uDrain", setup.drain)) {
+            invalid = true;
+          }
           if (invalid) {
             target.bind();
             gl.activeTexture(gl.TEXTURE0);

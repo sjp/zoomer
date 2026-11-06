@@ -51,7 +51,10 @@ import { createSpriteBatch, polygonStrip } from "./sprites";
 import { defineEffect } from "./types";
 
 const f = glslFloat;
-const vec3 = (hex: string) => `vec3(${hexToUnitRgb(hex).map(f).join(", ")})`;
+const vec3 = (hex: string) =>
+  `vec3(${hexToUnitRgb(hex)
+    .map((v) => f(v))
+    .join(", ")})`;
 
 /** Sky, sea and fog are soft everywhere; the headland and tower are drawn sharp in the blit. */
 const DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
@@ -418,7 +421,9 @@ export const lighthouse = defineEffect(lighthouseMeta, {
           sizeKey.set(0, width);
           sizeKey.set(1, height);
           sizeKey.set(2, divisor);
-          if (sizeKey.take()) target.resize(width, height, divisor);
+          if (sizeKey.take()) {
+            target.resize(width, height, divisor);
+          }
 
           phase = advancePhase(phase, dt, clamp(p.period, 1, 600));
           tilt = easeTilt(tilt, p.tilt, dt);

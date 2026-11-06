@@ -61,7 +61,7 @@ const MOTE_BRIGHT = 0.75;
 /** Rates (per second) at which the beam and lamp fade on and off, and the cloud follows a toggle. */
 const FADE_RATE = 0.8;
 
-const vec3 = (c: readonly number[]) => `vec3(${c.map(glslFloat).join(", ")})`;
+const vec3 = (c: readonly number[]) => `vec3(${c.map((v) => glslFloat(v)).join(", ")})`;
 
 /**
  * The room at low resolution: back wall and floor, the bookcases (four mip taps),
@@ -254,7 +254,9 @@ export const library = defineEffect(libraryMeta, {
           // The beam fades on and off; with it off, the geometry stays on its last side.
           const beam: BeamId = p.beam === "left" || p.beam === "right" ? p.beam : "off";
           const beamOn = beam !== "off";
-          if (beam !== "off") lastSide = beam;
+          if (beam !== "off") {
+            lastSide = beam;
+          }
           beamLevel =
             beamLevel < 0 ? (beamOn ? 1 : 0) : approach(beamLevel, beamOn ? 1 : 0, dt * FADE_RATE);
           lampLevel =
@@ -312,7 +314,9 @@ export const library = defineEffect(libraryMeta, {
               const s = motes.s[i] * geom.length;
               const t = motes.t[i] * geom.halfBox;
               const mask = beamMaskLocal(geom, s, t);
-              if (mask < 0.004) continue;
+              if (mask < 0.004) {
+                continue;
+              }
               const depth = motes.depth[i];
               const r = MOTE_R0 + depth * depth * MOTE_R1 * (0.3 + 0.7 * blur);
               // Larger (more defocused) motes spread the same light over more area.

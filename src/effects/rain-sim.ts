@@ -12,9 +12,25 @@ export const DROP_FLOATS = 6;
  * `a` if it already holds `n` elements, else a new array of the same type and
  * length `n` whose first `keep` elements are copied from `a` (the rest zero).
  */
-export function growArray<T extends Float32Array | Uint8Array>(a: T, n: number, keep: number): T {
-  if (a.length >= n) return a;
-  const b = new (a.constructor as new (length: number) => T)(n);
+export function growArray(
+  a: Float32Array<ArrayBuffer>,
+  n: number,
+  keep: number,
+): Float32Array<ArrayBuffer>;
+export function growArray(
+  a: Uint8Array<ArrayBuffer>,
+  n: number,
+  keep: number,
+): Uint8Array<ArrayBuffer>;
+export function growArray(
+  a: Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>,
+  n: number,
+  keep: number,
+): Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer> {
+  if (a.length >= n) {
+    return a;
+  }
+  const b = a instanceof Float32Array ? new Float32Array(n) : new Uint8Array(n);
   b.set(a.subarray(0, Math.min(keep, a.length)));
   return b;
 }
@@ -53,14 +69,14 @@ export interface RainSim {
    * falling and only newly exposed ones are scattered, so dragging the window
    * edge doesn't restart the rain.
    */
-  layout(cols: number, rows: number, density: number, restart: boolean): void;
+  layout: (cols: number, rows: number, density: number, restart: boolean) => void;
   /**
    * Advances every drop by `dt` seconds at `speed` rows per second (times its
    * pace), starting a new drop in a column once the current one is well past the
    * bottom, and writes the visible drops into `data` (at most `2 * cols`
    * instances of DROP_FLOATS, at `stride` floats apart). Returns how many it wrote.
    */
-  step(
+  step: (
     dt: number,
     speed: number,
     density: number,
@@ -68,7 +84,7 @@ export interface RainSim {
     trailAge: number,
     data: Float32Array,
     stride: number,
-  ): number;
+  ) => number;
 }
 
 export function createRainSim(random: () => number = Math.random): RainSim {
@@ -93,7 +109,9 @@ export function createRainSim(random: () => number = Math.random): RainSim {
   /** Appends one drop instance covering its still-visible rows from `minRow` down. */
   const emit = (c: number, head: number, rate: number, s: number, minRow: number) => {
     dropRows(span, head, rate, lead, trailAge, minRow, rows);
-    if (span[0] >= span[1]) return;
+    if (span[0] >= span[1]) {
+      return;
+    }
     const o = emitted++ * stride;
     out[o] = c;
     out[o + 1] = head;
@@ -166,7 +184,9 @@ export function createRainSim(random: () => number = Math.random): RainSim {
           resetColumn(c, density, false);
         }
         const head = heads[c];
-        if (active[c]) emit(c, head, speed * pace[c], seed[c], 0);
+        if (active[c]) {
+          emit(c, head, speed * pace[c], seed[c], 0);
+        }
         if (prevActive[c]) {
           // The current drop repaints the cells it has passed.
           const minRow = active[c] ? Math.max(0, Math.floor(head) + 1) : 0;

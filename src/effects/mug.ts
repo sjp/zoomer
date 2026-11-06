@@ -64,7 +64,7 @@ const LIT_CELLS = 1.5;
 const LIGHT = [0.55, 0.5, 0.67] as const;
 
 const g = glslFloat;
-const vec3Of = (v: readonly number[]) => `vec3(${v.map(g).join(", ")})`;
+const vec3Of = (v: readonly number[]) => `vec3(${v.map((x) => g(x)).join(", ")})`;
 const norm = (v: readonly number[]) => {
   const l = Math.hypot(...v);
   return v.map((x) => x / l);

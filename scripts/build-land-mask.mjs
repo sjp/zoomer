@@ -17,8 +17,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 
-const [input, output = "public/land-mask.png"] = process.argv.slice(2);
-if (!input) {
+const args = process.argv.slice(2);
+const [input, output = "public/land-mask.png"] = args;
+if (args.length === 0 || input === "") {
   console.error("usage: node scripts/build-land-mask.mjs <ne_50m_land.geojson> [out.png]");
   process.exit(1);
 }
@@ -41,23 +42,77 @@ const PAD = (RANGE + 2) * SS;
 
 /** @typedef {[number, number]} Position */
 /** @typedef {Position[]} Ring */
-/**
- * @typedef {{ type: "Polygon"; coordinates: Ring[] }
- *   | { type: "MultiPolygon"; coordinates: Ring[][] }
- *   | { type: string; coordinates?: unknown }} Geometry
- */
+/** @typedef {{ type: string; coordinates?: unknown }} Geometry */
 /** @typedef {{ features: { geometry: Geometry }[] }} FeatureCollection */
 
-const geo = /** @type {FeatureCollection} */ (JSON.parse(readFileSync(input, "utf8")));
+/**
+ * @param {unknown} v
+ * @returns {v is Record<string, unknown>}
+ */
+const isObject = (v) => typeof v === "object" && v !== null;
+
+/**
+ * @param {unknown} v
+ * @returns {v is FeatureCollection}
+ */
+const isFeatureCollection = (v) =>
+  isObject(v) &&
+  Array.isArray(v.features) &&
+  v.features.every(
+    (/** @type {unknown} */ f) =>
+      isObject(f) && isObject(f.geometry) && typeof f.geometry.type === "string",
+  );
+
+/**
+ * @param {unknown} v
+ * @returns {v is Position}
+ */
+const isPosition = (v) =>
+  Array.isArray(v) && v.length >= 2 && typeof v[0] === "number" && typeof v[1] === "number";
+
+/**
+ * @param {unknown} v
+ * @returns {v is Ring[]}
+ */
+const isPolygon = (v) =>
+  Array.isArray(v) &&
+  v.every((/** @type {unknown} */ ring) => Array.isArray(ring) && ring.every((p) => isPosition(p)));
+
+/**
+ * @param {unknown} v
+ * @returns {v is Ring[][]}
+ */
+const isMultiPolygon = (v) => Array.isArray(v) && v.every((p) => isPolygon(p));
+
+/** @type {unknown} */
+const parsed = JSON.parse(readFileSync(input, "utf8"));
+if (!isFeatureCollection(parsed)) {
+  throw new Error(`${input} is not a GeoJSON FeatureCollection`);
+}
+const geo = parsed;
 /** @type {Ring[]} */
 const rings = [];
 for (const f of geo.features) {
   const g = f.geometry;
   /** @type {Ring[][]} */
   let polys = [];
-  if (g.type === "Polygon") polys = [/** @type {Ring[]} */ (g.coordinates)];
-  else if (g.type === "MultiPolygon") polys = /** @type {Ring[][]} */ (g.coordinates);
-  for (const poly of polys) for (const ring of poly) rings.push(ring);
+  const coords = g.coordinates;
+  if (g.type === "Polygon") {
+    if (!isPolygon(coords)) {
+      throw new Error("Polygon with malformed coordinates");
+    }
+    polys = [coords];
+  } else if (g.type === "MultiPolygon") {
+    if (!isMultiPolygon(coords)) {
+      throw new Error("MultiPolygon with malformed coordinates");
+    }
+    polys = coords;
+  }
+  for (const poly of polys) {
+    for (const ring of poly) {
+      rings.push(ring);
+    }
+  }
 }
 
 const land = new Uint8Array(HW * HH);
@@ -80,7 +135,9 @@ for (let y = 0; y < HH; y++) {
   for (let k = 0; k + 1 < xs.length; k += 2) {
     const a = Math.max(0, Math.ceil(xs[k]));
     const b = Math.min(HW - 1, Math.floor(xs[k + 1]));
-    for (let x = a; x <= b; x++) land[y * HW + x] ^= 1;
+    for (let x = a; x <= b; x++) {
+      land[y * HW + x] ^= 1;
+    }
   }
 }
 
@@ -114,7 +171,9 @@ function dt1(f, n, d, v, z) {
   }
   k = 0;
   for (let q = 0; q < n; q++) {
-    while (z[k + 1] < q) k++;
+    while (z[k + 1] < q) {
+      k++;
+    }
     d[q] = (q - v[k]) * (q - v[k]) + f[v[k]];
   }
 }
@@ -125,25 +184,34 @@ function dt1(f, n, d, v, z) {
 function edt(inside) {
   const PW = HW + 2 * PAD;
   const grid = new Float64Array(PW * HH);
-  for (let y = 0; y < HH; y++)
+  for (let y = 0; y < HH; y++) {
     for (let x = 0; x < PW; x++) {
       const sx = (((x - PAD) % HW) + HW) % HW;
       grid[y * PW + x] = inside(land[y * HW + sx]) ? 0 : INF;
     }
+  }
   const n = Math.max(PW, HH);
   const f = new Float64Array(n);
   const d = new Float64Array(n);
   const v = new Int32Array(n);
   const z = new Float64Array(n + 1);
   for (let x = 0; x < PW; x++) {
-    for (let y = 0; y < HH; y++) f[y] = grid[y * PW + x];
+    for (let y = 0; y < HH; y++) {
+      f[y] = grid[y * PW + x];
+    }
     dt1(f, HH, d, v, z);
-    for (let y = 0; y < HH; y++) grid[y * PW + x] = d[y];
+    for (let y = 0; y < HH; y++) {
+      grid[y * PW + x] = d[y];
+    }
   }
   for (let y = 0; y < HH; y++) {
-    for (let x = 0; x < PW; x++) f[x] = grid[y * PW + x];
+    for (let x = 0; x < PW; x++) {
+      f[x] = grid[y * PW + x];
+    }
     dt1(f, PW, d, v, z);
-    for (let x = 0; x < PW; x++) grid[y * PW + x] = d[x];
+    for (let x = 0; x < PW; x++) {
+      grid[y * PW + x] = d[x];
+    }
   }
   return { grid, PW };
 }
@@ -156,10 +224,10 @@ const toSea = edt((v) => v === 0);
 // ---------------------------------------------------------------------------
 
 const out = new Uint8Array(W * H);
-for (let y = 0; y < H; y++)
+for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
     let sum = 0;
-    for (let j = 0; j < SS; j++)
+    for (let j = 0; j < SS; j++) {
       for (let i = 0; i < SS; i++) {
         const hy = y * SS + j;
         const hx = x * SS + i + PAD;
@@ -168,10 +236,12 @@ for (let y = 0; y < H; y++)
         const lnd = Math.sqrt(toLand.grid[hy * toLand.PW + hx]);
         sum += sea > 0 ? sea - 0.5 : -(lnd - 0.5);
       }
+    }
     const dTexels = sum / (SS * SS) / SS;
     const clamped = Math.max(-RANGE, Math.min(RANGE, dTexels));
     out[y * W + x] = Math.max(0, Math.min(255, Math.round(128 + clamped * STEPS)));
   }
+}
 
 // ---------------------------------------------------------------------------
 // PNG (greyscale, 8-bit, per-row adaptive filter)
@@ -180,13 +250,17 @@ for (let y = 0; y < H; y++)
 const crcTable = new Uint32Array(256);
 for (let n = 0; n < 256; n++) {
   let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  for (let k = 0; k < 8; k++) {
+    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  }
   crcTable[n] = c >>> 0;
 }
 /** @param {Uint8Array} buf */
 const crc32 = (buf) => {
   let c = 0xffffffff;
-  for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+  for (const b of buf) {
+    c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+  }
   return (c ^ 0xffffffff) >>> 0;
 };
 /**
@@ -256,7 +330,11 @@ const png = Buffer.concat([
 ]);
 writeFileSync(output, png);
 let landCount = 0;
-for (const v of out) if (v >= 128) landCount++;
-console.log(
-  `wrote ${output}: ${String(png.length)} bytes, land ${((100 * landCount) / out.length).toFixed(1)}% of texels`,
+for (const v of out) {
+  if (v >= 128) {
+    landCount++;
+  }
+}
+process.stdout.write(
+  `wrote ${output}: ${String(png.length)} bytes, land ${((100 * landCount) / out.length).toFixed(1)}% of texels\n`,
 );

@@ -11,6 +11,7 @@ import { createSpriteBatch, type SpriteBatch } from "./sprites";
 import { rainMeta } from "./rain.meta";
 import { defineEffect } from "./types";
 import { HASH32_GLSL } from "./noise";
+import { has } from "./lookup";
 import { createRainSim } from "./rain-sim";
 
 const CHARSETS: Record<string, string> = {
@@ -170,7 +171,9 @@ export const rain = defineEffect(rainMeta, {
           Math.ceil(glyphCount / ATLAS_COLS) * cell,
         );
         const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Digital Rain: no 2D context for the glyph atlas");
+        if (!ctx) {
+          throw new Error("Digital Rain: no 2D context for the glyph atlas");
+        }
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.font = `${String(cell)}px ${FONT_FAMILY}`;
@@ -199,7 +202,9 @@ export const rain = defineEffect(rainMeta, {
 
       return {
         resize(v) {
-          if (v.width !== width || v.height !== height) sizeDirty = true;
+          if (v.width !== width || v.height !== height) {
+            sizeDirty = true;
+          }
           ({ width, height, scale } = v);
         },
         frame(dt, p) {
@@ -213,7 +218,7 @@ export const rain = defineEffect(rainMeta, {
             sizeDirty = false;
             layout(p.density, false);
           }
-          const charset = CHARSETS[p.charset] ? p.charset : "katakana";
+          const charset = has(CHARSETS, p.charset) ? p.charset : "katakana";
           if (atlasCell !== cell || atlasCharset !== charset) {
             buildAtlas(CHARSETS[charset]);
             atlasCell = cell;
@@ -225,7 +230,9 @@ export const rain = defineEffect(rainMeta, {
           const trailAge = Math.log(CUTOFF) / decay;
           const lead = p.brightHead ? 1 : 0;
 
-          if (!batch) return;
+          if (!batch) {
+            return;
+          }
           const n = sim.step(dt, p.speed, p.density, lead, trailAge, batch.data, batch.stride);
 
           const bg = backgroundRgb(p.background);
@@ -233,7 +240,9 @@ export const rain = defineEffect(rainMeta, {
 
           gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
-          if (n === 0) return;
+          if (n === 0) {
+            return;
+          }
 
           batch.upload(n);
           gl.useProgram(program);

@@ -63,7 +63,9 @@ export function lanternOutline(): number[] {
   for (let i = 0; i < n; i++) {
     let a0 = normal((i + n - 1) % n);
     const a1 = normal(i);
-    while (a0 > a1) a0 -= TAU;
+    while (a0 > a1) {
+      a0 -= TAU;
+    }
     for (let s = 0; s <= steps; s++) {
       const a = a0 + ((a1 - a0) * s) / steps;
       out.push(inner[i][0] + Math.cos(a) * round, inner[i][1] + Math.sin(a) * round);
@@ -136,12 +138,12 @@ export interface Lanterns {
   /** After `step`: instances written before the first that draws a halo. */
   readonly haloFirst: number;
   /** Scales x positions after the width changes by `k`. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances `dt` seconds and writes the visible lanterns far to near into
    * `data` (LANTERN_FLOATS at `stride` floats apart, in device px). Returns how many.
    */
-  step(dt: number, f: LanternFrame, data: Float32Array, stride: number): number;
+  step: (dt: number, f: LanternFrame, data: Float32Array, stride: number) => number;
 }
 
 /** Reference px a lantern of depth `d` reaches beyond its centre, halo included. */
@@ -153,7 +155,9 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
   const rand = createRng(seed);
   // Depths skew far, so the field reads as deep; sorted once for painter's order.
   const depths: number[] = [];
-  for (let i = 0; i < max; i++) depths.push(rand() ** 1.4);
+  for (let i = 0; i < max; i++) {
+    depths.push(rand() ** 1.4);
+  }
   depths.sort((a, b) => a - b);
   const depth = Float32Array.from(depths);
   const x = new Float64Array(max);
@@ -171,7 +175,9 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
    * picks lanterns spread over every depth while the draw order stays sorted.
    */
   const rank = new Uint16Array(max);
-  for (let i = 0; i < max; i++) rank[i] = i;
+  for (let i = 0; i < max; i++) {
+    rank[i] = i;
+  }
   for (let i = max - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     const t = rank[i];
@@ -188,9 +194,11 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
     drift[i] = (rand() - 0.5) * 6;
     const u = rand();
     // Mostly warm orange to gold, a few pinker or redder.
-    if (u < 0.12) tint.set([1, 0.72, 0.95], i * 3);
-    else if (u < 0.22) tint.set([1, 0.78, 0.7], i * 3);
-    else {
+    if (u < 0.12) {
+      tint.set([1, 0.72, 0.95], i * 3);
+    } else if (u < 0.22) {
+      tint.set([1, 0.78, 0.7], i * 3);
+    } else {
       const t = rand() * 2 - 1;
       tint.set([1, 1 + 0.16 * t, 1 + 0.3 * t], i * 3);
     }
@@ -207,7 +215,9 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
       return haloFirst;
     },
     rescaleX(k) {
-      for (let i = 0; i < max; i++) x[i] *= k;
+      for (let i = 0; i < max; i++) {
+        x[i] *= k;
+      }
     },
     step(dt, f, data, stride) {
       time += dt;
@@ -236,7 +246,9 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
         x[i] = wrap(x[i] + (wind * WIND_PX + drift[i]) * pace * dt, -reach, w + 2 * reach);
 
         fade[i] = approach(fade[i], rank[i] < f.count ? 1 : 0, fadeStep);
-        if (fade[i] <= 0) continue;
+        if (fade[i] <= 0) {
+          continue;
+        }
 
         const s = depthScale(d);
         const sway = Math.sin(swayRate[i] * time + swayPhase[i]);
@@ -257,7 +269,9 @@ export function createLanterns(max: number, refWidth: number, seed = 4141): Lant
         // Tilt leads the sway (it leans the way it is moving) and into the wind.
         data[o + 8] = TILT * Math.cos(swayRate[i] * time + swayPhase[i]) + WIND_LEAN * wind;
         data[o + 9] = 1;
-        if (d < HALO_MIN_DEPTH) haloFirst = n + 1;
+        if (d < HALO_MIN_DEPTH) {
+          haloFirst = n + 1;
+        }
         n++;
       }
       return n;

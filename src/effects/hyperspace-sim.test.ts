@@ -42,7 +42,9 @@ describe("createJump", () => {
       const before = jump.flash;
       jump.step(dt, "in", 2, 16);
       frames++;
-      if (jump.flash > before) flashes.push(jump.progress);
+      if (jump.flash > before) {
+        flashes.push(jump.progress);
+      }
       expect(jump.progress).toBeLessThanOrEqual(1);
     }
     expect(Math.abs(frames - 120)).toBeLessThanOrEqual(1);
@@ -54,21 +56,31 @@ describe("createJump", () => {
   it("fades the flash out over FLASH_SECONDS", () => {
     const jump = createJump();
     jump.step(dt, "out", 0.5, 16);
-    while (jump.flash === 0) jump.step(dt, "in", 0.5, 16);
+    while (jump.flash === 0) {
+      jump.step(dt, "in", 0.5, 16);
+    }
     expect(jump.flash).toBeCloseTo(1 - dt / FLASH_SECONDS, 12);
-    for (let t = 0; t < FLASH_SECONDS; t += dt) jump.step(dt, "in", 0.5, 16);
+    for (let t = 0; t < FLASH_SECONDS; t += dt) {
+      jump.step(dt, "in", 0.5, 16);
+    }
     expect(jump.flash).toBe(0);
   });
 
   it("drops back without a flash, and reverses mid-jump", () => {
     const jump = createJump();
     jump.step(dt, "in", 1, 16);
-    for (let i = 0; i < 30; i++) jump.step(dt, "out", 1, 16);
+    for (let i = 0; i < 30; i++) {
+      jump.step(dt, "out", 1, 16);
+    }
     expect(jump.progress).toBeCloseTo(0.5, 9);
     expect(jump.flash).toBe(0);
-    for (let i = 0; i < 6; i++) jump.step(dt, "in", 1, 16);
+    for (let i = 0; i < 6; i++) {
+      jump.step(dt, "in", 1, 16);
+    }
     expect(jump.progress).toBeCloseTo(0.6, 9);
-    for (let i = 0; i < 100; i++) jump.step(dt, "out", 1, 16);
+    for (let i = 0; i < 100; i++) {
+      jump.step(dt, "out", 1, 16);
+    }
     expect(jump.progress).toBe(0);
   });
 
@@ -76,7 +88,9 @@ describe("createJump", () => {
     const jump = createJump();
     const at: number[] = [];
     for (let t = 0; t < 16; t += 0.5) {
-      for (let i = 0; i < 30; i++) jump.step(dt, "cycle", 1.6, 16);
+      for (let i = 0; i < 30; i++) {
+        jump.step(dt, "cycle", 1.6, 16);
+      }
       at.push(jump.progress);
     }
     // Normal space through 4s, fully in by about 4 + 1.6s, back out after 13.6s.

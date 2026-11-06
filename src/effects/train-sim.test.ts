@@ -106,7 +106,9 @@ describe("layers", () => {
         // One period on screen later, the offset is the same.
         const b = scrollOffset(pos + (2048 * z) / FOCAL, z, 2048);
         const d = Math.abs(a - b);
-        if (!(a >= 0 && a < 1) || Math.min(d, 1 - d) > 1e-6) ok = false;
+        if (!(a >= 0 && a < 1) || Math.min(d, 1 - d) > 1e-6) {
+          ok = false;
+        }
       }
     }
     expect(ok).toBe(true);
@@ -139,12 +141,16 @@ describe("tables", () => {
       const h = hillTable(seed);
       const f = fieldTable(seed);
       const b = bankTable(seed);
-      for (let ch = 0; ch < HILL_CHANNELS; ch++)
+      for (let ch = 0; ch < HILL_CHANNELS; ch++) {
         ok &&= seamless(h, HILL_COLUMNS, HILL_CHANNELS, ch);
+      }
       // R (heights) and B (hedges) are continuous; G (field tone) steps at a field edge.
-      for (const ch of [0, 2, 3]) ok &&= seamless(f, FIELD_COLUMNS, FIELD_CHANNELS, ch);
-      for (let ch = 0; ch < BANK_CHANNELS; ch++)
+      for (const ch of [0, 2, 3]) {
+        ok &&= seamless(f, FIELD_COLUMNS, FIELD_CHANNELS, ch);
+      }
+      for (let ch = 0; ch < BANK_CHANNELS; ch++) {
         ok &&= seamless(b, BANK_COLUMNS, BANK_CHANNELS, ch);
+      }
     }
     expect(ok).toBe(true);
   });
@@ -155,7 +161,9 @@ describe("tables", () => {
     for (let c = 0; c < FIELD_COLUMNS; c++) {
       const prev = (c + FIELD_COLUMNS - 1) % FIELD_COLUMNS;
       if (f[c * FIELD_CHANNELS + 1] !== f[prev * FIELD_CHANNELS + 1]) {
-        if (Math.max(f[c * FIELD_CHANNELS + 2], f[prev * FIELD_CHANNELS + 2]) < 0.5) ok = false;
+        if (Math.max(f[c * FIELD_CHANNELS + 2], f[prev * FIELD_CHANNELS + 2]) < 0.5) {
+          ok = false;
+        }
       }
     }
     expect(ok).toBe(true);
@@ -176,7 +184,9 @@ describe("tables", () => {
     const b = bankTable(3);
     let ok = true;
     for (let c = 0; c < HILL_COLUMNS; c++) {
-      if (h[c * 2] < 20 || h[c * 2] > 130 || h[c * 2 + 1] < 8 || h[c * 2 + 1] > 80) ok = false;
+      if (h[c * 2] < 20 || h[c * 2] > 130 || h[c * 2 + 1] < 8 || h[c * 2 + 1] > 80) {
+        ok = false;
+      }
     }
     for (let c = 0; c < FIELD_COLUMNS; c++) {
       const o = c * FIELD_CHANNELS;
@@ -185,7 +195,9 @@ describe("tables", () => {
       }
     }
     for (let c = 0; c < BANK_COLUMNS; c++) {
-      if (b[c * 2] < 155 || b[c * 2] > 215 || b[c * 2 + 1] < 0 || b[c * 2 + 1] > 1) ok = false;
+      if (b[c * 2] < 155 || b[c * 2] > 215 || b[c * 2 + 1] < 0 || b[c * 2 + 1] > 1) {
+        ok = false;
+      }
     }
     expect(ok).toBe(true);
   });
@@ -197,8 +209,12 @@ describe("tables", () => {
     const maxB = fillBankTable(b, 9);
     let mf = 0;
     let mb = 0;
-    for (let c = 0; c < FIELD_COLUMNS; c++) mf = Math.max(mf, f[c * FIELD_CHANNELS]);
-    for (let c = 0; c < BANK_COLUMNS; c++) mb = Math.max(mb, b[c * 2]);
+    for (let c = 0; c < FIELD_COLUMNS; c++) {
+      mf = Math.max(mf, f[c * FIELD_CHANNELS]);
+    }
+    for (let c = 0; c < BANK_COLUMNS; c++) {
+      mb = Math.max(mb, b[c * 2]);
+    }
     expect(maxF).toBeCloseTo(mf, 4);
     expect(maxB).toBeCloseTo(mb, 3);
   });
@@ -229,8 +245,9 @@ describe("train", () => {
     let prevPos = train.pos;
     for (let i = 0; i < 600; i++) {
       stepTrain(train, 1 / 60, 0.5, -1);
-      if (Math.abs(train.v - prevV) > 0.011 || Math.abs(train.pos - prevPos) > V_MAX / 60)
+      if (Math.abs(train.v - prevV) > 0.011 || Math.abs(train.pos - prevPos) > V_MAX / 60) {
         ok = false;
+      }
       prevV = train.v;
       prevPos = train.pos;
     }
@@ -255,7 +272,9 @@ describe("poles and wires", () => {
     expect(off).toBeLessThan(POLE_SPACING);
     let ok = xs[0] <= 0 && xs[n - 1] >= 1920;
     for (let i = 1; i < n; i++) {
-      if (Math.abs(xs[i] - xs[i - 1] - POLE_SPACING) > 1e-9) ok = false;
+      if (Math.abs(xs[i] - xs[i - 1] - POLE_SPACING) > 1e-9) {
+        ok = false;
+      }
     }
     expect(ok).toBe(true);
     // A small step moves the poles left by the pole layer's screen speed.
@@ -274,15 +293,22 @@ describe("poles and wires", () => {
         const b = xs[i + 1] + WIRE_DX[w];
         // Both ends at the attachment height, from either side.
         for (const x of [a, b]) {
-          if (Math.abs(wireHeight(w, x + 1e-6, off) - WIRE_Y[w]) > 1e-3) ok = false;
-          if (Math.abs(wireHeight(w, x - 1e-6, off) - WIRE_Y[w]) > 1e-3) ok = false;
+          if (Math.abs(wireHeight(w, x + 1e-6, off) - WIRE_Y[w]) > 1e-3) {
+            ok = false;
+          }
+          if (Math.abs(wireHeight(w, x - 1e-6, off) - WIRE_Y[w]) > 1e-3) {
+            ok = false;
+          }
         }
         // The lowest point, mid-span.
-        if (Math.abs(wireHeight(w, (a + b) / 2, off) - (WIRE_Y[w] - WIRE_SAG[w])) > 1e-6)
+        if (Math.abs(wireHeight(w, (a + b) / 2, off) - (WIRE_Y[w] - WIRE_SAG[w])) > 1e-6) {
           ok = false;
+        }
         // Symmetric about mid-span.
         const q = (b - a) / 4;
-        if (Math.abs(wireHeight(w, a + q, off) - wireHeight(w, b - q, off)) > 1e-6) ok = false;
+        if (Math.abs(wireHeight(w, a + q, off) - wireHeight(w, b - q, off)) > 1e-6) {
+          ok = false;
+        }
       }
     }
     expect(ok).toBe(true);
@@ -307,8 +333,12 @@ describe("houses", () => {
     for (let p = 0; p < 2000; p += 3.7) {
       const m = viewHouses(houses, p, 1920, 0.5, out, look);
       for (let i = 0; i < m; i++) {
-        if (Math.abs(out[i * 4] - 960) > 960 + out[i * 4 + 1] * 1.4 + 2) ok = false;
-        if (look[i * 4] !== 0 && look[i * 4] !== 0.5) ok = false;
+        if (Math.abs(out[i * 4] - 960) > 960 + out[i * 4 + 1] * 1.4 + 2) {
+          ok = false;
+        }
+        if (look[i * 4] !== 0 && look[i * 4] !== 0.5) {
+          ok = false;
+        }
       }
     }
     expect(ok).toBe(true);
@@ -322,8 +352,12 @@ describe("sway", () => {
     for (let t = 0; t < 60; t += 0.05) {
       const s = swayOffset(t, 1, 0.5);
       peak = Math.max(peak, Math.abs(s));
-      if (Math.abs(s) > SWAY_AMP + 1e-9) ok = false;
-      if (swayOffset(t, 0, 0.5) !== 0 || swayOffset(t, 1, 0) !== 0) ok = false;
+      if (Math.abs(s) > SWAY_AMP + 1e-9) {
+        ok = false;
+      }
+      if (swayOffset(t, 0, 0.5) !== 0 || swayOffset(t, 1, 0) !== 0) {
+        ok = false;
+      }
     }
     expect(ok).toBe(true);
     expect(peak).toBeGreaterThan(SWAY_AMP * 0.6);
@@ -340,7 +374,9 @@ describe("time of day", () => {
     for (let i = 0; i < 300; i++) {
       stepTime(state, 1 / 60, 0);
       const h = sampleTime(state.pos, look).hour;
-      if (h > prev + 1e-9 || prev - h > 0.5) ok = false;
+      if (h > prev + 1e-9 || prev - h > 0.5) {
+        ok = false;
+      }
       prev = h;
     }
     expect(ok).toBe(true);

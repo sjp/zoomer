@@ -166,7 +166,9 @@ export function measureFigure(f: Figure): Rejection {
   for (let k = 0; k <= n; k++) {
     const x = samples[k * 2] * f.invX;
     const y = samples[k * 2 + 1] * f.invY;
-    if (k > 0) arc += Math.hypot(x - px, y - py);
+    if (k > 0) {
+      arc += Math.hypot(x - px, y - py);
+    }
     px = x;
     py = y;
     sxx += x * x;
@@ -178,11 +180,17 @@ export function measureFigure(f: Figure): Rejection {
   const disc = Math.sqrt((sxx - syy) * (sxx - syy) + 4 * sxy * sxy);
   const lo = (tr - disc) / 2;
   const hi = (tr + disc) / 2;
-  if (!(hi > 0) || lo < 0.08 * hi) return "line";
+  if (!(hi > 0) || lo < 0.08 * hi) {
+    return "line";
+  }
   f.arc = arc;
-  if (arc < MIN_ARC) return "sparse";
+  if (arc < MIN_ARC) {
+    return "sparse";
+  }
   const seg = Math.max(MIN_SEG, arc / FIGURE_SEGMENTS);
-  if (seg > MAX_SEG) return "dense";
+  if (seg > MAX_SEG) {
+    return "dense";
+  }
   f.seg = seg;
   f.segments = Math.ceil(arc / seg);
   return null;
@@ -204,12 +212,16 @@ function randomFigure(f: Figure, rng: () => number, complexity: number): void {
   f.amp[1] = second * (0.3 + 0.7 * rng());
   f.amp[2] = 0.8 + 0.2 * rng();
   f.amp[3] = second * (0.3 + 0.7 * rng());
-  for (let i = 0; i < 4; i++) f.phase[i] = rng() * Math.PI * 2;
+  for (let i = 0; i < 4; i++) {
+    f.phase[i] = rng() * Math.PI * 2;
+  }
   // Cycles of the mean frequency over the figure; more with complexity.
   const cycles = 14 + (8 + 10 * complexity) * rng();
   f.duration = (Math.PI * 2 * cycles) / ((a + b) / 2);
   const d = Math.log(1 / END_AMP) / f.duration;
-  for (let i = 0; i < 4; i++) f.decay[i] = d * (0.75 + 0.5 * rng());
+  for (let i = 0; i < 4; i++) {
+    f.decay[i] = d * (0.75 + 0.5 * rng());
+  }
   f.hue = rng() * PALETTE_STOPS;
 }
 
@@ -220,8 +232,12 @@ function randomFigure(f: Figure, rng: () => number, complexity: number): void {
 export function chooseFigure(f: Figure, rng: () => number, complexity: number): number {
   for (let attempt = 1; ; attempt++) {
     randomFigure(f, rng, attempt > 20 ? 0 : complexity);
-    if (measureFigure(f) === null) return attempt;
-    if (attempt > 200) throw new Error("Harmonograph: no usable figure");
+    if (measureFigure(f) === null) {
+      return attempt;
+    }
+    if (attempt > 200) {
+      throw new Error("Harmonograph: no usable figure");
+    }
   }
 }
 
@@ -256,8 +272,8 @@ export interface Harmonograph {
   /** Unwrapped birth time of each slot. */
   readonly births: Float64Array;
   /** Advances the pen by `dt` seconds, emitting segments and expiring old ones. */
-  step(dt: number, s: PenSettings): void;
-  clearDirty(): void;
+  step: (dt: number, s: PenSettings) => void;
+  clearDirty: () => void;
 }
 
 /** Segments emitted per `step` at most, so a long step can't stall a frame. */
@@ -296,7 +312,9 @@ export function createHarmonograph(
     emitted = 0;
     budget = 0;
     let fmax = 0;
-    for (let i = 0; i < 4; i++) fmax = Math.max(fmax, figure.freq[i]);
+    for (let i = 0; i < 4; i++) {
+      fmax = Math.max(fmax, figure.freq[i]);
+    }
     maxStep = (Math.PI * 2) / (fmax * 8);
   }
 
@@ -312,7 +330,9 @@ export function createHarmonograph(
   /** Moves the pen one segment length along the curve. Returns false at the end. */
   function advance(): boolean {
     const f = figure;
-    if (penT >= f.duration) return false;
+    if (penT >= f.duration) {
+      return false;
+    }
     const L = f.seg;
     // March along the curve in steps sized from the local speed (at most an
     // eighth of the fastest pendulum's period, so no loop is skipped) until the
@@ -336,7 +356,9 @@ export function createHarmonograph(
       }
       at(t1);
       const len1 = Math.hypot(nextX - penX, nextY - penY);
-      if (len1 >= L) return bisect(t0, t1, L);
+      if (len1 >= L) {
+        return bisect(t0, t1, L);
+      }
       t0 = t1;
       len0 = len1;
     }
@@ -355,8 +377,11 @@ export function createHarmonograph(
         penT = mid;
         return true;
       }
-      if (len < L) lo = mid;
-      else hi = mid;
+      if (len < L) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
     }
     at(hi);
     penT = hi;
@@ -372,13 +397,21 @@ export function createHarmonograph(
     data[o + 4] = time % TIME_PERIOD;
     let phase =
       (figure.hue + (COLOR_CYCLES * PALETTE_STOPS * emitted) / figure.segments) % PALETTE_STOPS;
-    if (phase < 0) phase += PALETTE_STOPS;
+    if (phase < 0) {
+      phase += PALETTE_STOPS;
+    }
     data[o + 5] = phase;
     births[head] = time;
-    if (dirtyCount === 0) dirtyStart = head;
-    if (dirtyCount < capacity) dirtyCount++;
+    if (dirtyCount === 0) {
+      dirtyStart = head;
+    }
+    if (dirtyCount < capacity) {
+      dirtyCount++;
+    }
     head = head + 1 === capacity ? 0 : head + 1;
-    if (live < capacity) live++;
+    if (live < capacity) {
+      live++;
+    }
     emitted++;
   }
 
@@ -412,7 +445,9 @@ export function createHarmonograph(
       fadeAge = FADE_FIGURES * s.drawTime;
       if (gap > 0) {
         gap -= dt;
-        if (gap <= 0) startFigure(s.complexity);
+        if (gap <= 0) {
+          startFigure(s.complexity);
+        }
       } else {
         budget += (dt * figure.segments) / s.drawTime;
         let n = 0;
@@ -430,11 +465,15 @@ export function createHarmonograph(
           budget -= 1;
           n++;
         }
-        if (n === MAX_PER_STEP) budget = Math.min(budget, 1);
+        if (n === MAX_PER_STEP) {
+          budget = Math.min(budget, 1);
+        }
       }
       // Expire segments past the fade, oldest first.
       let oldest = head - live;
-      if (oldest < 0) oldest += capacity;
+      if (oldest < 0) {
+        oldest += capacity;
+      }
       while (live > 0 && time - births[oldest] >= fadeAge) {
         live--;
         oldest = oldest + 1 === capacity ? 0 : oldest + 1;

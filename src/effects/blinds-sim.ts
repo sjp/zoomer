@@ -147,7 +147,9 @@ export const MAX_DIP = 0.5;
  */
 export function sunLevel(n: number, clouds: number): number {
   const c = clamp(clouds, 0, 1);
-  if (c <= 0) return 1;
+  if (c <= 0) {
+    return 1;
+  }
   // The wide ramp keeps the dimming slow: the noise changes by at most about
   // 0.2 per second, so the deepest dip takes three seconds or more.
   const threshold = 0.6 - 0.9 * c;
@@ -157,7 +159,9 @@ export function sunLevel(n: number, clouds: number): number {
 
 /** `sunLevel` at `time` seconds, sampling 1D noise (a fixed row of `noise2`). */
 export function sunLevelAt(noise: Noise, time: number, clouds: number): number {
-  if (clouds <= 0) return 1;
+  if (clouds <= 0) {
+    return 1;
+  }
   return sunLevel(noise.noise2(time * CLOUD_FREQ, 3.7), clouds);
 }
 
@@ -171,6 +175,8 @@ export const DIM_TINT: Rgb = [0.86, 0.95, 1.12];
 export function sunColor(out: Rgb, light: Rgb, level: number, gain: number): Rgb {
   const k = clamp((1 - level) / MAX_DIP, 0, 1);
   const g = level * gain;
-  for (let i = 0; i < 3; i++) out[i] = light[i] * (1 + k * (DIM_TINT[i] - 1)) * g;
+  for (let i = 0; i < 3; i++) {
+    out[i] = light[i] * (1 + k * (DIM_TINT[i] - 1)) * g;
+  }
   return out;
 }

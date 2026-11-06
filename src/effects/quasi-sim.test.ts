@@ -29,7 +29,9 @@ import { CENTRE_OPTIONS, PALETTE_OPTIONS, quasiMeta, SYMMETRY_OPTIONS } from "./
 describe("options", () => {
   it("match the sim's names and limits", () => {
     expect(SYMMETRY_OPTIONS.map((o) => waveCount(o.value))).toEqual([...SYMMETRIES]);
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(CENTRE_OPTIONS.map((o) => o.value)).toEqual([...CENTRES]);
     expect(quasiMeta.params.scale.min).toBe(MIN_SCALE);
     expect(quasiMeta.params.scale.max).toBe(MAX_SCALE);
@@ -70,7 +72,9 @@ describe("phase", () => {
     let bad = 0;
     for (let i = 0; i < 5000; i++) {
       p = advancePhase(p, 0.05, 2);
-      if (!(p >= 0 && p < TAU)) bad++;
+      if (!(p >= 0 && p < TAU)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(advancePhase(1, 1, 0)).toBe(1);
@@ -134,7 +138,9 @@ describe("pattern", () => {
           d += Math.cos(f * ((x - 500) * dirs[2 * k] + (y - 300) * dirs[2 * k + 1]) + 1.3);
         }
         worst = Math.max(worst, Math.abs(v - d / n));
-        if (v < -1 || v > 1) outside++;
+        if (v < -1 || v > 1) {
+          outside++;
+        }
       }
     }
     expect(outside).toBe(0);
@@ -155,9 +161,15 @@ describe("pattern", () => {
       for (let i = 0; i <= 40; i++) {
         const v = -1 + i / 20;
         const t = tone(v, n, 1);
-        if (!(t > 0 && t < 1)) bad++;
-        if (Math.abs(tone(v, n, 0.4) - 0.5) > 0.2 + 1e-12) bad++;
-        if (tone(v, n, 0) !== 0.5) bad++;
+        if (!(t > 0 && t < 1)) {
+          bad++;
+        }
+        if (Math.abs(tone(v, n, 0.4) - 0.5) > 0.2 + 1e-12) {
+          bad++;
+        }
+        if (tone(v, n, 0) !== 0.5) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -173,9 +185,13 @@ describe("wavelength clamp", () => {
       const viewScale = height / 1080;
       for (let s = MIN_SCALE - 20; s <= MAX_SCALE + 20; s += 5) {
         const l = wavelengthPx(s, viewScale);
-        if (l < MIN_WAVELENGTH_PX) bad++;
+        if (l < MIN_WAVELENGTH_PX) {
+          bad++;
+        }
         const clamped = Math.min(Math.max(s, MIN_SCALE), MAX_SCALE) * viewScale;
-        if (l !== Math.max(clamped, MIN_WAVELENGTH_PX)) bad++;
+        if (l !== Math.max(clamped, MIN_WAVELENGTH_PX)) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -197,14 +213,30 @@ describe("palettes", () => {
     for (const name of Object.keys(PALETTES)) {
       const d = paletteData(name);
       paletteColor(d, 0, out);
-      for (let c = 0; c < 3; c++) if (Math.abs(out[c] - d[c]) > 1e-6) bad++;
+      for (let c = 0; c < 3; c++) {
+        if (Math.abs(out[c] - d[c]) > 1e-6) {
+          bad++;
+        }
+      }
       paletteColor(d, 1, out);
-      for (let c = 0; c < 3; c++) if (Math.abs(out[c] - d[9 + c]) > 1e-6) bad++;
+      for (let c = 0; c < 3; c++) {
+        if (Math.abs(out[c] - d[9 + c]) > 1e-6) {
+          bad++;
+        }
+      }
       paletteColor(d, 1 / 3, out);
-      for (let c = 0; c < 3; c++) if (Math.abs(out[c] - d[3 + c]) > 1e-6) bad++;
+      for (let c = 0; c < 3; c++) {
+        if (Math.abs(out[c] - d[3 + c]) > 1e-6) {
+          bad++;
+        }
+      }
       for (let i = 0; i <= 30; i++) {
         paletteColor(d, i / 30, out);
-        for (let c = 0; c < 3; c++) if (!(out[c] >= 0 && out[c] <= 1)) bad++;
+        for (let c = 0; c < 3; c++) {
+          if (!(out[c] >= 0 && out[c] <= 1)) {
+            bad++;
+          }
+        }
       }
     }
     expect(bad).toBe(0);

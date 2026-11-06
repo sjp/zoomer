@@ -144,7 +144,9 @@ export const moire = defineEffect(moireMeta, {
           const k = patternKinds(p.pattern);
           if (k !== lastKinds) {
             lastKinds = k;
-            for (let i = 0; i < MAX_LAYERS; i++) kinds[i] = k[i];
+            for (let i = 0; i < MAX_LAYERS; i++) {
+              kinds[i] = k[i];
+            }
             gl.uniform1iv(u.loc.uKind, kinds);
           }
           for (let i = 0; i < MAX_LAYERS; i++) {

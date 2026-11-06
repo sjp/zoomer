@@ -18,8 +18,9 @@ import { PALETTE_OPTIONS } from "./library.meta";
 
 describe("ROOM_PALETTES", () => {
   it("has a palette for every option", () => {
-    for (const { value } of PALETTE_OPTIONS)
+    for (const { value } of PALETTE_OPTIONS) {
       expect(ROOM_PALETTES[value].spines.length).toBeGreaterThan(3);
+    }
   });
 });
 
@@ -46,10 +47,16 @@ describe("beam", () => {
       const s = (i / 200) * g.length;
       for (let j = -20; j <= 20; j++) {
         const m = beamMaskLocal(g, s, (j / 20) * g.halfBox);
-        if (!(m >= 0 && m <= 1)) bad++;
+        if (!(m >= 0 && m <= 1)) {
+          bad++;
+        }
       }
-      if (beamMaskLocal(g, s, beamHalfWidth(s)) !== 0) bad++;
-      if (beamMaskLocal(g, s, -g.halfBox) !== 0) bad++;
+      if (beamMaskLocal(g, s, beamHalfWidth(s)) !== 0) {
+        bad++;
+      }
+      if (beamMaskLocal(g, s, -g.halfBox) !== 0) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(beamMaskLocal(g, 0, 0)).toBe(0);
@@ -78,13 +85,17 @@ describe("cloudLight", () => {
     const minima: number[] = [];
     for (let t = step; t <= CLOUD_SLOT * 10; t += step) {
       const v = cloudLight(9, t);
-      if (!(v >= 1 - CLOUD_DEPTH[1] - 1e-9 && v <= 1)) bad++;
+      if (!(v >= 1 - CLOUD_DEPTH[1] - 1e-9 && v <= 1)) {
+        bad++;
+      }
       maxJump = Math.max(maxJump, Math.abs(v - prev));
       prev = v;
       slotMin = Math.min(slotMin, v);
       // Each slot ends in clear sky.
       const local = t % CLOUD_SLOT;
-      if (local > CLOUD_SLOT - 2 * step) slotEnd = Math.max(slotEnd, 1 - v);
+      if (local > CLOUD_SLOT - 2 * step) {
+        slotEnd = Math.max(slotEnd, 1 - v);
+      }
       if (local + step >= CLOUD_SLOT) {
         minima.push(slotMin);
         slotMin = 1;
@@ -105,8 +116,13 @@ describe("cloudLight", () => {
     let same = 0;
     let differ = 0;
     for (let t = 0; t < 600; t += 1) {
-      if (cloudLight(3, t) === cloudLight(3, t)) same++;
-      if (cloudLight(3, t) !== cloudLight(4, t)) differ++;
+      const first = cloudLight(3, t);
+      if (first === cloudLight(3, t)) {
+        same++;
+      }
+      if (cloudLight(3, t) !== cloudLight(4, t)) {
+        differ++;
+      }
     }
     expect(same).toBe(600);
     expect(differ).toBeGreaterThan(0);
@@ -128,12 +144,16 @@ describe("motes", () => {
       stepMotes(m, g, 300, time, 1 / 30);
       time += 1 / 30;
       for (let i = 0; i < 300; i++) {
-        if (!(m.s[i] >= 0 && m.s[i] < 1 && m.t[i] >= -1 && m.t[i] < 1)) outside++;
+        if (!(m.s[i] >= 0 && m.s[i] < 1 && m.t[i] >= -1 && m.t[i] < 1)) {
+          outside++;
+        }
       }
     }
     expect(outside).toBe(0);
     let moved = 0;
-    for (let i = 0; i < 300; i++) moved += Math.abs(m.s[i] - s0[i]) * g.length;
+    for (let i = 0; i < 300; i++) {
+      moved += Math.abs(m.s[i] - s0[i]) * g.length;
+    }
     // 20 s at a few px/s: the average mote has moved tens of px but not across the frame.
     expect(moved / 300).toBeGreaterThan(10);
     expect(moved / 300).toBeLessThan(400);

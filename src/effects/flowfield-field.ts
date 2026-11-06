@@ -31,12 +31,12 @@ export interface FlowField {
    * cover rebuilds everything; a time step blends the current slices and builds a
    * little more of the next one. Allocates only when the lattice grows.
    */
-  update(noise: Noise3, x0: number, y0: number, x1: number, y1: number, time: number): void;
+  update: (noise: Noise3, x0: number, y0: number, x1: number, y1: number, time: number) => void;
   /**
    * The noise at noise-space (x, y) and the last `update` time, bilinearly
    * interpolated. Points outside the cover read its nearest edge.
    */
-  sample(x: number, y: number): number;
+  sample: (x: number, y: number) => number;
 }
 
 export function createFlowField(): FlowField {
@@ -59,12 +59,16 @@ export function createFlowField(): FlowField {
 
   const fillRows = (out: Float32Array, k: number, from: number, to: number) => {
     const fn = noise;
-    if (!fn) return;
+    if (!fn) {
+      return;
+    }
     const z = k * FIELD_DZ;
     for (let j = from; j < to; j++) {
       const y = (gy0 + j) / FIELD_RES;
       const o = j * cols;
-      for (let i = 0; i < cols; i++) out[o + i] = fn((gx0 + i) / FIELD_RES, y, z);
+      for (let i = 0; i < cols; i++) {
+        out[o + i] = fn((gx0 + i) / FIELD_RES, y, z);
+      }
     }
   };
 
@@ -125,7 +129,9 @@ export function createFlowField(): FlowField {
       if (rebuilt || t !== blendT) {
         blendT = t;
         const n = cols * rows;
-        for (let i = 0; i < n; i++) blend[i] = a[i] + (b[i] - a[i]) * t;
+        for (let i = 0; i < n; i++) {
+          blend[i] = a[i] + (b[i] - a[i]) * t;
+        }
       }
     },
 
@@ -138,8 +144,12 @@ export function createFlowField(): FlowField {
       fy = fy < 0 ? 0 : fy > maxY ? maxY : fy;
       let ix = Math.floor(fx);
       let iy = Math.floor(fy);
-      if (ix > maxX - 1) ix = maxX - 1;
-      if (iy > maxY - 1) iy = maxY - 1;
+      if (ix > maxX - 1) {
+        ix = maxX - 1;
+      }
+      if (iy > maxY - 1) {
+        iy = maxY - 1;
+      }
       const tx = fx - ix;
       const ty = fy - iy;
       const o = iy * cols + ix;

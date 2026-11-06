@@ -75,14 +75,18 @@ export function wetFade(tau: number): number {
  */
 export function waveWetness(n: number, tau: number, reach: number): number {
   const m = maxReach(tau, reach);
-  if (m <= 0 || n > m) return 0;
+  if (m <= 0 || n > m) {
+    return 0;
+  }
   const since = washSinceUncovered(n, tau, m);
   return Math.exp(-Math.max(0, since) / T_DRY) * wetFade(tau);
 }
 
 /** Strength of a wave's main foam band: a whitening crest, the break, then thinning. */
 export function foamStrength(tau: number): number {
-  if (tau < T_APPROACH) return 0.35 * smoothstep(T_APPROACH - 0.8, T_APPROACH, tau);
+  if (tau < T_APPROACH) {
+    return 0.35 * smoothstep(T_APPROACH - 0.8, T_APPROACH, tau);
+  }
   if (tau < T_STOP) {
     const u = (tau - T_APPROACH) / T_RUNUP;
     return 0.35 + 0.65 * smoothstep(0, 0.12, u) - 0.35 * u;
@@ -137,7 +141,7 @@ export interface WaveScheduler {
   /** Scheduler clock (s), unwrapped float64. */
   readonly time: number;
   /** Advances the clock, retires finished waves and starts a new one when due. */
-  step(dt: number, waveTime: number, reach: number): void;
+  step: (dt: number, waveTime: number, reach: number) => void;
 }
 
 export function createWaveScheduler(seed: number): WaveScheduler {
@@ -163,7 +167,9 @@ export function createWaveScheduler(seed: number): WaveScheduler {
     }
     // Unit length, so every front wiggles about as much as one channel does.
     const inv = len > 1e-6 ? 1 / Math.sqrt(len) : 1;
-    for (let k = 0; k < 4; k++) w.weights[k] = len > 1e-6 ? w.weights[k] * inv : k === 0 ? 1 : 0;
+    for (let k = 0; k < 4; k++) {
+      w.weights[k] = len > 1e-6 ? w.weights[k] * inv : k === 0 ? 1 : 0;
+    }
     w.offX = rng();
     w.offY = rng();
     nextAt = time + waveTime * (SPACING_MIN + (SPACING_MAX - SPACING_MIN) * rng());
@@ -182,7 +188,9 @@ export function createWaveScheduler(seed: number): WaveScheduler {
       // Waves share one lifetime, so they retire in start order from the front.
       while (count > 0 && time - waves[0].start >= LIFETIME) {
         const done = waves[0];
-        for (let i = 1; i < count; i++) waves[i - 1] = waves[i];
+        for (let i = 1; i < count; i++) {
+          waves[i - 1] = waves[i];
+        }
         waves[count - 1] = done;
         count--;
       }
@@ -330,7 +338,11 @@ const DUSK: WaterPalette = {
 
 /** Palette for a `water` select value; unknown values fall back to Tropical. */
 export function waterPalette(water: string): WaterPalette {
-  if (water === "atlantic") return ATLANTIC;
-  if (water === "dusk") return DUSK;
+  if (water === "atlantic") {
+    return ATLANTIC;
+  }
+  if (water === "dusk") {
+    return DUSK;
+  }
   return TROPICAL;
 }

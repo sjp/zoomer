@@ -62,7 +62,9 @@ describe("textPages", () => {
   it("fits the default text and its limits", () => {
     const def = splitflapMeta.params.lines;
     expect(def.maxLength).toBe(BOARD_COLS);
-    for (const l of def.default.split("\n")) expect(line(l).trimEnd()).toBe(l);
+    for (const l of def.default.split("\n")) {
+      expect(line(l).trimEnd()).toBe(l);
+    }
     // Six lines over three text rows (four rows less the clock): two pages.
     expect(textPages(def.default, 3)).toHaveLength(2);
     // Longer input is cut to the board, not wrapped.
@@ -99,7 +101,9 @@ describe("cell flips", () => {
       moving = stepBoard(board, dt, n);
       t += dt;
       for (let i = 0; i < n; i++) {
-        if (board.cur[i] !== prev[i] && board.cur[i] !== (prev[i] + 1) % GLYPH_COUNT) badStep++;
+        if (board.cur[i] !== prev[i] && board.cur[i] !== (prev[i] + 1) % GLYPH_COUNT) {
+          badStep++;
+        }
         prev[i] = board.cur[i];
       }
     }
@@ -131,13 +135,17 @@ describe("cell flips", () => {
   it("keep flipping towards a new target set mid-change", () => {
     const board = createBoard(1, 1);
     setTargets(board, Uint8Array.of(20), 1, 0);
-    for (let k = 0; k < 30; k++) stepBoard(board, 1 / 30, 1);
+    for (let k = 0; k < 30; k++) {
+      stepBoard(board, 1 / 30, 1);
+    }
     const mid = board.cur[0];
     expect(mid).toBeGreaterThan(0);
     expect(mid).toBeLessThan(20);
     setTargets(board, Uint8Array.of(2), 1, 1);
     expect(board.delay[0]).toBe(0);
-    for (let k = 0; k < 600 && !cellIdle(board, 0); k++) stepBoard(board, 1 / 30, 1);
+    for (let k = 0; k < 600 && !cellIdle(board, 0); k++) {
+      stepBoard(board, 1 / 30, 1);
+    }
     expect(board.cur[0]).toBe(2);
   });
 
@@ -160,7 +168,9 @@ describe("flapAngle", () => {
     for (let k = 1; k <= 1000; k++) {
       const a = flapAngle(k / 1000);
       worst = Math.max(worst, Math.abs(a - prev));
-      if (a < prev) backwards++;
+      if (a < prev) {
+        backwards++;
+      }
       prev = a;
     }
     expect(backwards).toBe(0);
@@ -208,7 +218,11 @@ describe("clock", () => {
     const t0 = 1_700_000_040_000 + 30_000;
     let changes = 0;
     // Three and a half minutes of 60 fps frames: the first read, then three new minutes.
-    for (let k = 0; k < 60 * 210; k++) if (tickClock(c, t0 + (k * 1000) / 60, local)) changes++;
+    for (let k = 0; k < 60 * 210; k++) {
+      if (tickClock(c, t0 + (k * 1000) / 60, local)) {
+        changes++;
+      }
+    }
     expect(changes).toBe(4);
     expect(reads).toBe(4);
     // A wall clock set back an hour is noticed at once.

@@ -67,7 +67,9 @@ describe("event schedule", () => {
     let ok = true;
     for (let t = 0; t <= 600; t += 0.25) {
       for (let at = takeEvent(s, t, 1); !Number.isNaN(at); at = takeEvent(s, t, 1)) {
-        if (!(at >= last && at <= t)) ok = false;
+        if (!(at >= last && at <= t)) {
+          ok = false;
+        }
         last = at;
       }
     }
@@ -99,13 +101,19 @@ describe("meteor paths", () => {
       const rand = createRng(11);
       const m = createShower(0).list[0];
       for (let i = 0; i < 400; i++) {
-        if (!spawnMeteor(m, 0, f, 0.3, rand)) continue;
+        if (!spawnMeteor(m, 0, f, 0.3, rand)) {
+          continue;
+        }
         spawned++;
         const ox = m.x - f.radiantX;
         const oy = m.y - f.radiantY;
         const cos = (ox * m.dx + oy * m.dy) / Math.hypot(ox, oy);
-        if (cos < Math.cos(DIRECTION_JITTER) - 1e-9) bad++;
-        if (Math.abs(Math.hypot(m.dx, m.dy) - 1) > 1e-9) bad++;
+        if (cos < Math.cos(DIRECTION_JITTER) - 1e-9) {
+          bad++;
+        }
+        if (Math.abs(Math.hypot(m.dx, m.dy) - 1) > 1e-9) {
+          bad++;
+        }
         // The whole path stays out of the smallest exclusion ellipse and above the floor.
         const ex = m.x + m.dx * m.length;
         const ey = m.y + m.dy * m.length;
@@ -120,9 +128,15 @@ describe("meteor paths", () => {
           EXCLUDE_RX * 1920 * k,
           EXCLUDE_RY * REF_HEIGHT * k,
         );
-        if (entry < m.length) bad++;
-        if (Math.min(m.y, ey) < f.floor - 1e-6) bad++;
-        if (ex === m.x && ey === m.y) bad++;
+        if (entry < m.length) {
+          bad++;
+        }
+        if (Math.min(m.y, ey) < f.floor - 1e-6) {
+          bad++;
+        }
+        if (ex === m.x && ey === m.y) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -179,7 +193,9 @@ describe("envelopes", () => {
     const f = setSkyFrame(createSkyFrame(), 1920, "topLeft", 200);
     const m = createShower(0).list[0];
     const rand = createRng(3);
-    while (!spawnMeteor(m, 10, f, 1, rand));
+    while (!spawnMeteor(m, 10, f, 1, rand)) {
+      // Retry until one spawns.
+    }
     const p = createMeteorPose();
     meteorAt(m, 10, p);
     expect(p.core).toBe(0);
@@ -208,7 +224,9 @@ describe("shower", () => {
       stepShower(s, t, 60, 1, f);
       maxCount = Math.max(maxCount, s.count);
       for (let i = 0; i < s.count; i++) {
-        if (t - s.list[i].start >= meteorLife(s.list[i])) stale++;
+        if (t - s.list[i].start >= meteorLife(s.list[i])) {
+          stale++;
+        }
       }
     }
     expect(maxCount).toBeLessThanOrEqual(MAX_ACTIVE);
@@ -223,7 +241,9 @@ describe("shower", () => {
       const out: number[] = [];
       for (let t = 0; t < 120; t += 1 / 30) {
         stepShower(s, t, 20, 0.3, f);
-        for (let i = 0; i < s.count; i++) out.push(s.list[i].start, s.list[i].x, s.list[i].dy);
+        for (let i = 0; i < s.count; i++) {
+          out.push(s.list[i].start, s.list[i].x, s.list[i].dy);
+        }
       }
       return out;
     };

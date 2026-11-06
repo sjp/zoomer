@@ -16,10 +16,14 @@ export function useIdle(ms: number): boolean {
       }, ms);
     };
     const events = ["pointermove", "pointerdown", "keydown", "wheel"] as const;
-    for (const e of events) window.addEventListener(e, wake);
+    for (const e of events) {
+      window.addEventListener(e, wake);
+    }
     return () => {
       clearTimeout(timer);
-      for (const e of events) window.removeEventListener(e, wake);
+      for (const e of events) {
+        window.removeEventListener(e, wake);
+      }
     };
   }, [ms]);
 

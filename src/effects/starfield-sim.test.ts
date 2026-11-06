@@ -60,7 +60,9 @@ describe("star cells", () => {
           star.bright <= 1 &&
           star.temp > 0 &&
           star.temp < 1;
-        if (!ok) bad.push([ring, k]);
+        if (!ok) {
+          bad.push([ring, k]);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -71,7 +73,9 @@ describe("star cells", () => {
     let occupied = 0;
     const total = 20000;
     for (let i = 0; i < total; i++) {
-      if (cellStar(i >> 6, i & 63, 64, 0.3, seedSalt(1), star).occupied) occupied++;
+      if (cellStar(i >> 6, i & 63, 64, 0.3, seedSalt(1), star).occupied) {
+        occupied++;
+      }
     }
     expect(occupied / total).toBeGreaterThan(0.27);
     expect(occupied / total).toBeLessThan(0.33);
@@ -81,7 +85,9 @@ describe("star cells", () => {
     const star = createStar();
     let bright = 0;
     for (let k = 0; k < 4000; k++) {
-      if (cellStar(50, k, 4000, 1, seedSalt(1), star).bright > 0.5) bright++;
+      if (cellStar(50, k, 4000, 1, seedSalt(1), star).bright > 0.5) {
+        bright++;
+      }
     }
     expect(bright / 4000).toBeGreaterThan(0.02);
     expect(bright / 4000).toBeLessThan(0.15);
@@ -100,7 +106,9 @@ describe("rotation", () => {
       const w = wrapAngle(rot);
       // The step on the circle is the same whether or not it wrapped.
       let step = w - prev;
-      if (step < 0) step += TAU;
+      if (step < 0) {
+        step += TAU;
+      }
       ok &&=
         w >= 0 &&
         w < TAU &&
@@ -159,7 +167,9 @@ describe("point stars", () => {
     const n = fillStars(a, 60000, layout());
     expect(fillStars(b, 60000, layout())).toBe(n);
     let same = true;
-    for (let i = 0; i < n * STAR_FLOATS; i++) same &&= a[i] === b[i];
+    for (let i = 0; i < n * STAR_FLOATS; i++) {
+      same &&= a[i] === b[i];
+    }
     expect(same).toBe(true);
     expect(n).toBeGreaterThan(1000);
     // The first listed star is a real cell of its ring.
@@ -185,7 +195,9 @@ describe("point stars", () => {
     let bad = 0;
     for (let i = 0; i < n; i++) {
       const r = Math.hypot(out[i * STAR_FLOATS], out[i * STAR_FLOATS + 1]);
-      if (r < rMin || r > rMax) bad++;
+      if (r < rMin || r > rMax) {
+        bad++;
+      }
     }
     // At any rotation, the stars in the frame match the density (about 1 per 128 px² at 1).
     for (const rot of [0, 1, 2.5, 4]) {
@@ -197,10 +209,14 @@ describe("point stars", () => {
         const qy = out[i * STAR_FLOATS + 1];
         const x = l.pole[0] + c * qx - s * qy;
         const y = l.pole[1] + s * qx + c * qy;
-        if (x >= 0 && x <= 1920 && y >= 0 && y <= 1080) inside++;
+        if (x >= 0 && x <= 1920 && y >= 0 && y <= 1080) {
+          inside++;
+        }
       }
       const expected = (0.4 * 1920 * 1080) / (RING_WIDTH * CELL_LENGTH);
-      if (Math.abs(inside / expected - 1) > 0.1) bad++;
+      if (Math.abs(inside / expected - 1) > 0.1) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -213,7 +229,9 @@ describe("point stars", () => {
     for (let i = 0; i < n; i++) {
       const x = l.pole[0] + out[i * STAR_FLOATS];
       const y = l.pole[1] + out[i * STAR_FLOATS + 1];
-      if (x < -4 || x > 1924 || y < -4 || y > 1084) outside++;
+      if (x < -4 || x > 1924 || y < -4 || y > 1084) {
+        outside++;
+      }
     }
     expect(outside).toBe(0);
     expect(n).toBeGreaterThan(6000);
@@ -263,7 +281,9 @@ describe("point stars", () => {
         const r = starRadiusPx(b, scale);
         const light = (starPeak(b, scale) * Math.PI * r * r) / 3;
         worst = Math.max(worst, Math.abs(light / (b * STAR_ENERGY * scale * scale) - 1));
-        if (r < STAR_MIN_RADIUS_PX) worst = Infinity;
+        if (r < STAR_MIN_RADIUS_PX) {
+          worst = Infinity;
+        }
       }
     }
     expect(worst).toBeLessThan(1e-9);

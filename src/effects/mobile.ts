@@ -264,7 +264,9 @@ export const mobile = defineEffect(mobileMeta, {
             target = null;
             target =
               createRenderTarget(gl, tw, th, gl.R8) ?? createRenderTarget(gl, tw, th, gl.RGBA8);
-            if (!target) throw new Error("Hanging Mobile: no renderable shadow buffer");
+            if (!target) {
+              throw new Error("Hanging Mobile: no renderable shadow buffer");
+            }
           }
         },
         frame(dt, p) {
@@ -284,9 +286,11 @@ export const mobile = defineEffect(mobileMeta, {
             mobLevels = levels;
             mobSide = p.side;
             mobAspect = aspect;
-            for (let i = 0; i < MAX_SHAPES; i++) order[i] = i;
+            for (let i = 0; i < MAX_SHAPES; i++) {
+              order[i] = i;
+            }
           }
-          if (motion === null) motion = createMotion(p.draught);
+          motion ??= createMotion(p.draught);
           stepMotion(motion, dt, p.draught);
           poseMobile(mob, motion);
           const nWires = writeWires(mob, wireData);
@@ -412,8 +416,9 @@ export const mobile = defineEffect(mobileMeta, {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, mask ? mask.texture : null);
           wu.v3("uWall", wall(p.wall));
-          if (mask)
+          if (mask) {
             wu.f2("uMaskScale", 1 / (mask.width * SHADOW_DIV), 1 / (mask.height * SHADOW_DIV));
+          }
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
 

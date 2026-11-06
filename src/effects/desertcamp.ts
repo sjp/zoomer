@@ -161,9 +161,9 @@ const vec3 FLAME_RED = ${C("#c8320c")};
 const vec3 FLAME_ORANGE = ${C("#ff8a1e")};
 const vec3 FLAME_YELLOW = ${C("#ffd060")};
 const vec3 FLAME_WHITE = ${C("#fff4d8")};
-const float TX[${String(TONGUES)}] = float[](${TONGUE_X.map(glslFloat).join(", ")});
-const float TL[${String(TONGUES)}] = float[](${TONGUE_L.map(glslFloat).join(", ")});
-const float TW[${String(TONGUES)}] = float[](${TONGUE_W.map(glslFloat).join(", ")});
+const float TX[${String(TONGUES)}] = float[](${TONGUE_X.map((v) => glslFloat(v)).join(", ")});
+const float TL[${String(TONGUES)}] = float[](${TONGUE_L.map((v) => glslFloat(v)).join(", ")});
+const float TW[${String(TONGUES)}] = float[](${TONGUE_W.map((v) => glslFloat(v)).join(", ")});
 
 /** Coverage of a silhouette whose top is \`d\` device px above this pixel. */
 float coverage(float d) {
@@ -444,8 +444,12 @@ export const desertcamp = defineEffect(desertcampMeta, {
             tongues[i * 3 + 2] = m.bright[i];
           }
           let top = DUNE_TOP * REF_HEIGHT;
-          if (hasFire) top = Math.max(top, camp.fireY + HALO_LIFT + 2.5 * HALO_R);
-          if (p.tent) top = Math.max(top, camp.tentY + TENT_H);
+          if (hasFire) {
+            top = Math.max(top, camp.fireY + HALO_LIFT + 2.5 * HALO_R);
+          }
+          if (p.tent) {
+            top = Math.max(top, camp.tentY + TENT_H);
+          }
           gl.useProgram(landProgram);
           gl.bindTexture(gl.TEXTURE_2D, dunes.texture);
           lu.f1("uScale", scale);

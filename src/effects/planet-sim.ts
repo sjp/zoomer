@@ -96,8 +96,10 @@ export const WORLDS: Readonly<Record<WorldId, WorldStyle>> = {
   },
 };
 
+const isWorldId = (v: string): v is WorldId => Object.hasOwn(WORLDS, v);
+
 export function worldStyle(world: string): WorldStyle {
-  return Object.hasOwn(WORLDS, world) ? WORLDS[world as WorldId] : WORLDS.earth;
+  return isWorldId(world) ? WORLDS[world] : WORLDS.earth;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +209,9 @@ function lerpTable(fine: number, coarse: number, wrapAround: boolean, stride: nu
         a = 0;
         w = 0;
       }
-      if (b > coarse - 1) b = coarse - 1;
+      if (b > coarse - 1) {
+        b = coarse - 1;
+      }
     }
     i0[x] = a * stride;
     i1[x] = b * stride;
@@ -291,7 +295,9 @@ function forEachRow(
   row: (y: number, rows: Float32Array[]) => void,
 ): void {
   const rows: Float32Array[] = [];
-  for (let c = 0; c < F.c.channels + F.m.channels; c++) rows.push(new Float32Array(width));
+  for (let c = 0; c < F.c.channels + F.m.channels; c++) {
+    rows.push(new Float32Array(width));
+  }
   for (let y = 0; y < height; y++) {
     upsampleRow(F.c, F.cx, F.cy, y, rows, 0);
     upsampleRow(F.m, F.mx, F.my, y, rows, F.c.channels);
@@ -346,8 +352,8 @@ type ShadeRow = (
   salt: number,
 ) => void;
 
-/** A 0..1 value as a rounded, clamped byte. */
-const byte = (v: number) => (v <= 0 ? 0 : v >= 1 ? 255 : (v * 255 + 0.5) | 0);
+/** A 0..1 value as a rounded, clamped byte (NaN gives NaN, which a byte array stores as 0). */
+const byte = (v: number) => (v <= 0 ? 0 : v >= 1 ? 255 : Math.trunc(v * 255 + 0.5));
 
 function put(out: Uint8Array, o: number, r: number, g: number, b: number, a: number): void {
   out[o] = byte(r);
@@ -540,12 +546,16 @@ function gasShade(storms: Float64Array): ShadeRow {
       for (let i = 0; i < MAX_STORMS; i++) {
         const k = i * 5;
         const ey = (lat - storms[k + 1]) / storms[k + 3];
-        if (ey * ey >= 1.6) continue;
+        if (ey * ey >= 1.6) {
+          continue;
+        }
         let dl = lon - storms[k];
         dl -= Math.round(dl);
         const ex = (dl * TAU) / storms[k + 2];
         const e2 = ex * ex + ey * ey;
-        if (e2 >= 1.6) continue;
+        if (e2 >= 1.6) {
+          continue;
+        }
         const d = Math.sqrt(e2);
         // Swirl the bands around the storm, then fill its core.
         band += 0.5 * Math.sin(Math.atan2(ey, ex) + d * 6) * (1 - smoothstep(0.6, 1.25, d));
@@ -604,7 +614,7 @@ export function buildSurface(
   seed: number,
   out: Uint8Array = new Uint8Array(SURFACE_W * SURFACE_H * 4),
 ): Uint8Array {
-  const id: WorldId = Object.hasOwn(WORLDS, world) ? (world as WorldId) : "earth";
+  const id: WorldId = isWorldId(world) ? world : "earth";
   const noise = createNoise(worldSeed(id, seed, 0x1234567));
   const W = SURFACE_W;
   const H = SURFACE_H;
@@ -832,10 +842,16 @@ export function raySphere(
   const b = px * dx + py * dy + pz * dz;
   const c = px * px + py * py + pz * pz - r * r;
   const disc = b * b - c;
-  if (disc < 0) return -1;
+  if (disc < 0) {
+    return -1;
+  }
   const s = Math.sqrt(disc);
-  if (-b - s >= 0) return -b - s;
-  if (-b + s >= 0) return -b + s;
+  if (-b - s >= 0) {
+    return -b - s;
+  }
+  if (-b + s >= 0) {
+    return -b + s;
+  }
   return -1;
 }
 

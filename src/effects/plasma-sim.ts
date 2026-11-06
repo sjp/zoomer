@@ -192,14 +192,20 @@ export function filamentCount(value: number): number {
  */
 export function settlePlasma(p: Plasma, count: number, seconds = 3): void {
   const n = filamentCount(count);
-  for (let i = 0; i < MAX_FILAMENTS; i++) p.fade[i] = i < n ? 1 : 0;
-  for (let t = 0; t < seconds; t += MAX_STEP) moveEnds(p, MAX_STEP, 0);
+  for (let i = 0; i < MAX_FILAMENTS; i++) {
+    p.fade[i] = i < n ? 1 : 0;
+  }
+  for (let t = 0; t < seconds; t += MAX_STEP) {
+    moveEnds(p, MAX_STEP, 0);
+  }
 }
 
 /** Advances the filaments by `dt` seconds with `count` shown, wandering at `drift`. */
 export function stepPlasma(p: Plasma, dt: number, count: number, drift: number): void {
   const d = Number.isFinite(dt) ? clamp(dt, 0, MAX_DT) : 0;
-  if (d <= 0) return;
+  if (d <= 0) {
+    return;
+  }
   const n = filamentCount(count);
   const w = Number.isFinite(drift) ? Math.max(drift, 0) : 0;
   p.time += d;
@@ -235,7 +241,9 @@ function moveEnds(p: Plasma, h: number, drift: number): void {
     let fy = k * noise.noise3(i * 7.13 + 2.9, 3.7, z);
     let fz = k * noise.noise3(i * 7.13 + 5.3, 6.1, z);
     for (let j = 0; j < n; j++) {
-      if (j === i || fade[j] <= 0) continue;
+      if (j === i || fade[j] <= 0) {
+        continue;
+      }
       const dx = ex - ends[3 * j];
       const dy = ey - ends[3 * j + 1];
       const dz = ez - ends[3 * j + 2];
@@ -245,7 +253,9 @@ function moveEnds(p: Plasma, h: number, drift: number): void {
       fy += dy * s;
       fz += dz * s;
     }
-    if (ey < FLOOR_Y) fy += FLOOR_K * (FLOOR_Y - ey);
+    if (ey < FLOOR_Y) {
+      fy += FLOOR_K * (FLOOR_Y - ey);
+    }
     // Tangent part only: the end point slides over the glass.
     const radial = fx * ex + fy * ey + fz * ez;
     force[3 * i] = fx - radial * ex;
@@ -272,7 +282,9 @@ export function filamentBrightness(p: Plasma, i: number): number {
 /** Sum of the shown filaments' brightness: what the tests bound the change of. */
 export function totalBrightness(p: Plasma): number {
   let sum = 0;
-  for (let i = 0; i < MAX_FILAMENTS; i++) sum += filamentBrightness(p, i);
+  for (let i = 0; i < MAX_FILAMENTS; i++) {
+    sum += filamentBrightness(p, i);
+  }
   return sum;
 }
 

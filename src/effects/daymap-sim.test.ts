@@ -181,7 +181,9 @@ describe("createMapClock", () => {
     wall = 5000000;
     clock.step(0.25, false);
     expect(clock.ms).toBe(1000250);
-    for (let t = 0.25; t < CLOCK_READ_INTERVAL; t += 0.25) clock.step(0.25, false);
+    for (let t = 0.25; t < CLOCK_READ_INTERVAL; t += 0.25) {
+      clock.step(0.25, false);
+    }
     expect(clock.ms).toBe(5000000);
     expect(reads).toBe(2);
   });

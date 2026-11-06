@@ -53,7 +53,9 @@ describe("createRainSim", () => {
   const run = (sim: ReturnType<typeof createRainSim>, frames: number, density = 0.7) => {
     const data = new Float32Array(sim.cols * 2 * stride);
     let n = 0;
-    for (let i = 0; i < frames; i++) n = sim.step(1 / 60, 14, density, 1, 1.5, data, stride);
+    for (let i = 0; i < frames; i++) {
+      n = sim.step(1 / 60, 14, density, 1, 1.5, data, stride);
+    }
     return { data, n };
   };
 
@@ -66,7 +68,9 @@ describe("createRainSim", () => {
     const fail = (msg: string) => bad.length < 10 && bad.push(msg);
     for (let f = 0; f < 600; f++) {
       const n = sim.step(1 / 60, 14, 0.7, 1, 1.5, data, stride);
-      if (!(n <= 100)) fail(`frame ${String(f)}: ${String(n)} drops`);
+      if (!(n <= 100)) {
+        fail(`frame ${String(f)}: ${String(n)} drops`);
+      }
       const perColumn = new Map<number, number>();
       for (let i = 0; i < n; i++) {
         const o = i * stride;
@@ -79,7 +83,9 @@ describe("createRainSim", () => {
         }
       }
       const most = Math.max(0, ...perColumn.values());
-      if (!(most <= 2)) fail(`frame ${String(f)}: ${String(most)} drops in one column`);
+      if (!(most <= 2)) {
+        fail(`frame ${String(f)}: ${String(most)} drops in one column`);
+      }
     }
     expect(bad).toEqual([]);
   });
@@ -102,7 +108,9 @@ describe("createRainSim", () => {
       for (const list of spans.values()) {
         if (list.length === 2) {
           pairs++;
-          if (list[1][0] < list[0][1]) overlaps++;
+          if (list[1][0] < list[0][1]) {
+            overlaps++;
+          }
         }
       }
     }
@@ -118,7 +126,9 @@ describe("createRainSim", () => {
     const data = new Float32Array(20 * stride);
     // One row per step. 20 rows + 30% of 20 at pace 1: restarts once past row 26.
     const step = () => sim.step(0.05, 20, 1, 1, 1, data, stride);
-    for (let i = 0; i < 7; i++) step();
+    for (let i = 0; i < 7; i++) {
+      step();
+    }
     expect(sim.heads[0]).toBeCloseTo(26, 4);
     step();
     expect(sim.heads[0]).toBeLessThanOrEqual(0);
@@ -150,6 +160,8 @@ describe("createRainSim", () => {
     }
     // A restart re-scatters every column above the top.
     sim.layout(15, 25, 1, true);
-    for (let c = 0; c < 15; c++) expect(sim.heads[c]).toBeLessThanOrEqual(0);
+    for (let c = 0; c < 15; c++) {
+      expect(sim.heads[c]).toBeLessThanOrEqual(0);
+    }
   });
 });

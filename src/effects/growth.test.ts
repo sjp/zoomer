@@ -51,7 +51,9 @@ describe("growthStateAt", () => {
       const s = growthStateAt(CYCLE, t);
       const ok =
         s.level >= 0 && s.level <= 1 && s.melt >= 0 && s.melt <= 1 && s.time >= 0 && s.time < 200;
-      if (!ok && outside.length < 10) outside.push(`t ${String(t)}: ${JSON.stringify(s)}`);
+      if (!ok && outside.length < 10) {
+        outside.push(`t ${String(t)}: ${JSON.stringify(s)}`);
+      }
     }
     expect(outside).toEqual([]);
   });
@@ -119,7 +121,9 @@ describe("createGrowthClock", () => {
 
   it("without looping, grows to the hold and stays", () => {
     const clock = createGrowthClock(CYCLE, 90);
-    for (let i = 0; i < 100; i++) clock.advance(1, 1, false);
+    for (let i = 0; i < 100; i++) {
+      clock.advance(1, 1, false);
+    }
     expect(clock.time).toBe(100);
     expect(clock.state).toMatchObject({ phase: "hold", level: 1, melt: 0, cycle: 0 });
   });
@@ -131,8 +135,9 @@ describe("createGrowthClock", () => {
     const rising: string[] = [];
     for (let i = 0; i < 200; i++) {
       clock.advance(0.5, 1, false);
-      if (!(clock.state.melt <= melt))
+      if (!(clock.state.melt <= melt)) {
         rising.push(`step ${String(i)}: ${String(melt)} -> ${String(clock.state.melt)}`);
+      }
       melt = clock.state.melt;
     }
     expect(rising).toEqual([]);

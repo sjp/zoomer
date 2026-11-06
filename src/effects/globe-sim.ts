@@ -8,6 +8,7 @@
  * glass is the unit disc whatever the globe's size or the canvas.
  */
 import type { GlobeSceneId } from "./globe.meta";
+import { lookup } from "./lookup";
 import { clamp } from "./math";
 import { createRng } from "./noise";
 
@@ -208,8 +209,11 @@ export function moundEdge(): number {
   for (let k = 0; k < 40; k++) {
     const mid = 0.5 * (lo + hi);
     const m = moundY(mid);
-    if (mid * mid + m * m < FLAKE_DISC * FLAKE_DISC) lo = mid;
-    else hi = mid;
+    if (mid * mid + m * m < FLAKE_DISC * FLAKE_DISC) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
   }
   return lo;
 }
@@ -222,7 +226,9 @@ export function moundEdge(): number {
 export function shakeSnow(s: Snow, nudge = true): void {
   const rng = s.rng;
   s.sinceShake = 0;
-  if (nudge) s.nudgeAge = 0;
+  if (nudge) {
+    s.nudgeAge = 0;
+  }
   s.spin = rng() < 0.5 ? -1 : 1;
   for (let i = 0; i < s.count; i++) {
     s.settled[i] = 0;
@@ -254,7 +260,9 @@ export function stepSnow(s: Snow, dt: number, interval: number): boolean {
     shakeSnow(s);
     shook = true;
   }
-  if (step === 0) return shook;
+  if (step === 0) {
+    return shook;
+  }
   const n = Math.ceil(step / MAX_STEP);
   const h = step / n;
   const keep = Math.exp(-DRAG * h);
@@ -267,7 +275,9 @@ export function stepSnow(s: Snow, dt: number, interval: number): boolean {
     // The churned water holds the flakes up at first.
     const fall = 1 - (SWIRL_HOLD * Math.abs(w)) / SWIRL_START;
     for (let i = 0; i < s.count; i++) {
-      if (s.settled[i]) continue;
+      if (s.settled[i]) {
+        continue;
+      }
       let x = s.x[i];
       let y = s.y[i];
       const ph = s.phase[i];
@@ -275,7 +285,9 @@ export function stepSnow(s: Snow, dt: number, interval: number): boolean {
       const fx = -w * (y - VORTEX_Y) + aw * Math.sin(2.3 * y + 1.7 * t + ph);
       // The flow turns along the mound rather than into it.
       let fy = w * x + aw * Math.sin(2.9 * x - 1.3 * t + 1.7 * ph);
-      if (fy < 0) fy *= Math.min(1, (y - moundY(x)) * (1 / MOUND_FLOW));
+      if (fy < 0) {
+        fy *= Math.min(1, (y - moundY(x)) * (1 / MOUND_FLOW));
+      }
       fy -= s.fall[i] * fall;
       let vx = fx + (s.vx[i] - fx) * keep;
       let vy = fy + (s.vy[i] - fy) * keep;
@@ -372,5 +384,5 @@ export const SCENES: Readonly<Record<GlobeSceneId, number>> = {
 };
 
 export function sceneKind(id: string): number {
-  return Object.hasOwn(SCENES, id) ? SCENES[id as GlobeSceneId] : SCENES.cabin;
+  return lookup(SCENES, id, "cabin");
 }

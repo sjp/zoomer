@@ -126,7 +126,9 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
         pace[i] = 0.6 + Math.random() * 0.8;
         mix[i] = Math.random();
       };
-      for (let i = 0; i < MAX_STREAKS; i++) spawn(i, Math.random());
+      for (let i = 0; i < MAX_STREAKS; i++) {
+        spawn(i, Math.random());
+      }
 
       return {
         resize(v) {

@@ -8,7 +8,8 @@
  */
 import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { clamp, smoothstep, wrap } from "./math";
-import { createNoise, createRng, hash32 } from "./noise";
+import type { createNoise } from "./noise";
+import { createRng, hash32 } from "./noise";
 
 const TAU = Math.PI * 2;
 const REF_HEIGHT = 1080;
@@ -166,14 +167,20 @@ export function createFish(max: number, refWidth: number, seed = 0xc01): FishSta
     s.pick[i] = s.pick[j];
     s.pick[j] = t;
   }
-  for (let i = 0; i < max; i++) straightenSpine(s, i, 1);
+  for (let i = 0; i < max; i++) {
+    straightenSpine(s, i, 1);
+  }
   return s;
 }
 
 /** Scales every fish's x (and spine) by `k`, keeping fish in place relative to a resized width. */
 export function rescaleFish(s: FishState, k: number): void {
-  for (let i = 0; i < s.max; i++) s.x[i] *= k;
-  for (let j = 0; j < s.spine.length; j += 2) s.spine[j] *= k;
+  for (let i = 0; i < s.max; i++) {
+    s.x[i] *= k;
+  }
+  for (let j = 0; j < s.spine.length; j += 2) {
+    s.spine[j] *= k;
+  }
 }
 
 /** `a` wrapped into (-π, π]. */
@@ -203,11 +210,15 @@ function steer(
   // Separation: a fish length apart.
   const sep = f.size * 1.2;
   for (let j = 0; j < n; j++) {
-    if (j === i || s.life[j] <= 0) continue;
+    if (j === i || s.life[j] <= 0) {
+      continue;
+    }
     const dx = x - s.x[j];
     const dy = y - s.y[j];
     const d2 = dx * dx + dy * dy;
-    if (d2 >= sep * sep || d2 < 1e-9) continue;
+    if (d2 >= sep * sep || d2 < 1e-9) {
+      continue;
+    }
     const d = Math.sqrt(d2);
     const w = (1 - d / sep) * 2.5;
     sx += (dx / d) * w;
@@ -217,17 +228,25 @@ function steer(
   // Edges: quadratic push inside the margin.
   const right = f.refWidth;
   const m = EDGE_MARGIN;
-  if (x < m) sx += 4 * ((m - x) / m) ** 2;
-  else if (x > right - m) sx -= 4 * ((x - (right - m)) / m) ** 2;
-  if (y < m) sy += 4 * ((m - y) / m) ** 2;
-  else if (y > REF_HEIGHT - m) sy -= 4 * ((y - (REF_HEIGHT - m)) / m) ** 2;
+  if (x < m) {
+    sx += 4 * ((m - x) / m) ** 2;
+  } else if (x > right - m) {
+    sx -= 4 * ((x - (right - m)) / m) ** 2;
+  }
+  if (y < m) {
+    sy += 4 * ((m - y) / m) ** 2;
+  } else if (y > REF_HEIGHT - m) {
+    sy -= 4 * ((y - (REF_HEIGHT - m)) / m) ** 2;
+  }
 
   // Centre third: a soft horizontal push towards the nearer side.
   const cx = right * 0.5;
   const reach = right * 0.2;
   const dx = x - cx;
   const ax = Math.abs(dx);
-  if (ax < reach) sx += (dx < 0 ? -1 : 1) * 0.9 * (1 - ax / reach);
+  if (ax < reach) {
+    sx += (dx < 0 ? -1 : 1) * 0.9 * (1 - ax / reach);
+  }
 
   out[0] = sx;
   out[1] = sy;
@@ -287,7 +306,9 @@ export function stepFish(
 
     // Tail beat: faster when swimming faster.
     s.tailPhase[i] += sdt * (1.6 + 2.2 * (v / Math.max(1e-6, SWIM_PX * sizeK)));
-    if (s.tailPhase[i] > TAU * 1e3) s.tailPhase[i] -= TAU * 1e3;
+    if (s.tailPhase[i] > TAU * 1e3) {
+      s.tailPhase[i] -= TAU * 1e3;
+    }
 
     solveSpine(s, i, (fishLength(s, i, size) * SPINE_FRACTION) / (SPINE_POINTS - 1));
 
@@ -358,7 +379,9 @@ export function rowShape(r: number): [halfWidth: number, u: number] {
 
 const ROW_HALF = new Float64Array(ROWS);
 const ROW_U = new Float64Array(ROWS);
-for (let r = 0; r < ROWS; r++) [ROW_HALF[r], ROW_U[r]] = rowShape(r);
+for (let r = 0; r < ROWS; r++) {
+  [ROW_HALF[r], ROW_U[r]] = rowShape(r);
+}
 
 /**
  * Writes fish `i`'s triangle strip (`VERTS_PER_FISH` vertices of
@@ -408,7 +431,9 @@ export function writeFishStrip(
   for (let k = 0; k < SPINE_POINTS; k++) {
     rows[k * 4] = points[k * 2];
     rows[k * 4 + 1] = points[k * 2 + 1];
-    if (k === SPINE_POINTS - 1) break;
+    if (k === SPINE_POINTS - 1) {
+      break;
+    }
     const k0 = Math.max(0, k - 1) * 2;
     const k3 = Math.min(SPINE_POINTS - 1, k + 2) * 2;
     const k1 = k * 2;
@@ -501,7 +526,9 @@ export function varietyOf(s: FishState, i: number, varieties: string): number {
  * painter's order. Insertion sort: the order barely changes between frames.
  */
 export function sortByDepth(s: FishState, n: number, order: Int32Array): void {
-  for (let i = 0; i < n; i++) order[i] = i;
+  for (let i = 0; i < n; i++) {
+    order[i] = i;
+  }
   for (let i = 1; i < n; i++) {
     const v = order[i];
     const d = s.depth[v];
@@ -651,7 +678,9 @@ export function createPads(max: number, refWidth: number, seed = 0x11d): Pads {
 }
 
 export function rescalePads(p: Pads, k: number): void {
-  for (let i = 0; i < p.x.length; i++) p.x[i] *= k;
+  for (let i = 0; i < p.x.length; i++) {
+    p.x[i] *= k;
+  }
 }
 
 /** Drifts and turns the live pads, wrapping them round the padded frame, and fades them with the count. */
@@ -709,7 +738,9 @@ export function buildPebbleTexture(size: number, cells: number, seed = 0x9eb): U
             f2 = f1;
             f1 = d;
             best = c;
-          } else if (d < f2) f2 = d;
+          } else if (d < f2) {
+            f2 = d;
+          }
         }
       }
       // Distance to the cell border is about (f2 - f1) / 2: domes, dark grout.

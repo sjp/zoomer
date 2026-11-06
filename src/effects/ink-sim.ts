@@ -111,7 +111,9 @@ export function createDropState(): DropState {
  * Continuous everywhere; 0 outside [0, PLUME_LIFE].
  */
 export function plumeIntensity(age: number): number {
-  if (!(age > 0) || age >= PLUME_LIFE) return 0;
+  if (!(age > 0) || age >= PLUME_LIFE) {
+    return 0;
+  }
   return smoothstep(0, FADE_IN, age) * (1 - smoothstep(FADE_START, PLUME_LIFE, age));
 }
 
@@ -133,14 +135,20 @@ export function spawnInterval(rng: () => number): number {
 
 export function aliveCount(state: DropState): number {
   let n = 0;
-  for (const p of state.plumes) if (p.alive) n++;
+  for (const p of state.plumes) {
+    if (p.alive) {
+      n++;
+    }
+  }
   return n;
 }
 
 function pickEdge(rng: () => number): number {
   const r = rng();
   let e = 0;
-  while (e < EDGE_CDF.length - 1 && r >= EDGE_CDF[e]) e++;
+  while (e < EDGE_CDF.length - 1 && r >= EDGE_CDF[e]) {
+    e++;
+  }
   return e;
 }
 
@@ -162,9 +170,13 @@ export function spawnPlume(
       break;
     }
   }
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
   let edge = pickEdge(rng);
-  if (edge === state.lastEdge) edge = pickEdge(rng);
+  if (edge === state.lastEdge) {
+    edge = pickEdge(rng);
+  }
   state.lastEdge = edge;
   let base: number;
   if (edge === EDGE_LEFT || edge === EDGE_RIGHT) {
@@ -196,7 +208,9 @@ export function spawnPlume(
  * unfurling and the next drop a few seconds away.
  */
 export function seedDrops(state: DropState, rng: () => number, inks: number): void {
-  for (const p of state.plumes) p.alive = false;
+  for (const p of state.plumes) {
+    p.alive = false;
+  }
   spawnPlume(state, rng, inks, 12);
   state.timer = 4 + 4 * rng();
 }
@@ -217,9 +231,13 @@ export function stepDrops(
 ): void {
   const step = Math.max(0, sdt);
   for (const p of state.plumes) {
-    if (!p.alive) continue;
+    if (!p.alive) {
+      continue;
+    }
     p.age += step;
-    if (p.age >= PLUME_LIFE) p.alive = false;
+    if (p.age >= PLUME_LIFE) {
+      p.alive = false;
+    }
   }
   state.timer = Math.max(0, state.timer - step * Math.max(0, frequency));
   if (state.timer <= 0 && step > 0 && spawnPlume(state, rng, inks)) {
@@ -277,7 +295,9 @@ export function packPlumes(
   let n = 0;
   for (const p of state.plumes) {
     const intensity = p.alive ? plumeIntensity(p.age) : 0;
-    if (intensity <= 0) continue;
+    if (intensity <= 0) {
+      continue;
+    }
     const o = n * 4;
     const g = plumeGrowth(p.age);
     const r = plumeRadius(p.age);

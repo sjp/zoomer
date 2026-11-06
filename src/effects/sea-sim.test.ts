@@ -73,7 +73,9 @@ describe("swell", () => {
     const t = 1 / 60;
     for (let f = 0; f < 60 * 120; f++) {
       advanceSwellPhases(wrapped, waves, t);
-      for (let i = 0; i < 3; i++) unwrapped[i] -= waves[i].omega * t;
+      for (let i = 0; i < 3; i++) {
+        unwrapped[i] -= waves[i].omega * t;
+      }
     }
     for (let i = 0; i < 3; i++) {
       expect(wrapped[i]).toBeGreaterThanOrEqual(0);

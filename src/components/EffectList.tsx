@@ -58,20 +58,25 @@ export function EffectList(props: EffectListProps) {
   const [announcement, setAnnouncement] = useState<string>();
   const active =
     effects.find((e) => e.id === activeId) ??
-    (query ? undefined : effects.find((e) => e.id === currentId)) ??
+    (query !== "" ? undefined : effects.find((e) => e.id === currentId)) ??
     effects.at(0);
 
   useEffect(() => {
     inputRef.current?.focus();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- focusRequest is a counter whose only job is to re-run this effect
   }, [props.focusRequest]);
 
   useEffect(() => {
-    if (active)
+    if (active) {
       document.getElementById(optionDomId(uid, active.id))?.scrollIntoView({ block: "nearest" });
+    }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- scrollRequest is a counter whose only job is to re-run this effect after starring
   }, [active, uid, scrollRequest]);
 
   const activate = (effect: ListableEffect | undefined) => {
-    if (!effect) return;
+    if (!effect) {
+      return;
+    }
     setActiveId(effect.id);
     onPrefetch(effect.id);
   };
@@ -92,7 +97,9 @@ export function EffectList(props: EffectListProps) {
       activate(effects[Math.max(i - 8, 0)]);
     } else if (e.key === "*") {
       e.preventDefault();
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       const starred = favourites?.has(active.id) ?? false;
       props.onToggleFavourite(active.id);
       setAnnouncement(
@@ -101,12 +108,17 @@ export function EffectList(props: EffectListProps) {
       setScrollRequest((n) => n + 1);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (active) props.onSelect(active.id);
+      if (active) {
+        props.onSelect(active.id);
+      }
     } else if (e.key === "Escape") {
       // A search input clears itself on Esc in some browsers; do it here instead.
       e.preventDefault();
-      if (query) changeQuery("");
-      else props.onClose();
+      if (query !== "") {
+        changeQuery("");
+      } else {
+        props.onClose();
+      }
     }
   };
 
@@ -124,8 +136,11 @@ export function EffectList(props: EffectListProps) {
       effectGroup(effect, options) ??
       (groups[0]?.heading === FAVOURITES_GROUP ? OTHERS_GROUP : undefined);
     const last = groups.at(-1);
-    if (last && last.heading === heading) last.items.push(effect);
-    else groups.push({ heading, items: [effect] });
+    if (last && last.heading === heading) {
+      last.items.push(effect);
+    } else {
+      groups.push({ heading, items: [effect] });
+    }
   }
 
   const renderOption = (effect: ListableEffect): ReactNode => {
@@ -200,7 +215,9 @@ export function EffectList(props: EffectListProps) {
           aria-label="Sort effects"
           value={sort}
           onChange={(e) => {
-            if (isEffectSort(e.target.value)) props.onSortChange(e.target.value);
+            if (isEffectSort(e.target.value)) {
+              props.onSortChange(e.target.value);
+            }
           }}
         >
           {Object.entries(EFFECT_SORTS).map(([value, label]) => (
@@ -216,7 +233,7 @@ export function EffectList(props: EffectListProps) {
       <p className="sr-only" role="status">
         {announcement ?? (effects.length === 1 ? "1 effect" : `${String(effects.length)} effects`)}
       </p>
-      {!query.trim() && !effects.some((e) => favourites?.has(e.id)) && (
+      {query.trim() === "" && !effects.some((e) => favourites?.has(e.id) === true) && (
         <p className="hint effect-list-hint">Star effects to keep them at the top</p>
       )}
       <div id={listboxId} role="listbox" aria-label="Effects" className="effect-listbox">

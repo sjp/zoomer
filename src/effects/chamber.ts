@@ -183,7 +183,9 @@ export const chamber = defineEffect(chamberMeta, {
             target = null;
             target =
               createRenderTarget(gl, tw, th, gl.R8) ?? createRenderTarget(gl, tw, th, gl.RGBA8);
-            if (!target) throw new Error("Cloud Chamber: no renderable track buffer");
+            if (!target) {
+              throw new Error("Cloud Chamber: no renderable track buffer");
+            }
           }
           sx = (scale * tw) / width;
           sy = (scale * th) / height;
@@ -205,7 +207,9 @@ export const chamber = defineEffect(chamberMeta, {
           for (let i = 0; i < sim.count; i++) {
             const tr = sim.list[i];
             trackAt(tr, time, pose);
-            if (!(pose.brightness > 0)) continue;
+            if (!(pose.brightness > 0)) {
+              continue;
+            }
             const core = pose.brightness * (tr.kind === ALPHA ? ALPHA_CORE_GAIN : 1);
             const w = pose.halfWidth;
             const midW = w * MID_W + MID_BLUR * pose.spread;
@@ -214,7 +218,9 @@ export const chamber = defineEffect(chamberMeta, {
             const dist = tr.dist;
             for (let j = 0; j + 1 < tr.count; j++) {
               const d0 = dist[j];
-              if (d0 >= pose.reveal) break;
+              if (d0 >= pose.reveal) {
+                break;
+              }
               const x0 = pts[2 * j] + pose.dx;
               const y0 = pts[2 * j + 1] + pose.dy;
               let x1 = pts[2 * j + 2] + pose.dx;

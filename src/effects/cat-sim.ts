@@ -12,6 +12,7 @@
 import { clamp, smoothstep, wrap } from "./math";
 import type { CoatId, TimeOfDayId } from "./cat.meta";
 import { createRng } from "./noise";
+import { lookup } from "./lookup";
 
 const TAU = Math.PI * 2;
 
@@ -164,7 +165,9 @@ export const TAIL_ANGLE = 0.5;
  * a tenth of a second, then eased home by EAR_DURATION; 0 outside the twitch.
  */
 export function earTwitch(tau: number): number {
-  if (!(tau > 0 && tau < EAR_DURATION)) return 0;
+  if (!(tau > 0 && tau < EAR_DURATION)) {
+    return 0;
+  }
   return EAR_ANGLE * smoothstep(0, 0.07, tau) * (1 - smoothstep(0.12, EAR_DURATION, tau));
 }
 
@@ -174,7 +177,9 @@ export function earTwitch(tau: number): number {
  * at the top; 0 outside the flick.
  */
 export function tailFlick(tau: number): number {
-  if (!(tau > 0 && tau < TAIL_DURATION)) return 0;
+  if (!(tau > 0 && tau < TAIL_DURATION)) {
+    return 0;
+  }
   const u = tau / TAIL_DURATION;
   const s = Math.sin(Math.PI * u);
   return TAIL_ANGLE * s * s * (1 + 0.25 * Math.sin(TAU * u));
@@ -283,7 +288,7 @@ export const COATS: Readonly<Record<CoatId, CoatLook>> = {
 
 /** The coat for a select value; unknown values fall back to ginger. */
 export function coatFor(id: string): CoatLook {
-  return Object.hasOwn(COATS, id) ? COATS[id as CoatId] : COATS.ginger;
+  return lookup(COATS, id, "ginger");
 }
 
 export interface TimeLook {
@@ -339,7 +344,7 @@ export const TIMES: Readonly<Record<TimeOfDayId, TimeLook>> = {
 
 /** The look for a select value; unknown values fall back to afternoon. */
 export function timeFor(id: string): TimeLook {
-  return Object.hasOwn(TIMES, id) ? TIMES[id as TimeOfDayId] : TIMES.afternoon;
+  return lookup(TIMES, id, "afternoon");
 }
 
 // ---------------------------------------------------------------- sunbeam
@@ -454,7 +459,9 @@ export function stepMotes(m: Motes, beam: Beam, t: number, dt: number): void {
 export function moteBrightness(m: Motes, beam: Beam, i: number, t: number, amount: number): number {
   const a = clamp(Number.isFinite(amount) ? amount : 0, 0, 1);
   const k = clamp(a * m.along.length - i, 0, 1);
-  if (k <= 0) return 0;
+  if (k <= 0) {
+    return 0;
+  }
   const light = beamLight(beam, m.along[i] * beam.length, m.across[i] * BEAM_HALF_WIDTH);
   return k * light * (0.65 + 0.35 * Math.sin(t * 0.9 + m.twinkle[i]));
 }

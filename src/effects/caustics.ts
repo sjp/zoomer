@@ -295,11 +295,15 @@ export const caustics = defineEffect(causticsMeta, {
       };
 
       const ensureTile = (res: number) => {
-        if (tile && res === tile.width) return;
+        if (res === tile?.width) {
+          return;
+        }
         tile?.dispose();
         tile = null;
         tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
-        if (!tile) throw new Error("Caustics: R8 tile is not renderable");
+        if (!tile) {
+          throw new Error("Caustics: R8 tile is not renderable");
+        }
         tileDirty = true;
       };
 
@@ -432,7 +436,9 @@ export const caustics = defineEffect(causticsMeta, {
           // 4. Bubbles (deep water only).
           const target = deep ? Math.min(MAX_BUBBLES, Math.max(0, Math.floor(p.bubbles))) : 0;
           // Bubbles belong to deep water only; a scene change is a hard cut.
-          if (!deep) liveBubbles = 0;
+          if (!deep) {
+            liveBubbles = 0;
+          }
           const n = (liveBubbles = growLive(bubbles.life, liveBubbles, target));
           if (n > 0) {
             stepBubbles(bubbles, n, target, sdt, dt, refWidth, rng);

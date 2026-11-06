@@ -11,6 +11,7 @@
  * the envelope's round top is the unit circle centred on the origin, y up.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
+import { lookup } from "./lookup";
 import { approach, clamp, smoothstep, wrap } from "./math";
 import { createRng } from "./noise";
 import { MAX_BALLOONS, MIN_BALLOONS } from "./balloons.meta";
@@ -60,7 +61,9 @@ export const BALLOON_STRIP: readonly number[] = (() => {
   const out = [...OUTLINE[0]];
   for (let lo = 1, hi = n - 1; lo <= hi; lo++, hi--) {
     out.push(...OUTLINE[lo]);
-    if (hi !== lo) out.push(...OUTLINE[hi]);
+    if (hi !== lo) {
+      out.push(...OUTLINE[hi]);
+    }
   }
   return out;
 })();
@@ -79,7 +82,7 @@ export const EXTENT = 1.15;
 /** Colours per balloon palette; each balloon picks 2 or 3 of them. */
 export const PALETTE_SIZE = 6;
 
-const colors = (...hex: string[]): readonly Rgb[] => hex.map(hexToUnitRgb);
+const colors = (...hex: string[]): readonly Rgb[] => hex.map((v) => hexToUnitRgb(v));
 
 export const PALETTES = {
   classic: colors("#d8352c", "#f2c230", "#2a58a8", "#f4efe4", "#2e8a4e", "#e8722a"),
@@ -90,7 +93,7 @@ export const PALETTES = {
 
 /** The palette for a select value; unknown values fall back to classic. */
 export function paletteFor(id: string): readonly Rgb[] {
-  return Object.hasOwn(PALETTES, id) ? PALETTES[id as keyof typeof PALETTES] : PALETTES.classic;
+  return lookup(PALETTES, id, "classic");
 }
 
 export interface LightSetting {
@@ -200,7 +203,7 @@ export const LIGHTS = {
 
 /** The light setting for a select value; unknown values fall back to morning. */
 export function lightFor(id: string): LightSetting {
-  return Object.hasOwn(LIGHTS, id) ? LIGHTS[id as keyof typeof LIGHTS] : LIGHTS.morning;
+  return lookup(LIGHTS, id, "morning");
 }
 
 /** Shape of the rolling valley hills, for `buildHills` in `horizon-sim.ts`. */
@@ -209,17 +212,17 @@ export const HILL_SHAPE = { amp: 0.9, ridge: 0, freq: 0.75 } as const;
 export const HILL_LAYERS = 3;
 
 /**
- * Writes the colour of hill layer `l` of `n` (0 = back) under `light` into `out`:
+ * Writes the colour of hill layer `l` of `n` (0 = back) under `setting` into `out`:
  * the daylight colour for its depth, tinted by the light, then hazed towards the
  * horizon sky more the farther back it is (atmospheric perspective).
  */
-export function hillColor(out: Rgb, light: LightSetting, l: number, n: number): Rgb {
+export function hillColor(out: Rgb, setting: LightSetting, l: number, n: number): Rgb {
   const depth = n > 1 ? l / (n - 1) : 1;
   const haze = 0.62 * (1 - depth) ** 1.2;
   for (let c = 0; c < 3; c++) {
-    const base = mix(light.hillBack[c], light.hillFront[c], depth);
-    const lit = base * mix(light.shade[c], light.lit[c], 0.8);
-    out[c] = mix(lit, light.horizon[c], haze);
+    const base = mix(setting.hillBack[c], setting.hillFront[c], depth);
+    const lit = base * mix(setting.shade[c], setting.lit[c], 0.8);
+    out[c] = mix(lit, setting.horizon[c], haze);
   }
   return out;
 }
@@ -305,7 +308,9 @@ export const climbSpeed = (depth: number) => CLIMB_RADII * balloonRadius(depth);
 
 /** Burner glow 0..1, `age` seconds into a burn `len` seconds long (age < 0: not burning). */
 export function burnGlow(age: number, len: number): number {
-  if (!(age >= 0)) return 0;
+  if (!(age >= 0)) {
+    return 0;
+  }
   return smoothstep(0, 0.3, age) * smoothstep(0, 0.6, len - age);
 }
 
@@ -389,7 +394,9 @@ export function createBalloons(seed: number, aspect: number): Balloons {
     const lo = trackLow(r, b.gap[i]);
     const span = trackSpan(r, b.gap[i], aspect);
     let x = lo + rand() * span;
-    if (x > aspect / 3 && x < (2 * aspect) / 3) x = wrap(x + (b.dir * aspect) / 3, lo, span);
+    if (x > aspect / 3 && x < (2 * aspect) / 3) {
+      x = wrap(x + (b.dir * aspect) / 3, lo, span);
+    }
     b.x[i] = x;
     b.y[i] = randIn(rand, altitudeLow(d), altitudeHigh(d));
     b.vyTarget[i] = (rand() * 2 - 1) * climbSpeed(d);
@@ -407,7 +414,9 @@ export function createBalloons(seed: number, aspect: number): Balloons {
     let third = first;
     if (k === 3) {
       third = Math.floor(rand() * PALETTE_SIZE);
-      while (third === first || third === second) third = (third + 1) % PALETTE_SIZE;
+      while (third === first || third === second) {
+        third = (third + 1) % PALETTE_SIZE;
+      }
     }
     b.colors[i * 3] = first;
     b.colors[i * 3 + 1] = second;
@@ -415,7 +424,9 @@ export function createBalloons(seed: number, aspect: number): Balloons {
     b.colorCount[i] = k;
     b.gores[i] = k * (k === 2 ? 6 + Math.floor(rand() * 3) : 4 + Math.floor(rand() * 2));
   }
-  for (let i = 0; i < n; i++) b.order[i] = i;
+  for (let i = 0; i < n; i++) {
+    b.order[i] = i;
+  }
   b.order.sort((p, q) => b.depth[q] - b.depth[p]);
   return b;
 }
@@ -464,7 +475,9 @@ export function stepBalloons(
     // Burner: fires every so often, and the balloon climbs after it.
     if (b.burnAge[i] >= 0) {
       b.burnAge[i] += dt;
-      if (b.burnAge[i] >= b.burnLen[i]) b.burnAge[i] = -1;
+      if (b.burnAge[i] >= b.burnLen[i]) {
+        b.burnAge[i] = -1;
+      }
     } else {
       b.burnTimer[i] -= dt;
       if (b.burnTimer[i] <= 0) {
@@ -525,7 +538,9 @@ export function writeBalloons(
   let n = 0;
   for (let k = 0; k < MAX_BALLOONS; k++) {
     const i = b.order[k];
-    if (!(b.presence[i] > 0)) continue;
+    if (!(b.presence[i] > 0)) {
+      continue;
+    }
     const d = b.depth[i];
     const o = n * BALLOON_FLOATS;
     out[o] = b.x[i] * height;

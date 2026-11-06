@@ -34,7 +34,8 @@ export type SceneId = "pines" | "village" | "plain";
 const SCENES: readonly SceneId[] = ["pines", "village", "plain"];
 
 /** The shader's index for a scene select value; unknown values fall back to pines. */
-export const sceneIndex = (value: string): number => Math.max(0, SCENES.indexOf(value as SceneId));
+export const sceneIndex = (value: string): number =>
+  Math.max(0, (SCENES as readonly string[]).indexOf(value));
 
 /**
  * Where the speaker's face and shoulders usually sit: the middle third across,
@@ -89,7 +90,9 @@ export function windowPanes(layout: LayoutId, aspect: number): Rect[] {
 export function paneAt(panes: readonly Rect[], x: number, y: number): number {
   for (let i = 0; i < panes.length; i++) {
     const [x0, y0, x1, y1] = panes[i];
-    if (x >= x0 && x < x1 && y >= y0 && y < y1) return i;
+    if (x >= x0 && x < x1 && y >= y0 && y < y1) {
+      return i;
+    }
   }
   return -1;
 }
@@ -125,12 +128,14 @@ export function fogDensity(p: Rect, x: number, y: number, noise: Noise): number 
   const db = y - y0;
   const dt = y1 - y;
   const dx = Math.min(dl, dr);
-  const corner = 1 - Math.sqrt(dx * dx + db * db) / reach;
+  const corner = 1 - Math.hypot(dx, db) / reach;
   const bottom = 0.55 * (1 - db / (0.4 * reach));
-  const top = 0.6 * (1 - Math.sqrt(dx * dx + dt * dt) / (0.45 * reach));
+  const top = 0.6 * (1 - Math.hypot(dx, dt) / (0.45 * reach));
   const f = Math.max(corner, bottom, top);
   // Clear glass away from the corners and edges: no noise to evaluate.
-  if (f <= 0) return 0;
+  if (f <= 0) {
+    return 0;
+  }
   const n = fbm2(noise, x * 7, y * 7, 2);
   const g = clamp(f * (1 + 0.45 * n) + 0.08 * n, 0, 1);
   return g * g * (3 - 2 * g);
@@ -180,7 +185,9 @@ export function buildCondensation(
       const y = (j + 0.5) * sy;
       for (let i = i0; i < i1; i++) {
         const v = fogDensity(p, (i + 0.5) * sx, y, noise);
-        if (v > 0) out[(j * width + i) * 4] = Math.round(v * 255);
+        if (v > 0) {
+          out[(j * width + i) * 4] = Math.round(v * 255);
+        }
       }
     }
   }
@@ -193,9 +200,13 @@ export function buildCondensation(
       const cx = x0 + rng() * (x1 - x0);
       const cy = y0 + rng() * (y1 - y0);
       const r = (DROP_MIN_PX + (DROP_MAX_PX - DROP_MIN_PX) * rng() ** 2) / 1080;
-      if (fogDensity(p, cx, cy, noise) < DROP_FOG) continue;
+      if (fogDensity(p, cx, cy, noise) < DROP_FOG) {
+        continue;
+      }
       // Keep the whole drop on its pane.
-      if (cx - r < x0 || cx + r > x1 || cy - r < y0 || cy + r > y1) continue;
+      if (cx - r < x0 || cx + r > x1 || cy - r < y0 || cy + r > y1) {
+        continue;
+      }
       const hx = cx - 0.35 * r;
       const hy = cy + 0.35 * r;
       const hr = 0.35 * r + 0.7 * sy;
@@ -211,10 +222,14 @@ export function buildCondensation(
           const o = (j * width + i) * 4;
           const edge = 0.5 + ((r - Math.hypot(x - cx, y - cy)) / sy) * DROP_RAMP;
           const g = Math.round(clamp(edge, 0, 1) * 255);
-          if (g > out[o + 1]) out[o + 1] = g;
+          if (g > out[o + 1]) {
+            out[o + 1] = g;
+          }
           const h = clamp(1 - Math.hypot(x - hx, y - hy) / hr, 0, 1);
           const b = Math.round(h * h * 255);
-          if (b > out[o + 2]) out[o + 2] = b;
+          if (b > out[o + 2]) {
+            out[o + 2] = b;
+          }
         }
       }
     }

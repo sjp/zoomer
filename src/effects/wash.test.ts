@@ -31,7 +31,9 @@ describe("washSinceUncovered", () => {
     for (const n of [0.02, 0.1, 0.19]) {
       // Find when the front drops below n while draining.
       let t = T_STOP;
-      while (washFront(t, reach, 0.05, 1) > n) t += 1e-4;
+      while (washFront(t, reach, 0.05, 1) > n) {
+        t += 1e-4;
+      }
       expect(washSinceUncovered(n, t, reach)).toBeCloseTo(0, 3);
     }
   });

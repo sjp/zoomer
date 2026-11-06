@@ -33,7 +33,7 @@ export interface Noise {
 
 /** Deterministic PRNG (mulberry32). Any number works as a seed; floats are truncated. */
 export function createRng(seed: number): () => number {
-  let a = (Math.imul(Math.floor(seed) | 0, 0x9e3779b1) ^ 0x6d2b79f5) >>> 0;
+  let a = (Math.imul(Math.floor(seed), 0x9e3779b1) ^ 0x6d2b79f5) >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
     let t = a;
@@ -101,7 +101,9 @@ const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 export function createNoise(seed: number): Noise {
   const rng = createRng(seed);
   const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 0; i < 256; i++) {
+    p[i] = i;
+  }
   for (let i = 255; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     const t = p[i];
@@ -243,10 +245,15 @@ export function createNoise(seed: number): Noise {
     const fx = x - xf;
     const fy = y - yf;
     // Wrap lattice coordinates before hashing so the gradients repeat exactly.
-    let x0 = (xf | 0) % px;
-    let y0 = (yf | 0) % py;
-    if (x0 < 0) x0 += px;
-    if (y0 < 0) y0 += py;
+    // Math.imul(v, 1) is ToInt32(v), as `v | 0`: huge or non-finite coordinates still index `perm`.
+    let x0 = Math.imul(xf, 1) % px;
+    let y0 = Math.imul(yf, 1) % py;
+    if (x0 < 0) {
+      x0 += px;
+    }
+    if (y0 < 0) {
+      y0 += py;
+    }
     const x1 = x0 + 1 === px ? 0 : x0 + 1;
     const y1 = y0 + 1 === py ? 0 : y0 + 1;
     const h0 = perm[x0];
@@ -343,7 +350,9 @@ export function fbmPeriodic2(
   const base = toPeriod(period);
   for (let o = 0; o < octaves; o++) {
     const p = base * f;
-    if (p > MAX_PERIOD) break;
+    if (p > MAX_PERIOD) {
+      break;
+    }
     const shift = o * OCTAVE_SHIFT;
     sum += amp * noise.periodic2(x * f + shift, y * f - shift, p, p);
     norm += amp;

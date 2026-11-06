@@ -84,7 +84,9 @@ describe("buildRayTable", () => {
 
   it("has distinct channels and is deterministic", () => {
     let diff = 0;
-    for (let i = 0; i < cols; i++) diff += Math.abs(rays[i * 4] - rays[i * 4 + 1]);
+    for (let i = 0; i < cols; i++) {
+      diff += Math.abs(rays[i * 4] - rays[i * 4 + 1]);
+    }
     expect(diff / cols).toBeGreaterThan(0.01);
     expect(buildRayTable(cols)).toEqual(rays);
   });
@@ -111,7 +113,9 @@ describe("buildHorizonTable", () => {
     const steepest = (kind: "hills" | "pines") => {
       const t = buildHorizonTable(kind, 960, 16 / 9);
       let max = 0;
-      for (let i = 0; i < 960; i++) max = Math.max(max, Math.abs(t[i * 2 + 1]));
+      for (let i = 0; i < 960; i++) {
+        max = Math.max(max, Math.abs(t[i * 2 + 1]));
+      }
       return max;
     };
     expect(steepest("hills")).toBeLessThan(0.5);

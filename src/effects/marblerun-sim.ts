@@ -377,13 +377,17 @@ export function buildRun(levels: number, side: MarbleSide, aspect: number): Run 
 export function segmentAt(run: Run, s: number): number {
   const segs = run.segments;
   let i = segs.length - 1;
-  while (i > 0 && segs[i].s0 > s) i--;
+  while (i > 0 && segs[i].s0 > s) {
+    i--;
+  }
   return i;
 }
 
 /** The landing bounce height `d` path units into a roll. */
 export function hopOffset(d: number): number {
-  if (d <= 0 || d >= HOP_LEN) return 0;
+  if (d <= 0 || d >= HOP_LEN) {
+    return 0;
+  }
   const split = HOP_LEN * (2 / 3);
   if (d < split) {
     const t = d / split;
@@ -487,17 +491,23 @@ function ahead(run: Run, a: number, b: number): number {
  */
 export function stepMarbles(run: Run, m: Marbles, time: number): void {
   const n = m.count;
-  if (n === 0 || !(time > 0)) return;
+  if (n === 0 || !(time > 0)) {
+    return;
+  }
   const t = Math.min(time, 0.25);
   const { s, move } = m;
-  for (let i = 0; i < n; i++) move[i] = freeAdvance(run, s[i], t);
+  for (let i = 0; i < n; i++) {
+    move[i] = freeAdvance(run, s[i], t);
+  }
   if (n > 1) {
     // Two passes backwards round the ring settle every limit (leaders never move back).
     for (let k = 0; k < 2 * n; k++) {
       const i = (((n - 1 - k) % n) + n) % n;
       const j = (i + 1) % n;
       const limit = ahead(run, s[i], s[j]) + move[j] - MIN_GAP;
-      if (move[i] > limit) move[i] = Math.max(0, limit);
+      if (move[i] > limit) {
+        move[i] = Math.max(0, limit);
+      }
     }
   }
   const tau = Math.PI * 2;

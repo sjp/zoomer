@@ -41,14 +41,22 @@ function columnDiff(data: Uint8Array, w: number, h: number, a: number, b: number
 function typicalDiff(data: Uint8Array, w: number, h: number): number {
   let sum = 0;
   const cols = [w / 4, w / 2, (3 * w) / 4];
-  for (const x of cols) sum += columnDiff(data, w, h, x - 1, x);
+  for (const x of cols) {
+    sum += columnDiff(data, w, h, x - 1, x);
+  }
   return sum / cols.length;
 }
 
 /** Whether two byte arrays hold the same values (cheaper than a deep `toEqual` on megabytes). */
 function same(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -84,8 +92,11 @@ describe("buildSurface", { timeout: 60_000 }, () => {
     let glossy = 0;
     let lit = 0;
     for (let i = 3; i < data.length; i += 4) {
-      if (data[i] < 128) glossy++;
-      else if (data[i] > 160) lit++;
+      if (data[i] < 128) {
+        glossy++;
+      } else if (data[i] > 160) {
+        lit++;
+      }
     }
     const n = SURFACE_W * SURFACE_H;
     expect(glossy / n).toBeGreaterThan(0.4);
@@ -98,8 +109,11 @@ describe("buildSurface", { timeout: 60_000 }, () => {
     let glossy = 0;
     let lit = 0;
     for (let i = 3; i < data.length; i += 4) {
-      if (data[i] < 128) glossy++;
-      else if (data[i] !== materialByte(0)) lit++;
+      if (data[i] < 128) {
+        glossy++;
+      } else if (data[i] !== materialByte(0)) {
+        lit++;
+      }
     }
     return [glossy, lit];
   }
@@ -276,7 +290,7 @@ describe("framing and sun", () => {
   });
 
   it("gives every framing a distinct anchor", () => {
-    const seen = new Set(FRAMING_OPTIONS.map(({ value }) => framingAnchor(value).join()));
+    const seen = new Set(FRAMING_OPTIONS.map(({ value }) => framingAnchor(value).join(",")));
     expect(seen.size).toBe(FRAMING_OPTIONS.length);
     expect(framingAnchor("nope")).toEqual(framingAnchor("bottomLeft"));
   });
@@ -314,7 +328,9 @@ describe("framing and sun", () => {
   });
 
   it("has a style for every world", () => {
-    for (const { value } of WORLD_OPTIONS) expect(worldStyle(value)).toBe(WORLDS[value]);
+    for (const { value } of WORLD_OPTIONS) {
+      expect(worldStyle(value)).toBe(WORLDS[value]);
+    }
     expect(worldStyle("nope")).toBe(WORLDS.earth);
     expect(SEA_LEVEL).toBeGreaterThan(-1);
   });

@@ -316,7 +316,9 @@ export function stepSparks(
   s.owed += SPARK_RATE * step;
   while (s.owed >= 1) {
     s.owed -= 1;
-    if (s.count >= MAX_SPARKS) continue;
+    if (s.count >= MAX_SPARKS) {
+      continue;
+    }
     const i = s.count++;
     const r = s.rand;
     s.x[i] = fireX + (r() - 0.5) * 16;
@@ -397,7 +399,9 @@ export function stepMeteors(m: Meteors, t: number, on: boolean, refWidth: number
   while (t >= m.next) {
     const at = m.next;
     m.next += meteorGap(m.rand);
-    if (!on) continue;
+    if (!on) {
+      continue;
+    }
     const r = m.rand;
     const c = m.current;
     const left = r() < 0.5;

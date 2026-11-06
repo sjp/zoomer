@@ -219,7 +219,10 @@ export const effects: readonly EffectEntry[] = [
   { ...terrainMeta, load: () => import("./terrain").then((m) => m.terrain) },
   { ...vinesMeta, load: () => import("./vines").then((m) => m.vines) },
   { ...contoursMeta, load: () => import("./contours").then((m) => m.contours) },
-  { ...constellationMeta, load: () => import("./constellation").then((m) => m.constellation) },
+  {
+    ...constellationMeta,
+    load: () => import("./constellation").then((m) => m.constellation),
+  },
 ];
 
 /** Shares, caches and retries effect imports for the whole app. */
@@ -235,6 +238,8 @@ export const DEFAULT_EFFECT_ID = "warp";
 /** Resolves {@link DEFAULT_EFFECT_ID}; throws at load so a rename can't break it silently. */
 export const defaultEffect: EffectEntry = (() => {
   const effect = getEffect(DEFAULT_EFFECT_ID);
-  if (!effect) throw new Error(`Default effect "${DEFAULT_EFFECT_ID}" is not in the registry`);
+  if (!effect) {
+    throw new Error(`Default effect "${DEFAULT_EFFECT_ID}" is not in the registry`);
+  }
   return effect;
 })();

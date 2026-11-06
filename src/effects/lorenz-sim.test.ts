@@ -41,7 +41,7 @@ function framed(t: Trajectory, x: number, y: number, z: number): [number, number
 
 describe("systems", () => {
   it("has one system per option, with distinct shader indices", () => {
-    expect(Object.keys(SYSTEMS).sort()).toEqual([...ids].sort());
+    expect(Object.keys(SYSTEMS).toSorted()).toEqual([...ids].toSorted());
     expect(new Set(ids.map((id) => SYSTEMS[id].index)).size).toBe(ids.length);
     expect(systemFor("nope")).toBe(SYSTEMS.lorenz);
   });
@@ -60,7 +60,9 @@ describe("systems", () => {
     const k = rk4Scratch();
     const run = (h: number) => {
       const p = Float64Array.from([1, 1, 20]);
-      for (let i = 0; i < Math.round(0.2 / h); i++) rk4Step(sys, p, h, k);
+      for (let i = 0; i < Math.round(0.2 / h); i++) {
+        rk4Step(sys, p, h, k);
+      }
       return p;
     };
     const ref = run(0.0005);
@@ -113,21 +115,27 @@ describe("buildTrajectory", () => {
     const t = trajOf("lorenz");
     const k = rk4Scratch();
     const p = Float64Array.from(t.points.subarray(400, 403));
-    for (let s = 0; s < sys.stride; s++) rk4Step(sys, p, sys.step, k);
-    for (let a = 0; a < 3; a++) expect(p[a]).toBeCloseTo(t.points[404 + a], 3);
+    for (let s = 0; s < sys.stride; s++) {
+      rk4Step(sys, p, sys.step, k);
+    }
+    for (let a = 0; a < 3; a++) {
+      expect(p[a]).toBeCloseTo(t.points[404 + a], 3);
+    }
   });
 
   it("visits both Lorenz wings, coloured apart", () => {
     const t = trajOf("lorenz");
     const w = SYSTEMS.lorenz.wing;
     let agree = 0;
-    let both = [0, 0];
+    const both = [0, 0];
     for (let i = 0; i < TRAJ_SAMPLES; i++) {
       const o = i * 4;
       const x = t.points[o];
       const q = [0, 1, 2].map((a) => (t.points[o + a] - t.centre[a]) * t.norm);
       const d = q[0] * w[0] + q[1] * w[1] + q[2] * w[2];
-      if (Math.sign(d) === Math.sign(x)) agree++;
+      if (Math.sign(d) === Math.sign(x)) {
+        agree++;
+      }
       both[x > 0 ? 1 : 0]++;
     }
     expect(agree / TRAJ_SAMPLES).toBeGreaterThan(0.9);
@@ -171,7 +179,11 @@ describe("seedParticles", () => {
     const b = seedParticles(t, 2000, 7, new Float32Array(2000 * 4));
     expect(a).toEqual(b);
     let right = 0;
-    for (let i = 0; i < 2000; i++) if (a[i * 4] > 0) right++;
+    for (let i = 0; i < 2000; i++) {
+      if (a[i * 4] > 0) {
+        right++;
+      }
+    }
     expect(right / 2000).toBeGreaterThan(0.25);
     expect(right / 2000).toBeLessThan(0.75);
   });
@@ -183,7 +195,7 @@ describe("timing", () => {
     expect(flowStep(1 / 60, 1, sys)).toBeCloseTo(sys.rate / 60);
     expect(flowStep(5, 1, sys)).toBeCloseTo(sys.rate * MAX_DT);
     expect(flowStep(-1, 1, sys)).toBe(0);
-    expect(flowStep(NaN, 1, sys)).toBe(0);
+    expect(flowStep(Number.NaN, 1, sys)).toBe(0);
     expect(respawnChance(0)).toBe(0);
     expect(respawnChance(1 / 60)).toBeGreaterThan(0);
     expect(respawnChance(1 / 60)).toBeLessThan(0.01);
@@ -192,7 +204,7 @@ describe("timing", () => {
   it("decays trails by a frame-rate independent amount", () => {
     expect(trailKeep(1 / 60) ** 2).toBeCloseTo(trailKeep(1 / 30), 10);
     expect(trailKeep(0)).toBe(1);
-    expect(trailKeep(NaN)).toBe(1);
+    expect(trailKeep(Number.NaN)).toBe(1);
   });
 });
 
@@ -224,7 +236,7 @@ describe("advanceOrbit", () => {
     expect(advanceOrbit(0.1, 1, -1)).toBeCloseTo(0.1 - ORBIT_RATE);
     expect(advanceOrbit(0.001, 1, -1)).toBeCloseTo(TAU + 0.001 - ORBIT_RATE);
     expect(advanceOrbit(1, 1, 0)).toBe(1);
-    expect(advanceOrbit(1, NaN, 1)).toBe(1);
+    expect(advanceOrbit(1, Number.NaN, 1)).toBe(1);
     expect(advanceOrbit(TAU + 1, 0, 1)).toBeCloseTo(1);
   });
 });
@@ -295,7 +307,9 @@ describe("framing", () => {
 
 describe("palettes", () => {
   it("has one palette per option, all in gamut", () => {
-    expect(Object.keys(PALETTES).sort()).toEqual(PALETTE_OPTIONS.map((o) => o.value).sort());
+    expect(Object.keys(PALETTES).toSorted()).toEqual(
+      PALETTE_OPTIONS.map((o) => o.value).toSorted(),
+    );
     expect(paletteFor("bogus")).toBe(PALETTES.cyanamber);
     const c = new Float64Array(3);
     let ok = true;

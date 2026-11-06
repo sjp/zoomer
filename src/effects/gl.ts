@@ -50,7 +50,9 @@ float dither8(vec2 fragCoord) {
  * Throws on NaN and infinities, which have no literal.
  */
 export function glslFloat(n: number): string {
-  if (!Number.isFinite(n)) throw new Error(`glslFloat: ${String(n)} has no GLSL literal`);
+  if (!Number.isFinite(n)) {
+    throw new TypeError(`glslFloat: ${String(n)} has no GLSL literal`);
+  }
   return Number.isInteger(n) ? n.toFixed(1) : String(n);
 }
 
@@ -88,20 +90,20 @@ export function beginFrame(gl: WebGL2RenderingContext, width: number, height: nu
  */
 export interface Scope {
   /** Registers `dispose(resource)` and returns `resource`. */
-  add<T>(resource: T, dispose: (resource: T) => void): T;
+  add: <T>(resource: T, dispose: (resource: T) => void) => T;
   /** Registers `resource.dispose()` and returns `resource`. */
-  own<T extends { dispose(): void }>(resource: T): T;
+  own: <T extends { dispose: () => void }>(resource: T) => T;
   /**
    * Registers a cleanup callback, for resources that are replaced over time
    * (the callback reads the current one) or non-GL teardown.
    */
-  defer(cleanup: () => void): void;
+  defer: (cleanup: () => void) => void;
   /**
    * Runs every cleanup, most recent first, and forgets them, so a second call does
    * nothing. A cleanup that throws doesn't stop the rest; the first error is rethrown
    * once all have run.
    */
-  dispose(): void;
+  dispose: () => void;
 }
 
 export function createScope(): Scope {
@@ -129,11 +131,15 @@ export function createScope(): Scope {
         try {
           cleanup();
         } catch (err) {
-          if (!failed) first = err;
+          if (!failed) {
+            first = err;
+          }
           failed = true;
         }
       }
-      if (failed) throw first;
+      if (failed) {
+        throw first;
+      }
     },
   };
 }
@@ -171,10 +177,12 @@ export function compileShader(
   source: string,
 ): WebGLShader {
   const shader = gl.createShader(type);
-  if (!shader) throw new Error("WebGL: could not create shader (is the context lost?)");
+  if (!shader) {
+    throw new Error("WebGL: could not create shader (is the context lost?)");
+  }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS) && !gl.isContextLost()) {
+  if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) !== true && !gl.isContextLost()) {
     const log = gl.getShaderInfoLog(shader) ?? "";
     gl.deleteShader(shader);
     const kind = type === gl.VERTEX_SHADER ? "vertex" : "fragment";
@@ -212,7 +220,7 @@ export function createProgram(
   // Shaders can be flagged for deletion once linked; the program keeps them alive.
   gl.deleteShader(vs);
   gl.deleteShader(fs);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
+  if (gl.getProgramParameter(program, gl.LINK_STATUS) !== true && !gl.isContextLost()) {
     const log = gl.getProgramInfoLog(program) ?? "";
     gl.deleteProgram(program);
     throw new Error(`WebGL: program failed to link:\n${log}`);
@@ -229,9 +237,29 @@ export function getUniforms<const N extends string>(
   program: WebGLProgram,
   names: readonly N[],
 ): Record<N, WebGLUniformLocation | null> {
-  const out = {} as Record<N, WebGLUniformLocation | null>;
-  for (const name of names) out[name] = gl.getUniformLocation(program, name);
+  return recordOf(names, (name) => gl.getUniformLocation(program, name));
+}
+
+/** `{ [name]: value(name, i) }` for each of `names`, in order (a repeated name keeps its last value). */
+function recordOf<N extends string, V>(
+  names: readonly N[],
+  value: (name: N, i: number) => V,
+): Record<N, V> {
+  const out: Partial<Record<N, V>> = {};
+  names.forEach((name, i) => {
+    out[name] = value(name, i);
+  });
+  if (!hasEvery(out, names)) {
+    throw new Error("recordOf: a name is missing");
+  }
   return out;
+}
+
+function hasEvery<N extends string, V>(
+  record: Partial<Record<N, V>>,
+  names: readonly N[],
+): record is Record<N, V> {
+  return names.every((name) => Object.hasOwn(record, name));
 }
 
 /**
@@ -248,18 +276,18 @@ export function getUniforms<const N extends string>(
 export interface Uniforms<N extends string> {
   readonly program: WebGLProgram;
   readonly loc: Readonly<Record<N, WebGLUniformLocation | null>>;
-  f1(name: N, x: number): boolean;
-  f2(name: N, x: number, y: number): boolean;
-  f3(name: N, x: number, y: number, z: number): boolean;
-  f4(name: N, x: number, y: number, z: number, w: number): boolean;
+  f1: (name: N, x: number) => boolean;
+  f2: (name: N, x: number, y: number) => boolean;
+  f3: (name: N, x: number, y: number, z: number) => boolean;
+  f4: (name: N, x: number, y: number, z: number, w: number) => boolean;
   /** A `vec3` from the first three entries of `v`, e.g. an `Rgb`. */
-  v3(name: N, v: ArrayLike<number>): boolean;
+  v3: (name: N, v: ArrayLike<number>) => boolean;
   /** A `vec3` colour (0..1) from a hex string, parsed once per distinct string. */
-  rgb(name: N, hex: string): boolean;
+  rgb: (name: N, hex: string) => boolean;
   /** An `int`, `bool` or sampler unit. */
-  i1(name: N, x: number): boolean;
+  i1: (name: N, x: number) => boolean;
   /** A `uint`. */
-  u1(name: N, x: number): boolean;
+  u1: (name: N, x: number) => boolean;
 }
 
 /**
@@ -273,8 +301,7 @@ export function createUniforms<const N extends string>(
   names: readonly N[],
 ): Uniforms<N> {
   const loc = getUniforms(gl, program, names);
-  const index = {} as Record<N, number>;
-  names.forEach((name, i) => (index[name] = i));
+  const index = recordOf(names, (_name, i) => i);
   /** Four values per uniform; NaN never compares equal, so the first set always uploads. */
   const last = new Float64Array(names.length * 4).fill(Number.NaN);
   const lastHex: (string | undefined)[] = names.map(() => undefined);
@@ -286,7 +313,9 @@ export function createUniforms<const N extends string>(
   function changed(name: N, x: number, y: number, z: number, w: number): boolean {
     const i = index[name];
     const o = i * 4;
-    if (last[o] === x && last[o + 1] === y && last[o + 2] === z && last[o + 3] === w) return false;
+    if (last[o] === x && last[o + 1] === y && last[o + 2] === z && last[o + 3] === w) {
+      return false;
+    }
     if (
       import.meta.env.DEV &&
       gl.getParameter(gl.CURRENT_PROGRAM) !== program &&
@@ -303,7 +332,9 @@ export function createUniforms<const N extends string>(
   }
 
   const f3 = (name: N, x: number, y: number, z: number) => {
-    if (!changed(name, x, y, z, 0)) return false;
+    if (!changed(name, x, y, z, 0)) {
+      return false;
+    }
     gl.uniform3f(loc[name], x, y, z);
     return true;
   };
@@ -311,37 +342,49 @@ export function createUniforms<const N extends string>(
     program,
     loc,
     f1(name, x) {
-      if (!changed(name, x, 0, 0, 0)) return false;
+      if (!changed(name, x, 0, 0, 0)) {
+        return false;
+      }
       gl.uniform1f(loc[name], x);
       return true;
     },
     f2(name, x, y) {
-      if (!changed(name, x, y, 0, 0)) return false;
+      if (!changed(name, x, y, 0, 0)) {
+        return false;
+      }
       gl.uniform2f(loc[name], x, y);
       return true;
     },
     f3,
     f4(name, x, y, z, w) {
-      if (!changed(name, x, y, z, w)) return false;
+      if (!changed(name, x, y, z, w)) {
+        return false;
+      }
       gl.uniform4f(loc[name], x, y, z, w);
       return true;
     },
     v3: (name, v) => f3(name, v[0], v[1], v[2]),
     rgb(name, hex) {
       const i = index[name];
-      if (lastHex[i] === hex) return false;
+      if (lastHex[i] === hex) {
+        return false;
+      }
       const [r, g, b] = hexToUnitRgb(hex);
       const uploaded = f3(name, r, g, b);
       lastHex[i] = hex;
       return uploaded;
     },
     i1(name, x) {
-      if (!changed(name, x, 0, 0, 0)) return false;
+      if (!changed(name, x, 0, 0, 0)) {
+        return false;
+      }
       gl.uniform1i(loc[name], x);
       return true;
     },
     u1(name, x) {
-      if (!changed(name, x, 0, 0, 0)) return false;
+      if (!changed(name, x, 0, 0, 0)) {
+        return false;
+      }
       gl.uniform1ui(loc[name], x);
       return true;
     },
@@ -350,8 +393,8 @@ export function createUniforms<const N extends string>(
 
 export interface FullscreenTriangle {
   /** Binds the triangle's vertex array and draws it. */
-  draw(): void;
-  dispose(): void;
+  draw: () => void;
+  dispose: () => void;
 }
 
 /**
@@ -403,8 +446,8 @@ export interface GradientBackground {
    * Colours are 0..1. When top and bottom are equal it clears instead, which
    * ignores the viewport: the viewport must cover the bound framebuffer.
    */
-  draw(top: Rgb, bottom: Rgb): void;
-  dispose(): void;
+  draw: (top: Rgb, bottom: Rgb) => void;
+  dispose: () => void;
 }
 
 /** Full-screen vertical linear gradient, matching a 2D `createLinearGradient(0, 0, 0, h)`. */
@@ -544,8 +587,8 @@ export interface ColumnTable {
   readonly columns: number;
   readonly rows: number;
   /** Uploads `data`, leaving the texture bound to the active unit (see `updateDataTexture`). */
-  upload(): void;
-  dispose(): void;
+  upload: () => void;
+  dispose: () => void;
 }
 
 /** Sized half-float internal format and pixel format for a table with this many channels. */
@@ -554,8 +597,12 @@ export function columnTableFormat(
   channels: ColumnTableChannels,
 ): { internalFormat: GLenum; format: GLenum } {
   // Half floats are filterable in core WebGL2 and accept FLOAT data; 32-bit floats aren't.
-  if (channels === 1) return { internalFormat: gl.R16F, format: gl.RED };
-  if (channels === 2) return { internalFormat: gl.RG16F, format: gl.RG };
+  if (channels === 1) {
+    return { internalFormat: gl.R16F, format: gl.RED };
+  }
+  if (channels === 2) {
+    return { internalFormat: gl.RG16F, format: gl.RG };
+  }
   return { internalFormat: gl.RGBA16F, format: gl.RGBA };
 }
 
@@ -611,8 +658,28 @@ export interface RenderTarget {
   readonly width: number;
   readonly height: number;
   /** Binds the framebuffer and sets the viewport to cover it. Caller unbinds. */
-  bind(): void;
-  dispose(): void;
+  bind: () => void;
+  dispose: () => void;
+}
+
+/**
+ * `gl.getParameter` with the result types the WebGL2 spec gives for the parameters
+ * read here (the DOM typings return `any`).
+ */
+export interface TypedParameters {
+  getParameter: {
+    (pname: WebGL2RenderingContext["FRAMEBUFFER_BINDING"]): WebGLFramebuffer | null;
+    (pname: WebGL2RenderingContext["TEXTURE_BINDING_2D"]): WebGLTexture | null;
+    (pname: WebGL2RenderingContext["CURRENT_PROGRAM"]): WebGLProgram | null;
+    (pname: WebGL2RenderingContext["VIEWPORT"]): Int32Array;
+    (pname: WebGL2RenderingContext["COLOR_CLEAR_VALUE"]): Float32Array;
+    (pname: WebGL2RenderingContext["COLOR_WRITEMASK"]): boolean[];
+  };
+}
+
+/** `gl`, viewed through `TypedParameters`; call `getParameter` on the result as a method. */
+export function typedParameters(gl: WebGL2RenderingContext): TypedParameters {
+  return gl;
 }
 
 /**
@@ -634,8 +701,9 @@ export function createRenderTarget(
   const filter = options.filter ?? gl.LINEAR;
   const wrap = options.wrap ?? gl.CLAMP_TO_EDGE;
   // Allocation is rare, so querying the state to restore costs nothing that matters.
-  const prevFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
-  const prevTexture = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+  const params = typedParameters(gl);
+  const prevFramebuffer = params.getParameter(gl.FRAMEBUFFER_BINDING);
+  const prevTexture = params.getParameter(gl.TEXTURE_BINDING_2D);
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
@@ -650,16 +718,18 @@ export function createRenderTarget(
   const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
   if (complete) {
     // Start from known contents rather than whatever the driver hands out.
-    const viewport = gl.getParameter(gl.VIEWPORT) as Int32Array;
-    const clearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE) as Float32Array;
-    const mask = gl.getParameter(gl.COLOR_WRITEMASK) as boolean[];
+    const viewport = params.getParameter(gl.VIEWPORT);
+    const clearColor = params.getParameter(gl.COLOR_CLEAR_VALUE);
+    const mask = params.getParameter(gl.COLOR_WRITEMASK);
     const scissor = gl.isEnabled(gl.SCISSOR_TEST);
     gl.disable(gl.SCISSOR_TEST);
     gl.colorMask(true, true, true, true);
     gl.viewport(0, 0, width, height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    if (scissor) gl.enable(gl.SCISSOR_TEST);
+    if (scissor) {
+      gl.enable(gl.SCISSOR_TEST);
+    }
     gl.colorMask(mask[0], mask[1], mask[2], mask[3]);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);

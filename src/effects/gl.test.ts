@@ -38,9 +38,17 @@ describe("createScope", () => {
   it("runs cleanups in reverse order of registration", () => {
     const scope = createScope();
     const order: string[] = [];
-    const a = scope.add("a", (r) => order.push(r));
-    scope.own({ dispose: () => order.push("b") });
-    scope.defer(() => order.push("c"));
+    const a = scope.add("a", (r) => {
+      order.push(r);
+    });
+    scope.own({
+      dispose: () => {
+        order.push("b");
+      },
+    });
+    scope.defer(() => {
+      order.push("c");
+    });
     expect(a).toBe("a");
     scope.dispose();
     expect(order).toEqual(["c", "b", "a"]);
@@ -49,7 +57,9 @@ describe("createScope", () => {
   it("is idempotent", () => {
     const scope = createScope();
     let count = 0;
-    scope.defer(() => count++);
+    scope.defer(() => {
+      count++;
+    });
     scope.dispose();
     scope.dispose();
     expect(count).toBe(1);
@@ -58,14 +68,18 @@ describe("createScope", () => {
   it("runs every cleanup even if one throws, then rethrows the first error", () => {
     const scope = createScope();
     const order: string[] = [];
-    scope.defer(() => order.push("a"));
+    scope.defer(() => {
+      order.push("a");
+    });
     scope.defer(() => {
       throw new Error("first");
     });
     scope.defer(() => {
       throw new Error("second");
     });
-    scope.defer(() => order.push("d"));
+    scope.defer(() => {
+      order.push("d");
+    });
     expect(() => {
       scope.dispose();
     }).toThrow("second");
@@ -80,7 +94,9 @@ describe("withScope", () => {
   it("returns the result and leaves the scope to the caller on success", () => {
     let disposed = false;
     const result = withScope((scope) => {
-      scope.defer(() => (disposed = true));
+      scope.defer(() => {
+        disposed = true;
+      });
       return {
         dispose: () => {
           scope.dispose();
@@ -97,8 +113,12 @@ describe("withScope", () => {
     const err = new Error("shader failed");
     expect(() =>
       withScope((scope) => {
-        scope.add("triangle", (r) => order.push(r));
-        scope.add("program", (r) => order.push(r));
+        scope.add("triangle", (r) => {
+          order.push(r);
+        });
+        scope.add("program", (r) => {
+          order.push(r);
+        });
         throw err;
       }),
     ).toThrow(err);
@@ -160,11 +180,19 @@ function recordingGl(overrides: Record<string, unknown> = {}) {
   const texture = { id: "tex" };
   const gl = new Proxy(enums, {
     get(target, key: string) {
-      if (key in overrides) return overrides[key];
-      if (key in target) return target[key];
-      if (key === "createTexture") return () => texture;
+      if (key in overrides) {
+        return overrides[key];
+      }
+      if (key in target) {
+        return target[key];
+      }
+      if (key === "createTexture") {
+        return () => texture;
+      }
       // Any other enum the helpers read (unpack state and so on) is just a number.
-      if (/^[A-Z0-9_]+$/.test(key)) return 0;
+      if (/^[A-Z0-9_]+$/.test(key)) {
+        return 0;
+      }
       return (...args: unknown[]) => calls.push({ name: key, args });
     },
   });
@@ -239,7 +267,7 @@ describe("createRenderTarget", () => {
       checkFramebufferStatus: () => status,
       isContextLost: () => lost,
       // Bindings read back as null; the arrays as empty.
-      getParameter: (k: unknown) => (/BINDING/.test(String(k)) ? null : []),
+      getParameter: (k: unknown) => (String(k).includes("BINDING") ? null : []),
       FRAMEBUFFER_BINDING: "FRAMEBUFFER_BINDING",
       TEXTURE_BINDING_2D: "TEXTURE_BINDING_2D",
     });
@@ -258,7 +286,7 @@ describe("createRenderTarget", () => {
 
     calls.length = 0;
     t.dispose();
-    expect(calls.map((c) => c.name).sort()).toEqual(["deleteFramebuffer", "deleteTexture"]);
+    expect(calls.map((c) => c.name).toSorted()).toEqual(["deleteFramebuffer", "deleteTexture"]);
   });
 
   it("restores the state it changes, so it can run mid-frame", () => {
@@ -316,7 +344,9 @@ describe("createUniforms", () => {
     const gl = {
       CURRENT_PROGRAM,
       getUniformLocation: (_p: object, name: string) => (name === "uGone" ? null : { name }),
-      useProgram: (p: object | null) => (current = p),
+      useProgram: (p: object | null) => {
+        current = p;
+      },
       getParameter: (pname: number) => (pname === CURRENT_PROGRAM && !lost ? current : null),
       isContextLost: () => lost,
       uniform1f: record("1f"),
@@ -326,7 +356,9 @@ describe("createUniforms", () => {
       uniform1i: record("1i"),
       uniform1ui: record("1ui"),
     };
-    const loseContext = () => (lost = true);
+    const loseContext = () => {
+      lost = true;
+    };
     return { gl: gl as unknown as WebGL2RenderingContext, calls, loseContext };
   }
 

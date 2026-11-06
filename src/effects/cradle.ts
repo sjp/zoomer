@@ -395,7 +395,9 @@ function buildStatics(v: CradleView, count: number, scene: ScenePalette, out: St
   ];
   normals.forEach(([nx, ny, nz], qi) => {
     const lit = 0.35 + 0.9 * Math.max(0, nx * kx + ny * ky + nz * kz);
-    for (let c = 0; c < 3; c++) out.faceCols[qi * 3 + c] = frame[c] * lit + top[c] * 0.05;
+    for (let c = 0; c < 3; c++) {
+      out.faceCols[qi * 3 + c] = frame[c] * lit + top[c] * 0.05;
+    }
   });
   scene.lights.forEach((light, k) => {
     const l = Math.hypot(light.dir[0], light.dir[1], light.dir[2]);
@@ -410,11 +412,15 @@ function buildStatics(v: CradleView, count: number, scene: ScenePalette, out: St
     putDir(v, dy * hz, dz * hx - dx * hz, -dy * hx, out.lY, k * 3);
     out.lSize.set([light.size[0], light.size[1], light.size[2], light.bars], k * 4);
     const col = hexToUnitRgb(light.color);
-    for (let c = 0; c < 3; c++) out.lCol[k * 3 + c] = col[c] * light.intensity;
+    for (let c = 0; c < 3; c++) {
+      out.lCol[k * 3 + c] = col[c] * light.intensity;
+    }
   });
   putDir(v, 0, 1, 0, out.up, 0);
   const hor = hexToUnitRgb(scene.envHorizon);
-  for (let c = 0; c < 3; c++) out.stringCol[c] = 0.85 * (0.7 * hor[c] + 0.3);
+  for (let c = 0; c < 3; c++) {
+    out.stringCol[c] = 0.85 * (0.7 * hor[c] + 0.3);
+  }
 }
 
 /**

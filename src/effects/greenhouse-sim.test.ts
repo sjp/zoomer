@@ -46,8 +46,12 @@ describe("roof", () => {
       for (let k = 0; k <= 40; k++) {
         const u = k / 40;
         const y = eaveY(kind, u);
-        if (Math.abs(y - eaveY(kind, 1 - u)) > 1e-9) bad.push(`sym ${kind} ${String(u)}`);
-        if (y < 0.1 || y > EAVE_EDGE + 1e-9) bad.push(`range ${kind} ${String(u)}`);
+        if (Math.abs(y - eaveY(kind, 1 - u)) > 1e-9) {
+          bad.push(`sym ${kind} ${String(u)}`);
+        }
+        if (y < 0.1 || y > EAVE_EDGE + 1e-9) {
+          bad.push(`range ${kind} ${String(u)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -80,7 +84,9 @@ describe("rivulets", () => {
         stepRivulets(riv, roof, 1 / 15, 1);
         let alive = 0;
         for (let i = 0; i < MAX_RIVULETS; i++) {
-          if (!riv.alive[i]) continue;
+          if (!riv.alive[i]) {
+            continue;
+          }
           alive++;
           const f = Math.max(0, riv.f[i]);
           const r = rivuletR(riv, i, f);
@@ -89,16 +95,21 @@ describe("rivulets", () => {
             bad.push(`pane ${kind} ${String(s)} ${String(i)}`);
           }
           roofPoint(roof, r, f, p);
-          if (p[1] < -1e-9 || p[1] > EAVE_EDGE + 1e-9)
+          if (p[1] < -1e-9 || p[1] > EAVE_EDGE + 1e-9) {
             bad.push(`y ${kind} ${String(s)} ${String(i)}`);
+          }
         }
         maxAlive = Math.max(maxAlive, alive);
         const n = writeRivulets(riv, roof, 1080, 1, [1, 1, 1], out);
         for (let k = 0; k < n * STREAK_FLOATS; k++) {
-          if (!Number.isFinite(out[k])) bad.push(`nan ${String(s)}`);
+          if (!Number.isFinite(out[k])) {
+            bad.push(`nan ${String(s)}`);
+          }
         }
       }
-      if (maxAlive < MAX_RIVULETS * 0.8) bad.push(`few ${kind} ${String(maxAlive)}`);
+      if (maxAlive < MAX_RIVULETS * 0.8) {
+        bad.push(`few ${kind} ${String(maxAlive)}`);
+      }
     }
     expect(bad.slice(0, 5)).toEqual([]);
     // Heavy by nature: 6000 rivulet steps, with no per-sample expects to trim.
@@ -109,7 +120,9 @@ describe("rivulets", () => {
     stepRivulets(riv, null, 0.1, 1);
     expect(riv.alive.every((a) => a === 0)).toBe(true);
     const roof = defined(buildRoof("pitched", 16 / 9));
-    for (let s = 0; s < 300; s++) stepRivulets(riv, roof, 0.1, 0);
+    for (let s = 0; s < 300; s++) {
+      stepRivulets(riv, roof, 0.1, 0);
+    }
     expect(riv.alive.every((a) => a === 0)).toBe(true);
   });
 });
@@ -126,7 +139,9 @@ describe("drips", () => {
     }
     expect(seen).toBeGreaterThan(0);
     expect(seen).toBeLessThanOrEqual(MAX_DRIPS);
-    for (let s = 0; s < 300; s++) stepDrips(d, roof, 1 / 30, 1, false);
+    for (let s = 0; s < 300; s++) {
+      stepDrips(d, roof, 1 / 30, 1, false);
+    }
     expect(d.alive.every((a) => a === 0)).toBe(true);
   });
 });
@@ -138,9 +153,15 @@ describe("cloudThin", () => {
     let bad = 0;
     for (let k = 0; k < 1000; k++) {
       const v = cloudThin(k / 1000);
-      if (!(v >= 0 && v <= 1)) bad++;
-      if (Math.abs(v - cloudThin(k / 1000 + 3)) > 1e-9) bad++;
-      if (v === 0) zero++;
+      if (!(v >= 0 && v <= 1)) {
+        bad++;
+      }
+      if (Math.abs(v - cloudThin(k / 1000 + 3)) > 1e-9) {
+        bad++;
+      }
+      if (v === 0) {
+        zero++;
+      }
       max = Math.max(max, v);
     }
     expect(bad).toBe(0);
@@ -166,7 +187,9 @@ describe("buildLeaves", () => {
           for (let s = 0; s <= 40; s++) {
             leafPoint(leaf, s / 40, LAYOUT_ASPECT, p);
             total++;
-            if (inCentre(p[0], p[1])) inside++;
+            if (inCentre(p[0], p[1])) {
+              inside++;
+            }
           }
         }
       }
@@ -181,9 +204,15 @@ describe("buildLeaves", () => {
       const mid = buildLeaves(seed, 1, "jungle");
       const high = buildLeaves(seed, DENSITY_MAX, "fern");
       for (const layout of [low, mid, high]) {
-        if (layout.counts.length !== LEAF_LAYERS.length) bad.push(`layers ${String(seed)}`);
-        if (layout.counts.some((c) => c < 1)) bad.push(`empty ${String(seed)}`);
-        if (layout.leaves.length > MAX_LEAVES) bad.push(`max ${String(seed)}`);
+        if (layout.counts.length !== LEAF_LAYERS.length) {
+          bad.push(`layers ${String(seed)}`);
+        }
+        if (layout.counts.some((c) => c < 1)) {
+          bad.push(`empty ${String(seed)}`);
+        }
+        if (layout.leaves.length > MAX_LEAVES) {
+          bad.push(`max ${String(seed)}`);
+        }
         layout.leaves.forEach((leaf, i) => {
           const l = leaf.layer;
           if (i < layout.starts[l] || i >= layout.starts[l] + layout.counts[l]) {
@@ -199,7 +228,7 @@ describe("buildLeaves", () => {
   });
 
   it("follows the palette's mix of kinds", () => {
-    let fronds = { jungle: 0, fern: 0 };
+    const fronds = { jungle: 0, fern: 0 };
     for (const seed of SEEDS) {
       for (const palette of ["jungle", "fern"] as const) {
         const layout = buildLeaves(seed, 1, palette);
@@ -215,7 +244,7 @@ describe("buildLeaves", () => {
     const out = new Float32Array(MAX_LEAVES * LEAF_FLOATS);
     const n = writeLeaves(layout, out);
     expect(n).toBe(layout.leaves.length);
-    expect(out.subarray(0, n * LEAF_FLOATS).every(Number.isFinite)).toBe(true);
+    expect(out.subarray(0, n * LEAF_FLOATS).every((v) => Number.isFinite(v))).toBe(true);
   });
 });
 
@@ -227,7 +256,9 @@ describe("bob springs", () => {
     let max = 0;
     for (let s = 0; s < 5000; s++) {
       stepBobs(b, s % 7 === 0 ? 0.1 : 1 / 60, 5, out);
-      for (let i = 0; i < lengths.length; i++) max = Math.max(max, Math.abs(b.x[i]));
+      for (let i = 0; i < lengths.length; i++) {
+        max = Math.max(max, Math.abs(b.x[i]));
+      }
     }
     expect(max).toBeLessThanOrEqual(BOB_MAX);
     expect(max).toBeGreaterThan(0);
@@ -238,7 +269,9 @@ describe("bob springs", () => {
     const b = createBobs([0.3, 0.8], 1);
     b.x[0] = BOB_MAX;
     b.v[1] = 0.3;
-    for (let s = 0; s < 60 * 20; s++) stepBobs(b, 1 / 60, 0);
+    for (let s = 0; s < 60 * 20; s++) {
+      stepBobs(b, 1 / 60, 0);
+    }
     expect(Math.abs(b.x[0])).toBeLessThan(1e-3);
     expect(Math.abs(b.x[1])).toBeLessThan(1e-3);
   });

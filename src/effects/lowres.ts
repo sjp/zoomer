@@ -38,6 +38,7 @@ import {
   FULLSCREEN_VERTEX,
   type RenderTarget,
   type Scope,
+  typedParameters,
   withScope,
 } from "./gl";
 
@@ -95,13 +96,13 @@ export interface LowResTarget {
    * (viewport, framebuffer, program and so on) as it found it, so it is safe to
    * call mid-frame.
    */
-  resize(width: number, height: number, divisor: number): void;
+  resize: (width: number, height: number, divisor: number) => void;
   /**
    * Binds the FBO and sets the viewport to the low-res size. Caller unbinds.
    * When rendering direct (see `rendersDirect`), binds the default framebuffer
    * and sets the full-size viewport instead.
    */
-  bind(): void;
+  bind: () => void;
   /**
    * Draws the low-res texture to the currently bound framebuffer, filling the
    * full-size viewport, with blending disabled and sub-LSB dither. Binds the
@@ -114,7 +115,7 @@ export interface LowResTarget {
    *
    * A no-op when rendering direct: the image is already on the canvas.
    */
-  blit(outWidth?: number, outHeight?: number): void;
+  blit: (outWidth?: number, outHeight?: number) => void;
   /** Low-res size in pixels. */
   readonly width: number;
   readonly height: number;
@@ -132,7 +133,7 @@ export interface LowResTarget {
   readonly isFloat: boolean;
   /** True while `bind` targets the canvas directly and `blit` does nothing. */
   readonly direct: boolean;
-  dispose(): void;
+  dispose: () => void;
 }
 
 export interface LowResOptions {
@@ -230,18 +231,24 @@ function buildLowResTarget(
         isFloat = false;
         return;
       }
-      if (rt && lw === rt.width && lh === rt.height) return;
+      if (lw === rt?.width && lh === rt.height) {
+        return;
+      }
       rt?.dispose();
       rt = null;
       if (wantFloat) {
         rt = createRenderTarget(gl, lw, lh, gl.RGBA16F);
         // 16F not renderable after all: stop trying and use 8-bit from now on.
-        if (!rt) wantFloat = false;
+        if (!rt) {
+          wantFloat = false;
+        }
       }
       isFloat = rt !== null;
       rt ??= createRenderTarget(gl, lw, lh, gl.RGBA8);
-      if (!rt) throw new Error("Low-res target: RGBA8 is not renderable");
-      const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+      if (!rt) {
+        throw new Error("Low-res target: RGBA8 is not renderable");
+      }
+      const prevProgram = typedParameters(gl).getParameter(gl.CURRENT_PROGRAM);
       gl.useProgram(program);
       gl.uniform2f(uSize, lw, lh);
       gl.useProgram(prevProgram);
@@ -250,10 +257,14 @@ function buildLowResTarget(
       if (direct) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, fullWidth, fullHeight);
-      } else rt?.bind();
+      } else {
+        rt?.bind();
+      }
     },
     blit(outWidth = fullWidth, outHeight = fullHeight) {
-      if (direct) return;
+      if (direct) {
+        return;
+      }
       gl.viewport(0, 0, outWidth, outHeight);
       gl.disable(gl.BLEND);
       gl.useProgram(program);

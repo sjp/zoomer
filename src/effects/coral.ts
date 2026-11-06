@@ -284,8 +284,11 @@ export const coral = defineEffect(coralMeta, {
           advanceCaustics(phases, step);
 
           // Rebuild the reef for a new cycle, seed, layout param or (settled) aspect.
-          if (aspect !== builtAspect) resizeWait += step;
-          else resizeWait = 0;
+          if (aspect !== builtAspect) {
+            resizeWait += step;
+          } else {
+            resizeWait = 0;
+          }
           const cs = cycleSeed(seed, s.cycle);
           const key = `${String(cs)}|${String(p.density)}|${String(p.height)}`;
           if (key !== builtKey || resizeWait >= RESIZE_SETTLE || builtAspect === 0) {
@@ -320,7 +323,9 @@ export const coral = defineEffect(coralMeta, {
           gl.useProgram(coralProgram);
           if (p.palette !== paletteKey) {
             paletteKey = p.palette;
-            for (let i = 0; i < SLOTS; i++) colors.set(pal.coral[i], i * 3);
+            for (let i = 0; i < SLOTS; i++) {
+              colors.set(pal.coral[i], i * 3);
+            }
             gl.uniform3fv(cu.loc.uColors, colors);
           }
           cu.f2("uResolution", width, height);

@@ -70,9 +70,10 @@ export function magnet(phase: number, rhythm: Rhythm): number {
       return 0.5 - 0.5 * Math.cos(TAU * u);
     case "hold":
       return 1;
-    default:
-      return smoothstep(0, 0.25, u) - smoothstep(0.5, 0.75, u);
+    case "pulse":
+      break;
   }
+  return smoothstep(0, 0.25, u) - smoothstep(0.5, 0.75, u);
 }
 
 /** Wraps a lattice angle into [0, LATTICE_PERIOD): the lattice looks identical. */
@@ -117,7 +118,9 @@ export const PROFILE_SLOPE = 4 / 3;
  * bound at its closest approach to the pool's axis.
  */
 export function boundAt(r2: number, f: Field): number {
-  if (r2 >= 1) return 0;
+  if (r2 >= 1) {
+    return 0;
+  }
   const e = 1 - r2;
   return DOME_HEIGHT * (1 - r2 * r2) + e * e * (crownHeight(f) + spikeHeight(f));
 }
@@ -173,7 +176,9 @@ const scratch = [0, 0];
  */
 export function heightAt(x: number, z: number, f: Field): number {
   const r2 = x * x + z * z;
-  if (r2 >= 1) return 0;
+  if (r2 >= 1) {
+    return 0;
+  }
   const e = 1 - r2;
   latticeOffset(x, z, f, scratch);
   const c = Math.max(0, 1 - Math.hypot(scratch[0], scratch[1]) / CONE_RADIUS);

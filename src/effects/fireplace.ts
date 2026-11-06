@@ -363,8 +363,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
             rebuildLayout(p.height, p.quality, p.logs);
             if (import.meta.env.DEV) {
               const err = gl.getError();
-              if (err !== gl.NO_ERROR)
+              if (err !== gl.NO_ERROR) {
                 console.error(`fireplace: GL error 0x${err.toString(16)} in rebuildLayout`);
+              }
             }
             built.width = width;
             built.height = height;
@@ -409,7 +410,9 @@ export const fireplace = defineEffect(fireplaceMeta, {
           let visible = 0;
           for (let i = 0; i < embers.count; i++) {
             const a = emberAlpha(embers.age[i], embers.life[i], embers.seed[i], time) * p.intensity;
-            if (a <= 0.004) continue;
+            if (a <= 0.004) {
+              continue;
+            }
             const o = visible * 4;
             data[o] = embers.x[i] * scale;
             data[o + 1] = embers.y[i] * scale;

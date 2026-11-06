@@ -129,7 +129,9 @@ export const SWELL_TRAVEL = 2.5;
 export const PLANT_SEGMENTS = 16;
 export const PLANT_STRIP: readonly number[] = (() => {
   const out: number[] = [];
-  for (let i = 0; i <= PLANT_SEGMENTS; i++) out.push(i, -1, i, 1);
+  for (let i = 0; i <= PLANT_SEGMENTS; i++) {
+    out.push(i, -1, i, 1);
+  }
   return out;
 })();
 
@@ -168,7 +170,9 @@ export function plantWeight(u: number): number {
 function sampleX(rng: () => number, lo = 0.01, hi = 0.99): number {
   for (let k = 0; k < 32; k++) {
     const u = lo + (hi - lo) * rng();
-    if (rng() < plantWeight(u)) return u;
+    if (rng() < plantWeight(u)) {
+      return u;
+    }
   }
   return rng() < 0.5 ? lo : hi;
 }
@@ -208,14 +212,21 @@ export function buildPlants(seed: number, density: number, out: Float32Array): P
   let clumpX = 0.1;
   for (let i = 0; i < BACK_PLANTS; i++) {
     // Every plant draws the same numbers whether or not it is kept.
-    if (i % 4 === 0) clumpX = sampleX(rng, 0.02, 0.98);
+    if (i % 4 === 0) {
+      clumpX = sampleX(rng, 0.02, 0.98);
+    }
     const bushy = i % 4 === 3 || rng() < 0.2;
     const u = clamp(clumpX + (rng() - 0.5) * (bushy ? 0.06 : 0.035), 0.005, 0.995);
     const h = bushy ? 0.16 + 0.2 * rng() : 0.32 + 0.38 * rng();
     const w = bushy ? 24 + 14 * rng() : 5 + 3.5 * rng();
     const base = gravelTop(u) + 0.01 + 0.02 * rng();
-    if (i < backCount) writePlant(out, i, u, base, h, w, bushy ? PLANT_BUSHY : PLANT_RIBBON, rng);
-    else for (let k = 0; k < 4; k++) rng();
+    if (i < backCount) {
+      writePlant(out, i, u, base, h, w, bushy ? PLANT_BUSHY : PLANT_RIBBON, rng);
+    } else {
+      for (let k = 0; k < 4; k++) {
+        rng();
+      }
+    }
   }
   for (let j = 0; j < FRONT_PLANTS; j++) {
     const left = j % 2 === 0;
@@ -225,7 +236,11 @@ export function buildPlants(seed: number, density: number, out: Float32Array): P
     const w = bushy ? 44 + 16 * rng() : 9 + 4 * rng();
     if (j < frontCount) {
       writePlant(out, backCount + j, u, 1.03, h, w, bushy ? PLANT_BUSHY : PLANT_RIBBON, rng);
-    } else for (let k = 0; k < 4; k++) rng();
+    } else {
+      for (let k = 0; k < 4; k++) {
+        rng();
+      }
+    }
   }
   return { backCount, frontCount };
 }
@@ -391,8 +406,12 @@ export function schoolCount(count: number): number {
 
 /** Fish `i`'s species for the species param, given its school and the school count. */
 export function speciesOf(species: SpeciesId, i: number, school: number, schools: number): number {
-  if (species === "neon") return SPECIES_NEON;
-  if (species === "silver") return SPECIES_SILVER;
+  if (species === "neon") {
+    return SPECIES_NEON;
+  }
+  if (species === "silver") {
+    return SPECIES_SILVER;
+  }
   return schools > 1 ? school % 2 : i % 2;
 }
 
@@ -531,7 +550,9 @@ export function stepFishSim(sim: FishSim, dt: number, env: FishEnv): void {
   sim.live = growLive(sim.life, sim.live, target);
   const inStep = wall / FISH_FADE_IN;
   const outStep = wall / FADE_OUT;
-  for (let i = 0; i < sim.live; i++) stepLife(sim.life, i, target, inStep, outStep);
+  for (let i = 0; i < sim.live; i++) {
+    stepLife(sim.life, i, target, inStep, outStep);
+  }
 
   let left = wall * Math.max(0, env.speed);
   while (left > 1e-6) {
@@ -551,7 +572,9 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
 
   for (let s = 0; s < schools; s++) {
     sim.goalTimer[s] -= dt;
-    if (sim.goalTimer[s] <= 0) pickGoal(sim, s);
+    if (sim.goalTimer[s] <= 0) {
+      pickGoal(sim, s);
+    }
   }
 
   cx.fill(0);
@@ -598,11 +621,15 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
     ay += 0.3 * (cy[s] - y[i]) + 0.6 * (avy[s] - vy[i]);
     // Separation from every fish nearby.
     for (let j = 0; j < n; j++) {
-      if (j === i) continue;
+      if (j === i) {
+        continue;
+      }
       const dx = x[i] - x[j];
       const dy = y[i] - y[j];
       const d2 = dx * dx + dy * dy;
-      if (d2 >= r2 || d2 === 0) continue;
+      if (d2 >= r2 || d2 === 0) {
+        continue;
+      }
       const d = Math.sqrt(d2);
       const k = (0.5 * (1 - d / SEPARATION_R)) / d;
       ax += dx * k;
@@ -619,7 +646,9 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
     ay -= 0.4 * clamp((y[i] - (TANK_BOTTOM - WALL_ZONE)) / WALL_ZONE, 0, 1);
     // The central band in front of the speaker: a weak push outwards, so fish still cross.
     const bd = x[i] - bandC;
-    if (Math.abs(bd) < bandHalf) ax += 0.03 * Math.sign(bd || 1) * (1 - Math.abs(bd) / bandHalf);
+    if (Math.abs(bd) < bandHalf) {
+      ax += 0.03 * Math.sign(bd || 1) * (1 - Math.abs(bd) / bandHalf);
+    }
     // Darts: a short burst along the current heading.
     if (sim.dart[i] > 0) {
       sim.dart[i] = Math.max(0, sim.dart[i] - dt);
@@ -690,7 +719,9 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
     z[i] = zz;
 
     // Turning round: flip through edge-on at a fixed rate.
-    if (ux * sim.facing[i] < -TURN_HYSTERESIS) sim.facing[i] = sim.facing[i] > 0 ? -1 : 1;
+    if (ux * sim.facing[i] < -TURN_HYSTERESIS) {
+      sim.facing[i] = sim.facing[i] > 0 ? -1 : 1;
+    }
     const goal = sim.facing[i] > 0 ? 0 : Math.PI;
     const step = (Math.PI / TURN_TIME) * dt;
     const t0 = sim.turn[i];
@@ -744,7 +775,9 @@ export function fishInstances(
   for (let k = 0; k < n; k++) {
     const i = order[k];
     const l = sim.life[i];
-    if (l <= 0) continue;
+    if (l <= 0) {
+      continue;
+    }
     const sp = speciesOf(env.species, i, i % schools, schools);
     const o = written * stride;
     out[o] = sim.x[i];
@@ -755,7 +788,9 @@ export function fishInstances(
     out[o + 5] = fishFog(z[i]);
     out[o + 6] = sp;
     out[o + 7] = l * l * (3 - 2 * l);
-    if (z[i] < 0.5) far++;
+    if (z[i] < 0.5) {
+      far++;
+    }
     written++;
   }
   sim.farCount = far;

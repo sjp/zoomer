@@ -8,6 +8,7 @@
  * rotation, then samples a tiling 4-octave noise texture (one octave per channel).
  */
 import { fract, smoothstep } from "./math";
+import { lookup } from "./lookup";
 import { buildPeriodicNoiseTexture, createRng, type NoiseChannel } from "./noise";
 
 // ---------------------------------------------------------------------------
@@ -33,10 +34,10 @@ export function paletteColor(
   c3: string,
 ): string {
   const i = index <= 0 ? 0 : index >= 2 ? 2 : Math.floor(index);
-  if (palette === "custom") return i === 0 ? c1 : i === 1 ? c2 : c3;
-  const list: readonly string[] = Object.hasOwn(PALETTES, palette)
-    ? PALETTES[palette as keyof typeof PALETTES]
-    : PALETTES.orion;
+  if (palette === "custom") {
+    return i === 0 ? c1 : i === 1 ? c2 : c3;
+  }
+  const list: readonly string[] = lookup(PALETTES, palette, "orion");
   return list[i];
 }
 
@@ -56,8 +57,10 @@ export function nebulaNoiseChannels(seed = NOISE_SEED): NoiseChannel[] {
 
 let noiseData: Uint8Array | undefined;
 /** The RGBA8 noise texture data, built once per page (about 10 ms). */
-export const getNoiseData = (): Uint8Array =>
-  (noiseData ??= buildPeriodicNoiseTexture(NOISE_SIZE, nebulaNoiseChannels()));
+export const getNoiseData = (): Uint8Array => {
+  noiseData ??= buildPeriodicNoiseTexture(NOISE_SIZE, nebulaNoiseChannels());
+  return noiseData;
+};
 
 /** Octave weights for the 4-channel fBm fetch. */
 export const OCT = [0.5, 0.25, 0.125, 0.0625] as const;
@@ -135,7 +138,9 @@ export interface NebulaLayout {
 export function createLayout(seed: number): NebulaLayout {
   const rng = createRng(Math.floor(seed) * 7919 + 101);
   const base = new Float64Array(OFFSET_FLOATS);
-  for (let i = 0; i < OFFSET_FLOATS; i++) base[i] = rng();
+  for (let i = 0; i < OFFSET_FLOATS; i++) {
+    base[i] = rng();
+  }
   return { base, side: rng() < 0.5 ? -1 : 1, coreU: rng(), coreV: rng() };
 }
 
@@ -154,7 +159,9 @@ export function coreCentre(layout: NebulaLayout, aspect: number, out: Float64Arr
  * so the wrap is invisible. Allocates nothing.
  */
 export function offsetsAt(layout: NebulaLayout, t: number, out: Float64Array | Float32Array): void {
-  for (let i = 0; i < OFFSET_FLOATS; i++) out[i] = fract(layout.base[i] + DRIFT[i] * t);
+  for (let i = 0; i < OFFSET_FLOATS; i++) {
+    out[i] = fract(layout.base[i] + DRIFT[i] * t);
+  }
 }
 
 /** Rotation angle at time `t`, wrapped to [0, 2pi) (exact: the rotation is periodic). */
@@ -337,7 +344,9 @@ export function buildStars(
     const ub = rng();
     const ut = rng();
     const rr = STAR_DISC * STAR_DISC * ur;
-    if (rr > r2) continue;
+    if (rr > r2) {
+      continue;
+    }
     const r = Math.sqrt(rr);
     const a = ua * Math.PI * 2;
     const x = r * Math.cos(a);
@@ -366,13 +375,17 @@ export function buildStars(
       for (let i = k; i < n; i++) {
         const o = i * STAR_STRIDE;
         const ax = Math.abs(out[o]);
-        if (ax < third || ax > halfW || Math.abs(out[o + 1]) > 0.48) continue;
+        if (ax < third || ax > halfW || Math.abs(out[o + 1]) > 0.48) {
+          continue;
+        }
         if (out[o + 3] >= bestB) {
           bestB = out[o + 3];
           best = i;
         }
       }
-      if (best < 0) break;
+      if (best < 0) {
+        break;
+      }
       swapStars(out, k, best);
       spikeCount++;
     }
@@ -386,7 +399,9 @@ export function buildStars(
 }
 
 function swapStars(out: Float32Array, i: number, j: number): void {
-  if (i === j) return;
+  if (i === j) {
+    return;
+  }
   const a = i * STAR_STRIDE;
   const b = j * STAR_STRIDE;
   for (let c = 0; c < STAR_STRIDE; c++) {

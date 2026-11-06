@@ -82,11 +82,11 @@ export function recordCanvas(
   );
   const mediaRecorderType = supported.at(0);
   if (
-    mediaRecorderType?.startsWith("video/mp4") ||
+    mediaRecorderType?.startsWith("video/mp4") === true ||
     !frames ||
     typeof VideoEncoder === "undefined"
   ) {
-    return mediaRecorderType
+    return mediaRecorderType !== undefined && mediaRecorderType !== ""
       ? recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType)
       : Promise.reject(new Error("This browser cannot record video."));
   }
@@ -96,7 +96,9 @@ export function recordCanvas(
     if (await canRecordMp4(width, height, opts)) {
       return { blob: await recordMp4(canvas, opts, frames), extension: "mp4" as const };
     }
-    if (!mediaRecorderType) throw new Error("This browser cannot record video.");
+    if (mediaRecorderType === undefined || mediaRecorderType === "") {
+      throw new Error("This browser cannot record video.");
+    }
     return recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType);
   })();
 }
@@ -122,7 +124,9 @@ function recordWithMediaRecorder(
 
     /** Releases the capture and the timer, and settles the promise once. */
     const finish = (err?: unknown) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(timer);
       if (recorder && recorder.state !== "inactive") {
@@ -132,13 +136,19 @@ function recordWithMediaRecorder(
           // Already stopping; the tracks are stopped below either way.
         }
       }
-      if (stream) for (const track of stream.getTracks()) track.stop();
-      if (err !== undefined) reject(toError(err));
-      else
+      if (stream) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      }
+      if (err !== undefined) {
+        reject(toError(err));
+      } else {
         resolve({
           blob: new Blob(chunks, { type: mimeType }),
           extension: mimeType.startsWith("video/mp4") ? "mp4" : "webm",
         });
+      }
     };
 
     try {
@@ -148,18 +158,22 @@ function recordWithMediaRecorder(
         videoBitsPerSecond: videoBitrate(width, height),
       });
       const rec = recorder;
-      rec.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      rec.onerror = () => {
+      rec.addEventListener("dataavailable", (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      });
+      rec.addEventListener("error", () => {
         finish(new Error("Recording failed."));
-      };
-      rec.onstop = () => {
+      });
+      rec.addEventListener("stop", () => {
         finish();
-      };
+      });
       rec.start(1000);
       timer = setTimeout(() => {
-        if (rec.state !== "inactive") rec.stop();
+        if (rec.state !== "inactive") {
+          rec.stop();
+        }
       }, seconds * 1000);
     } catch (err) {
       finish(err ?? new Error("Recording failed."));

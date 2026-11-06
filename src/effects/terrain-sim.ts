@@ -44,7 +44,9 @@ export const cornerCode = (dx: number, dz: number) => dx + 1 + 3 * (dz + 1);
 /** Triangles in the mesh. */
 export function triangleCount(): number {
   let n = 0;
-  for (let r = 0; r < ROWS; r++) n += 2 * (2 * rowHalfWidth(r) + 1);
+  for (let r = 0; r < ROWS; r++) {
+    n += 2 * (2 * rowHalfWidth(r) + 1);
+  }
   return n;
 }
 
@@ -194,7 +196,9 @@ export const rowsNeeded = (row: number) => row + ROWS + 1;
 export function buildOctaves(seed: number, first = 0): Uint8Array {
   const data = new Uint8Array(PERIOD * PERIOD * 4);
   const write = createOctaveRows(seed);
-  for (let r = first; r < first + PERIOD; r++) write(r, data, ringRow(r) * PERIOD * 4);
+  for (let r = first; r < first + PERIOD; r++) {
+    write(r, data, ringRow(r) * PERIOD * 4);
+  }
   return data;
 }
 
@@ -213,7 +217,9 @@ export function octaveWeights(roughness: number, out: Float64Array): number {
     w *= gain;
   }
   // Single octaves rarely pass +-0.7, so stretch the sum to about +-1.
-  for (let i = 0; i < 4; i++) out[i] = (out[i] / sum) * amp * 1.4;
+  for (let i = 0; i < 4; i++) {
+    out[i] = (out[i] / sum) * amp * 1.4;
+  }
   return amp;
 }
 
@@ -297,7 +303,9 @@ export function buildRamp(stops: readonly RampStop[], out: Float32Array): void {
   for (let i = 0; i < RAMP_SIZE; i++) {
     const t = i / (RAMP_SIZE - 1);
     let j = 0;
-    while (j < stops.length - 2 && stops[j + 1].at <= t) j++;
+    while (j < stops.length - 2 && stops[j + 1].at <= t) {
+      j++;
+    }
     const a = stops[j];
     const b = stops[Math.min(j + 1, stops.length - 1)];
     const span = b.at - a.at;

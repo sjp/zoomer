@@ -37,8 +37,12 @@ describe("attractorAt", () => {
       let bad = 0;
       for (let t = 0; t < 600; t += 0.25) {
         attractorAt(t, aspect, out);
-        if (out[1] < ATTR_MIN_Y - 1e-6 || out[1] > 0.9) bad++;
-        if (out[0] < 0.15 * aspect || out[0] > 0.85 * aspect) bad++;
+        if (out[1] < ATTR_MIN_Y - 1e-6 || out[1] > 0.9) {
+          bad++;
+        }
+        if (out[0] < 0.15 * aspect || out[0] > 0.85 * aspect) {
+          bad++;
+        }
       }
       expect(bad).toBe(0);
     }
@@ -50,7 +54,9 @@ describe("attractorAt", () => {
     let lowest = Infinity;
     for (let t = 0; t < 600; t += 0.1) {
       attractorAt(t, 16 / 9, out);
-      if (Math.abs(out[0] / (16 / 9) - 0.5) < 0.05) lowest = Math.min(lowest, out[1]);
+      if (Math.abs(out[0] / (16 / 9) - 0.5) < 0.05) {
+        lowest = Math.min(lowest, out[1]);
+      }
     }
     expect(lowest).toBeGreaterThan(0.72);
   });
@@ -90,19 +96,31 @@ describe("boundaryForce", () => {
     const aspect = 16 / 9;
     const problems: string[] = [];
     for (let y = 0.45; y <= 0.95; y += 0.05) {
-      if (boundaryForce(0.02, y, aspect, f)[0] <= 0) problems.push(`left ${String(y)}`);
-      if (boundaryForce(-0.1, y, aspect, f)[0] <= 0) problems.push(`left outside ${String(y)}`);
-      if (boundaryForce(aspect - 0.02, y, aspect, f)[0] >= 0) problems.push(`right ${String(y)}`);
-      if (boundaryForce(aspect + 0.1, y, aspect, f)[0] >= 0)
+      if (boundaryForce(0.02, y, aspect, f)[0] <= 0) {
+        problems.push(`left ${String(y)}`);
+      }
+      if (boundaryForce(-0.1, y, aspect, f)[0] <= 0) {
+        problems.push(`left outside ${String(y)}`);
+      }
+      if (boundaryForce(aspect - 0.02, y, aspect, f)[0] >= 0) {
+        problems.push(`right ${String(y)}`);
+      }
+      if (boundaryForce(aspect + 0.1, y, aspect, f)[0] >= 0) {
         problems.push(`right outside ${String(y)}`);
+      }
     }
     for (let x = 0.1; x < aspect - 0.1; x += 0.05) {
-      if (boundaryForce(x, 0.98, aspect, f)[1] >= 0) problems.push(`top ${String(x)}`);
-      if (boundaryForce(x, 1.1, aspect, f)[1] >= 0) problems.push(`top outside ${String(x)}`);
+      if (boundaryForce(x, 0.98, aspect, f)[1] >= 0) {
+        problems.push(`top ${String(x)}`);
+      }
+      if (boundaryForce(x, 1.1, aspect, f)[1] >= 0) {
+        problems.push(`top outside ${String(x)}`);
+      }
       // Everywhere in the bottom third the push is upwards.
       for (let y = -0.1; y < 1 / 3; y += 0.05) {
-        if (boundaryForce(x, y, aspect, f)[1] <= 0)
+        if (boundaryForce(x, y, aspect, f)[1] <= 0) {
           problems.push(`bottom ${String(x)} ${String(y)}`);
+        }
       }
     }
     expect(problems).toEqual([]);
@@ -117,8 +135,9 @@ describe("boundaryForce", () => {
         boundaryForce(x, y, aspect, f);
         const outward = f[0] * (x - cx) + f[1] * (y - EX_Y);
         const deepInside = Math.abs(x - cx) < 0.16 && y < 0.5;
-        if (outward < 0 || f[1] < 0 || (deepInside && outward <= 0))
+        if (outward < 0 || f[1] < 0 || (deepInside && outward <= 0)) {
           problems.push(`${String(x)} ${String(y)}`);
+        }
       }
     }
     expect(problems).toEqual([]);
@@ -170,8 +189,12 @@ describe("steeringAt", () => {
     for (let t = 0; t < 300; t += 0.5) {
       steeringAt(t, 1, out);
       minRate = Math.min(minRate, out[0], out[1]);
-      if (Math.abs(out[2]) > SWIRL + 1e-6) bad++;
-      if (Math.abs(out[0] + out[1] - 2) > 1e-5) bad++;
+      if (Math.abs(out[2]) > SWIRL + 1e-6) {
+        bad++;
+      }
+      if (Math.abs(out[0] + out[1] - 2) > 1e-5) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(minRate).toBeGreaterThan(0.3);
@@ -188,11 +211,19 @@ describe("predatorAt", () => {
     for (let t = 0; t < 1200; t += 0.05) {
       predatorAt(t, aspect, out);
       const on = out[2] > 0;
-      if (on && !active) starts.push(t);
+      if (on && !active) {
+        starts.push(t);
+      }
       active = on;
-      if (out[2] < 0 || out[2] > PRED_ACCEL) bad++;
-      if (on && (out[1] < 0.55 || out[1] > 0.95)) bad++;
-      if (on && (out[0] < -0.16 || out[0] > aspect + 0.16)) bad++;
+      if (out[2] < 0 || out[2] > PRED_ACCEL) {
+        bad++;
+      }
+      if (on && (out[1] < 0.55 || out[1] > 0.95)) {
+        bad++;
+      }
+      if (on && (out[0] < -0.16 || out[0] > aspect + 0.16)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(starts.length).toBeGreaterThan(25);
@@ -205,7 +236,9 @@ describe("predatorAt", () => {
   it("crosses the whole frame in one pass", () => {
     const out = new Float32Array(3);
     let t = 0;
-    while (predatorAt(t, 16 / 9, out)[2] === 0) t += 0.01;
+    while (predatorAt(t, 16 / 9, out)[2] === 0) {
+      t += 0.01;
+    }
     const x0 = out[0];
     predatorAt(t + PRED_DURATION - 0.02, 16 / 9, out);
     expect(Math.abs(out[0] - x0)).toBeGreaterThan(16 / 9);
@@ -268,7 +301,9 @@ describe("fieldEncoding", () => {
     let b = 0;
     let splatted = 0;
     for (let i = 0; i < n * e.stride; i++) {
-      if (i % e.stride !== 0) continue;
+      if (i % e.stride !== 0) {
+        continue;
+      }
       splatted++;
       // Quantised: floor(1 + v + u) with u uniform, evenly spread here.
       const u = (splatted % 16) / 16 + 1 / 32;
@@ -318,8 +353,12 @@ describe("seedBirds", () => {
     let bad = 0;
     for (let i = 0; i < n; i++) {
       const o = i * BIRD_FLOATS;
-      if (a[o] < 0 || a[o] > 16 / 9 || a[o + 1] < 0.4 || a[o + 1] > 1) bad++;
-      if (Math.abs(Math.hypot(a[o + 2], a[o + 3]) - CRUISE) > 1e-6) bad++;
+      if (a[o] < 0 || a[o] > 16 / 9 || a[o + 1] < 0.4 || a[o + 1] > 1) {
+        bad++;
+      }
+      if (Math.abs(Math.hypot(a[o + 2], a[o + 3]) - CRUISE) > 1e-6) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });

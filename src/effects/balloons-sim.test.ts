@@ -48,7 +48,9 @@ function insideOutline(x: number, y: number, margin = 0): boolean {
     const ex = bx - ax;
     const ey = by - ay;
     // Right of each edge (y up), by `margin`.
-    if ((ey * (x - ax) - ex * (y - ay)) / Math.hypot(ex, ey) < margin) return false;
+    if ((ey * (x - ax) - ex * (y - ay)) / Math.hypot(ex, ey) < margin) {
+      return false;
+    }
   }
   return true;
 }
@@ -83,7 +85,9 @@ describe("balloon shape", () => {
     for (const [x, y] of OUTLINE) {
       let found = 0;
       for (let i = 0; i < BALLOON_STRIP.length; i += 2) {
-        if (BALLOON_STRIP[i] === x && BALLOON_STRIP[i + 1] === y) found++;
+        if (BALLOON_STRIP[i] === x && BALLOON_STRIP[i + 1] === y) {
+          found++;
+        }
       }
       expect(found).toBe(1);
       expect(Math.abs(x)).toBeLessThan(EXTENT);
@@ -126,12 +130,20 @@ describe("depth curves", () => {
 
 describe("palettes and light", () => {
   it("has a palette and light for every option, and falls back", () => {
-    for (const o of PALETTE_OPTIONS) expect(paletteFor(o.value)).toBe(PALETTES[o.value]);
-    for (const o of LIGHT_OPTIONS) expect(lightFor(o.value)).toBe(LIGHTS[o.value]);
+    for (const o of PALETTE_OPTIONS) {
+      expect(paletteFor(o.value)).toBe(PALETTES[o.value]);
+    }
+    for (const o of LIGHT_OPTIONS) {
+      expect(lightFor(o.value)).toBe(LIGHTS[o.value]);
+    }
     expect(paletteFor("nope")).toBe(PALETTES.classic);
     expect(lightFor("toString")).toBe(LIGHTS.morning);
-    for (const p of Object.values(PALETTES)) expect(p.length).toBe(PALETTE_SIZE);
-    for (const l of Object.values(LIGHTS)) expect(Math.hypot(...l.dir)).toBeCloseTo(1);
+    for (const p of Object.values(PALETTES)) {
+      expect(p.length).toBe(PALETTE_SIZE);
+    }
+    for (const l of Object.values(LIGHTS)) {
+      expect(Math.hypot(...l.dir)).toBeCloseTo(1);
+    }
   });
 
   it("hazes farther hill layers towards the horizon", () => {
@@ -149,7 +161,9 @@ describe("balloons", () => {
   it("are deterministic per seed", () => {
     const run = (seed: number) => {
       const b = createBalloons(seed, ASPECT);
-      for (let s = 0; s < 3000; s++) stepBalloons(b, DT, ASPECT, 1, 6);
+      for (let s = 0; s < 3000; s++) {
+        stepBalloons(b, DT, ASPECT, 1, 6);
+      }
       return [...b.x, ...b.y, ...b.burnTimer, ...b.burnAge];
     };
     expect(run(7)).toEqual(run(7));
@@ -172,7 +186,7 @@ describe("balloons", () => {
   it("spread any first few over near and far", () => {
     for (let seed = 0; seed < 20; seed++) {
       const b = createBalloons(seed, ASPECT);
-      const first = [...b.depth.slice(0, MIN_BALLOONS)];
+      const first = b.depth.slice(0, MIN_BALLOONS);
       expect(Math.max(...first) - Math.min(...first)).toBeGreaterThan(0.3);
     }
   });
@@ -180,7 +194,9 @@ describe("balloons", () => {
   it("never start in the centre third", () => {
     for (let seed = 0; seed < 50; seed++) {
       const b = createBalloons(seed, ASPECT);
-      for (const x of b.x) expect(x < ASPECT / 3 || x > (2 * ASPECT) / 3).toBe(true);
+      for (const x of b.x) {
+        expect(x < ASPECT / 3 || x > (2 * ASPECT) / 3).toBe(true);
+      }
     }
   });
 
@@ -193,11 +209,15 @@ describe("balloons", () => {
         prev.set(b.x);
         stepBalloons(b, 0.1, ASPECT, 3, MAX_BALLOONS);
         for (let i = 0; i < MAX_BALLOONS; i++) {
-          if (Math.abs(b.x[i] - prev[i]) < 0.5) continue;
+          if (Math.abs(b.x[i] - prev[i]) < 0.5) {
+            continue;
+          }
           wraps++;
           // Off-screen by the balloon's whole extent, less at most one step of drift.
           const ext = EXTENT * balloonRadius(b.depth[i]) - 0.01;
-          for (const x of [prev[i], b.x[i]]) expect(x < -ext || x > ASPECT + ext).toBe(true);
+          for (const x of [prev[i], b.x[i]]) {
+            expect(x < -ext || x > ASPECT + ext).toBe(true);
+          }
         }
       }
       expect(wraps).toBeGreaterThan(10);
@@ -211,7 +231,9 @@ describe("balloons", () => {
     stepBalloons(b, 0, 4 / 3, 1, MAX_BALLOONS);
     const onScreen = frac.map((f, i) => [f, i]).filter(([f]) => f > 0.1 && f < 0.9);
     expect(onScreen.length).toBeGreaterThan(0);
-    for (const [f, i] of onScreen) expect(Math.abs(b.x[i] / (4 / 3) - f)).toBeLessThan(0.1);
+    for (const [f, i] of onScreen) {
+      expect(Math.abs(b.x[i] / (4 / 3) - f)).toBeLessThan(0.1);
+    }
   });
 
   it("stay within their altitude band", () => {
@@ -263,7 +285,9 @@ describe("balloons", () => {
             `step ${String(s)}, balloon ${String(i)}: burnTimer ${String(timer)}, burnAge ${String(age)}`,
           );
         }
-        if (age >= 0) fired[i] = 1;
+        if (age >= 0) {
+          fired[i] = 1;
+        }
       }
     }
     expect(unbounded).toEqual([]);
@@ -285,9 +309,13 @@ describe("balloons", () => {
     const b = createBalloons(2, ASPECT);
     stepBalloons(b, 0.1, ASPECT, 0, 4);
     const x = [...b.x];
-    for (let s = 0; s < 40; s++) stepBalloons(b, 0.1, ASPECT, 0, 4);
+    for (let s = 0; s < 40; s++) {
+      stepBalloons(b, 0.1, ASPECT, 0, 4);
+    }
     expect([...b.x]).toEqual(x);
-    for (let i = 0; i < MAX_BALLOONS; i++) expect(b.presence[i]).toBe(i < 4 ? 1 : 0);
+    for (let i = 0; i < MAX_BALLOONS; i++) {
+      expect(b.presence[i]).toBe(i < 4 ? 1 : 0);
+    }
     const out = new Float32Array(MAX_BALLOONS * BALLOON_FLOATS);
     expect(writeBalloons(b, out, PALETTES.classic, 1080, true)).toBe(4);
     stepBalloons(b, 0.1, ASPECT, 0, 5);
@@ -296,7 +324,9 @@ describe("balloons", () => {
 
   it("writes instances farthest first in px, with no glow when burners are off", () => {
     const b = createBalloons(1, ASPECT);
-    for (let s = 0; s < 3000; s++) stepBalloons(b, DT, ASPECT, 1, MAX_BALLOONS);
+    for (let s = 0; s < 3000; s++) {
+      stepBalloons(b, DT, ASPECT, 1, MAX_BALLOONS);
+    }
     const out = new Float32Array(MAX_BALLOONS * BALLOON_FLOATS);
     const n = writeBalloons(b, out, PALETTES.pastel, 2160, false);
     expect(n).toBe(MAX_BALLOONS);

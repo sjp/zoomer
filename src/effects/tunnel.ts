@@ -152,7 +152,9 @@ export const buildTexture = (out: Float32Array, seed: number) => {
   // Histogram-equalise, then shape: an even spread of values keeps every
   // palette colour on screen, and the curve keeps bright strands the minority.
   const order = new Uint32Array(out.length);
-  for (let i = 0; i < order.length; i++) order[i] = i;
+  for (let i = 0; i < order.length; i++) {
+    order[i] = i;
+  }
   order.sort((a, b) => out[a] - out[b]);
   const last = order.length - 1;
   for (let r = 0; r <= last; r++) {
@@ -187,7 +189,9 @@ export const buildTexture = (out: Float32Array, seed: number) => {
  * format, and R16F is only renderable with EXT_color_buffer_float.
  */
 export function downsample2x(src: Float32Array, size: number): Float32Array {
-  if (size <= 1) return src.slice(0, 1);
+  if (size <= 1) {
+    return src.slice(0, 1);
+  }
   const half = size >> 1;
   const out = new Float32Array(half * half);
   for (let y = 0; y < half; y++) {
@@ -204,7 +208,9 @@ export function downsample2x(src: Float32Array, size: number): Float32Array {
 /** Full mip chain of a square power-of-two texture: `[level0, level1, ..., 1x1]`. */
 export function buildMipChain(level0: Float32Array, size: number): Float32Array[] {
   const levels = [level0];
-  for (let s = size; s > 1; s >>= 1) levels.push(downsample2x(levels[levels.length - 1], s));
+  for (let s = size; s > 1; s >>= 1) {
+    levels.push(downsample2x(levels[levels.length - 1], s));
+  }
   return levels;
 }
 
@@ -251,7 +257,7 @@ export const tunnel = defineEffect(tunnelMeta, {
       // createDataTexture, so its unpack state still applies.
       gl.bindTexture(gl.TEXTURE_2D, texture);
       const levels = getTextureLevels();
-      for (let i = 1; i < levels.length; i++)
+      for (let i = 1; i < levels.length; i++) {
         gl.texImage2D(
           gl.TEXTURE_2D,
           i,
@@ -263,6 +269,7 @@ export const tunnel = defineEffect(tunnelMeta, {
           gl.FLOAT,
           levels[i],
         );
+      }
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       gl.bindTexture(gl.TEXTURE_2D, null);
       const u = createUniforms(gl, program, [
@@ -293,7 +300,7 @@ export const tunnel = defineEffect(tunnelMeta, {
       let uOff = 0;
       let spiralOff = 0;
       // Colours last derived from; the uniforms themselves skip unchanged uploads.
-      let lastBrightness = NaN;
+      let lastBrightness = Number.NaN;
       let lastCore = "";
       let lastColor1 = "";
       let lastColor2 = "";

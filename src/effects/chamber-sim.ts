@@ -61,8 +61,12 @@ export function takeEvent(s: EventSchedule, t: number, rate: number): number {
     s.rate = rate;
     s.next = t + eventGap(s.rand, rate);
   }
-  if (t - s.next > SCHEDULE_MAX_LAG) s.next = t + eventGap(s.rand, rate);
-  if (t < s.next) return Number.NaN;
+  if (t - s.next > SCHEDULE_MAX_LAG) {
+    s.next = t + eventGap(s.rand, rate);
+  }
+  if (t < s.next) {
+    return Number.NaN;
+  }
   const at = s.next;
   s.next = at + eventGap(s.rand, rate);
   return at;
@@ -87,8 +91,12 @@ export const MIX_WEIGHTS: Record<MixId, readonly [number, number, number]> = {
 /** The kind for a uniform draw `r` (0..1) under `mix` (unknown ids count as natural). */
 export function pickKind(mix: string, r: number): TrackKind {
   const w = lookup(MIX_WEIGHTS, mix, "natural");
-  if (r < w[0]) return ALPHA;
-  if (r < w[0] + w[1]) return ELECTRON;
+  if (r < w[0]) {
+    return ALPHA;
+  }
+  if (r < w[0] + w[1]) {
+    return ELECTRON;
+  }
   return MUON;
 }
 
@@ -223,10 +231,16 @@ function pushPoint(tr: Track, x: number, y: number) {
 function toEdge(x: number, y: number, dx: number, dy: number, w: number): number {
   let t = Number.POSITIVE_INFINITY;
   const lo = FRAME_MARGIN;
-  if (dx > 1e-9) t = Math.min(t, (w - lo - x) / dx);
-  else if (dx < -1e-9) t = Math.min(t, (lo - x) / dx);
-  if (dy > 1e-9) t = Math.min(t, (REF_HEIGHT - lo - y) / dy);
-  else if (dy < -1e-9) t = Math.min(t, (lo - y) / dy);
+  if (dx > 1e-9) {
+    t = Math.min(t, (w - lo - x) / dx);
+  } else if (dx < -1e-9) {
+    t = Math.min(t, (lo - x) / dx);
+  }
+  if (dy > 1e-9) {
+    t = Math.min(t, (REF_HEIGHT - lo - y) / dy);
+  } else if (dy < -1e-9) {
+    t = Math.min(t, (lo - y) / dy);
+  }
   return Math.max(0, t);
 }
 
@@ -275,10 +289,14 @@ function walk(
       h += gauss(rand) * lerp(SCATTER[0], SCATTER[1], (s / length) ** 2);
     }
     // A sliver left at the end isn't worth a point (and could round to nothing in float32).
-    if (!(ds > 0.05)) break;
+    if (!(ds > 0.05)) {
+      break;
+    }
     const nx = x + Math.cos(h) * ds;
     const ny = y + Math.sin(h) * ds;
-    if (!inFrame(nx, ny, w)) break;
+    if (!inFrame(nx, ny, w)) {
+      break;
+    }
     pushPoint(tr, nx, ny);
     x = nx;
     y = ny;
@@ -311,7 +329,9 @@ export function spawnTrack(
     const ax = lerp(FRAME_MARGIN, w - FRAME_MARGIN, rand());
     const ay = lerp(FRAME_MARGIN, REF_HEIGHT - FRAME_MARGIN, rand());
     const keep = rand();
-    if (Math.abs(ax / w - 0.5) < CENTRE_HALF && keep >= CENTRE_KEEP) continue;
+    if (Math.abs(ax / w - 0.5) < CENTRE_HALF && keep >= CENTRE_KEEP) {
+      continue;
+    }
     const heading = rand() * 2 * Math.PI;
     const dx = Math.cos(heading);
     const dy = Math.sin(heading);
@@ -321,7 +341,9 @@ export function spawnTrack(
       const y0 = ay - dy * half;
       const x1 = ax + dx * half;
       const y1 = ay + dy * half;
-      if (!inFrame(x0, y0, w) || !inFrame(x1, y1, w)) continue;
+      if (!inFrame(x0, y0, w) || !inFrame(x1, y1, w)) {
+        continue;
+      }
       resetPath(tr, x0, y0);
       pushPoint(tr, x1, y1);
       tr.spiral = false;
@@ -330,7 +352,9 @@ export function spawnTrack(
       const back = toEdge(ax, ay, -dx, -dy, w);
       const fwd = toEdge(ax, ay, dx, dy, w);
       const chord = back + fwd;
-      if (chord < MUON_MIN) continue;
+      if (chord < MUON_MIN) {
+        continue;
+      }
       const x0 = ax - dx * back;
       const y0 = ay - dy * back;
       if (magnetic) {
@@ -354,7 +378,9 @@ export function spawnTrack(
       walk(tr, SCATTERING, ax, ay, heading, length, w, 0, 0, 1, rand);
       tr.spiral = false;
     }
-    if (tr.length < MIN_LENGTH) continue;
+    if (tr.length < MIN_LENGTH) {
+      continue;
+    }
     tr.kind = kind;
     tr.start = at;
     tr.grow = lerp(GROW[kind][0], GROW[kind][1], rand());
@@ -372,7 +398,9 @@ export function spawnTrack(
  * diffuses. 0 at and outside both ends, never above 1.
  */
 export function trackEnvelope(age: number, grow: number, life: number): number {
-  if (!(age > 0) || !(age < life)) return 0;
+  if (!(age > 0) || !(age < life)) {
+    return 0;
+  }
   const s = trackSpread(age, grow, life);
   return smoothstep(0, grow, age) * (1 - s) * (1 - s);
 }
@@ -436,7 +464,9 @@ export interface Chamber {
 
 export function createChamber(seed: number): Chamber {
   const list: Track[] = [];
-  for (let i = 0; i < MAX_TRACKS; i++) list.push(createTrack());
+  for (let i = 0; i < MAX_TRACKS; i++) {
+    list.push(createTrack());
+  }
   return {
     list,
     count: 0,
@@ -461,7 +491,9 @@ export function stepChamber(
 ): void {
   for (let i = 0; i < c.count; i++) {
     const tr = c.list[i];
-    if (t - tr.start < tr.life) continue;
+    if (t - tr.start < tr.life) {
+      continue;
+    }
     const last = --c.count;
     c.list[i] = c.list[last];
     c.list[last] = tr;

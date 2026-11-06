@@ -25,7 +25,9 @@ import { defineEffect } from "./types";
  * 16384 × 24 bytes = 384 KiB of instance data, uploaded a few segments per frame.
  */
 const MAX_SEGMENTS = 16384;
-if (MAX_SEGMENTS < 2.5 * FIGURE_SEGMENTS) throw new Error("Harmonograph: ring too small");
+if (MAX_SEGMENTS < 2.5 * FIGURE_SEGMENTS) {
+  throw new Error("Harmonograph: ring too small");
+}
 
 /** Glow radius beyond the line's edge, in 1080p pixels. */
 const GLOW_RADIUS = 9;
@@ -195,7 +197,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
 
       /** Points the instance attributes at `first` and draws `count` segments from there. */
       function drawRange(first: number, count: number) {
-        if (count <= 0) return;
+        if (count <= 0) {
+          return;
+        }
         gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stride, first * stride);
         gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, first * stride + 16);
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
@@ -220,7 +224,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
       /** Uploads the slots written since the last upload (one or two ranges). */
       function upload() {
         const n = sim.dirtyCount;
-        if (n === 0) return;
+        if (n === 0) {
+          return;
+        }
         gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
         if (n >= MAX_SEGMENTS) {
           gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
@@ -234,7 +240,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
             start * SEG_FLOATS,
             first * SEG_FLOATS,
           );
-          if (first < n) gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, (n - first) * SEG_FLOATS);
+          if (first < n) {
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, (n - first) * SEG_FLOATS);
+          }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         sim.clearDirty();
@@ -262,7 +270,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
             // Start with a fifth of the first figure already drawn, not a blank frame.
             started = true;
             const warm = 0.2 * p.drawTime;
-            for (let t = 0; t < warm; t += 0.1) sim.step(0.1, settings);
+            for (let t = 0; t < warm; t += 0.1) {
+              sim.step(0.1, settings);
+            }
           }
           sim.step(dt, settings);
           upload();
@@ -274,7 +284,9 @@ export const harmonograph = defineEffect(harmonographMeta, {
           const bg = backgroundRgb(p.background);
           gl.clearColor(bg[0], bg[1], bg[2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
-          if (sim.live === 0) return;
+          if (sim.live === 0) {
+            return;
+          }
 
           gl.useProgram(program);
           if (palette !== p.palette) {

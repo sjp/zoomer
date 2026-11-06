@@ -54,7 +54,7 @@ const GLOW_R = [60, 140] as const;
 /** How fast the shared lean follows the draft curve, per second (smooths param changes). */
 const LEAN_RATE = 1.5;
 
-const vec3 = (c: readonly number[]) => `vec3(${c.map(glslFloat).join(", ")})`;
+const vec3 = (c: readonly number[]) => `vec3(${c.map((v) => glslFloat(v)).join(", ")})`;
 
 /**
  * Wall and table lighting at reduced resolution: the sum of up to 7 radial

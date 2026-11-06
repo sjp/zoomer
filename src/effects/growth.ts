@@ -73,7 +73,9 @@ export function cyclePeriod(c: GrowthCycle): number {
     throw new Error("growth: grow and melt must be positive and hold non-negative");
   }
   const p = c.grow + c.hold + c.melt;
-  if (!Number.isFinite(p)) throw new Error("growth: phase durations must be finite");
+  if (!Number.isFinite(p)) {
+    throw new TypeError("growth: phase durations must be finite");
+  }
   return p;
 }
 
@@ -136,9 +138,9 @@ export interface GrowthClock {
    * With `loop` false the clock stops at the start of the hold, and a melt in
    * progress runs backwards to it, so the pattern returns to full growth smoothly.
    */
-  advance(dt: number, speed?: number, loop?: boolean): GrowthState;
+  advance: (dt: number, speed?: number, loop?: boolean) => GrowthState;
   /** Jumps to `t` seconds after the start of cycle 0. */
-  set(t: number): GrowthState;
+  set: (t: number) => GrowthState;
 }
 
 export function createGrowthClock(c: GrowthCycle, start = 0): GrowthClock {
@@ -160,10 +162,14 @@ export function createGrowthClock(c: GrowthCycle, start = 0): GrowthClock {
     advance(dt, speed = 1, loop = true) {
       const raw = dt * speed;
       const step = Number.isFinite(raw) && raw > 0 ? raw : 0;
-      if (loop) return set(time + step);
+      if (loop) {
+        return set(time + step);
+      }
       const base = state.cycle * period;
       const holdStart = base + c.grow;
-      if (time < holdStart) return set(Math.min(holdStart, time + step));
+      if (time < holdStart) {
+        return set(Math.min(holdStart, time + step));
+      }
       return set(Math.max(holdStart, time - step));
     },
   };
@@ -198,7 +204,9 @@ export function growthCover(arrival: number, threshold: number, soft: number): n
  */
 export function segmentReveal(t0: number, t1: number, threshold: number): number {
   const span = t1 - t0;
-  if (!(span > 1e-6)) return threshold > t0 ? 1 : 0;
+  if (!(span > 1e-6)) {
+    return threshold > t0 ? 1 : 0;
+  }
   return Math.min(1, Math.max(0, (threshold - t0) / span));
 }
 

@@ -47,16 +47,26 @@ describe("buildBranch", () => {
     const bad: string[] = [];
     for (const seed of SEEDS) {
       const segs = buildBranch(seed, 0);
-      if (segs.length < 20 || segs.length > MAX_SEGMENTS_PER_BRANCH)
+      if (segs.length < 20 || segs.length > MAX_SEGMENTS_PER_BRANCH) {
         bad.push(`count ${String(seed)}`);
-      if (segs.filter((s) => s.parent < 0).length !== 1) bad.push(`roots ${String(seed)}`);
-      if (Math.max(...segs.map((s) => s.depth)) < 2) bad.push(`depth ${String(seed)}`);
+      }
+      if (segs.filter((s) => s.parent < 0).length !== 1) {
+        bad.push(`roots ${String(seed)}`);
+      }
+      if (Math.max(...segs.map((s) => s.depth)) < 2) {
+        bad.push(`depth ${String(seed)}`);
+      }
       segs.forEach((s, i) => {
-        if (s.parent >= i) bad.push(`order ${String(seed)}:${String(i)}`);
-        if (s.parent >= 0 && s.depth < segs[s.parent].depth)
+        if (s.parent >= i) {
+          bad.push(`order ${String(seed)}:${String(i)}`);
+        }
+        if (s.parent >= 0 && s.depth < segs[s.parent].depth) {
           bad.push(`depth ${String(seed)}:${String(i)}`);
+        }
         const hasChild = segs.some((c) => c.parent === i);
-        if (hasChild === s.tip) bad.push(`tip flag ${String(seed)}:${String(i)}`);
+        if (hasChild === s.tip) {
+          bad.push(`tip flag ${String(seed)}:${String(i)}`);
+        }
       });
     }
     expect(bad).toEqual([]);
@@ -67,7 +77,9 @@ describe("buildBranch", () => {
     for (const seed of SEEDS) {
       const segs = buildBranch(seed, 0);
       for (const s of segs) {
-        if (s.parent < 0) continue;
+        if (s.parent < 0) {
+          continue;
+        }
         const p = segs[s.parent];
         worst = Math.max(worst, Math.hypot(s.x0 - p.x1, s.y0 - p.y1));
         worst = Math.max(worst, Math.abs(Math.hypot(s.x1 - s.x0, s.y1 - s.y0) - s.length));
@@ -81,10 +93,12 @@ describe("buildBranch", () => {
     for (const seed of SEEDS) {
       const segs = buildBranch(seed, 0);
       segs.forEach((s, i) => {
-        if (!(s.r1 <= s.r0) || !(s.r1 > 0))
+        if (!(s.r1 <= s.r0) || !(s.r1 > 0)) {
           bad.push(`${String(seed)}:${String(i)} ${String(s.r0)} -> ${String(s.r1)}`);
-        if (s.parent >= 0 && s.r0 > segs[s.parent].r1)
+        }
+        if (s.parent >= 0 && s.r0 > segs[s.parent].r1) {
           bad.push(`${String(seed)}:${String(i)} thicker than parent`);
+        }
       });
     }
     expect(bad).toEqual([]);
@@ -94,10 +108,12 @@ describe("buildBranch", () => {
     const bad: string[] = [];
     for (const seed of SEEDS) {
       for (const s of buildBranch(seed, 0)) {
-        if (s.x1 + s.r1 > REGION_W || s.y1 + s.r1 > REGION_H)
+        if (s.x1 + s.r1 > REGION_W || s.y1 + s.r1 > REGION_H) {
           bad.push(`${String(seed)}: ${String(s.x1)}, ${String(s.y1)}`);
-        if (s.x0 + s.r0 > REGION_W || s.y0 + s.r0 > REGION_H)
+        }
+        if (s.x0 + s.r0 > REGION_W || s.y0 + s.r0 > REGION_H) {
           bad.push(`${String(seed)}: ${String(s.x0)}, ${String(s.y0)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -112,12 +128,14 @@ describe("buildScene", () => {
       const pose = restPose(scene);
       scene.blossoms.forEach((b, j) => {
         const s = scene.segments[b.segment];
-        if (b.segment < 0 || b.segment >= scene.segments.length || b.t < 0 || b.t > 1)
+        if (b.segment < 0 || b.segment >= scene.segments.length || b.t < 0 || b.t > 1) {
           bad.push(`${String(seed)}:${String(j)} detached`);
+        }
         const x = pose.bx[j];
         const y = pose.by[j];
-        if (x + b.radius > REGION_W || y + b.radius > REGION_H)
+        if (x + b.radius > REGION_W || y + b.radius > REGION_H) {
           bad.push(`${String(seed)}:${String(j)} at ${String(x)}, ${String(y)}`);
+        }
         // Its distance from the segment's axis is its offset across it.
         const ax = s.x0 + (s.x1 - s.x0) * b.t;
         const ay = s.y0 + (s.y1 - s.y0) * b.t;
@@ -135,8 +153,11 @@ describe("buildScene", () => {
     for (const seed of SEEDS) {
       const scene = buildScene("topLeft", seed, 1);
       for (const b of scene.blossoms) {
-        if (scene.segments[b.segment].depth >= 2) onTwigs++;
-        else if (scene.segments[b.segment].depth === 0) onMain++;
+        if (scene.segments[b.segment].depth >= 2) {
+          onTwigs++;
+        } else if (scene.segments[b.segment].depth === 0) {
+          onMain++;
+        }
       }
     }
     expect(onTwigs).toBeGreaterThan(onMain * 3);
@@ -244,18 +265,28 @@ describe("writers", () => {
     scene.segments.forEach((s, i) => {
       const x = segData[i * SEGMENT_FLOATS + 2] / 2;
       const want = s.side === 1 ? 1920 - pose.ex[i] : pose.ex[i];
-      if (Math.abs(x - want) > 1e-3) bad.push(`segment ${String(i)}`);
-      if (segData[i * SEGMENT_FLOATS + 5] > segData[i * SEGMENT_FLOATS + 4])
+      if (Math.abs(x - want) > 1e-3) {
+        bad.push(`segment ${String(i)}`);
+      }
+      if (segData[i * SEGMENT_FLOATS + 5] > segData[i * SEGMENT_FLOATS + 4]) {
         bad.push(`taper ${String(i)}`);
+      }
     });
     const data = new Float32Array(scene.blossoms.length * BLOSSOM_FLOATS);
     expect(writeBlossoms(scene, pose, BLOSSOM_PALETTES.deep, 2, data)).toBe(scene.blossoms.length);
     scene.blossoms.forEach((b, j) => {
       const o = j * BLOSSOM_FLOATS;
-      if (Math.abs(data[o] - pose.bx[j] * 2) > 1e-3) bad.push(`blossom ${String(j)}`);
-      if (data[o + 7] !== b.kind) bad.push(`kind ${String(j)}`);
-      for (let k = 4; k < 7; k++)
-        if (!(data[o + k] >= 0 && data[o + k] <= 1)) bad.push(`colour ${String(j)}`);
+      if (Math.abs(data[o] - pose.bx[j] * 2) > 1e-3) {
+        bad.push(`blossom ${String(j)}`);
+      }
+      if (data[o + 7] !== b.kind) {
+        bad.push(`kind ${String(j)}`);
+      }
+      for (let k = 4; k < 7; k++) {
+        if (!(data[o + k] >= 0 && data[o + k] <= 1)) {
+          bad.push(`colour ${String(j)}`);
+        }
+      }
     });
     expect(bad).toEqual([]);
   });
@@ -281,7 +312,9 @@ describe("createShedder", () => {
       const seconds = 2000;
       for (let k = 0; k < seconds * 30; k++) {
         shedder.advance(1 / 30, rate);
-        while (shedder.take()) shed++;
+        while (shedder.take()) {
+          shed++;
+        }
       }
       expect(Math.abs(shed / seconds - rate) / rate).toBeLessThan(0.05);
     }
@@ -308,13 +341,19 @@ describe("createPetalSource", () => {
     let spawned = 0;
     const pieces = createPieces(160, 1920, 2, {
       spawn(out, layer) {
-        if (!source(out, layer)) return false;
+        if (!source(out, layer)) {
+          return false;
+        }
         spawned++;
-        if (layer === 0) bad.push("far layer");
+        if (layer === 0) {
+          bad.push("far layer");
+        }
         const at = state.scene.open.some(
           (j) => state.pose.bx[j] === out.x && state.pose.by[j] === out.y,
         );
-        if (!at) bad.push(`spawned at ${String(out.x)}, ${String(out.y)}`);
+        if (!at) {
+          bad.push(`spawned at ${String(out.x)}, ${String(out.y)}`);
+        }
         return true;
       },
     });

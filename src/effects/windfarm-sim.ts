@@ -12,6 +12,7 @@ import { clamp, wrap } from "./math";
 import { createNoise, createRng } from "./noise";
 import { COLUMNS, latticePeriod, ridgeHeightAt, ridgeRaw, SPAN } from "./ridges-sim";
 import { MAX_TURBINES, MIN_TURBINES, type SIDE_OPTIONS, type TIME_OPTIONS } from "./windfarm.meta";
+import { lookup } from "./lookup";
 
 export { COLUMNS, SPAN };
 
@@ -58,10 +59,14 @@ function blurPeriodic(src: Float32Array, dst: Float32Array, sigma: number): void
   }
   const kernel = new Float32Array(2 * r + 1);
   let total = 0;
-  for (let k = -r; k <= r; k++) total += kernel[k + r] = Math.exp(-(k * k) / (2 * sigma * sigma));
+  for (let k = -r; k <= r; k++) {
+    total += kernel[k + r] = Math.exp(-(k * k) / (2 * sigma * sigma));
+  }
   for (let c = 0; c < n; c++) {
     let sum = 0;
-    for (let k = -r; k <= r; k++) sum += kernel[k + r] * src[(((c + k) % n) + n) % n];
+    for (let k = -r; k <= r; k++) {
+      sum += kernel[k + r] * src[(((c + k) % n) + n) % n];
+    }
     dst[c] = sum / total;
   }
 }
@@ -80,14 +85,20 @@ export function fillHillTable(out: Float32Array, seed: number): void {
     const noise = createNoise(s * 7919 + i * 104729 + 211);
     const p0 = latticePeriod(shape.wavelength);
     const row = i * COLUMNS;
-    for (let c = 0; c < COLUMNS; c++) raw[c] = ridgeRaw(noise, c / COLUMNS, p0, HILL_PEAKS);
+    for (let c = 0; c < COLUMNS; c++) {
+      raw[c] = ridgeRaw(noise, c / COLUMNS, p0, HILL_PEAKS);
+    }
     blurPeriodic(raw, out.subarray(row, row + COLUMNS), (shape.smooth / SPAN) * COLUMNS);
     let lo = Infinity;
     let hi = -Infinity;
     for (let c = 0; c < COLUMNS; c++) {
       const v = out[row + c];
-      if (v < lo) lo = v;
-      if (v > hi) hi = v;
+      if (v < lo) {
+        lo = v;
+      }
+      if (v > hi) {
+        hi = v;
+      }
     }
     const inv = hi > lo ? 1 / (hi - lo) : 0;
     for (let c = 0; c < COLUMNS; c++) {
@@ -215,7 +226,7 @@ export const PALETTES: Readonly<Record<TimeOfDay, FarmPalette>> = {
 
 /** The palette for a `timeOfDay` value; unknown values fall back to midday. */
 export function paletteFor(id: string): FarmPalette {
-  return Object.hasOwn(PALETTES, id) ? PALETTES[id as TimeOfDay] : PALETTES.midday;
+  return lookup(PALETTES, id, "midday");
 }
 
 /** Writes each hill layer's colour, its grass faded toward the haze by depth, as RGB triples. */
@@ -319,9 +330,15 @@ export function silhouettesOverlap(
   const br = BLADE * bSize;
   const ay = hubY(aBase, aSize);
   const by = hubY(bBase, bSize);
-  if (Math.hypot(ax - bx, ay - by) < ar + br + GAP) return true;
-  if (segmentDistance(ax, ay, bx, bBase, by) < ar + GAP) return true;
-  if (segmentDistance(bx, by, ax, aBase, ay) < br + GAP) return true;
+  if (Math.hypot(ax - bx, ay - by) < ar + br + GAP) {
+    return true;
+  }
+  if (segmentDistance(ax, ay, bx, bBase, by) < ar + GAP) {
+    return true;
+  }
+  if (segmentDistance(bx, by, ax, aBase, ay) < br + GAP) {
+    return true;
+  }
   return Math.abs(ax - bx) < GAP && aBase < by && bBase < ay;
 }
 
@@ -345,7 +362,9 @@ export function turbinesClash(
   bSize: number,
   bLayer: number,
 ): boolean {
-  if (aLayer === bLayer) return silhouettesOverlap(ax, aBase, aSize, bx, bBase, bSize);
+  if (aLayer === bLayer) {
+    return silhouettesOverlap(ax, aBase, aSize, bx, bBase, bSize);
+  }
   const near = aLayer < bLayer;
   const nx = near ? ax : bx;
   const nBase = near ? aBase : bBase;
@@ -355,7 +374,9 @@ export function turbinesClash(
   const fy = hubY(near ? bBase : aBase, fSize);
   const clear = HUB_CLEAR * fSize + GAP;
   const ny = hubY(nBase, nSize);
-  if (Math.hypot(fx - nx, fy - ny) < HUB_CLEAR * nSize + clear) return true;
+  if (Math.hypot(fx - nx, fy - ny) < HUB_CLEAR * nSize + clear) {
+    return true;
+  }
   return segmentDistance(fx, fy, nx, nBase, ny) < clear;
 }
 
@@ -416,7 +437,9 @@ export function layoutFarm(
   let left = n;
   for (let i = 0; i < HILL_LAYERS; i++) {
     quota[i] = i === HILL_LAYERS - 1 ? left : Math.min(left, Math.round(n * LAYER_SHARE[i]));
-    if (i === 0) quota[i] = Math.max(1, Math.min(quota[i], side === "spread" ? 2 : 1));
+    if (i === 0) {
+      quota[i] = Math.max(1, Math.min(quota[i], side === "spread" ? 2 : 1));
+    }
     left -= quota[i];
   }
   let placed = 0;
@@ -455,11 +478,16 @@ function placeOne(
     const z = Math.floor(rand() * nz);
     let lo = zone[z * 2];
     let hi = zone[z * 2 + 1];
-    if (!(hi > lo)) continue;
+    if (!(hi > lo)) {
+      continue;
+    }
     if (layer === 0) {
       // The big near turbines frame the scene from the outer edges.
-      if (hi < aspect / 2) hi = lo + NEAR_OUTER * (hi - lo);
-      else lo = hi - NEAR_OUTER * (hi - lo);
+      if (hi < aspect / 2) {
+        hi = lo + NEAR_OUTER * (hi - lo);
+      } else {
+        lo = hi - NEAR_OUTER * (hi - lo);
+      }
     }
     // Climb to the highest point nearby: turbines stand on the crests.
     let x = lo + (hi - lo) * rand();
@@ -476,7 +504,9 @@ function placeOne(
     const base = best - SINK * size;
     let ok = true;
     for (let j = 0; j < layer && ok; j++) {
-      if (hillHeightAt(table, j, x) > base + MAX_HIDDEN * size) ok = false;
+      if (hillHeightAt(table, j, x) > base + MAX_HIDDEN * size) {
+        ok = false;
+      }
     }
     for (let o = 0; o < k && ok; o++) {
       const o2 = farm.layer[o];
@@ -484,7 +514,9 @@ function placeOne(
         ok = false;
       }
     }
-    if (!ok) continue;
+    if (!ok) {
+      continue;
+    }
     farm.x[k] = x;
     farm.base[k] = base;
     farm.size[k] = size;

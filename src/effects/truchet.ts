@@ -145,7 +145,7 @@ void main() {
     float u = clamp(sd / hw, -1.0, 1.0);
     vec3 n = vec3(radial * u, sqrt(max(1.0 - u * u, 0.0)));
     float lit = ${glslFloat(SHADE_AMBIENT)} + ${glslFloat(SHADE_DIFFUSE)}
-      * max(dot(n, vec3(${LIGHT.map(glslFloat).join(", ")})), 0.0);
+      * max(dot(n, vec3(${LIGHT.map((v) => glslFloat(v)).join(", ")})), 0.0);
     float shadow = 1.0 - ${glslFloat(SHADOW)}
       * (1.0 - smoothstep(hwPx, hwPx + ${glslFloat(SHADOW_REACH)} * tilePx, dpx));
     col = mix(bg * shadow, band * lit, cov);
@@ -222,7 +222,9 @@ export const truchet = defineEffect(truchetMeta, {
 
       let tex: WebGLTexture | null = null;
       scope.defer(() => {
-        if (tex) gl.deleteTexture(tex);
+        if (tex) {
+          gl.deleteTexture(tex);
+        }
         tex = null;
       });
       let sim: TruchetSim | undefined;
@@ -245,16 +247,20 @@ export const truchet = defineEffect(truchetMeta, {
           layoutTile = tilePx;
         }
         const s = Number.isFinite(seed) ? Math.floor(seed) : 0;
-        if (sim && sim.cols === layout.cols && sim.rows === layout.rows && sim.seed === s) return;
+        if (sim && sim.cols === layout.cols && sim.rows === layout.rows && sim.seed === s) {
+          return;
+        }
         sim = createTruchet({
           cols: layout.cols,
           rows: layout.rows,
           seed: s,
-          from: sim && sim.seed === s ? sim : undefined,
+          from: sim?.seed === s ? sim : undefined,
         });
         data = new Uint8Array(4 * sim.cols * sim.rows);
         sim.encode(data);
-        if (tex) gl.deleteTexture(tex);
+        if (tex) {
+          gl.deleteTexture(tex);
+        }
         tex = null;
         tex = createDataTexture(gl, {
           width: sim.cols,
@@ -282,7 +288,9 @@ export const truchet = defineEffect(truchetMeta, {
           const g = layout;
           const s = sim;
           const t = tex;
-          if (!g || !s || !t) throw new Error("truchet: ensureGrid left no layout, sim or texture");
+          if (!g || !s || !t) {
+            throw new Error("truchet: ensureGrid left no layout, sim or texture");
+          }
 
           const flags = s.step(dt, p.flipRate);
           gl.activeTexture(gl.TEXTURE0);
@@ -301,7 +309,9 @@ export const truchet = defineEffect(truchetMeta, {
               flipsChanged = true;
             }
           }
-          if (flipsChanged) gl.uniform1fv(u.loc.uFlip, sentFlips);
+          if (flipsChanged) {
+            gl.uniform1fv(u.loc.uFlip, sentFlips);
+          }
 
           u.f4("uGrid", g.ox, g.oy, 1 / g.tilePx, g.tilePx);
           u.f2("uCells", s.cols, s.rows);

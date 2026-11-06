@@ -86,7 +86,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     if (value === undefined) {
       value = ZERO_ENUMS.has(name) ? 0 : 0x10000 + enumValues.size;
       enumValues.set(name, value);
-      if (value !== 0) enumNames.set(value, name);
+      if (value !== 0) {
+        enumNames.set(value, name);
+      }
     }
     return value;
   };
@@ -94,7 +96,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     typeof value === "number" ? (enumNames.get(value) ?? `0x${value.toString(16)}`) : String(value);
 
   // Texture units are consecutive, as `TEXTURE0 + i` relies on.
-  for (let i = 0; i < 32; i++) enumOf(`TEXTURE${String(i)}`);
+  for (let i = 0; i < 32; i++) {
+    enumOf(`TEXTURE${String(i)}`);
+  }
 
   const errors: string[] = [];
   const calls: { name: string; args: unknown[] }[] = [];
@@ -133,7 +137,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
 
   /** Checks `obj` is null or a live object of `kind`, reporting misuse under `call`. */
   const check = (call: string, kind: string, obj: unknown): obj is FakeObject | null => {
-    if (obj === null) return true;
+    if (obj === null) {
+      return true;
+    }
     const o = obj as FakeObject;
     if (typeof o !== "object" || o.kind !== kind) {
       const got = typeof o === "object" ? `${o.kind} ${String(o.id)}` : typeof obj;
@@ -148,30 +154,53 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
   };
 
   const del = (kind: string) => (obj: unknown) => {
-    if (obj === null || obj === undefined) return;
-    if (!check(`delete${kind}`, kind, obj)) return;
+    if (obj === null || obj === undefined) {
+      return;
+    }
+    if (!check(`delete${kind}`, kind, obj)) {
+      return;
+    }
     obj.deleted = true;
     // As in WebGL, deleting a bound object unbinds it (a current program stays
     // in use until another is bound).
-    if (state.drawFramebuffer === obj) state.drawFramebuffer = null;
-    if (state.readFramebuffer === obj) state.readFramebuffer = null;
-    if (state.vertexArray === obj) state.vertexArray = null;
+    if (state.drawFramebuffer === obj) {
+      state.drawFramebuffer = null;
+    }
+    if (state.readFramebuffer === obj) {
+      state.readFramebuffer = null;
+    }
+    if (state.vertexArray === obj) {
+      state.vertexArray = null;
+    }
     for (const map of [state.buffers, state.textures] as Map<unknown, FakeObject | null>[]) {
-      for (const [key, bound] of map) if (bound === obj) map.set(key, null);
+      for (const [key, bound] of map) {
+        if (bound === obj) {
+          map.set(key, null);
+        }
+      }
     }
   };
 
   const bindFramebuffer = (target: number, fb: FakeObject | null) => {
-    if (!check("bindFramebuffer", "Framebuffer", fb)) return;
+    if (!check("bindFramebuffer", "Framebuffer", fb)) {
+      return;
+    }
     const t = enumName(target);
-    if (t === "FRAMEBUFFER" || t === "DRAW_FRAMEBUFFER") state.drawFramebuffer = fb;
-    if (t === "FRAMEBUFFER" || t === "READ_FRAMEBUFFER") state.readFramebuffer = fb;
+    if (t === "FRAMEBUFFER" || t === "DRAW_FRAMEBUFFER") {
+      state.drawFramebuffer = fb;
+    }
+    if (t === "FRAMEBUFFER" || t === "READ_FRAMEBUFFER") {
+      state.readFramebuffer = fb;
+    }
   };
 
   const uniform = (name: string) => (loc: FakeLocation | null) => {
-    if (loc === null) return;
-    if (state.program === null) errors.push(`${name}(${loc.name}) with no program bound`);
-    else if (loc.program !== state.program) {
+    if (loc === null) {
+      return;
+    }
+    if (state.program === null) {
+      errors.push(`${name}(${loc.name}) with no program bound`);
+    } else if (loc.program !== state.program) {
       errors.push(
         `${name}(${loc.name}) belongs to program ${String(loc.program.id)} but program ${String(state.program.id)} is bound`,
       );
@@ -180,13 +209,15 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
 
   const draw = (name: string) => () => {
     draws++;
-    if (state.program === null) errors.push(`${name} with no program bound`);
+    if (state.program === null) {
+      errors.push(`${name} with no program bound`);
+    }
   };
 
   const methods: Record<string, (...args: never[]) => unknown> = {
     isContextLost: () => false,
     getError: () => 0,
-    getExtension: (name: string) => (options.extensions?.includes(name) ? {} : null),
+    getExtension: (name: string) => (options.extensions?.includes(name) === true ? {} : null),
     getSupportedExtensions: () => [...(options.extensions ?? [])],
 
     createShader: create("Shader"),
@@ -208,7 +239,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
 
     compileShader: (shader: FakeObject) => {
       check("compileShader", "Shader", shader);
-      if (compiles++ === options.failCompileAt) shaderFailed.add(shader);
+      if (compiles++ === options.failCompileAt) {
+        shaderFailed.add(shader);
+      }
     },
     getShaderParameter: (shader: FakeObject) => !shaderFailed.has(shader),
     getShaderInfoLog: () => "fake compile error",
@@ -220,7 +253,9 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     getProgramParameter: () => true,
     getProgramInfoLog: () => "",
     useProgram: (program: FakeObject | null) => {
-      if (check("useProgram", "Program", program)) state.program = program;
+      if (check("useProgram", "Program", program)) {
+        state.program = program;
+      }
     },
     getUniformLocation: (program: FakeObject | null, name: string): FakeLocation | null =>
       check("getUniformLocation", "Program", program) && program ? { program, name } : null,
@@ -228,14 +263,21 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
 
     bindFramebuffer,
     bindVertexArray: (vao: FakeObject | null) => {
-      if (check("bindVertexArray", "VertexArray", vao)) state.vertexArray = vao;
+      if (check("bindVertexArray", "VertexArray", vao)) {
+        state.vertexArray = vao;
+      }
     },
     bindBuffer: (target: number, buffer: FakeObject | null) => {
-      if (check("bindBuffer", "Buffer", buffer)) state.buffers.set(enumName(target), buffer);
+      if (check("bindBuffer", "Buffer", buffer)) {
+        state.buffers.set(enumName(target), buffer);
+      }
     },
     bufferData: (target: number, data: number | ArrayBufferView) => {
       const buffer = state.buffers.get(enumName(target));
-      if (!buffer) return void errors.push(`bufferData(${enumName(target)}) with no buffer bound`);
+      if (!buffer) {
+        errors.push(`bufferData(${enumName(target)}) with no buffer bound`);
+        return;
+      }
       bufferSizes.set(buffer, typeof data === "number" ? data : data.byteLength);
     },
     bufferSubData: (
@@ -246,7 +288,10 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       length?: number,
     ) => {
       const buffer = state.buffers.get(enumName(target));
-      if (!buffer) return void errors.push(`bufferSubData(${enumName(target)}) with no buffer`);
+      if (!buffer) {
+        errors.push(`bufferSubData(${enumName(target)}) with no buffer`);
+        return;
+      }
       const bytesPer = "BYTES_PER_ELEMENT" in data ? (data.BYTES_PER_ELEMENT as number) : 1;
       const count = length ?? data.byteLength / bytesPer - srcOffset;
       const size = bufferSizes.get(buffer) ?? 0;
@@ -260,21 +305,33 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       state.activeTexture = unit - enumOf("TEXTURE0");
     },
     bindTexture: (target: number, texture: FakeObject | null) => {
-      if (!check("bindTexture", "Texture", texture)) return;
-      if (enumName(target) === "TEXTURE_2D") state.textures.set(state.activeTexture, texture);
+      if (!check("bindTexture", "Texture", texture)) {
+        return;
+      }
+      if (enumName(target) === "TEXTURE_2D") {
+        state.textures.set(state.activeTexture, texture);
+      }
     },
     texStorage2D: (_target: number, _levels: number, format: number) => {
       const texture = state.textures.get(state.activeTexture);
-      if (texture) textureFormats.set(texture, enumName(format));
-      else errors.push("texStorage2D with no texture bound");
+      if (texture) {
+        textureFormats.set(texture, enumName(format));
+      } else {
+        errors.push("texStorage2D with no texture bound");
+      }
     },
     texImage2D: (_target: number, _level: number, format: number) => {
       const texture = state.textures.get(state.activeTexture);
-      if (texture) textureFormats.set(texture, enumName(format));
-      else errors.push("texImage2D with no texture bound");
+      if (texture) {
+        textureFormats.set(texture, enumName(format));
+      } else {
+        errors.push("texImage2D with no texture bound");
+      }
     },
     texSubImage2D: () => {
-      if (!state.textures.get(state.activeTexture)) errors.push("texSubImage2D with no texture");
+      if (!state.textures.get(state.activeTexture)) {
+        errors.push("texSubImage2D with no texture");
+      }
     },
     framebufferTexture2D: (
       _target: number,
@@ -282,15 +339,16 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       _texTarget: number,
       texture: FakeObject | null,
     ) => {
-      if (!state.drawFramebuffer) errors.push("framebufferTexture2D on the default framebuffer");
-      else if (check("framebufferTexture2D", "Texture", texture) && texture) {
+      if (!state.drawFramebuffer) {
+        errors.push("framebufferTexture2D on the default framebuffer");
+      } else if (check("framebufferTexture2D", "Texture", texture) && texture) {
         attachments.set(state.drawFramebuffer, texture);
       }
     },
     checkFramebufferStatus: () => {
       const texture = state.drawFramebuffer && attachments.get(state.drawFramebuffer);
       const format = texture ? textureFormats.get(texture) : undefined;
-      const ok = format !== undefined && !options.unrenderable?.includes(format);
+      const ok = format !== undefined && options.unrenderable?.includes(format) !== true;
       return enumOf(ok ? "FRAMEBUFFER_COMPLETE" : "FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
     },
 
@@ -381,10 +439,16 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     {},
     {
       get(_, key) {
-        if (typeof key !== "string" || key === "then") return undefined;
-        if (/^[A-Z][A-Z0-9_]*$/.test(key)) return enumOf(key);
+        if (typeof key !== "string" || key === "then") {
+          return undefined;
+        }
+        if (/^[A-Z][A-Z0-9_]*$/.test(key)) {
+          return enumOf(key);
+        }
         const method = (methods[key] as ((...args: unknown[]) => unknown) | undefined) ?? noop;
-        if (!options.record) return method;
+        if (options.record !== true) {
+          return method;
+        }
         return (...args: unknown[]) => {
           calls.push({ name: key, args });
           return method(...args);

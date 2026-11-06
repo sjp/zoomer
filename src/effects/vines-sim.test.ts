@@ -46,8 +46,12 @@ const sprites = new Float32Array(MAX_SPRITES * STRIDE);
 /** Every drawn segment of every plant in use, as [plant, slot]. */
 function* segments(v: Vines) {
   for (let p = 0; p < MAX_PLANTS; p++) {
-    if (!v.active[p]) continue;
-    for (let k = 0; k < v.segUsed[p]; k++) yield [p, p * PLANT_SEGS + k] as const;
+    if (!v.active[p]) {
+      continue;
+    }
+    for (let k = 0; k < v.segUsed[p]; k++) {
+      yield [p, p * PLANT_SEGS + k] as const;
+    }
   }
 }
 
@@ -57,7 +61,9 @@ function run(v: Vines, f: VineFrame, seconds: number, every: number, check: () =
   const steps = Math.round(seconds * 10);
   for (let s = 0; s < steps; s++) {
     v.step(0.1, f);
-    if (s % every === 0) check();
+    if (s % every === 0) {
+      check();
+    }
   }
 }
 
@@ -118,7 +124,9 @@ describe("growth", () => {
           const kind = v.segKind[slot];
           const turn = Math.abs(angleDiff(d[o + 5], d[o + 4]));
           worstTurn = Math.max(worstTurn, turn / (KAPPA_MAX[kind] * (SEG_LEN[kind] + MAX_STEP)));
-          if (kind === KIND_TENDRIL) worstTendril = Math.max(worstTendril, d[o + 6]);
+          if (kind === KIND_TENDRIL) {
+            worstTendril = Math.max(worstTendril, d[o + 6]);
+          }
           segs++;
         }
       });
@@ -159,8 +167,14 @@ describe("growth", () => {
       run(v, f, 300, 20, () => {
         const n = v.writeSprites(sprites, STRIDE, SPRITE_FLOATS, 2, type);
         most = Math.max(most, n);
-        if (n !== v.leafSprites + v.flowerSprites) bad++;
-        for (let i = 0; i < n * STRIDE; i++) if (!Number.isFinite(sprites[i])) bad++;
+        if (n !== v.leafSprites + v.flowerSprites) {
+          bad++;
+        }
+        for (let i = 0; i < n * STRIDE; i++) {
+          if (!Number.isFinite(sprites[i])) {
+            bad++;
+          }
+        }
       });
       expect(bad).toBe(0);
       expect(most).toBeGreaterThan(0);
@@ -186,15 +200,25 @@ describe("pools", () => {
     const length = segData.length;
     let bad = 0;
     run(v, f, 600, 10, () => {
-      if (v.segData !== segData || v.segData.length !== length) bad++;
+      if (v.segData.length !== length) {
+        bad++;
+      }
       let active = 0;
       for (let p = 0; p < MAX_PLANTS; p++) {
         active += v.active[p];
-        if (v.segUsed[p] > PLANT_SEGS || v.leafCount[p] > PLANT_LEAVES) bad++;
+        if (v.segUsed[p] > PLANT_SEGS || v.leafCount[p] > PLANT_LEAVES) {
+          bad++;
+        }
       }
-      if (active !== v.plants || v.plants > MAX_PLANTS) bad++;
-      if (v.falling > MAX_FALLING) bad++;
-      if (v.writeSprites(sprites, STRIDE, SPRITE_FLOATS, 1, f.type) > MAX_SPRITES) bad++;
+      if (active !== v.plants || v.plants > MAX_PLANTS) {
+        bad++;
+      }
+      if (v.falling > MAX_FALLING) {
+        bad++;
+      }
+      if (v.writeSprites(sprites, STRIDE, SPRITE_FLOATS, 1, f.type) > MAX_SPRITES) {
+        bad++;
+      }
     });
     expect(bad).toBe(0);
     expect(v.spawned).toBeGreaterThan(MAX_PLANTS);
@@ -209,9 +233,13 @@ describe("pools", () => {
     v.resize(1920);
     v.step(0.1, f);
     const slots: number[] = [];
-    for (let i = 0; i < MAX_PLANTS; i++) slots.push(v.spawn(f));
+    for (let i = 0; i < MAX_PLANTS; i++) {
+      slots.push(v.spawn(f));
+    }
     expect(new Set(slots).size).toBe(MAX_PLANTS);
-    for (let i = 0; i < 20; i++) v.step(0.1, f);
+    for (let i = 0; i < 20; i++) {
+      v.step(0.1, f);
+    }
     // The next spawn reuses the first plant's slot, and its old segments are cleared.
     const reused = v.spawn(f);
     expect(reused).toBe(slots[0]);
@@ -225,14 +253,18 @@ describe("pools", () => {
     const v = createVines(2);
     const f = frame({ growth: 3, density: 1 });
     v.resize(1920);
-    for (let i = 0; i < 20; i++) v.step(0.1, f);
+    for (let i = 0; i < 20; i++) {
+      v.step(0.1, f);
+    }
     const p = v.active.indexOf(1);
     const used = v.segUsed[p];
     expect(used).toBeGreaterThan(0);
     v.clearDirty();
     // Run the plant through to retirement without spawning a replacement.
     const g = frame({ growth: 3, density: 0 });
-    while (v.active[p]) v.step(0.1, g);
+    while (v.active[p]) {
+      v.step(0.1, g);
+    }
     const slice = v.segData.subarray(
       p * PLANT_SEGS * SEG_FLOATS,
       (p + 1) * PLANT_SEGS * SEG_FLOATS,

@@ -212,7 +212,9 @@ export const mandel = defineEffect(mandelMeta, {
               gl.UNSIGNED_BYTE,
               paletteTexels(pal),
             );
-          } else gl.bindTexture(gl.TEXTURE_2D, paletteTex);
+          } else {
+            gl.bindTexture(gl.TEXTURE_2D, paletteTex);
+          }
 
           target.bind();
           gl.useProgram(program);

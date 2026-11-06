@@ -114,7 +114,7 @@ export function layerUniforms(
   params[o] = freq;
   params[o + 1] = wa;
   // Averaging two independent fields lowers their contrast by sqrt(wa² + wb²).
-  params[o + 2] = 1 / Math.sqrt(wa * wa + wb * wb);
+  params[o + 2] = 1 / Math.hypot(wa, wb);
   params[o + 3] = opacity;
 }
 
@@ -292,10 +292,16 @@ export const TRANSITION_SECONDS = 2;
 
 /** Eased progress (smoothstep) of a transition `elapsed` seconds into `duration`. */
 export function transitionWeight(elapsed: number, duration: number): number {
-  if (!(duration > 0)) return 1;
+  if (!(duration > 0)) {
+    return 1;
+  }
   const x = elapsed / duration;
-  if (!(x > 0)) return 0;
-  if (x >= 1) return 1;
+  if (!(x > 0)) {
+    return 0;
+  }
+  if (x >= 1) {
+    return 1;
+  }
   return x * x * (3 - 2 * x);
 }
 
@@ -327,7 +333,7 @@ export interface PresetTransition {
    * The very first call snaps straight to the target. Returns true if `values`
    * changed. Allocates nothing.
    */
-  update(dt: number, index: number): boolean;
+  update: (dt: number, index: number) => boolean;
 }
 
 export function createPresetTransition(
@@ -353,7 +359,9 @@ export function createPresetTransition(
         elapsed = 0;
         active = true;
       }
-      if (!active) return false;
+      if (!active) {
+        return false;
+      }
       elapsed += dt > 0 ? dt : 0;
       lerpPreset(
         values,
@@ -363,7 +371,9 @@ export function createPresetTransition(
         index * PRESET_STRIDE,
         transitionWeight(elapsed, duration),
       );
-      if (elapsed >= duration) active = false;
+      if (elapsed >= duration) {
+        active = false;
+      }
       return true;
     },
   };

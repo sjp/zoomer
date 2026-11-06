@@ -10,7 +10,9 @@ import type {
 
 export function defaults(schema: ParamSchema): AnyParamValues {
   const values: AnyParamValues = {};
-  for (const [key, def] of Object.entries(schema)) values[key] = def.default;
+  for (const [key, def] of Object.entries(schema)) {
+    values[key] = def.default;
+  }
   return values;
 }
 
@@ -22,10 +24,14 @@ export function defaults(schema: ParamSchema): AnyParamValues {
  */
 export function snap(def: NumberParam, n: number): number {
   const clamped = Math.min(def.max, Math.max(def.min, n));
-  if (!(def.step > 0)) return clamped;
+  if (!(def.step > 0)) {
+    return clamped;
+  }
   let k = Math.round((clamped - def.min) / def.step);
   // Like a range input, stay on the grid below an off-grid max.
-  if (def.min + k * def.step > def.max) k--;
+  if (def.min + k * def.step > def.max) {
+    k--;
+  }
   return Number((def.min + k * def.step).toFixed(12));
 }
 
@@ -34,7 +40,9 @@ export function snap(def: NumberParam, n: number): number {
  * the shortest round-trip string, so exponent forms like `1e-7` or `2.5e-8` work.
  */
 export function stepDecimals(step: number): number {
-  if (!(step > 0) || !Number.isFinite(step)) return 0;
+  if (!(step > 0) || !Number.isFinite(step)) {
+    return 0;
+  }
   const [mantissa, exponent = "0"] = String(step).split("e");
   const fraction = mantissa.split(".")[1]?.length ?? 0;
   return Math.min(20, Math.max(0, fraction - Number(exponent)));
@@ -76,7 +84,9 @@ export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
   switch (def.kind) {
     case "number": {
       const n = Number(raw);
-      if (raw.trim() === "" || !Number.isFinite(n)) return undefined;
+      if (raw.trim() === "" || !Number.isFinite(n)) {
+        return undefined;
+      }
       return snap(def, n);
     }
     case "color": {
@@ -84,13 +94,20 @@ export function coerce(def: ParamDef, raw: string): ParamValue | undefined {
       return /^#[0-9a-f]{6}$/i.test(hex) ? hex.toLowerCase() : undefined;
     }
     case "boolean":
-      if (raw === "1" || raw === "true") return true;
-      if (raw === "0" || raw === "false") return false;
+      if (raw === "1" || raw === "true") {
+        return true;
+      }
+      if (raw === "0" || raw === "false") {
+        return false;
+      }
       return undefined;
     case "select":
       return def.options.some((o) => o.value === raw) ? raw : undefined;
     case "text":
       return sanitizeText(def, raw);
+    default:
+      // Unreachable for a well-typed def; a kind from elsewhere is invalid.
+      return undefined;
   }
 }
 
@@ -100,22 +117,32 @@ export function parseValues(schema: ParamSchema, raw: Record<string, string>): A
   for (const [key, def] of Object.entries(schema)) {
     if (key in raw) {
       const value = coerce(def, raw[key]);
-      if (value !== undefined) values[key] = value;
+      if (value !== undefined) {
+        values[key] = value;
+      }
     }
   }
   return values;
 }
 
 function serialize(def: ParamDef, value: ParamValue): string {
-  if (def.kind === "boolean") return value ? "1" : "0";
-  if (def.kind === "color") return String(value).replace(/^#/, "");
+  if (def.kind === "boolean") {
+    // Truthiness, as a boolean param's value is a boolean.
+    const on = Boolean(value);
+    return on ? "1" : "0";
+  }
+  if (def.kind === "color") {
+    return String(value).replace(/^#/, "");
+  }
   return String(value);
 }
 
 export function decodeHash(hash: string): { effectId?: string; raw: Record<string, string> } {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const raw: Record<string, string> = {};
-  for (const [key, value] of params) raw[key] = value;
+  for (const [key, value] of params) {
+    raw[key] = value;
+  }
   const { effect: effectId, ...rest } = raw;
   return { effectId, raw: rest };
 }
@@ -125,7 +152,9 @@ export function encodeHash(effect: EffectMeta, values: AnyParamValues): string {
   const params = new URLSearchParams({ effect: effect.id });
   for (const [key, def] of Object.entries(effect.params)) {
     const value = (values as Partial<AnyParamValues>)[key];
-    if (value !== undefined && value !== def.default) params.set(key, serialize(def, value));
+    if (value !== undefined && value !== def.default) {
+      params.set(key, serialize(def, value));
+    }
   }
   return `#${params.toString()}`;
 }
@@ -142,6 +171,8 @@ export function stateFromHash<E extends EffectMeta>(
 ): { effect: E; values: AnyParamValues } {
   const { effectId, raw } = decodeHash(hash);
   const effect = effects.find((e) => e.id === effectId);
-  if (!effect) return { effect: fallback, values: defaults(fallback.params) };
+  if (!effect) {
+    return { effect: fallback, values: defaults(fallback.params) };
+  }
   return { effect, values: parseValues(effect.params, raw) };
 }

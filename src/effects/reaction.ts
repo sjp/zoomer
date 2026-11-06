@@ -289,10 +289,11 @@ export const reaction = defineEffect(reactionMeta, {
       const statsTarget = createRenderTarget(gl, STATS_SIZE, STATS_SIZE, gl.RGBA8, {
         filter: gl.NEAREST,
       });
-      if (statsTarget)
+      if (statsTarget) {
         scope.add(statsTarget, (t) => {
           t.dispose();
         });
+      }
       const statsBytes = new Uint8Array(STATS_SIZE * STATS_SIZE * 4);
       const pbo = scope.add(gl.createBuffer(), (b) => {
         gl.deleteBuffer(b);
@@ -307,7 +308,9 @@ export const reaction = defineEffect(reactionMeta, {
       let fenceGeneration = 0;
       let generation = 0;
       scope.defer(() => {
-        if (fence) gl.deleteSync(fence);
+        if (fence) {
+          gl.deleteSync(fence);
+        }
         fence = null;
       });
       const stats = createStats();
@@ -320,7 +323,9 @@ export const reaction = defineEffect(reactionMeta, {
       let gridW = 0;
       let gridH = 0;
       const deleteTargets = () => {
-        for (const t of targets) t.dispose();
+        for (const t of targets) {
+          t.dispose();
+        }
         targets = [];
       };
       scope.defer(deleteTargets);
@@ -380,12 +385,16 @@ export const reaction = defineEffect(reactionMeta, {
         deleteTargets();
         targets = [a, b];
         current = 0;
-        if (!old) reseed();
+        if (!old) {
+          reseed();
+        }
       };
 
       /** Renders the coverage stats and starts reading them back. */
       const requestStats = (grid: RenderTarget) => {
-        if (!statsTarget) return;
+        if (!statsTarget) {
+          return;
+        }
         const [tx, ty] = statsTile(grid.width, grid.height);
         statsTarget.bind();
         // Texels past the grid read back as empty tiles.
@@ -408,22 +417,30 @@ export const reaction = defineEffect(reactionMeta, {
         fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0) ?? null;
         if (!fence) {
           readback = false;
-          if (import.meta.env.DEV) console.info("reaction: no fence; cycle runs on its fallbacks");
+          if (import.meta.env.DEV) {
+            // oxlint-disable-next-line eslint/no-console -- dev-only diagnostics, behind import.meta.env.DEV
+            console.info("reaction: no fence; cycle runs on its fallbacks");
+          }
         }
         fenceGeneration = generation;
       };
 
       /** Collects a finished readback, if any; true if the cycle asks for a reseed. */
       const collectStats = (regrow: boolean): boolean => {
-        if (!fence || gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) return false;
+        if (!fence || gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) {
+          return false;
+        }
         gl.deleteSync(fence);
         fence = null;
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
         gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, statsBytes);
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        if (fenceGeneration !== generation) return false;
+        if (fenceGeneration !== generation) {
+          return false;
+        }
         const reseedNow = sampleCycle(cycle, readStats(statsBytes, stats), regrow);
         if (import.meta.env.DEV) {
+          // oxlint-disable-next-line eslint/no-console -- dev-only diagnostics, behind import.meta.env.DEV
           console.debug(
             `reaction: ${cycle.phase}, coverage ${stats.coverage.toFixed(3)}, max B ${stats.maxB.toFixed(2)}, still ${String(cycle.still)}`,
           );
@@ -443,7 +460,9 @@ export const reaction = defineEffect(reactionMeta, {
           const cell = Math.max(1, p.scale * scale);
           const w = clamp(Math.ceil(width / cell), 1, MAX_GRID);
           const h = clamp(Math.ceil(height / cell), 1, MAX_GRID);
-          if (w !== gridW || h !== gridH) regrid(w, h);
+          if (w !== gridW || h !== gridH) {
+            regrid(w, h);
+          }
           if (targets.length < 2) {
             const c = color1(p.color1);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -454,7 +473,9 @@ export const reaction = defineEffect(reactionMeta, {
           }
           if (p.reseed !== reseedKey) {
             // The first frame only records the toggle: the grid was just seeded.
-            if (reseedKey !== undefined) reseed();
+            if (reseedKey !== undefined) {
+              reseed();
+            }
             reseedKey = p.reseed;
           }
           const regrow = p.regrow;
@@ -485,10 +506,12 @@ export const reaction = defineEffect(reactionMeta, {
           let again = advanceCycle(cycle, n, dt, targets[0].width, p.hold, regrow);
           again = collectStats(regrow) || again;
           if (import.meta.env.DEV && (again || cycle.phase !== before)) {
+            // oxlint-disable-next-line eslint/no-console -- dev-only diagnostics, behind import.meta.env.DEV
             console.info(`reaction: ${before} -> ${again ? "reseed" : cycle.phase}`);
           }
-          if (again) reseed();
-          else if (regrow && readback && !fence && wantsSample(cycle)) {
+          if (again) {
+            reseed();
+          } else if (regrow && readback && !fence && wantsSample(cycle)) {
             requestStats(targets[current]);
           }
 

@@ -203,8 +203,8 @@ describe("visibleEffects", () => {
       visibleEffects(list, { sort, favourites }).map((e) => effectGroup(e, { sort, favourites }));
     for (const sort of ["featured", "az", "lightest"] as const) {
       expect(grouped(sort)).toEqual([
-        ...Array<string>(3).fill("Favourites"),
-        ...Array<undefined>(3).fill(undefined),
+        ...Array.from({ length: 3 }, () => "Favourites"),
+        ...Array.from({ length: 3 }, () => undefined),
       ]);
     }
     expect(grouped("category")).toEqual([
@@ -269,11 +269,11 @@ describe("stepEffect", () => {
 
 describe("adjacentEffects", () => {
   it("returns next then previous, without repeats or the current effect", () => {
-    const ids = (options: ListOptions, from: string) =>
+    const adjacentIds = (options: ListOptions, from: string) =>
       adjacentEffects(list, options, from).map((e) => e.id);
-    expect(ids({ sort: "featured" }, "sea")).toEqual(["blobs", "warp"]);
-    expect(ids({ sort: "featured", query: "water" }, "sea")).toEqual(["koi"]);
-    expect(ids({ sort: "featured", query: "pond" }, "koi")).toEqual([]);
-    expect(ids({ sort: "featured", query: "pond" }, "warp")).toEqual(["koi"]);
+    expect(adjacentIds({ sort: "featured" }, "sea")).toEqual(["blobs", "warp"]);
+    expect(adjacentIds({ sort: "featured", query: "water" }, "sea")).toEqual(["koi"]);
+    expect(adjacentIds({ sort: "featured", query: "pond" }, "koi")).toEqual([]);
+    expect(adjacentIds({ sort: "featured", query: "pond" }, "warp")).toEqual(["koi"]);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createKaleido,
+  type KaleidoSim,
   foldAngle,
   foldPoint,
   INSTANCE_ATTRIBUTES,
@@ -26,7 +27,9 @@ import { kaleidoMeta, PALETTE_OPTIONS, SEGMENT_OPTIONS, VIEW_OPTIONS } from "./k
 describe("options", () => {
   it("match the sim", () => {
     expect(SEGMENT_OPTIONS.map((o) => segmentCount(o.value))).toEqual([...SEGMENTS]);
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(VIEW_OPTIONS.map((o) => isCircleView(o.value))).toEqual([false, true]);
     expect(segmentCount(kaleidoMeta.params.segments.default)).toBe(8);
   });
@@ -47,11 +50,19 @@ describe("foldAngle", () => {
       for (let k = -2000; k <= 2000; k++) {
         const a = k * 0.0123;
         const f = foldAngle(a, w);
-        if (!(f >= 0 && f <= w + 1e-12)) bad++;
-        if (a >= 0 && a <= w && Math.abs(f - a) > 1e-12) bad++;
+        if (!(f >= 0 && f <= w + 1e-12)) {
+          bad++;
+        }
+        if (a >= 0 && a <= w && Math.abs(f - a) > 1e-12) {
+          bad++;
+        }
         // Symmetric under each mirror and periodic over a mirror pair.
-        if (Math.abs(foldAngle(-a, w) - f) > 1e-9) bad++;
-        if (Math.abs(foldAngle(a + 2 * w, w) - f) > 1e-9) bad++;
+        if (Math.abs(foldAngle(-a, w) - f) > 1e-9) {
+          bad++;
+        }
+        if (Math.abs(foldAngle(a + 2 * w, w) - f) > 1e-9) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -91,8 +102,12 @@ describe("foldPoint", () => {
         const r = (k % 17) / 16;
         foldPoint(r * Math.cos(a), r * Math.sin(a), w, out);
         const d = wedgeDistances(out[0], out[1], w);
-        if (Math.abs(Math.hypot(out[0], out[1]) - r) > 1e-9) bad++;
-        if (d.first < -1e-9 || d.second < -1e-9 || d.rim < -1e-9) bad++;
+        if (Math.abs(Math.hypot(out[0], out[1]) - r) > 1e-9) {
+          bad++;
+        }
+        if (d.first < -1e-9 || d.second < -1e-9 || d.rim < -1e-9) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -148,6 +163,18 @@ describe("createKaleido", () => {
   });
 
   it("keeps every chip inside the wedge", () => {
+    /** How many chips are outside the wedge (less the wall padding). */
+    const countOutside = (sim: KaleidoSim, w: number) => {
+      let outside = 0;
+      for (let i = 0; i < sim.count; i++) {
+        const d = wedgeDistances(sim.x[i], sim.y[i], w);
+        const pad = WALL_PAD * sim.bound[i] - 1e-9;
+        if (!(d.first >= pad && d.second >= pad && d.rim >= pad)) {
+          outside++;
+        }
+      }
+      return outside;
+    };
     let bad = 0;
     let moved = 0;
     for (const n of SEGMENTS) {
@@ -155,21 +182,20 @@ describe("createKaleido", () => {
       for (const seed of [0, 42]) {
         const sim = createKaleido(n, seed);
         const x0 = Array.from(sim.x);
-        const check = () => {
-          for (let i = 0; i < sim.count; i++) {
-            const d = wedgeDistances(sim.x[i], sim.y[i], w);
-            const pad = WALL_PAD * sim.bound[i] - 1e-9;
-            if (!(d.first >= pad && d.second >= pad && d.rim >= pad)) bad++;
-          }
-        };
-        check();
+        bad += countOutside(sim, w);
         // Long and coarse: 0.3 s steps are the most a frame can ask for (0.1 s at speed 3).
         for (let k = 0; k < 600; k++) {
           sim.step(0.3);
-          if (k % 50 === 0) check();
+          if (k % 50 === 0) {
+            bad += countOutside(sim, w);
+          }
         }
-        check();
-        for (let i = 0; i < sim.count; i++) if (Math.abs(sim.x[i] - x0[i]) > 0.01) moved++;
+        bad += countOutside(sim, w);
+        for (let i = 0; i < sim.count; i++) {
+          if (Math.abs(sim.x[i] - x0[i]) > 0.01) {
+            moved++;
+          }
+        }
       }
     }
     expect(bad).toBe(0);
@@ -204,16 +230,34 @@ describe("createKaleido", () => {
     const shapes = new Set<number>();
     for (let i = 0; i < sim.count; i++) {
       const o = i * INSTANCE_STRIDE;
-      for (let k = 0; k < INSTANCE_STRIDE; k++) if (!Number.isFinite(data[o + k])) bad++;
+      for (let k = 0; k < INSTANCE_STRIDE; k++) {
+        if (!Number.isFinite(data[o + k])) {
+          bad++;
+        }
+      }
       const shape = data[o + 8];
       shapes.add(shape);
-      if (![SHAPE_DISC, SHAPE_BEAD, SHAPE_ROD, 3, 4, 5, 6].includes(shape)) bad++;
-      if (data[o + 2] < data[o + 3]) bad++;
-      for (let c = 4; c < 7; c++) if (data[o + c] < 0 || data[o + c] > 1) bad++;
-      if (data[o + 7] <= 0 || data[o + 7] > pal.opacity) bad++;
+      if (![SHAPE_DISC, SHAPE_BEAD, SHAPE_ROD, 3, 4, 5, 6].includes(shape)) {
+        bad++;
+      }
+      if (data[o + 2] < data[o + 3]) {
+        bad++;
+      }
+      for (let c = 4; c < 7; c++) {
+        if (data[o + c] < 0 || data[o + c] > 1) {
+          bad++;
+        }
+      }
+      if (data[o + 7] <= 0 || data[o + 7] > pal.opacity) {
+        bad++;
+      }
       const flip = Math.abs(data[o + 10]);
-      if (flip < 0.25 - 1e-6 || flip > 1) bad++;
-      if (shape === SHAPE_BEAD && flip !== 1) bad++;
+      if (flip < 0.25 - 1e-6 || flip > 1) {
+        bad++;
+      }
+      if (shape === SHAPE_BEAD && flip !== 1) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(shapes.size).toBeGreaterThanOrEqual(4);

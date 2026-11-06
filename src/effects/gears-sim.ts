@@ -128,9 +128,15 @@ export function regionFits(
   y: number,
   r: number,
 ): boolean {
-  if (!(x >= 0 && x <= aspect && y >= 0 && y <= 1)) return false;
-  if (layout === "corner") return Math.hypot(x - aspect, y - 1) + r <= cornerRadius(aspect);
-  if (layout === "side") return x - r >= aspect - sideWidth(aspect);
+  if (!(x >= 0 && x <= aspect && y >= 0 && y <= 1)) {
+    return false;
+  }
+  if (layout === "corner") {
+    return Math.hypot(x - aspect, y - 1) + r <= cornerRadius(aspect);
+  }
+  if (layout === "side") {
+    return x - r >= aspect - sideWidth(aspect);
+  }
   // Frame: the disc must not reach the inner rectangle.
   const b = FRAME_BAND;
   const dx = Math.max(b - x, 0, x - (aspect - b));
@@ -201,8 +207,12 @@ function clearOf(gears: readonly Gear[], g: Gear, skip: number): boolean {
   const r = tipRadius(g);
   for (let i = 0; i < gears.length; i++) {
     const o = gears[i];
-    if (i === skip || o.layer !== g.layer) continue;
-    if (Math.hypot(o.x - g.x, o.y - g.y) < r + tipRadius(o) + CLEARANCE) return false;
+    if (i === skip || o.layer !== g.layer) {
+      continue;
+    }
+    if (Math.hypot(o.x - g.x, o.y - g.y) < r + tipRadius(o) + CLEARANCE) {
+      return false;
+    }
   }
   return true;
 }
@@ -217,7 +227,9 @@ function decorate(g: Gear, rand: () => number): void {
     g.style = STYLE_HOLES;
     g.spokes = g.teeth >= 40 ? 6 + 2 * Math.floor(rand() * 2) : 5;
   }
-  if (g.teeth >= 32 && rand() < 0.45) g.screws = rand() < 0.5 ? 3 : 4;
+  if (g.teeth >= 32 && rand() < 0.45) {
+    g.screws = rand() < 0.5 ? 3 : 4;
+  }
   const m = rand();
   g.metal = m < 0.6 ? METAL_BRASS : m < 0.88 ? METAL_STEEL : METAL_COPPER;
   g.tint = rand() * 2 - 1;
@@ -226,8 +238,12 @@ function decorate(g: Gear, rand: () => number): void {
 /** A tooth count up to `max` (biased towards the middle sizes). */
 function pickTeeth(rand: () => number, max: number): number {
   let n = 0;
-  while (n < TEETH.length && TEETH[n] <= max) n++;
-  if (n === 0) return TEETH[0];
+  while (n < TEETH.length && TEETH[n] <= max) {
+    n++;
+  }
+  if (n === 0) {
+    return TEETH[0];
+  }
   // The mean of two draws favours the middle of the list.
   return TEETH[Math.min(n - 1, Math.floor(((rand() + rand()) / 2) * n))];
 }
@@ -241,12 +257,15 @@ const ANCHOR_SPREAD = 0.18;
  */
 export function rootAnchors(layout: GearLayoutId, aspect: number): [number, number][] {
   const a = aspect;
-  if (layout === "corner") return [[a - 0.22, 0.78]];
-  if (layout === "side")
+  if (layout === "corner") {
+    return [[a - 0.22, 0.78]];
+  }
+  if (layout === "side") {
     return [
       [a - 0.15, 0.72],
       [a - 0.15, 0.22],
     ];
+  }
   return [
     [a - 0.1, 0.85],
     [0.1, 0.15],
@@ -277,16 +296,22 @@ function placeRoot(
       const x = anchor ? anchor[0] + (rand() * 2 - 1) * ANCHOR_SPREAD : rand() * aspect;
       const y = anchor ? anchor[1] + (rand() * 2 - 1) * ANCHOR_SPREAD : rand();
       const g = makeGear(x, y, teeth, spec.module, 1, -1);
-      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, -1)) continue;
+      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, -1)) {
+        continue;
+      }
       g.phase = rand() * TAU;
       // A new train is driven through hidden gearing, at its own size's ratio.
       g.ratio = gears.length === 0 ? 1 : ((rand() < 0.5 ? 1 : -1) * gears[0].teeth) / teeth;
-      if (Math.abs(g.ratio) > MAX_RATIO) continue;
+      if (Math.abs(g.ratio) > MAX_RATIO) {
+        continue;
+      }
       gears.push(g);
       return true;
     }
-    const i = TEETH.indexOf(teeth as (typeof TEETH)[number]);
-    if (i <= 0) break;
+    const i = (TEETH as readonly number[]).indexOf(teeth);
+    if (i <= 0) {
+      break;
+    }
     teeth = TEETH[i - 1];
   }
   return false;
@@ -308,7 +333,9 @@ export function growTrain(layout: GearLayoutId, aspect: number, seed: number): G
   const hasPartner: boolean[] = [];
   const anchors = rootAnchors(layout, aspect);
   if (!placeRoot(gears, layout, aspect, spec, rand, spec.maxTeeth, anchors[0])) {
-    if (!placeRoot(gears, layout, aspect, spec, rand, spec.maxTeeth, null)) return gears;
+    if (!placeRoot(gears, layout, aspect, spec, rand, spec.maxTeeth, null)) {
+      return gears;
+    }
   }
   hasPartner.push(false);
   decorate(gears[0], rand);
@@ -319,7 +346,9 @@ export function growTrain(layout: GearLayoutId, aspect: number, seed: number): G
     const g = makeGear(rand() * aspect, rand(), 0, spec.module, LAYERS - 1, -1);
     g.pitchR = spec.balanceR;
     g.ratio = 0;
-    if (!regionFits(layout, aspect, g.x, g.y, g.pitchR) || !clearOf(gears, g, -1)) continue;
+    if (!regionFits(layout, aspect, g.x, g.y, g.pitchR) || !clearOf(gears, g, -1)) {
+      continue;
+    }
     g.style = STYLE_BALANCE;
     g.spokes = 3;
     g.phase = rand() * TAU;
@@ -349,18 +378,24 @@ export function growTrain(layout: GearLayoutId, aspect: number, seed: number): G
     stalled++;
     const pi = Math.floor(rand() * gears.length);
     const parent = gears[pi];
-    if (parent.teeth === 0) continue;
+    if (parent.teeth === 0) {
+      continue;
+    }
     let g: Gear;
     if (rand() < 0.22 && !hasPartner[pi] && !parent.axle) {
       // A compound gear: a different size on the same axle, one layer up or down.
       const up = parent.layer === 0 || (parent.layer < LAYERS - 1 && rand() < 0.5);
       const teeth = pickTeeth(rand, spec.maxTeeth);
-      if (Math.abs(teeth - parent.teeth) < 8) continue;
+      if (Math.abs(teeth - parent.teeth) < 8) {
+        continue;
+      }
       g = makeGear(parent.x, parent.y, teeth, spec.module, parent.layer + (up ? 1 : -1), pi);
       g.axle = true;
       g.ratio = parent.ratio;
       g.phase = rand() * TAU;
-      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, -1)) continue;
+      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, -1)) {
+        continue;
+      }
       hasPartner[pi] = true;
       gears.push(g);
       hasPartner.push(true);
@@ -377,8 +412,12 @@ export function growTrain(layout: GearLayoutId, aspect: number, seed: number): G
         pi,
       );
       g.ratio = (-parent.ratio * parent.teeth) / teeth;
-      if (Math.abs(g.ratio) > MAX_RATIO) continue;
-      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, pi)) continue;
+      if (Math.abs(g.ratio) > MAX_RATIO) {
+        continue;
+      }
+      if (!regionFits(layout, aspect, g.x, g.y, tipRadius(g)) || !clearOf(gears, g, pi)) {
+        continue;
+      }
       g.phase = meshPhase(parent, g, alpha);
       gears.push(g);
       hasPartner.push(false);
@@ -427,7 +466,9 @@ export function advanceDrive(d: Drive, dt: number, omega: number, tick: boolean)
   if (d.u >= 1) {
     const ticks = Math.floor(d.u);
     d.u -= ticks;
-    if (ticks % 2 === 1) d.flip = !d.flip;
+    if (ticks % 2 === 1) {
+      d.flip = !d.flip;
+    }
     d.base += d.step;
     // Aim the next step at where the smooth drive will be when this tick ends.
     d.step = Math.max(0, d.smooth + omega * (1 - d.u) * TICK_PERIOD - d.base);

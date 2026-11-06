@@ -265,7 +265,9 @@ export const ink = defineEffect(inkMeta, {
       let marblePaletteVersion = -1;
       const updatePalette = (water: string, c1: string, c2: string, c3: string) => {
         const l = lastPalette;
-        if (l.water === water && l.c1 === c1 && l.c2 === c2 && l.c3 === c3) return;
+        if (l.water === water && l.c1 === c1 && l.c2 === c2 && l.c3 === c3) {
+          return;
+        }
         l.water = water;
         l.c1 = c1;
         l.c2 = c2;

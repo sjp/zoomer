@@ -39,11 +39,15 @@ describe("createStarfield", () => {
         if (Math.hypot(tx - 960, ty - 540) > Math.hypot(hx - 960, hy - 540) + 1e-3) {
           bad.push(`tail outside head ${String(i)}`);
         }
-        if (hx < -50 || hx > 1970 || hy < -50 || hy > 1130)
+        if (hx < -50 || hx > 1970 || hy < -50 || hy > 1130) {
           bad.push(`head off screen ${String(i)}`);
-        if ([r, g, b].some((c) => c < 0 || c > 1))
+        }
+        if ([r, g, b].some((c) => c < 0 || c > 1)) {
           bad.push(`colour ${String(r)},${String(g)},${String(b)}`);
-        if (hw < 0.25) bad.push(`half width ${String(hw)}`);
+        }
+        if (hw < 0.25) {
+          bad.push(`half width ${String(hw)}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -71,7 +75,9 @@ describe("createStarfield", () => {
     const f = frame({ speed: 0 });
     stars.step(1 / 60, f, data);
     const zs = stars.zs.slice();
-    for (let k = 0; k < 30; k++) stars.step(1 / 60, f, data);
+    for (let k = 0; k < 30; k++) {
+      stars.step(1 / 60, f, data);
+    }
     expect(stars.zs).toEqual(zs);
   });
 
@@ -79,18 +85,24 @@ describe("createStarfield", () => {
     const stars = createStarfield(MAX, createRng(4));
     stars.step(1 / 60, frame({ count: 100 }), data);
     // The starting stars fade in too, from life 0.
-    for (let k = 0; k < 60; k++) stars.step(1 / 60, frame({ count: 100 }), data);
+    for (let k = 0; k < 60; k++) {
+      stars.step(1 / 60, frame({ count: 100 }), data);
+    }
     expect(stars.life[0]).toBe(1);
     stars.step(1 / 60, frame({ count: 200 }), data);
     expect(stars.life[150]).toBeCloseTo(1 / 60 / FADE_IN, 6);
     expect(stars.live).toBe(200);
-    for (let k = 0; k < 60; k++) stars.step(1 / 60, frame({ count: 200 }), data);
+    for (let k = 0; k < 60; k++) {
+      stars.step(1 / 60, frame({ count: 200 }), data);
+    }
     expect(stars.life[150]).toBe(1);
     stars.step(1 / 60, frame({ count: 100 }), data);
     expect(stars.live).toBe(200);
     expect(stars.life[150]).toBeLessThan(1);
     expect(stars.life[150]).toBeGreaterThan(0.9);
-    for (let k = 0; k < 60; k++) stars.step(1 / 60, frame({ count: 100 }), data);
+    for (let k = 0; k < 60; k++) {
+      stars.step(1 / 60, frame({ count: 100 }), data);
+    }
     expect(stars.live).toBe(100);
   });
 

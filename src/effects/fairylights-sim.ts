@@ -80,7 +80,11 @@ export const PALETTES: Readonly<Record<string, readonly Rgb[]>> = {
 /** Mean colour of a palette, for the wall glow. */
 export function paletteMean(palette: readonly Rgb[], out: Rgb): Rgb {
   out[0] = out[1] = out[2] = 0;
-  for (const c of palette) for (let i = 0; i < 3; i++) out[i] += c[i] / palette.length;
+  for (const c of palette) {
+    for (let i = 0; i < 3; i++) {
+      out[i] += c[i] / palette.length;
+    }
+  }
   return out;
 }
 
@@ -153,7 +157,7 @@ export interface FairyGlow {
 
 export interface FairyLights {
   /** Lays the strings out again; allocates nothing past the capacities. */
-  build(b: FairyBuild): void;
+  build: (b: FairyBuild) => void;
   readonly stringCount: number;
   readonly bulbCount: number;
   readonly pointCount: number;
@@ -172,13 +176,13 @@ export interface FairyLights {
   readonly stringKind: Int32Array;
   readonly stringDepth: Float64Array;
   /** The level of bulb `i` at a frame's time and pattern. */
-  level(i: number, f: FairyFrame): number;
+  level: (i: number, f: FairyFrame) => number;
   /**
    * Sways the strings to `f.time` and writes the bulb instances (`BULB_FLOATS`
    * each, device px) and the visible wire segments (`WIRE_FLOATS` each). Returns
    * the bulb count; the wire segment count is in `wireCount`.
    */
-  step(f: FairyFrame, bulbs: Float32Array, wires: Float32Array): number;
+  step: (f: FairyFrame, bulbs: Float32Array, wires: Float32Array) => number;
   readonly wireCount: number;
 }
 
@@ -219,7 +223,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
   const stringBlur = new Float64Array(S);
 
   const glows: FairyGlow[] = [];
-  for (let i = 0; i < MAX_GLOWS; i++) glows.push({ x: 0, y: 0, rx: 1, ry: 1, strength: 0 });
+  for (let i = 0; i < MAX_GLOWS; i++) {
+    glows.push({ x: 0, y: 0, rx: 1, ry: 1, strength: 0 });
+  }
 
   let stringCount = 0;
   let bulbCount = 0;
@@ -229,7 +235,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
 
   /** Starts a string; returns its index or -1 when full. */
   const beginString = (kind: number, depth: number, rand: () => number) => {
-    if (stringCount >= S) return -1;
+    if (stringCount >= S) {
+      return -1;
+    }
     const s = stringCount++;
     stringFirst[s] = pointCount;
     stringPoints[s] = 0;
@@ -243,7 +251,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
   };
 
   const addPoint = (s: number, x: number, y: number, lever: number) => {
-    if (pointCount >= maxPoints) return;
+    if (pointCount >= maxPoints) {
+      return;
+    }
     const i = pointCount++;
     const n = stringPoints[s]++;
     pointX[i] = x;
@@ -259,8 +269,12 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
     let k = 0;
     let j = first;
     for (let arc = offset; bulbCount < maxBulbs; arc += spacing, k++) {
-      while (j + 1 < end && pointArc[j + 1] < arc) j++;
-      if (j + 1 >= end) break;
+      while (j + 1 < end && pointArc[j + 1] < arc) {
+        j++;
+      }
+      if (j + 1 >= end) {
+        break;
+      }
       const span = pointArc[j + 1] - pointArc[j];
       const u = span > 0 ? (arc - pointArc[j]) / span : 0;
       const b = bulbCount++;
@@ -279,7 +293,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
   };
 
   const addGlow = (x: number, y: number, rx: number, ry: number, strength: number) => {
-    if (glowCount >= MAX_GLOWS) return;
+    if (glowCount >= MAX_GLOWS) {
+      return;
+    }
     const g = glows[glowCount++];
     g.x = x;
     g.y = y;
@@ -293,7 +309,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
       const depth = n === 1 ? 0 : i / (n - 1);
       const shrink = 1 - DEPTH_SHRINK * depth;
       const s = beginString(0, depth, rand);
-      if (s < 0) return;
+      if (s < 0) {
+        return;
+      }
       const swags = clamp(Math.round((width / 1920) * (2 + rand() * 1.6)), 2, 8);
       const left = -0.03 * width;
       const step = (1.06 * width) / swags;
@@ -334,7 +352,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
         const depth = rand();
         const shrink = 1 - DEPTH_SHRINK * depth;
         const s = beginString(1, depth, rand);
-        if (s < 0) return;
+        if (s < 0) {
+          return;
+        }
         // Evenly across the outer 17% of the width, with jitter.
         const u = (i + 0.5 + (rand() - 0.5) * 0.6) / perSide;
         const fromEdge = (0.015 + 0.155 * u) * width;
@@ -359,8 +379,12 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
       const rand = createRng(b.seed * 7919 + 13);
       const n = clamp(Math.round(b.strings), 1, 4);
       const width = Math.max(1, b.refWidth);
-      if (b.layout !== "curtain") buildSwags(n, width, rand);
-      if (b.layout !== "swags") buildCurtain(n + 1, width, rand);
+      if (b.layout !== "curtain") {
+        buildSwags(n, width, rand);
+      }
+      if (b.layout !== "swags") {
+        buildCurtain(n + 1, width, rand);
+      }
     },
     get stringCount() {
       return stringCount;
@@ -388,7 +412,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
     stringKind,
     stringDepth,
     level(i, f) {
-      if (f.pattern === "steady") return 1;
+      if (f.pattern === "steady") {
+        return 1;
+      }
       const tw = twinkleLevel(f.time, bulbF1[i], bulbP1[i], bulbF2[i], bulbP2[i], f.twinkle);
       return f.pattern === "chase" ? tw * chaseLevel(bulbIndex[i], f.time) : tw;
     },
@@ -409,7 +435,9 @@ export function createFairyLights(maxBulbs: number, maxPoints: number): FairyLig
       const maxWires = Math.floor(wires.length / WIRE_FLOATS);
       for (let s = 0; s < stringCount; s++) {
         const fade = smoothstep(0, WIRE_FADE_BLUR, stringBlur[s]);
-        if (fade >= 1 || stringPoints[s] < 2) continue;
+        if (fade >= 1 || stringPoints[s] < 2) {
+          continue;
+        }
         const shrink = 1 - DEPTH_SHRINK * stringDepth[s];
         const r = f.wire[0] + (f.wall[0] - f.wire[0]) * fade;
         const g = f.wire[1] + (f.wall[1] - f.wire[1]) * fade;

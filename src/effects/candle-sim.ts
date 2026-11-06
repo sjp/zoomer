@@ -146,11 +146,15 @@ export function layoutCandles(
     const a = row ? rightA : Math.max(rightA, rightB - k * CLUSTER_SLOT);
     placeRun(l, first, k, a, rightB, row, rng);
   };
-  if (id === "left") leftRun(0, n);
-  else if (id === "right") rightRun(0, n);
-  else {
+  if (id === "left") {
+    leftRun(0, n);
+  } else if (id === "right") {
+    rightRun(0, n);
+  } else {
     const nLeft = Math.floor(n / 2);
-    if (nLeft > 0) leftRun(0, nLeft);
+    if (nLeft > 0) {
+      leftRun(0, nLeft);
+    }
     rightRun(nLeft, n - nLeft);
   }
   return l;
@@ -203,7 +207,9 @@ export const SWAY_RANGE = SWAY_BASE + LEAN_MAX;
  * in `t` and in `draft`.
  */
 export function draftAt(noise: Noise, t: number, draft: number): number {
-  if (!(draft > 0)) return 0;
+  if (!(draft > 0)) {
+    return 0;
+  }
   const th = 0.7 - 0.8 * Math.min(1, draft);
   const gust = smoothstep(th, th + 0.3, noise.noise2(t * RATE_GUST, 101.7));
   const dir = clamp(noise.noise2(t * RATE_DIR, 203.3) * 2.5, -1, 1);
@@ -259,14 +265,18 @@ export function falloff(dx: number, dy: number): number {
 /** Light on the wall at (x, y), every flame at brightness 1. */
 export function wallLightAt(l: CandleLayout, x: number, y: number): number {
   let sum = 0;
-  for (let i = 0; i < l.count; i++) sum += falloff(x - l.x[i], y - lightY(l, i));
+  for (let i = 0; i < l.count; i++) {
+    sum += falloff(x - l.x[i], y - lightY(l, i));
+  }
   return sum;
 }
 
 /** Light on the table at (x, y), every flame at brightness 1 (before `SURF_GAIN`). */
 export function surfaceLightAt(l: CandleLayout, x: number, y: number): number {
   let sum = 0;
-  for (let i = 0; i < l.count; i++) sum += falloff(x - l.x[i], (y - l.baseY[i]) * SURF_SQUASH);
+  for (let i = 0; i < l.count; i++) {
+    sum += falloff(x - l.x[i], (y - l.baseY[i]) * SURF_SQUASH);
+  }
   return sum;
 }
 
@@ -279,7 +289,9 @@ export function lightAt(l: CandleLayout, x: number, y: number): number {
 export function peakLight(l: CandleLayout, step = 16): number {
   let peak = 0;
   for (let y = 0; y <= REF_HEIGHT; y += step) {
-    for (let x = 0; x <= l.refWidth; x += step) peak = Math.max(peak, lightAt(l, x, y));
+    for (let x = 0; x <= l.refWidth; x += step) {
+      peak = Math.max(peak, lightAt(l, x, y));
+    }
   }
   for (let i = 0; i < l.count; i++) {
     peak = Math.max(peak, lightAt(l, l.x[i], lightY(l, i)), lightAt(l, l.x[i], l.baseY[i]));

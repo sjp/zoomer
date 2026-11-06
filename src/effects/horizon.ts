@@ -55,6 +55,10 @@ const TAU = Math.PI * 2;
 
 const PALETTE_IDS = ["meadow", "desert", "mountains", "coast"] as const;
 
+/** The clock mode for a select value; any other value steps like "fixed". */
+const toTimeMode = (value: string): TimeMode =>
+  value === "local" || value === "cycle" ? value : "fixed";
+
 const quant = (v: number) => Math.round(v * COLOR_STEPS) / COLOR_STEPS;
 
 interface Palette {
@@ -453,14 +457,16 @@ export const horizon = defineEffect(horizonMeta, {
         resize(v) {
           const newRefWidth = v.width / v.scale;
           const k = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_CLOUDS; i++) cloudX[i] *= k;
+          for (let i = 0; i < MAX_CLOUDS; i++) {
+            cloudX[i] *= k;
+          }
           ({ width, height, scale } = v);
           refWidth = newRefWidth;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
           const palette = PALETTES[p.palette] ?? PALETTES.meadow;
-          const phase = clock.step(dt, p.time as TimeMode, p.cycleMins, p.hour);
+          const phase = clock.step(dt, toTimeMode(p.time), p.cycleMins, p.hour);
           twinkle = (twinkle + dt) % TWINKLE_PERIOD;
           lunarTimer -= dt;
           if (lunarTimer <= 0) {
@@ -471,7 +477,7 @@ export const horizon = defineEffect(horizonMeta, {
           // Hill profiles and trees: rebuilt only when their inputs change.
           hillInputs.set(0, clamp(Math.round(p.layers), MIN_LAYERS, MAX_LAYERS));
           hillInputs.set(1, Math.floor(p.seed));
-          hillInputs.set(2, PALETTE_IDS.indexOf(p.palette as (typeof PALETTE_IDS)[number]));
+          hillInputs.set(2, (PALETTE_IDS as readonly string[]).indexOf(p.palette));
           if (hillInputs.take()) {
             layerCount = clamp(Math.round(p.layers), MIN_LAYERS, MAX_LAYERS);
             buildHills(profiles, layerCount, p.seed, palette.shape, hillMin, hillMax);
@@ -607,8 +613,12 @@ export const horizon = defineEffect(horizonMeta, {
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
           gl.useProgram(hillProgram);
           hillU.f2("uResolution", width, height);
-          if (changedArray(colors, sentColors)) gl.uniform3fv(hillU.loc.uColors, sentColors);
-          if (changedArray(bottoms, sentBottoms)) gl.uniform1fv(hillU.loc.uBottoms, sentBottoms);
+          if (changedArray(colors, sentColors)) {
+            gl.uniform3fv(hillU.loc.uColors, sentColors);
+          }
+          if (changedArray(bottoms, sentBottoms)) {
+            gl.uniform1fv(hillU.loc.uBottoms, sentBottoms);
+          }
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, hills.texture);
           gl.bindVertexArray(hillVao);

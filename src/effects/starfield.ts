@@ -196,15 +196,15 @@ export const createStarDraw = (): StarDraw => ({
 /** Point stars of the shared layout as additive sprites. */
 export interface StarSprites {
   /** Lists and uploads the stars for `layout`; returns the count. Call on resize or when the layout changes. */
-  build(layout: StarfieldLayout): number;
+  build: (layout: StarfieldLayout) => number;
   /** Stars from the last `build`. */
   readonly count: number;
   /**
    * Draws the stars additively (ONE, ONE) into the bound framebuffer and
    * viewport, then disables blending. Sets its own program.
    */
-  draw(d: StarDraw): void;
-  dispose(): void;
+  draw: (d: StarDraw) => void;
+  dispose: () => void;
 }
 
 /**
@@ -221,7 +221,9 @@ export function createStarSprites(gl: WebGL2RenderingContext, maxStars: number):
     });
     const u = createUniforms(gl, program, ["uPole", "uFrame", "uLook"]);
     const batch = scope.own(createSpriteBatch(gl, maxStars, [4, 2], [QUAD]));
-    if (batch.stride !== STAR_FLOATS) throw new Error("createStarSprites: layout mismatch");
+    if (batch.stride !== STAR_FLOATS) {
+      throw new Error("createStarSprites: layout mismatch");
+    }
     let count = 0;
     return {
       build(layout) {
@@ -233,7 +235,9 @@ export function createStarSprites(gl: WebGL2RenderingContext, maxStars: number):
         return count;
       },
       draw(d) {
-        if (count <= 0) return;
+        if (count <= 0) {
+          return;
+        }
         gl.useProgram(program);
         u.f4("uPole", d.pole[0], d.pole[1], Math.cos(d.rotation), Math.sin(d.rotation));
         u.f3("uFrame", d.scale, 2 / d.width, 2 / d.height);

@@ -279,8 +279,8 @@ ${DITHER_GLSL}
 void main() {
   vec2 d = (vUv - 0.5) * vec2(uAspect, 1.0);
   vec3 bg = mix(
-    vec3(${BG_CENTRE.map(glslFloat).join(", ")}),
-    vec3(${BG_EDGE.map(glslFloat).join(", ")}),
+    vec3(${BG_CENTRE.map((v) => glslFloat(v)).join(", ")}),
+    vec3(${BG_EDGE.map((v) => glslFloat(v)).join(", ")}),
     smoothstep(0.15, 1.1, length(d)));
   vec3 t = texture(uTrails, vUv).rgb;
   outColor = vec4(bg + (1.0 - exp(-t)) + dither8(gl_FragCoord.xy), 1.0);
@@ -457,7 +457,9 @@ export const lorenz = defineEffect(lorenzMeta, {
       let trailH = 0;
       scope.defer(() => trails?.dispose());
       const ensureTrails = (w: number, h: number) => {
-        if (w === trailW && h === trailH) return;
+        if (w === trailW && h === trailH) {
+          return;
+        }
         trails?.dispose();
         trailW = w;
         trailH = h;
@@ -466,10 +468,14 @@ export const lorenz = defineEffect(lorenzMeta, {
           trailFloat = false;
           trails = createRenderTarget(gl, w, h, gl.RGBA8);
         }
-        if (!trails) console.warn(`lorenz: can't allocate a ${String(w)}x${String(h)} trail layer`);
+        if (!trails) {
+          console.warn(`lorenz: can't allocate a ${String(w)}x${String(h)} trail layer`);
+        }
       };
       const clearTrails = () => {
-        if (!trails) return;
+        if (!trails) {
+          return;
+        }
         trails.bind();
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
@@ -484,7 +490,9 @@ export const lorenz = defineEffect(lorenzMeta, {
       let frameNo = 0;
 
       const setView = (u: Uniforms<ViewUniform>, aspect: number, palette: string, side: string) => {
-        if (!system || !traj) return;
+        if (!system || !traj) {
+          return;
+        }
         const pal = paletteFor(palette);
         u.i1("uSystem", system.index);
         u.f3("uCentre", traj.centre[0], traj.centre[1], traj.centre[2]);

@@ -91,7 +91,9 @@ export function stonesApart(ra: number, rb: number, dx: number, dy: number): boo
   const a = maxRingRadius(ra);
   const b = maxRingRadius(rb);
   const ax = Math.abs(dx);
-  if (ax >= GAP * (a + b) + STONE_MARGIN) return true;
+  if (ax >= GAP * (a + b) + STONE_MARGIN) {
+    return true;
+  }
   return Math.abs(dy) >= BOX_N * (a + b) + WAVE_SLOPE * ax + STONE_MARGIN;
 }
 
@@ -127,13 +129,17 @@ export function placeStones(
     for (let t = 0; t < TRIES; t++) {
       const x = edge + (refWidth - 2 * edge) * rng();
       const y = edge + (1080 - 2 * edge) * rng();
-      if (inCentre(x, radius, refWidth)) continue;
+      if (inCentre(x, radius, refWidth)) {
+        continue;
+      }
       let ok = true;
       for (let j = 0; j < n && ok; j++) {
         const o = j * STONE_FLOATS;
         ok = stonesApart(radius, pos[o + 2], x - pos[o], y - pos[o + 1]);
       }
-      if (!ok) continue;
+      if (!ok) {
+        continue;
+      }
       const o = n * STONE_FLOATS;
       pos[o] = x;
       pos[o + 1] = y;
@@ -221,7 +227,7 @@ export function fillStoneLayout(
 export function stoneDistance(t: number, n: number, r: number, rz: number): number {
   const ring = r + RING_STEEP * Math.max(r - rz, 0);
   const u = Math.max(GAP * rz - Math.abs(t), 0);
-  const d = Math.sqrt(u * u + n * n);
+  const d = Math.hypot(u, n);
   return Math.min(ring, d, Math.max(Math.abs(n), rz));
 }
 
@@ -256,11 +262,13 @@ export function rakePhase(
     const n = (phi - layout[o]) * inv;
     const t = (qx - slope * qy) * inv;
     const gap = GAP * rz;
-    if (Math.abs(t) >= gap || Math.abs(n) >= BOX_N * rz) continue;
-    const r = Math.max(Math.sqrt(qx * qx + qy * qy), 1e-3);
+    if (Math.abs(t) >= gap || Math.abs(n) >= BOX_N * rz) {
+      continue;
+    }
+    const r = Math.max(Math.hypot(qx, qy), 1e-3);
     const ring = r + RING_STEEP * Math.max(r - rz, 0);
     const u = gap - Math.abs(t);
-    const d = Math.max(Math.sqrt(u * u + n * n), 1e-3);
+    const d = Math.max(Math.hypot(u, n), 1e-3);
     const flat = Math.max(Math.abs(n), rz);
     const s = n >= 0 ? 1 : -1;
     // ∇n = ∇φ / g, ∇t = (1, -slope) / g.
@@ -334,9 +342,13 @@ export function stepRerake(s: Rerake, dt: number, enabled: boolean): boolean {
     }
     return false;
   }
-  if (!enabled) return false;
+  if (!enabled) {
+    return false;
+  }
   s.idle += step;
-  if (s.idle >= RERAKE_INTERVAL) s.progress = 0;
+  if (s.idle >= RERAKE_INTERVAL) {
+    s.progress = 0;
+  }
   return false;
 }
 
@@ -349,7 +361,9 @@ export const SWEEP_OFF = -1e5;
  * left of it show the new pattern.
  */
 export function sweepX(s: Rerake, refWidth: number): number {
-  if (s.progress < 0) return SWEEP_OFF;
+  if (s.progress < 0) {
+    return SWEEP_OFF;
+  }
   return -RERAKE_BAND + s.progress * (refWidth + 2 * RERAKE_BAND);
 }
 

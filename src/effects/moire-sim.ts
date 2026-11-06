@@ -10,6 +10,7 @@
  * whole-cycle sines, so wrapping the phase never makes the pattern jump.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
+import { lookup } from "./lookup";
 import { wrap } from "./math";
 
 export interface MoirePalette {
@@ -29,7 +30,7 @@ export type PaletteName = keyof typeof PALETTES;
 
 /** The named palette, or Paper for an unknown name. */
 export function palette(name: string): MoirePalette {
-  return name in PALETTES ? PALETTES[name as PaletteName] : PALETTES.paper;
+  return lookup(PALETTES, name, "paper");
 }
 
 /** Most layers drawn at once. */
@@ -58,7 +59,9 @@ export function paletteData(name: string): PaletteData {
     const tints = new Float32Array(MAX_LAYERS * 3);
     for (let i = 0; i < MAX_LAYERS; i++) {
       const ink = hexToUnitRgb(p.inks[i]);
-      for (let c = 0; c < 3; c++) tints[i * 3 + c] = Math.min(1, ink[c] / Math.max(bg[c], 1e-3));
+      for (let c = 0; c < 3; c++) {
+        tints[i * 3 + c] = Math.min(1, ink[c] / Math.max(bg[c], 1e-3));
+      }
     }
     d = { bg, tints };
     PALETTE_DATA.set(p, d);
@@ -83,7 +86,7 @@ const KINDS: Record<PatternName, readonly [number, number, number]> = {
 
 /** Pattern kind of each layer for a pattern name; Rings for an unknown name. */
 export function patternKinds(name: string): readonly [number, number, number] {
-  return name in KINDS ? KINDS[name as PatternName] : KINDS.rings;
+  return lookup(KINDS, name, "rings");
 }
 
 export const MOTIONS = ["rotate", "drift", "breathe"] as const;
@@ -91,7 +94,7 @@ export type MotionName = (typeof MOTIONS)[number];
 
 /** Motion index of a motion name; Rotate for an unknown name. */
 export function motionIndex(name: string): number {
-  return Math.max(0, MOTIONS.indexOf(name as MotionName));
+  return Math.max(0, (MOTIONS as readonly string[]).indexOf(name));
 }
 
 /** Layer count for a `layers` select value: 3 for "three", else 2. */

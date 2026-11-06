@@ -175,8 +175,8 @@ const float CLOUD_X = ${f(CLOUD_X)};
 const float CLOUD_Y = ${f(CLOUD_Y)};
 const float SHADOW_STRETCH = ${f(SHADOW_STRETCH)};
 const float FOOT_DEPTH = ${f(FOOT_DEPTH)};
-const float ZOOM[LAYERS] = float[LAYERS](${SHADOW_ZOOM.map(f).join(", ")});
-const float FOOT[LAYERS] = float[LAYERS](${FOOT_HAZE.map(f).join(", ")});
+const float ZOOM[LAYERS] = float[LAYERS](${SHADOW_ZOOM.map((v) => f(v)).join(", ")});
+const float FOOT[LAYERS] = float[LAYERS](${FOOT_HAZE.map((v) => f(v)).join(", ")});
 
 /** Four-octave cloud density at q, unit variance. */
 float density(vec2 q) {
@@ -417,7 +417,11 @@ void main() {
 
 /** Index of a side select value; unknown values fall back to "spread" (0). A loop, so nothing is allocated. */
 function sideIndex(id: string): number {
-  for (let i = 0; i < SIDE_OPTIONS.length; i++) if (SIDE_OPTIONS[i].value === id) return i;
+  for (let i = 0; i < SIDE_OPTIONS.length; i++) {
+    if (SIDE_OPTIONS[i].value === id) {
+      return i;
+    }
+  }
   return 0;
 }
 
@@ -509,7 +513,9 @@ export const windfarm = defineEffect(windfarmMeta, {
       /** Set by `track` when a scene uniform uploads, meaning the cached scene is stale. */
       let changed = false;
       const track = (uploaded: boolean) => {
-        if (uploaded) changed = true;
+        if (uploaded) {
+          changed = true;
+        }
       };
 
       return {
@@ -591,7 +597,9 @@ export const windfarm = defineEffect(windfarmMeta, {
           target.blit();
 
           const count = writeTurbines(farm, turbines.data, height);
-          if (count === 0) return;
+          if (count === 0) {
+            return;
+          }
           turbines.upload(count);
           gl.useProgram(turbineProgram);
           tu.f2("uInvRes", 1 / width, 1 / height);

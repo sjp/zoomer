@@ -261,15 +261,21 @@ export function fillStars(out: Float32Array, max: number, l: StarfieldLayout): n
     const n = sectorCount(ring, Infinity);
     for (let k = 0; k < n; k++) {
       const star = cellStar(ring, k, n, density, l.salt, starScratch);
-      if (!star.occupied || star.radius < rMin || star.radius > rMax) continue;
+      if (!star.occupied || star.radius < rMin || star.radius > rMax) {
+        continue;
+      }
       const qx = star.radius * Math.cos(star.angle);
       const qy = star.radius * Math.sin(star.angle);
       if (!l.rotates) {
         const x = px + qx;
         const y = py + qy;
-        if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+        if (x < x0 || x > x1 || y < y0 || y > y1) {
+          continue;
+        }
       }
-      if (count >= limit) return count;
+      if (count >= limit) {
+        return count;
+      }
       const o = count * STAR_FLOATS;
       out[o] = qx;
       out[o + 1] = qy;

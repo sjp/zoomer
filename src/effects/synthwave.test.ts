@@ -51,8 +51,9 @@ describe("buildRidgeData", () => {
         const env = ridgeEnvelope(i / last);
         // toBeCloseTo(_, 6): within half of 1e-6.
         const ok = Math.abs(v - ridge[i] * env) < 5e-7 && v >= 0 && v <= env + 1e-6;
-        if (!ok && wrong.length < 10)
+        if (!ok && wrong.length < 10) {
           wrong.push(`ridge ${String(row)}, point ${String(i)}: ${String(v)}`);
+        }
       }
     });
     expect(wrong).toEqual([]);
@@ -167,7 +168,7 @@ describe("fillRows", () => {
             }
           }
         }
-        expect(rows.every(Number.isFinite)).toBe(true);
+        expect(rows.every((v) => Number.isFinite(v))).toBe(true);
       }
     }
     expect(wrong).toEqual([]);
@@ -180,8 +181,11 @@ describe("fillRows", () => {
     for (let row = 0; row < height; row++) {
       const y = yOf(height, row);
       const cov = rows[row * ROW_FLOATS + 3];
-      if (y >= s.sunTop + 0.5 && y <= s.sunClip - 0.5) inside.push(cov);
-      else if (y < s.sunTop - 0.5 || y > s.sunClip + 0.5) outside.push(cov);
+      if (y >= s.sunTop + 0.5 && y <= s.sunClip - 0.5) {
+        inside.push(cov);
+      } else if (y < s.sunTop - 0.5 || y > s.sunClip + 0.5) {
+        outside.push(cov);
+      }
     }
     expect(inside.length).toBeGreaterThan(200);
     expect(new Set(inside)).toEqual(new Set([1]));
@@ -207,8 +211,11 @@ describe("fillRows", () => {
     for (let row = 0; row < height; row++) {
       const o = row * ROW_FLOATS;
       const lit = [8, 9, 10, 11].some((i) => rows[o + i] !== 0);
-      if (yOf(height, row) <= s.hy) skyGrid += lit ? 1 : 0;
-      else gridRows += lit ? 1 : 0;
+      if (yOf(height, row) <= s.hy) {
+        skyGrid += lit ? 1 : 0;
+      } else {
+        gridRows += lit ? 1 : 0;
+      }
     }
     expect(skyGrid).toBe(0);
     expect(gridRows).toBeGreaterThan(100);

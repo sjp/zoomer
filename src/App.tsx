@@ -60,14 +60,18 @@ export function App() {
   const [frameListeners] = useState(() => new Set<(now: number) => void>());
   const onFrame = useCallback(
     (now: number) => {
-      for (const listener of frameListeners) listener(now);
+      for (const listener of frameListeners) {
+        listener(now);
+      }
     },
     [frameListeners],
   );
   const subscribeFrames = useCallback<FrameSubscriber>(
     (listener) => {
       frameListeners.add(listener);
-      return () => frameListeners.delete(listener);
+      return () => {
+        frameListeners.delete(listener);
+      };
     },
     [frameListeners],
   );
@@ -88,7 +92,9 @@ export function App() {
   }, []);
   const prefetch = useCallback((id: string) => {
     const entry = getEffect(id);
-    if (entry) effectLoader.prefetch(entry);
+    if (entry) {
+      effectLoader.prefetch(entry);
+    }
   }, []);
 
   const effect = getEffect(effectId) ?? defaultEffect;
@@ -139,7 +145,9 @@ export function App() {
   // Once the selected effect runs, fetch the effects ← / → lead to (in the list as the
   // user sees it) in idle time so stepping to them is instant. Failures are dropped from the cache, so a real switch retries.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) {
+      return undefined;
+    }
     return whenIdle(() => {
       for (const entry of adjacentEffects(effects, listOptions, effect.id)) {
         effectLoader.prefetch(entry);
@@ -151,7 +159,9 @@ export function App() {
   // has already started its import, so this joins it.
   useEffect(() => {
     const entry = getEffect(initial.effectId) ?? defaultEffect;
-    if (effectLoader.get(entry.id)) return;
+    if (effectLoader.get(entry.id)) {
+      return undefined;
+    }
     startLoad(entry);
     return () => {
       latestLoad.cancel();
@@ -179,7 +189,9 @@ export function App() {
     const onHashChange = () => {
       const now = current.current;
       const hash = window.location.hash;
-      if (hash === encodeHash(now.effect, now.values)) return;
+      if (hash === encodeHash(now.effect, now.values)) {
+        return;
+      }
       const next = stateFromHash(hash, effects, defaultEffect);
       if (now.recording && next.effect.id !== now.effect.id) {
         // Switching effect would break the recording; put the current state back.
@@ -196,7 +208,9 @@ export function App() {
   }, [selectEffect]);
 
   useEffect(() => {
-    if (!toast) return;
+    if (!toast) {
+      return undefined;
+    }
     const timer = setTimeout(() => {
       setToast(undefined);
     }, TOAST_MS);
@@ -217,10 +231,14 @@ export function App() {
 
   const step = useCallback(
     (dir: 1 | -1) => {
-      if (recording) return;
+      if (recording) {
+        return;
+      }
       // The list as the user sees it: sorted and filtered by the search, even closed.
       const next = stepEffect(effects, listOptions, effect.id, dir);
-      if (next) selectEffect(next.id);
+      if (next) {
+        selectEffect(next.id);
+      }
     },
     [listOptions, effect, recording, selectEffect],
   );
@@ -241,7 +259,9 @@ export function App() {
   }, []);
   /** Shows the panel and the effect list, and focuses its search box. */
   const openList = useCallback(() => {
-    if (recording) return;
+    if (recording) {
+      return;
+    }
     setPanelHidden(false);
     setListOpen(true);
     setListFocus((n) => n + 1);
@@ -275,15 +295,23 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) {
+        return;
+      }
       if (e.key === "/") {
         e.preventDefault();
         openList();
-      } else if (e.key === "h" || e.key === "H") togglePanel();
-      else if (e.key === "f" || e.key === "F") toggleFullscreen();
-      else if (e.key === "s" || e.key === "S") toggleCurrentFavourite();
-      else if (e.key === "ArrowRight") step(1);
-      else if (e.key === "ArrowLeft") step(-1);
+      } else if (e.key === "h" || e.key === "H") {
+        togglePanel();
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      } else if (e.key === "s" || e.key === "S") {
+        toggleCurrentFavourite();
+      } else if (e.key === "ArrowRight") {
+        step(1);
+      } else if (e.key === "ArrowLeft") {
+        step(-1);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -294,7 +322,9 @@ export function App() {
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
     // A pending load would swap the effect mid-recording.
-    if (!canvas || recording || !ready) return;
+    if (!canvas || recording || !ready) {
+      return;
+    }
     setRecordingLeft(seconds);
     // The list is locked while recording; don't bring it back when the recording ends.
     setListOpen(false);
@@ -313,6 +343,7 @@ export function App() {
         `zoomer-${effect.id}-${String(canvas.width)}x${String(canvas.height)}.${extension}`,
       );
     } catch (err) {
+      // oxlint-disable-next-line eslint/no-alert -- a failed recording needs a blocking, dismissable message; the toast is for transient notices
       window.alert(err instanceof Error ? err.message : String(err));
     } finally {
       clearInterval(countdown);

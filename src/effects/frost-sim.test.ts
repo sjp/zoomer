@@ -28,8 +28,14 @@ const { width: W, height: H } = fieldSize(16 / 9);
  * half-million floats of a field takes most of a second.
  */
 function firstDiff(a: Float32Array, b: Float32Array): number {
-  if (a.length !== b.length) return Math.min(a.length, b.length);
-  for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return i;
+  if (a.length !== b.length) {
+    return Math.min(a.length, b.length);
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (!Object.is(a[i], b[i])) {
+      return i;
+    }
+  }
   return -1;
 }
 const field = buildFrostField(1234, W, H);
@@ -108,7 +114,9 @@ describe("buildFrostField", () => {
     let bad = 0;
     for (let k = 0; k < W * H; k++) {
       const a = field.data[k * 2];
-      if (!(Number.isFinite(a) && a >= 0 && a <= NEVER)) bad++;
+      if (!(Number.isFinite(a) && a >= 0 && a <= NEVER)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     const centre = (H / 2) * W + W / 2;
@@ -117,7 +125,11 @@ describe("buildFrostField", () => {
 
   it("reaches a good part of the frame", () => {
     let reached = 0;
-    for (let k = 0; k < W * H; k++) if (field.data[k * 2] < 1) reached++;
+    for (let k = 0; k < W * H; k++) {
+      if (field.data[k * 2] < 1) {
+        reached++;
+      }
+    }
     expect(reached / (W * H)).toBeGreaterThan(0.25);
   });
 
@@ -129,7 +141,9 @@ describe("buildFrostField", () => {
     for (let k = 0; k < W * H; k++) {
       const a = field.data[k * 2];
       const m = field.data[k * 2 + 1];
-      if (a >= 1) continue;
+      if (a >= 1) {
+        continue;
+      }
       if (m > 0.93) {
         edgeSum += a;
         edgeN++;
@@ -151,7 +165,9 @@ describe("buildFrostField", () => {
       for (let j = Math.ceil(H / 3); j < Math.floor((2 * H) / 3); j++) {
         for (let i = Math.ceil(W / 3); i < Math.floor((2 * W) / 3); i++) {
           const k = j * W + i;
-          if (effectiveArrival(f.data[k * 2], f.data[k * 2 + 1], reachLimit(1)) <= 1) covered++;
+          if (effectiveArrival(f.data[k * 2], f.data[k * 2 + 1], reachLimit(1)) <= 1) {
+            covered++;
+          }
         }
       }
       expect(covered).toBe(0);
@@ -165,7 +181,9 @@ describe("growFrost", () => {
   it("normalises the latest arrival to ARRIVAL_FILL", () => {
     let max = 0;
     for (const b of skeleton.branches) {
-      for (let i = 2; i < b.points.length; i += 3) max = Math.max(max, b.points[i]);
+      for (let i = 2; i < b.points.length; i += 3) {
+        max = Math.max(max, b.points[i]);
+      }
     }
     expect(max).toBeCloseTo(ARRIVAL_FILL, 6);
   });
@@ -177,22 +195,32 @@ describe("growFrost", () => {
     const fail = (msg: string) => wrong.length < 10 && wrong.push(msg);
     skeleton.branches.forEach((b, k) => {
       const p = b.points;
-      if (!Object.is(p[2], b.parentArrival))
+      if (!Object.is(p[2], b.parentArrival)) {
         fail(`branch ${String(k)} starts at ${String(p[2])}, not ${String(b.parentArrival)}`);
-      for (let i = 5; i < p.length; i += 3) {
-        if (!(p[i] >= p[i - 3]))
-          fail(`branch ${String(k)}, point ${String((i - 2) / 3)} arrives earlier`);
       }
-      if (b.parent < 0) return;
+      for (let i = 5; i < p.length; i += 3) {
+        if (!(p[i] >= p[i - 3])) {
+          fail(`branch ${String(k)}, point ${String((i - 2) / 3)} arrives earlier`);
+        }
+      }
+      if (b.parent < 0) {
+        return;
+      }
       children++;
       const parent = skeleton.branches[b.parent];
-      if (!(parent.depth <= b.depth)) fail(`branch ${String(k)} is shallower than its parent`);
+      if (!(parent.depth <= b.depth)) {
+        fail(`branch ${String(k)} is shallower than its parent`);
+      }
       let found = false;
       const q = parent.points;
       for (let i = 0; i < q.length; i += 3) {
-        if (q[i] === p[0] && q[i + 1] === p[1] && q[i + 2] === p[2]) found = true;
+        if (q[i] === p[0] && q[i + 1] === p[1] && q[i + 2] === p[2]) {
+          found = true;
+        }
       }
-      if (!found) fail(`branch ${String(k)} does not start on its parent`);
+      if (!found) {
+        fail(`branch ${String(k)} does not start on its parent`);
+      }
     });
     expect(wrong).toEqual([]);
     expect(children).toBeGreaterThan(100);
@@ -200,7 +228,7 @@ describe("growFrost", () => {
 
   it("grows side branches and needles", () => {
     const depths = new Set(skeleton.branches.map((b) => b.depth));
-    expect([...depths].sort((a, b) => a - b)).toEqual([0, 1, 2]);
+    expect([...depths].toSorted((a, b) => a - b)).toEqual([0, 1, 2]);
   });
 
   it("keeps every point inside the frame and outside the reach limit", () => {

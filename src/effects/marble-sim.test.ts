@@ -63,7 +63,9 @@ describe("operation maps", () => {
           const x = (rng() - 0.5) * 1200;
           const y = (rng() - 0.5) * 800;
           forward(op, e, x, y, fwd);
-          if (!inverse(op, e, fwd[0], fwd[1], back)) failedInverse++;
+          if (!inverse(op, e, fwd[0], fwd[1], back)) {
+            failedInverse++;
+          }
           worst = Math.max(worst, Math.hypot(back[0] - x, back[1] - y));
         }
       }
@@ -81,7 +83,9 @@ describe("operation maps", () => {
       for (let n = 0; n < 400; n++) {
         const x = (rng() - 0.5) * 1200;
         const y = (rng() - 0.5) * 800;
-        if (!inverse(op, 1, x, y, back)) continue;
+        if (!inverse(op, 1, x, y, back)) {
+          continue;
+        }
         forward(op, 1, back[0], back[1], fwd);
         worst = Math.max(worst, Math.hypot(fwd[0] - x, fwd[1] - y));
       }
@@ -131,7 +135,9 @@ describe("operation maps", () => {
         const x = (rng() - 0.5) * 1000;
         const y = (rng() - 0.5) * 700;
         // Skip points next to a comb's tine, where the map has a crease.
-        if (op.kind >= 1 && tineDistance(op, x, y) < 0.01) continue;
+        if (op.kind >= 1 && tineDistance(op, x, y) < 0.01) {
+          continue;
+        }
         forward(op, 1, x, y, p0);
         forward(op, 1, x + h, y, px);
         forward(op, 1, x, y + h, py);
@@ -214,13 +220,19 @@ describe("scheduler", () => {
           sim.step(0.1, { speed, drops, strokes }, EXTENT);
           sinceBake += 0.1;
           longest = Math.max(longest, sim.ops.length);
-          if (sim.ops.length > MAX_OPS) violations++;
+          if (sim.ops.length > MAX_OPS) {
+            violations++;
+          }
           const k = sim.bakeCount();
           if (k > 0) {
             if (sim.ops.length < BAKE_FORCE_AT && sinceBake < BAKE_MIN_INTERVAL - 1e-9) {
               earlyBakes++;
             }
-            for (let j = 0; j < k; j++) if (!isDone(sim.ops[j], sim.time)) incompleteBakes++;
+            for (let j = 0; j < k; j++) {
+              if (!isDone(sim.ops[j], sim.time)) {
+                incompleteBakes++;
+              }
+            }
             sim.commitBake(k);
             sinceBake = 0;
             bakes++;
@@ -247,9 +259,11 @@ describe("scheduler", () => {
       const last = sim.ops[sim.ops.length - 1];
       kinds.add(last.kind === KIND_DROP ? "drop" : last.kind === KIND_SWIRL ? "swirl" : "comb");
       const k = sim.bakeCount();
-      if (k) sim.commitBake(k);
+      if (k) {
+        sim.commitBake(k);
+      }
     }
-    expect([...kinds].sort()).toEqual(["comb", "drop", "swirl"]);
+    expect([...kinds].toSorted()).toEqual(["comb", "drop", "swirl"]);
     expect(sim.bakes).toBeGreaterThan(0);
   });
 
@@ -261,12 +275,20 @@ describe("scheduler", () => {
       for (let i = 0; i < 4000; i++) {
         sim.step(0.1, { speed: 2, drops: 2, strokes }, EXTENT);
         for (const op of sim.ops) {
-          if (strokes === "combs" && op.kind === KIND_SWIRL) wrong++;
-          if (strokes === "swirls" && op.kind > 1) wrong++;
-          if (op.kind === KIND_DROP && (op.colour < 0 || op.colour >= 4)) badColour++;
+          if (strokes === "combs" && op.kind === KIND_SWIRL) {
+            wrong++;
+          }
+          if (strokes === "swirls" && op.kind > 1) {
+            wrong++;
+          }
+          if (op.kind === KIND_DROP && (op.colour < 0 || op.colour >= 4)) {
+            badColour++;
+          }
         }
         const k = sim.bakeCount();
-        if (k) sim.commitBake(k);
+        if (k) {
+          sim.commitBake(k);
+        }
       }
       expect(wrong).toBe(0);
       expect(badColour).toBe(0);
@@ -276,8 +298,9 @@ describe("scheduler", () => {
   it("is deterministic per seed", () => {
     const run = (seed: number) => {
       const sim = createMarble({ seed, colours: 5, extent: EXTENT });
-      for (let i = 0; i < 1000; i++)
+      for (let i = 0; i < 1000; i++) {
         sim.step(0.1, { speed: 1, drops: 2, strokes: "mixed" }, EXTENT);
+      }
       return JSON.stringify(sim.ops);
     };
     expect(run(7)).toBe(run(7));
@@ -302,7 +325,9 @@ describe("palettes and options", () => {
       expect(p.colours.length).toBeGreaterThanOrEqual(3);
       expect(p.colours.length).toBeLessThanOrEqual(MAX_COLOURS);
     }
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(STROKE_OPTIONS.map((o) => o.value)).toEqual([...STROKE_MODES]);
     expect(marblePalette("nope")).toBe(PALETTES.classic);
   });

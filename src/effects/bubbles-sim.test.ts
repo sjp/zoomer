@@ -97,7 +97,9 @@ describe("createBubbles", () => {
     let bad = 0;
     for (let i = 0; i < 20 * 40; i++) {
       const visible = sim.step(1 / 20, f, data, BUBBLE_FLOATS);
-      if (sim.live !== sim.target || visible > sim.target) bad++;
+      if (sim.live !== sim.target || visible > sim.target) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     // Long after every bubble has crossed the frame a few times, nearly all are on screen.
@@ -113,11 +115,19 @@ describe("createBubbles", () => {
       for (let k = 0; k < n; k++) {
         const o = k * BUBBLE_FLOATS;
         for (let j = 0; j < BUBBLE_FLOATS; j++) {
-          if (!Number.isFinite(data[o + j])) bad.push(`non-finite ${String(j)}`);
+          if (!Number.isFinite(data[o + j])) {
+            bad.push(`non-finite ${String(j)}`);
+          }
         }
-        if (!(data[o + 3] > 0 && data[o + 3] <= 1)) bad.push(`alpha ${String(data[o + 3])}`);
-        if (!(data[o + 7] > 0 && data[o + 7] <= 1)) bad.push(`flip ${String(data[o + 7])}`);
-        if (!(data[o] > -100 && data[o] < 2020)) bad.push(`x ${String(data[o])}`);
+        if (!(data[o + 3] > 0 && data[o + 3] <= 1)) {
+          bad.push(`alpha ${String(data[o + 3])}`);
+        }
+        if (!(data[o + 7] > 0 && data[o + 7] <= 1)) {
+          bad.push(`flip ${String(data[o + 7])}`);
+        }
+        if (!(data[o] > -100 && data[o] < 2020)) {
+          bad.push(`x ${String(data[o])}`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -129,16 +139,22 @@ describe("createBubbles", () => {
     const f = frame({ mode, streams: true, count: 240, size: 10 });
     const seconds = 60;
     // Settle first, then measure.
-    for (let i = 0; i < 20 * 30; i++) sim.step(1 / 20, f, data, BUBBLE_FLOATS);
+    for (let i = 0; i < 20 * 30; i++) {
+      sim.step(1 / 20, f, data, BUBBLE_FLOATS);
+    }
     const before = Array.from(sim.emitted);
     let changed = 0;
     for (let i = 0; i < 20 * seconds; i++) {
       sim.step(1 / 20, f, data, BUBBLE_FLOATS);
-      if (sim.live !== sim.target) changed++;
+      if (sim.live !== sim.target) {
+        changed++;
+      }
     }
     expect(changed).toBe(0);
     let parked = 0;
-    for (let i = 0; i < sim.target; i++) parked += sim.parked[i];
+    for (let i = 0; i < sim.target; i++) {
+      parked += sim.parked[i];
+    }
     expect(parked).toBeLessThan(sim.target * 0.25);
     expect(mode.emitters.length).toBe(MAX_EMITTERS);
     for (let e = 0; e < MAX_EMITTERS; e++) {
@@ -154,19 +170,27 @@ describe("createBubbles", () => {
   it("returns parked bubbles to the random pool when streams turn off", () => {
     const sim = createBubbles(MAX, 1920);
     const on = frame({ mode: MODES.champagne, streams: true });
-    for (let i = 0; i < 20 * 30; i++) sim.step(1 / 20, on, data, BUBBLE_FLOATS);
+    for (let i = 0; i < 20 * 30; i++) {
+      sim.step(1 / 20, on, data, BUBBLE_FLOATS);
+    }
     sim.step(1 / 60, { ...on, streams: false }, data, BUBBLE_FLOATS);
-    for (let i = 0; i < MAX; i++) expect(sim.parked[i]).toBe(0);
+    for (let i = 0; i < MAX; i++) {
+      expect(sim.parked[i]).toBe(0);
+    }
   });
 
   it("fades out bubbles when the count drops, then stops simulating them", () => {
     const sim = createBubbles(MAX, 1920);
     sim.step(1 / 60, frame({ count: 300 }), data, BUBBLE_FLOATS);
-    for (let i = 0; i < 120; i++) sim.step(1 / 60, frame({ count: 300 }), data, BUBBLE_FLOATS);
+    for (let i = 0; i < 120; i++) {
+      sim.step(1 / 60, frame({ count: 300 }), data, BUBBLE_FLOATS);
+    }
     const high = sim.live;
     sim.step(1 / 60, frame({ count: 50 }), data, BUBBLE_FLOATS);
     expect(sim.live).toBe(high);
-    for (let i = 0; i < 120; i++) sim.step(1 / 60, frame({ count: 50 }), data, BUBBLE_FLOATS);
+    for (let i = 0; i < 120; i++) {
+      sim.step(1 / 60, frame({ count: 50 }), data, BUBBLE_FLOATS);
+    }
     expect(sim.live).toBe(sim.target);
   });
 
@@ -188,8 +212,12 @@ describe("createBubbles", () => {
       for (let k = 0; k < n; k++) {
         const o = k * BUBBLE_FLOATS;
         // Small bubbles barely zigzag: the column stays within a few px of x = 192.
-        if (Math.abs(data[o] - 192) > ZIG_PX + 6) bad.push(`x ${String(data[o])}`);
-        if (data[o + 1] > 0.8 * 1080 + 0.01) bad.push(`y ${String(data[o + 1])}`);
+        if (Math.abs(data[o] - 192) > ZIG_PX + 6) {
+          bad.push(`x ${String(data[o])}`);
+        }
+        if (data[o + 1] > 0.8 * 1080 + 0.01) {
+          bad.push(`y ${String(data[o + 1])}`);
+        }
         seen++;
       }
     }
@@ -218,7 +246,9 @@ describe("createBubbles", () => {
     const f = frame({ speed: 0 });
     sim.step(1 / 60, f, data, BUBBLE_FLOATS);
     const ys = Array.from(sim.ys);
-    for (let i = 0; i < 30; i++) sim.step(1 / 60, f, data, BUBBLE_FLOATS);
+    for (let i = 0; i < 30; i++) {
+      sim.step(1 / 60, f, data, BUBBLE_FLOATS);
+    }
     expect(Array.from(sim.ys)).toEqual(ys);
   });
 });

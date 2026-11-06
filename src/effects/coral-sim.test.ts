@@ -51,8 +51,9 @@ describe("layoutColonies", () => {
     const many = layoutColonies(createRng(3), ASPECT, 2);
     expect(many.length).toBeGreaterThan(few.length);
     for (const list of [few, many]) {
-      for (let i = 1; i < list.length; i++)
+      for (let i = 1; i < list.length; i++) {
         expect(list[i].fog).toBeLessThanOrEqual(list[i - 1].fog);
+      }
       for (const c of list) {
         expect(c.x).toBeGreaterThanOrEqual(0);
         expect(c.x).toBeLessThanOrEqual(ASPECT);
@@ -88,7 +89,9 @@ describe("buildReef", () => {
     expect(kinds).toEqual(new Set(["branching", "fan", "mound"]));
     const dense = buildReef(5, 3, 2, 0.6);
     expect(dense.count).toBeLessThanOrEqual(MAX_INSTANCES);
-    for (const reef of reefs) expect(reef.count).toBeGreaterThan(100);
+    for (const reef of reefs) {
+      expect(reef.count).toBeGreaterThan(100);
+    }
   });
 
   it("stays within the frame and under the height envelope", () => {
@@ -105,10 +108,11 @@ describe("buildReef", () => {
             x + r <= ASPECT + 1e-6 &&
             y >= 0 &&
             y + r <= heightAt(x, ASPECT, HEIGHT) + 1e-6;
-          if (!ok && outside.length < 10)
+          if (!ok && outside.length < 10) {
             outside.push(
               `reef ${String(n)}, instance ${String(i)}: ${String(x)}, ${String(y)}, r ${String(r)}`,
             );
+          }
         }
       }
     });
@@ -123,7 +127,9 @@ describe("buildReef", () => {
         for (const k of [0, 2]) {
           const x = field(reef, i, k);
           const y = field(reef, i, k + 1);
-          if (Math.abs(x - ASPECT / 2) < ASPECT / 6) top = Math.max(top, y + r);
+          if (Math.abs(x - ASPECT / 2) < ASPECT / 6) {
+            top = Math.max(top, y + r);
+          }
         }
       }
     }
@@ -144,10 +150,11 @@ describe("buildReef", () => {
           (kind === KIND_CAPSULE || kind === KIND_DISC) &&
           // A disc grows over a span; a zero-span disc would pop in.
           (kind === KIND_CAPSULE || t1 > t0);
-        if (!ok && wrong.length < 10)
+        if (!ok && wrong.length < 10) {
           wrong.push(
             `reef ${String(n)}, instance ${String(i)}: ${String(t0)}..${String(t1)}, kind ${String(kind)}`,
           );
+        }
       }
     });
     expect(wrong).toEqual([]);
@@ -159,10 +166,13 @@ describe("buildReef", () => {
     reefs.forEach((reef, n) => {
       for (let i = 0; i < reef.count; i++) {
         const tapers = field(reef, i, 5) <= field(reef, i, 4) + 1e-9;
-        if (!tapers && wrong.length < 10)
+        if (!tapers && wrong.length < 10) {
           wrong.push(`reef ${String(n)}, instance ${String(i)} widens`);
+        }
         const p = reef.parent[i];
-        if (p < 0) continue;
+        if (p < 0) {
+          continue;
+        }
         children++;
         const ok =
           p < i &&
@@ -172,8 +182,9 @@ describe("buildReef", () => {
           // A child starts at its parent's end point (toBeCloseTo(_, 6): within half of 1e-6).
           Math.abs(field(reef, i, 0) - field(reef, p, 2)) < 5e-7 &&
           Math.abs(field(reef, i, 1) - field(reef, p, 3)) < 5e-7;
-        if (!ok && wrong.length < 10)
+        if (!ok && wrong.length < 10) {
           wrong.push(`reef ${String(n)}, instance ${String(i)}, parent ${String(p)}`);
+        }
       }
     });
     expect(wrong).toEqual([]);
@@ -191,7 +202,9 @@ describe("buildReef", () => {
 
 describe("palettes", () => {
   it("has one palette per option, and falls back to the reef", () => {
-    for (const o of PALETTE_OPTIONS) expect(PALETTES[o.value].coral).toHaveLength(SLOTS);
+    for (const o of PALETTE_OPTIONS) {
+      expect(PALETTES[o.value].coral).toHaveLength(SLOTS);
+    }
     expect(paletteFor("nope")).toBe(PALETTES.reef);
     expect(paletteFor("toString")).toBe(PALETTES.reef);
   });

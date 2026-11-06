@@ -94,8 +94,12 @@ describe("rotation", () => {
       const next = advanceRotation(rot, rps, dt);
       // The step, measured round the circle, is always the expected one.
       const step = next - rot + (next < rot ? 1 : 0);
-      if (next < rot) wraps++;
-      if (!(next >= 0 && next < 1) || Math.abs(step - rps * dt) > 1e-9) bad++;
+      if (next < rot) {
+        wraps++;
+      }
+      if (!(next >= 0 && next < 1) || Math.abs(step - rps * dt) > 1e-9) {
+        bad++;
+      }
       rot = next;
     }
     expect(bad).toBe(0);
@@ -157,7 +161,9 @@ describe("turntableLayout", () => {
             for (let i = 0; i < ARM_FLOATS; i += 2) {
               const x = l.ox + arm[i] * l.scale;
               const y = l.oy + arm[i + 1] * l.scale;
-              if (x < l.box[0] || x > l.box[2] || y < l.box[1] || y > l.box[3]) outside++;
+              if (x < l.box[0] || x > l.box[2] || y < l.box[1] || y > l.box[3]) {
+                outside++;
+              }
             }
           }
         }
@@ -174,7 +180,9 @@ describe("tonearm", () => {
     for (let i = 0; i <= 50; i++) {
       const r = GROOVE_IN + ((GROOVE_OUT - GROOVE_IN) * i) / 50;
       stylusAt(r, s);
-      if (Math.abs(Math.hypot(s[0], s[1]) - r) > 1e-9 || s[0] <= 0 || s[1] >= 0) bad++;
+      if (Math.abs(Math.hypot(s[0], s[1]) - r) > 1e-9 || s[0] <= 0 || s[1] >= 0) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(GROOVE_IN).toBeGreaterThan(LABEL_R);
@@ -208,7 +216,9 @@ describe("tonearm", () => {
       maxDl = Math.max(maxDl, Math.abs(pose.lift - prevLift));
       maxLift = Math.max(maxLift, pose.lift);
       lowestR = Math.min(lowestR, pose.r);
-      if (s.ret < 0 && s.revs < 50 && maxLift === 1) restarted = true;
+      if (s.ret < 0 && s.revs < 50 && maxLift === 1) {
+        restarted = true;
+      }
       prevR = pose.r;
       prevLift = pose.lift;
     }
@@ -267,8 +277,12 @@ describe("tonearm", () => {
 
 describe("looks", () => {
   it("has a look for every option, with fallbacks", () => {
-    for (const { value } of PLINTH_OPTIONS) expect(plinthFor(value)).toBe(PLINTHS[value]);
-    for (const { value } of ROOM_OPTIONS) expect(roomFor(value)).toBe(ROOMS[value]);
+    for (const { value } of PLINTH_OPTIONS) {
+      expect(plinthFor(value)).toBe(PLINTHS[value]);
+    }
+    for (const { value } of ROOM_OPTIONS) {
+      expect(roomFor(value)).toBe(ROOMS[value]);
+    }
     expect(plinthFor("oak")).toBe(PLINTHS.walnut);
     expect(roomFor("toString")).toBe(ROOMS.lamp);
   });
@@ -280,8 +294,12 @@ describe("looks", () => {
     let bad = 0;
     for (let i = 0; i < BOKEH_COUNT; i++) {
       const [x, y, r, w] = a.subarray(i * 4, i * 4 + 4);
-      if (x < 0 || x > 1 || y < 0.4 || y > 1 || r < BOKEH_R[0] || r > BOKEH_R[1]) bad++;
-      if (w <= 0 || w > 1) bad++;
+      if (x < 0 || x > 1 || y < 0.4 || y > 1 || r < BOKEH_R[0] || r > BOKEH_R[1]) {
+        bad++;
+      }
+      if (w <= 0 || w > 1) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });

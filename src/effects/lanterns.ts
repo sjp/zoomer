@@ -319,10 +319,14 @@ export const lanterns = defineEffect(lanternsMeta, {
 
           gl.enable(gl.BLEND);
           gl.blendEquation(gl.FUNC_ADD);
-          if (n > 0) batch.upload(n);
+          if (n > 0) {
+            batch.upload(n);
+          }
 
           // Reflections, below the horizon.
-          if (lakePx > 0 && n > 0) drawLanterns(n, true, horizonPx);
+          if (lakePx > 0 && n > 0) {
+            drawLanterns(n, true, horizonPx);
+          }
 
           // Stars and lanterns, above it.
           gl.scissor(0, lakePx, width, horizonPx);
@@ -334,7 +338,9 @@ export const lanterns = defineEffect(lanternsMeta, {
             starU.f1("uScale", scale);
             stars.draw(0, STAR_COUNT);
           }
-          if (n > 0) drawLanterns(n, false, horizonPx);
+          if (n > 0) {
+            drawLanterns(n, false, horizonPx);
+          }
 
           gl.disable(gl.SCISSOR_TEST);
           gl.disable(gl.BLEND);

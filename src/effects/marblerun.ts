@@ -326,7 +326,9 @@ const MARBLE_ATTRIBUTES = [4, 4, 4] as const;
 function writeBoards(data: Float32Array, stride: number, first: number, boards: Board[]): number {
   let k = first;
   for (const b of boards) {
-    if (k >= MAX_BOARDS) break;
+    if (k >= MAX_BOARDS) {
+      break;
+    }
     const o = k * stride;
     data[o] = b.ax;
     data[o + 1] = b.ay;

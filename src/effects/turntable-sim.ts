@@ -367,9 +367,11 @@ export const PLINTHS: Readonly<Record<PlinthId, PlinthLook>> = {
   white: { top: "#d6d2ca", front: "#b5afa5", grain: 0, gloss: 0.1 },
 };
 
+const isPlinthId = (v: string): v is PlinthId => Object.hasOwn(PLINTHS, v);
+
 /** The plinth for a select value; unknown values fall back to walnut. */
 export function plinthFor(id: string): PlinthLook {
-  return Object.hasOwn(PLINTHS, id) ? PLINTHS[id as PlinthId] : PLINTHS.walnut;
+  return isPlinthId(id) ? PLINTHS[id] : PLINTHS.walnut;
 }
 
 export interface RoomLook {
@@ -427,9 +429,11 @@ export const ROOMS: Readonly<Record<TurntableRoomId, RoomLook>> = {
   },
 };
 
+const isRoomId = (v: string): v is TurntableRoomId => Object.hasOwn(ROOMS, v);
+
 /** The room for a select value; unknown values fall back to the warm lamp. */
 export function roomFor(id: string): RoomLook {
-  return Object.hasOwn(ROOMS, id) ? ROOMS[id as TurntableRoomId] : ROOMS.lamp;
+  return isRoomId(id) ? ROOMS[id] : ROOMS.lamp;
 }
 
 /** Bokeh lights in the room, and their radius range (height units). */

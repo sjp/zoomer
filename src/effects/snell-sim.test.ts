@@ -45,17 +45,27 @@ describe("optics", () => {
     let bad = 0;
     for (let k = 0; k <= 200; k++) {
       const theta = (k / 200) * 80 * DEG;
-      if (Math.abs(theta - thetaC) < 1e-6) continue;
+      if (Math.abs(theta - thetaC) < 1e-6) {
+        continue;
+      }
       const r = depthPx * Math.tan(theta);
       const t = refractUp(out, r * 0.6, r * 0.8, depthPx, 0, 0);
       const inside = theta < thetaC;
-      if (inside !== t > 0) bad++;
+      if (inside !== t > 0) {
+        bad++;
+      }
       if (inside) {
         // Snell: sin(theta_air) = n sin(theta_water), azimuth unchanged.
         const sinAir = Math.hypot(out[0], out[1]);
-        if (Math.abs(sinAir - WATER_IOR * Math.sin(theta)) > 1e-9) bad++;
-        if (Math.abs(Math.hypot(out[0], out[1], out[2]) - 1) > 1e-9) bad++;
-        if (theta > 0 && Math.abs(out[1] / out[0] - 0.8 / 0.6) > 1e-9) bad++;
+        if (Math.abs(sinAir - WATER_IOR * Math.sin(theta)) > 1e-9) {
+          bad++;
+        }
+        if (Math.abs(Math.hypot(out[0], out[1], out[2]) - 1) > 1e-9) {
+          bad++;
+        }
+        if (theta > 0 && Math.abs(out[1] / out[0] - 0.8 / 0.6) > 1e-9) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -74,7 +84,9 @@ describe("optics", () => {
     let rising = 0;
     for (let deg = 0; deg <= 60; deg += 0.5) {
       const t = fresnelTransmit(Math.cos(deg * DEG), WATER_IOR);
-      if (t > prev + 1e-12) rising++;
+      if (t > prev + 1e-12) {
+        rising++;
+      }
       prev = t;
     }
     expect(rising).toBe(0);
@@ -148,8 +160,11 @@ describe("slope map", () => {
         sy += gy;
         const j = (y * size + ((x + 1) % size)) * 2;
         const step = Math.abs(map[j] - map[i]);
-        if (x === size - 1) seam = Math.max(seam, step);
-        else inner = Math.max(inner, step);
+        if (x === size - 1) {
+          seam = Math.max(seam, step);
+        } else {
+          inner = Math.max(inner, step);
+        }
       }
     }
     expect(peak).toBe(1);
@@ -172,14 +187,19 @@ describe("palettes", () => {
     const unit = (c: readonly number[]) => c.every((v) => v >= 0 && v <= 1);
     for (const o of WATER_OPTIONS) {
       const w = WATER[o.value];
-      if (!(o.value in WATER) || !unit(w.deep) || !unit(w.haze) || !unit(w.ray)) bad++;
+      if (!(o.value in WATER) || !unit(w.deep) || !unit(w.haze) || !unit(w.ray)) {
+        bad++;
+      }
       // The reflected deep water frames the window darker than the haze.
-      if (w.deep.some((v, c) => v > w.haze[c])) bad++;
+      if (w.deep.some((v, c) => v > w.haze[c])) {
+        bad++;
+      }
     }
     for (const o of ABOVE_OPTIONS) {
       const s = SKY[o.value];
-      if (!(o.value in SKY) || !unit(s.zenith) || !unit(s.horizon) || !(s.cloudLo < s.cloudHi))
+      if (!(o.value in SKY) || !unit(s.zenith) || !unit(s.horizon) || !(s.cloudLo < s.cloudHi)) {
         bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -215,10 +235,16 @@ describe("motes", () => {
       stepMotes(s, 1 / 60, 1920);
       const dx = Math.abs(s.x[0] - x0);
       // Under a pixel per frame unless it just wrapped.
-      if (dx > 0.5 && dx < 1000) bad++;
+      if (dx > 0.5 && dx < 1000) {
+        bad++;
+      }
       for (let i = 0; i < 30; i++) {
-        if (s.x[i] < -MOTE_MARGIN || s.x[i] >= 1920 + MOTE_MARGIN) bad++;
-        if (s.y[i] < -MOTE_MARGIN || s.y[i] >= 1080 + MOTE_MARGIN) bad++;
+        if (s.x[i] < -MOTE_MARGIN || s.x[i] >= 1920 + MOTE_MARGIN) {
+          bad++;
+        }
+        if (s.y[i] < -MOTE_MARGIN || s.y[i] >= 1080 + MOTE_MARGIN) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -253,13 +279,23 @@ describe("leafAt", () => {
     let bad = 0;
     for (let cycle = 0; cycle < 20; cycle++) {
       const t0 = cycle * LEAF_CYCLE;
-      if (!leafAt(pose, t0, refWidth) || !offFrame(pose)) bad++;
-      if (Math.abs(Math.hypot(pose.x, pose.y) - reach) > 200) bad++;
-      if (!leafAt(pose, t0 + LEAF_CROSS - 1e-6, refWidth) || !offFrame(pose)) bad++;
-      if (leafAt(pose, t0 + LEAF_CROSS + 1, refWidth)) bad++;
+      if (!leafAt(pose, t0, refWidth) || !offFrame(pose)) {
+        bad++;
+      }
+      if (Math.abs(Math.hypot(pose.x, pose.y) - reach) > 200) {
+        bad++;
+      }
+      if (!leafAt(pose, t0 + LEAF_CROSS - 1e-6, refWidth) || !offFrame(pose)) {
+        bad++;
+      }
+      if (leafAt(pose, t0 + LEAF_CROSS + 1, refWidth)) {
+        bad++;
+      }
       // Halfway, it is near the window centre.
       leafAt(pose, t0 + LEAF_CROSS / 2, refWidth);
-      if (Math.hypot(pose.x, pose.y) > 200) bad++;
+      if (Math.hypot(pose.x, pose.y) > 200) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -270,7 +306,9 @@ describe("leafAt", () => {
     let prevY = 0;
     for (let t = 0; t < LEAF_CROSS; t += 0.25) {
       leafAt(pose, t, 1920);
-      if (t > 0 && Math.hypot(pose.x - prevX, pose.y - prevY) > 15) bad++;
+      if (t > 0 && Math.hypot(pose.x - prevX, pose.y - prevY) > 15) {
+        bad++;
+      }
       prevX = pose.x;
       prevY = pose.y;
     }

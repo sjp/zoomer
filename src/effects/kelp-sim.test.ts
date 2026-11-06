@@ -68,7 +68,9 @@ describe("buildFronds", () => {
 
   it("scales with density and never drops a layer", () => {
     expect(layout(1, 2).layout.total).toBeGreaterThan(layout(1, 1).layout.total);
-    for (const c of layout(1, 0).layout.counts) expect(c).toBeGreaterThanOrEqual(1);
+    for (const c of layout(1, 0).layout.counts) {
+      expect(c).toBeGreaterThanOrEqual(1);
+    }
     expect(layout(1, Number.NaN).layout.total).toBe(layout(1, 1).layout.total);
   });
 
@@ -102,7 +104,9 @@ describe("buildFronds", () => {
       for (let i = 0; i < l.total; i++) {
         const x = data[i * FROND_FLOATS];
         total++;
-        if (x > 1 / 3 && x < 2 / 3) centre++;
+        if (x > 1 / 3 && x < 2 / 3) {
+          centre++;
+        }
       }
       // The nearest layer stays out of the middle entirely.
       const near = LAYERS.length - 1;
@@ -189,7 +193,9 @@ describe("shafts", () => {
     expect(n).toBeGreaterThanOrEqual(3);
     expect(n).toBeLessThanOrEqual(MAX_SHAFTS);
     shaftUniforms(1, 1920, 1080, b);
-    for (let i = 0; i < n * 4; i++) expect(b[i]).toBeCloseTo(a[i], 3);
+    for (let i = 0; i < n * 4; i++) {
+      expect(b[i]).toBeCloseTo(a[i], 3);
+    }
     for (let k = 0; k < 50; k++) {
       shaftUniforms(k / 50, 1920, 1080, a);
       for (let i = 0; i < n; i++) {
@@ -212,7 +218,9 @@ describe("fish", () => {
       const before = f.spawned;
       stepFish(f, dt, aspect);
       t += dt;
-      if (f.spawned !== before) spawnTimes.push(t);
+      if (f.spawned !== before) {
+        spawnTimes.push(t);
+      }
     }
     expect(spawnTimes[0]).toBeGreaterThanOrEqual(FIRST_SCHOOL - 1e-6);
     expect(spawnTimes.length).toBeGreaterThan(5);
@@ -232,7 +240,9 @@ describe("fish", () => {
     let minOutside = Infinity;
     const counts = new Set<number>();
     for (let i = 0; i < 30 * 600; i++) {
-      if (f.active) counts.add(fishInstances(f, aspect, out));
+      if (f.active) {
+        counts.add(fishInstances(f, aspect, out));
+      }
       const lastX = f.x;
       const dir = f.dir;
       stepFish(f, 1 / 30, aspect);
@@ -261,7 +271,9 @@ describe("marine snow", () => {
   it("sinks, wraps and stays in the frame", () => {
     const s = createSnow(3);
     const out = new Float32Array(SNOW_COUNT * SNOW_FLOATS);
-    for (let i = 0; i < 60 * 300; i++) stepSnow(s, 1 / 60);
+    for (let i = 0; i < 60 * 300; i++) {
+      stepSnow(s, 1 / 60);
+    }
     const n = snowInstances(s, 16 / 9, out);
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) {

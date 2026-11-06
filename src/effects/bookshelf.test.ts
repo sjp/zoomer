@@ -43,10 +43,13 @@ describe("layoutShelves", () => {
           s.top > SPINE_TOP[1] ||
           s.row < 0 ||
           s.row >= SHELF_ROWS
-        )
+        ) {
           bad++;
+        }
       }
-      for (const c of shelfCoverage(spines)) minCover = Math.min(minCover, c);
+      for (const c of shelfCoverage(spines)) {
+        minCover = Math.min(minCover, c);
+      }
     }
     expect(bad).toBe(0);
     expect(minCover).toBeGreaterThan(0.75);
@@ -58,7 +61,9 @@ describe("layoutShelves", () => {
     for (let i = 1; i < spines.length; i++) {
       const a = spines[i - 1];
       const b = spines[i];
-      if (a.side === b.side && a.row === b.row && b.x0 < a.x1 - 1e-9) overlaps++;
+      if (a.side === b.side && a.row === b.row && b.x0 < a.x1 - 1e-9) {
+        overlaps++;
+      }
     }
     expect(overlaps).toBe(0);
   });
@@ -66,7 +71,9 @@ describe("layoutShelves", () => {
 
 describe("shelfSideWidth", () => {
   it("keeps the bookcases in the outer thirds, leaving the centre clear", () => {
-    for (const w of [1440, 1920, 2520, 3840]) expect(shelfSideWidth(w)).toBeLessThanOrEqual(w / 3);
+    for (const w of [1440, 1920, 2520, 3840]) {
+      expect(shelfSideWidth(w)).toBeLessThanOrEqual(w / 3);
+    }
   });
 });
 
@@ -78,8 +85,16 @@ describe("bakeShelves", () => {
     expect(a.length).toBe(SHELF_TEX_W * SHELF_TEX_H * 4);
     let diff = 0;
     let opaque = 0;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff++;
-    for (let i = 3; i < a.length; i += 4) if (a[i] === 255) opaque++;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        diff++;
+      }
+    }
+    for (let i = 3; i < a.length; i += 4) {
+      if (a[i] === 255) {
+        opaque++;
+      }
+    }
     expect(diff).toBe(0);
     expect(opaque).toBe(SHELF_TEX_W * SHELF_TEX_H);
     // Both inner panels meet at the seam, so the texels either side of it match.
@@ -94,7 +109,11 @@ describe("bakeShelves", () => {
     const a = bakeShelves(spines, OAK);
     const b = bakeShelves(spines, GREY);
     let diff = 0;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff++;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        diff++;
+      }
+    }
     expect(diff).toBeGreaterThan(a.length / 4);
   });
 });

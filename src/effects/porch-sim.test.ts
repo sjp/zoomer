@@ -32,13 +32,19 @@ describe("cone mask", () => {
       const g = lampGeometry(createLampGeometry(), side, WIDTH);
       let bad = 0;
       for (let s = 1; s <= 1500; s += 7) {
-        if (coneMask(g, g.x + g.ax * s, g.y + g.ay * s) !== 1) bad++;
+        if (coneMask(g, g.x + g.ax * s, g.y + g.ay * s) !== 1) {
+          bad++;
+        }
         // Perpendicular offset just past the edge.
         const off = s * CONE_TAN * 1.01;
         const px = g.x + g.ax * s + g.ay * off;
         const py = g.y + g.ay * s - g.ax * off;
-        if (coneMask(g, px, py) !== 0) bad++;
-        if (coneMask(g, g.x - g.ax * s, g.y - g.ay * s) !== 0) bad++;
+        if (coneMask(g, px, py) !== 0) {
+          bad++;
+        }
+        if (coneMask(g, g.x - g.ax * s, g.y - g.ay * s) !== 0) {
+          bad++;
+        }
       }
       expect(bad).toBe(0);
     }
@@ -52,7 +58,9 @@ describe("cone mask", () => {
     for (let k = 0; k <= 60; k++) {
       const off = (k / 60) * s * CONE_TAN;
       const m = coneMask(g, g.x + g.ax * s + g.ay * off, g.y + g.ay * s - g.ax * off);
-      if (m > prev + 1e-12) rising++;
+      if (m > prev + 1e-12) {
+        rising++;
+      }
       prev = m;
     }
     expect(rising).toBe(0);
@@ -95,11 +103,17 @@ describe("rain", () => {
         const d = rain.depth[i];
         const floor = rainFloor(d);
         const y = rain.y[i];
-        if (!(y >= RAIN_TOP && y < floor) || !(rain.u[i] >= 0 && rain.u[i] < 1)) outOfRange++;
+        if (!(y >= RAIN_TOP && y < floor) || !(rain.u[i] >= 0 && rain.u[i] < 1)) {
+          outOfRange++;
+        }
         // Moved by exactly one step's fall, less one span if it wrapped.
         let moved = y - before[i];
-        if (moved < 0) moved += floor - RAIN_TOP;
-        if (Math.abs(moved - rainSpeed(d) * dt) > 1e-2) badWrap++;
+        if (moved < 0) {
+          moved += floor - RAIN_TOP;
+        }
+        if (Math.abs(moved - rainSpeed(d) * dt) > 1e-2) {
+          badWrap++;
+        }
       }
     }
     expect(rain.count).toBe(300);
@@ -110,8 +124,10 @@ describe("rain", () => {
 
   it("stays spread over the whole fall", () => {
     const rain = createRain(2, 400);
-    for (let f = 0; f < 300; f++) stepRain(rain, rain.count, 1 / 60, 0, WIDTH);
-    const bins = new Array<number>(8).fill(0);
+    for (let f = 0; f < 300; f++) {
+      stepRain(rain, rain.count, 1 / 60, 0, WIDTH);
+    }
+    const bins = Array.from({ length: 8 }, () => 0);
     for (let i = 0; i < rain.count; i++) {
       const t = (rain.y[i] - RAIN_TOP) / (rainFloor(rain.depth[i]) - RAIN_TOP);
       bins[Math.min(7, Math.floor(t * 8))]++;
@@ -129,7 +145,9 @@ describe("rain", () => {
     let wrong = 0;
     for (let i = 0; i < rain.count; i++) {
       const moved = (rain.u[i] - u1[i] + 1) % 1;
-      if (moved <= 0 || moved > 0.01) wrong++;
+      if (moved <= 0 || moved > 0.01) {
+        wrong++;
+      }
     }
     expect(wrong).toBe(0);
   });
@@ -138,13 +156,19 @@ describe("rain", () => {
 describe("drips", () => {
   it("has bounded swell times that are deterministic per seed", () => {
     let outside = 0;
-    for (let seed = 0; seed < 20; seed++)
-      for (let i = 0; i < 7; i++)
+    for (let seed = 0; seed < 20; seed++) {
+      for (let i = 0; i < 7; i++) {
         for (let n = 0; n < 20; n++) {
           const g = growTime(seed, i, n);
-          if (!(g >= GROW_RANGE[0] && g <= GROW_RANGE[1])) outside++;
-          if (g !== growTime(seed, i, n)) outside++;
+          if (!(g >= GROW_RANGE[0] && g <= GROW_RANGE[1])) {
+            outside++;
+          }
+          if (g !== growTime(seed, i, n)) {
+            outside++;
+          }
         }
+      }
+    }
     expect(outside).toBe(0);
     expect(growTime(1, 0, 0)).not.toBe(growTime(2, 0, 0));
   });
@@ -157,9 +181,15 @@ describe("drips", () => {
       for (let f = 0; f < 3000; f++) {
         stepDrips(d, s, 1 / 60, 1);
         for (let i = 0; i < d.count; i++) {
-          if (d.phase[i] === GROWING && !(d.t[i] >= 0 && d.t[i] <= d.grow[i])) bad++;
-          if (!(d.grow[i] >= GROW_RANGE[0] && d.grow[i] <= GROW_RANGE[1])) bad++;
-          if (d.phase[i] === FALLING && !(d.y[i] >= GUTTER_BOTTOM && d.y[i] < d.landY[i])) bad++;
+          if (d.phase[i] === GROWING && !(d.t[i] >= 0 && d.t[i] <= d.grow[i])) {
+            bad++;
+          }
+          if (!(d.grow[i] >= GROW_RANGE[0] && d.grow[i] <= GROW_RANGE[1])) {
+            bad++;
+          }
+          if (d.phase[i] === FALLING && !(d.y[i] >= GUTTER_BOTTOM && d.y[i] < d.landY[i])) {
+            bad++;
+          }
         }
       }
       return { bad, landings: Array.from(d.landings), t: Array.from(d.t) };
@@ -194,8 +224,10 @@ describe("drips", () => {
       stepDrips(d, s, 1 / 60, 1);
       if (s.spawned > before) {
         const k = (s.next + s.max - 1) % s.max;
-        const i = Array.from(d.u).findIndex((u) => u === s.u[k]);
-        if (i < 0 || s.y[k] !== d.landY[i] || s.age[k] !== 0) mismatched++;
+        const i = d.u.indexOf(s.u[k]);
+        if (i < 0 || s.y[k] !== d.landY[i] || s.age[k] !== 0) {
+          mismatched++;
+        }
       }
       stepSplashes(s, 1 / 60);
     }
@@ -210,8 +242,12 @@ describe("splash droplets", () => {
     let early = 0;
     let late = 0;
     for (let k = 0; k < 4; k++) {
-      if (splashDroplet(out, 1234, k, 0.05)) early++;
-      if (splashDroplet(out, 1234, k, SPLASH_LIFE)) late++;
+      if (splashDroplet(out, 1234, k, 0.05)) {
+        early++;
+      }
+      if (splashDroplet(out, 1234, k, SPLASH_LIFE)) {
+        late++;
+      }
     }
     expect(early).toBe(4);
     expect(late).toBe(0);

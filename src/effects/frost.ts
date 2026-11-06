@@ -242,7 +242,9 @@ export const frost = defineEffect(frostMeta, {
       scope.defer(() => diffuse?.dispose());
       let fieldTex: WebGLTexture | null = null;
       scope.defer(() => {
-        if (fieldTex) gl.deleteTexture(fieldTex);
+        if (fieldTex) {
+          gl.deleteTexture(fieldTex);
+        }
       });
       let fieldW = 0;
       let fieldH = 0;
@@ -266,7 +268,9 @@ export const frost = defineEffect(frostMeta, {
           updateDataTexture(gl, fieldTex, w, h, gl.RG, gl.FLOAT, field.data);
           gl.bindTexture(gl.TEXTURE_2D, null);
         } else {
-          if (fieldTex) gl.deleteTexture(fieldTex);
+          if (fieldTex) {
+            gl.deleteTexture(fieldTex);
+          }
           fieldTex = null;
           fieldTex = createDataTexture(gl, {
             width: w,
@@ -339,8 +343,11 @@ export const frost = defineEffect(frostMeta, {
           const s = clock.advance(step, growth, p.cycle);
           const want = fieldSize(aspect);
           const cs = cycleSeed(seed, s.cycle);
-          if (want.width !== fieldW || want.height !== fieldH) resizeWait += step;
-          else resizeWait = 0;
+          if (want.width !== fieldW || want.height !== fieldH) {
+            resizeWait += step;
+          } else {
+            resizeWait = 0;
+          }
           if (!fieldTex || cs !== builtSeed || resizeWait >= RESIZE_SETTLE) {
             buildField(cs, want.width, want.height);
             resizeWait = 0;

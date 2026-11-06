@@ -62,7 +62,9 @@ export const STRETCH = 1.35;
  */
 export function gustLevel(noise: Noise, time: number, gusts: number): number {
   const g = clamp(gusts, 0, 1);
-  if (g <= 0) return 1;
+  if (g <= 0) {
+    return 1;
+  }
   return 1 + GUST_MAX * g * smoothstep(0, 0.7, noise.noise2(time * GUST_FREQ, 9.1));
 }
 
@@ -110,8 +112,12 @@ export function coverageThreshold(coverage: number, s: number): number {
   const c = clamp(coverage, 0, 1);
   const lo = -s;
   const hi = 1 + s;
-  if (c <= 0) return hi;
-  if (c >= 1) return lo;
+  if (c <= 0) {
+    return hi;
+  }
+  if (c >= 1) {
+    return lo;
+  }
   return clamp(0.5 - SPOT_SIGMA * LOGIT_TO_PROBIT * Math.log(c / (1 - c)), lo, hi);
 }
 
@@ -169,8 +175,10 @@ export function createRegionLayout(): RegionLayout {
   return { topY: 0, edgeX: 0, side: 0, sideW: 0, frameX: 0, frameY: 0 };
 }
 
+const isRegion = (v: string): v is Region => Object.hasOwn(REGIONS, v);
+
 export function layoutRegion(out: RegionLayout, position: string, refWidth: number) {
-  const r = Object.hasOwn(REGIONS, position) ? REGIONS[position as Region] : REGIONS.topRight;
+  const r = isRegion(position) ? REGIONS[position] : REGIONS.topRight;
   out.topY = r.top;
   out.side = r.side;
   out.edgeX = r.side > 0 ? refWidth : 0;

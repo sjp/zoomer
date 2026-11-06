@@ -24,6 +24,12 @@ import { createSpriteBatch, polygonStrip } from "./sprites";
 import { createStreakRenderer } from "./streaks";
 import { defineEffect } from "./types";
 
+const LAYOUTS: readonly FairyLayout[] = ["swags", "curtain", "both"];
+const PATTERNS: readonly FairyPattern[] = ["twinkle", "chase", "steady"];
+const isFairyLayout = (v: string): v is FairyLayout => (LAYOUTS as readonly string[]).includes(v);
+const isFairyPattern = (v: string): v is FairyPattern =>
+  (PATTERNS as readonly string[]).includes(v);
+
 const MAX_BULBS = 1024;
 const MAX_POINTS = 2048;
 /** Wall shading: the top is this much darker than the chosen colour. */
@@ -162,17 +168,18 @@ export const fairylights = defineEffect(fairylightsMeta, {
       let height = 1;
       let refWidth = 1920;
       /** What the current layout was built from; NaN forces a rebuild. */
-      let builtStrings = NaN;
+      let builtStrings = Number.NaN;
       let builtLayout = "";
-      let builtSeed = NaN;
-      let builtWidth = NaN;
+      let builtSeed = Number.NaN;
+      let builtWidth = Number.NaN;
 
       const rebuild = (strings: number, layout: string, seed: number) => {
         builtStrings = strings;
         builtLayout = layout;
         builtSeed = seed;
         builtWidth = refWidth;
-        sim.build({ strings, layout: layout as FairyLayout, seed, refWidth });
+        // The sim draws both swags and curtain for any layout it doesn't know.
+        sim.build({ strings, layout: isFairyLayout(layout) ? layout : "both", seed, refWidth });
         for (let i = 0; i < sim.glowCount; i++) {
           const g = sim.glows[i];
           glowData[i * 4] = g.x;
@@ -205,7 +212,8 @@ export const fairylights = defineEffect(fairylightsMeta, {
           }
           f.time += dt;
           f.twinkle = p.twinkle;
-          f.pattern = p.pattern as FairyPattern;
+          // The sim twinkles for any pattern it doesn't know.
+          f.pattern = isFairyPattern(p.pattern) ? p.pattern : "twinkle";
           f.focus = p.focus;
           f.palette = PALETTES[p.palette] ?? PALETTES.warm;
           const wall = wallColor(p.wall);

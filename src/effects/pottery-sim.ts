@@ -13,6 +13,7 @@
  * the vase, bowl and jar) are blended over the cycle, and H is solved so the
  * clay's volume stays the same throughout.
  */
+import { lookup } from "./lookup";
 import { clamp, smoothstep } from "./math";
 import type { ClayId, PotteryFormId } from "./pottery.meta";
 
@@ -122,7 +123,9 @@ function meanSection(radius: ArrayLike<number>, wall: number, open: number): num
 
 /** Sampled radii of a shape. */
 export function sampleShape(shape: PotShape, out = new Float64Array(PROFILE_N)): Float64Array {
-  for (let i = 0; i < PROFILE_N; i++) out[i] = shapeRadius(shape.points, heightAt(i));
+  for (let i = 0; i < PROFILE_N; i++) {
+    out[i] = shapeRadius(shape.points, heightAt(i));
+  }
   return out;
 }
 
@@ -138,11 +141,16 @@ export function wallFor(shape: PotShape): number {
   const radius = sampleShape(shape);
   let lo = 0;
   let hi = Math.max(...radius);
-  if (shape.open === 0) return hi;
+  if (shape.open === 0) {
+    return hi;
+  }
   for (let k = 0; k < 50; k++) {
     const mid = 0.5 * (lo + hi);
-    if (profileVolume(radius, shape.height, mid, shape.open) < CLAY_VOLUME) lo = mid;
-    else hi = mid;
+    if (profileVolume(radius, shape.height, mid, shape.open) < CLAY_VOLUME) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
   }
   return 0.5 * (lo + hi);
 }
@@ -177,16 +185,22 @@ export function createProfile(): Profile {
   return { radius: new Float32Array(PROFILE_N), height: MOUND.height, wall: 0, open: 0 };
 }
 
+const isFormId = (id: string): id is Exclude<PotteryFormId, "cycle"> => Object.hasOwn(FORMS, id);
+
 /** Which form a cycle throws: the chosen one, or the next in CYCLE_FORMS for "Cycle" (or an unknown id). */
 export function formFor(form: string, cycleIndex: number): Exclude<PotteryFormId, "cycle"> {
-  if (Object.hasOwn(FORMS, form)) return form as Exclude<PotteryFormId, "cycle">;
+  if (isFormId(form)) {
+    return form;
+  }
   const n = CYCLE_FORMS.length;
   return CYCLE_FORMS[((Math.floor(cycleIndex) % n) + n) % n];
 }
 
 function blend(a: Baked, b: Baked, t: number, out: Profile): Profile {
   const w = smoothstep(0, 1, t);
-  for (let i = 0; i < PROFILE_N; i++) out.radius[i] = a.radius[i] + (b.radius[i] - a.radius[i]) * w;
+  for (let i = 0; i < PROFILE_N; i++) {
+    out.radius[i] = a.radius[i] + (b.radius[i] - a.radius[i]) * w;
+  }
   out.wall = a.wall + (b.wall - a.wall) * w;
   out.open = a.open + (b.open - a.open) * w;
   out.height = CLAY_VOLUME / meanSection(out.radius, out.wall, out.open);
@@ -203,10 +217,18 @@ export function profileAt(phase: number, form: string, out: Profile): Profile {
   const f = phase - cycle;
   const shaped = BAKED_FORMS[formFor(form, cycle)];
   const [s0, s1, s2, s3] = STAGES;
-  if (f < s0) return blend(BAKED_MOUND, BAKED_MOUND, 0, out);
-  if (f < s1) return blend(BAKED_MOUND, BAKED_CYLINDER, (f - s0) / (s1 - s0), out);
-  if (f < s2) return blend(BAKED_CYLINDER, shaped, (f - s1) / (s2 - s1), out);
-  if (f < s3) return blend(shaped, shaped, 0, out);
+  if (f < s0) {
+    return blend(BAKED_MOUND, BAKED_MOUND, 0, out);
+  }
+  if (f < s1) {
+    return blend(BAKED_MOUND, BAKED_CYLINDER, (f - s0) / (s1 - s0), out);
+  }
+  if (f < s2) {
+    return blend(BAKED_CYLINDER, shaped, (f - s1) / (s2 - s1), out);
+  }
+  if (f < s3) {
+    return blend(shaped, shaped, 0, out);
+  }
   return blend(shaped, BAKED_MOUND, (f - s3) / (1 - s3), out);
 }
 
@@ -236,7 +258,9 @@ export function copyProfile(src: Profile, dst: Profile): Profile {
 /** The largest radius of a profile. */
 export function maxRadius(p: Profile): number {
   let m = 0;
-  for (let i = 0; i < PROFILE_N; i++) m = Math.max(m, p.radius[i]);
+  for (let i = 0; i < PROFILE_N; i++) {
+    m = Math.max(m, p.radius[i]);
+  }
   return m;
 }
 
@@ -309,5 +333,5 @@ export const CLAYS: Readonly<Record<ClayId, Clay>> = {
 };
 
 export function clayFor(id: string): Clay {
-  return Object.hasOwn(CLAYS, id) ? CLAYS[id as ClayId] : CLAYS.terracotta;
+  return lookup(CLAYS, id, "terracotta");
 }

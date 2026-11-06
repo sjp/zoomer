@@ -191,7 +191,7 @@ uniform vec3 uAmbient;
 uniform vec3 uCoatK;
 out vec4 outColor;
 ${DITHER_GLSL}
-const vec3 KEY = vec3(${KEY.map(g).join(", ")});
+const vec3 KEY = vec3(${KEY.map((v) => g(v)).join(", ")});
 const vec2 RIM_DIR = ${v2(RIM_DIR[0], RIM_DIR[1])};
 const vec2 BODY_C = vec2(-0.05, 0.18);
 const vec2 BODY_R = vec2(0.4, 0.2);
@@ -661,14 +661,18 @@ export const cat = defineEffect(catMeta, {
           // 3. Dust motes drifting in the beam, additive.
           stepMotes(dust, beam, time, step);
           const sun = sunRgb(look.sun);
-          for (let i = 0; i < 3; i++) moteRgb[i] = sun[i] * MOTE_GAIN;
+          for (let i = 0; i < 3; i++) {
+            moteRgb[i] = sun[i] * MOTE_GAIN;
+          }
           const data = motes.data;
           const stride = motes.stride;
           const len = beam.length;
           let visible = 0;
           for (let i = 0; i < MAX_MOTES; i++) {
             const k = moteBrightness(dust, beam, i, time, p.motes);
-            if (k <= 0.004) continue;
+            if (k <= 0.004) {
+              continue;
+            }
             const a = dust.along[i] * len;
             const c = dust.across[i] * BEAM_HALF_WIDTH;
             const x = beam.x + a * beam.dx + c * beam.dy;

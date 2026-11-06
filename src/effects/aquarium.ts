@@ -25,7 +25,7 @@ import {
   type PlantLayout,
   stepFishSim,
 } from "./aquarium-sim";
-import { aquariumMeta, MAX_FISH, type SpeciesId } from "./aquarium.meta";
+import { aquariumMeta, MAX_FISH, SPECIES_OPTIONS, type SpeciesId } from "./aquarium.meta";
 import { BUBBLE_FRAGMENT, bubbleVertex } from "./bubble-sprites";
 import { type BubbleFrame, createBubbles } from "./bubbles-sim";
 import { tileFragment } from "./caustics";
@@ -50,6 +50,7 @@ import { advanceSwell, swayGlsl } from "./sway";
 import { defineEffect } from "./types";
 import { lookup } from "./lookup";
 
+const isSpeciesId = (v: string): v is SpeciesId => SPECIES_OPTIONS.some((o) => o.value === v);
 const f = glslFloat;
 
 /** The background is soft apart from the gravel, whose pebbles are 7 px at 1080p at the back. */
@@ -592,11 +593,15 @@ export const aquarium = defineEffect(aquariumMeta, {
       let bubbleFade = 1;
 
       const ensureTile = (res: number) => {
-        if (tile && res === tile.width) return;
+        if (res === tile?.width) {
+          return;
+        }
         tile?.dispose();
         tile = null;
         tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
-        if (!tile) throw new Error("Aquarium: R8 tile is not renderable");
+        if (!tile) {
+          throw new Error("Aquarium: R8 tile is not renderable");
+        }
         tileDirty = true;
       };
 
@@ -629,7 +634,9 @@ export const aquarium = defineEffect(aquariumMeta, {
         L: readonly number[],
         light: AquariumLight,
       ) => {
-        if (count <= 0) return;
+        if (count <= 0) {
+          return;
+        }
         gl.useProgram(plantProgram);
         up.f2("uResolution", width, height);
         up.f1("uScale", scale);
@@ -642,7 +649,9 @@ export const aquarium = defineEffect(aquariumMeta, {
         plants.draw(first, count);
       };
       const drawFish = (first: number, count: number, light: AquariumLight) => {
-        if (count <= 0) return;
+        if (count <= 0) {
+          return;
+        }
         gl.useProgram(fishProgram);
         uf.f2("uResolution", width, height);
         uf.v3("uTop", light.top);
@@ -766,7 +775,8 @@ export const aquarium = defineEffect(aquariumMeta, {
           // 3. Simulation.
           env.aspect = aspect;
           env.count = p.fish;
-          env.species = p.species as SpeciesId;
+          // Any species the sim doesn't know mixes them, as "mixed" does.
+          env.species = isSpeciesId(p.species) ? p.species : "mixed";
           env.speed = speed;
           stepFishSim(fish, step, env);
           const fishCount = fishInstances(fish, env, fishBatch.data, fishBatch.stride);
@@ -783,7 +793,9 @@ export const aquarium = defineEffect(aquariumMeta, {
             bubbleCount = bubbles.step(step, bf, bubbleBatch.data, bubbleBatch.stride);
             if (bubbleFade < 1) {
               const d = bubbleBatch.data;
-              for (let k = 0; k < bubbleCount; k++) d[k * bubbleBatch.stride + 3] *= bubbleFade;
+              for (let k = 0; k < bubbleCount; k++) {
+                d[k * bubbleBatch.stride + 3] *= bubbleFade;
+              }
             }
             bubbleBatch.upload(bubbleCount);
           }

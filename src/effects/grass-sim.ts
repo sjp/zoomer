@@ -71,9 +71,13 @@ function unit(seed: number, i: number, k: number): number {
 export function buildBlades(seed: number, count: number, out: Float32Array): number {
   const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / BLADE_FLOATS)));
   const z = new Float64Array(n);
-  for (let i = 0; i < n; i++) z[i] = Z_NEAR + unit(seed, i, 1) * (Z_FAR - Z_NEAR);
+  for (let i = 0; i < n; i++) {
+    z[i] = Z_NEAR + unit(seed, i, 1) * (Z_FAR - Z_NEAR);
+  }
   const order = new Uint32Array(n);
-  for (let i = 0; i < n; i++) order[i] = i;
+  for (let i = 0; i < n; i++) {
+    order[i] = i;
+  }
   // Far first; ties by index keep the order deterministic.
   order.sort((a, b) => z[b] - z[a] || a - b);
   for (let j = 0; j < n; j++) {

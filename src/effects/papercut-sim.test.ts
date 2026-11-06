@@ -48,7 +48,9 @@ describe("buildScene", () => {
     const table = newTable();
     const scene = buildScene(id, n, table);
     scene.layers.forEach((layer, slot) => {
-      if (!layer.band) return;
+      if (!layer.band) {
+        return;
+      }
       const [lo, hi] = layer.band;
       let min = Infinity;
       let max = -Infinity;
@@ -89,7 +91,9 @@ describe("buildScene", () => {
     const table = newTable();
     const scene = buildScene(id, n, table);
     scene.layers.forEach((layer, slot) => {
-      if (!layer.hasX) return;
+      if (!layer.hasX) {
+        return;
+      }
       for (const ch of [0, 2]) {
         let maxStep = 0;
         for (let c = 1; c < TABLE_COLUMNS; c++) {
@@ -127,7 +131,9 @@ describe("buildScene", () => {
         let reach = -Infinity;
         for (let c = 0; c < TABLE_COLUMNS / 2; c++) {
           const y = yAt(c);
-          if (y > 1.2) break;
+          if (y > 1.2) {
+            break;
+          }
           reach = Math.max(reach, at(table, slot * 2 + 1, c, ch));
         }
         expect(reach).toBeGreaterThan(0.05);
@@ -277,7 +283,9 @@ describe("palettes", () => {
   it("resolves the scene default and every shared palette", () => {
     expect(resolvePalette("night", "scene")).toBe(SCENE_PALETTES.night);
     expect(resolvePalette("night", "nonsense")).toBe(SCENE_PALETTES.night);
-    for (const id of PALETTE_IDS) expect(resolvePalette("hills", id).sky).toMatch(/^#[0-9a-f]{6}$/);
+    for (const id of PALETTE_IDS) {
+      expect(resolvePalette("hills", id).sky).toMatch(/^#[0-9a-f]{6}$/);
+    }
   });
 
   it("shades land from back to front and fills every layer", () => {

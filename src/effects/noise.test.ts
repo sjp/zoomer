@@ -56,16 +56,19 @@ describe("createRng", () => {
   it("returns floats in [0, 1) spread across the range", () => {
     // Plain comparisons in the hot loop: an expect per draw costs far more than the check.
     const outside: string[] = [];
-    for (const seed of [0, 1, -7, 2 ** 40, NaN]) {
+    for (const seed of [0, 1, -7, 2 ** 40, Number.NaN]) {
       const rng = createRng(seed);
-      const buckets = new Array<number>(10).fill(0);
+      const buckets = Array.from({ length: 10 }, () => 0);
       for (let i = 0; i < 10000; i++) {
         const v = rng();
-        if (!(v >= 0 && v < 1) && outside.length < 10)
+        if (!(v >= 0 && v < 1) && outside.length < 10) {
           outside.push(`seed ${String(seed)}, draw ${String(i)}: ${String(v)}`);
+        }
         buckets[Math.floor(v * 10)]++;
       }
-      for (const n of buckets) expect(n).toBeGreaterThan(800);
+      for (const n of buckets) {
+        expect(n).toBeGreaterThan(800);
+      }
     }
     expect(outside).toEqual([]);
   });
@@ -81,7 +84,9 @@ describe("noise2", () => {
       const x = i * 0.37 - 5;
       const y = i * -0.73 + 3;
       expect(b.noise2(x, y)).toBe(a.noise2(x, y));
-      if (c.noise2(x, y) !== a.noise2(x, y)) differs = true;
+      if (c.noise2(x, y) !== a.noise2(x, y)) {
+        differs = true;
+      }
     }
     expect(differs).toBe(true);
   });
@@ -131,7 +136,9 @@ describe("buildPeriodicNoiseTexture", () => {
     // Each channel matches the same channel built on its own.
     channels.forEach((ch, c) => {
       const single = buildPeriodicNoiseTexture(16, [ch]);
-      for (let i = 0; i < 16 * 16; i++) expect(tex[i * 3 + c]).toBe(single[i]);
+      for (let i = 0; i < 16 * 16; i++) {
+        expect(tex[i * 3 + c]).toBe(single[i]);
+      }
     });
   });
 
@@ -146,7 +153,9 @@ describe("buildPeriodicNoiseTexture", () => {
 
 describe("toPeriod", () => {
   it("passes valid periods through", () => {
-    for (const p of [1, 2, 7, 100, MAX_PERIOD]) expect(toPeriod(p)).toBe(p);
+    for (const p of [1, 2, 7, 100, MAX_PERIOD]) {
+      expect(toPeriod(p)).toBe(p);
+    }
   });
 
   it("rounds, clamps and replaces NaN", () => {
@@ -156,7 +165,7 @@ describe("toPeriod", () => {
     expect(toPeriod(-5)).toBe(1);
     expect(toPeriod(1000)).toBe(MAX_PERIOD);
     expect(toPeriod(Infinity)).toBe(MAX_PERIOD);
-    expect(toPeriod(NaN)).toBe(1);
+    expect(toPeriod(Number.NaN)).toBe(1);
   });
 });
 
@@ -172,7 +181,7 @@ describe("periodic2", () => {
   });
 
   it("stays finite for out-of-range and fractional periods", () => {
-    for (const p of [0, -3, 2.5, 257, 300, 1000, NaN, Infinity]) {
+    for (const p of [0, -3, 2.5, 257, 300, 1000, Number.NaN, Infinity]) {
       for (let i = 0; i < 200; i++) {
         const v = noise.periodic2(i * 1.37 + 0.2, i * 0.91 + 0.4, p, p);
         expect(Number.isFinite(v)).toBe(true);

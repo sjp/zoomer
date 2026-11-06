@@ -51,7 +51,9 @@ describe("kernel", () => {
     for (let i = 0; i < TAPS.count; i++) {
       const [x, y, w] = TAPS.data.subarray(i * 3, i * 3 + 3);
       sum += 2 * w;
-      if (!(w > 0) || Math.hypot(Math.abs(x) + 0.5, y) > KERNEL_R + 1 || y < 0) bad++;
+      if (!(w > 0) || Math.hypot(Math.abs(x) + 0.5, y) > KERNEL_R + 1 || y < 0) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(sum).toBeCloseTo(1, 5);
@@ -68,7 +70,9 @@ describe("kernel", () => {
     const R = KERNEL_R;
     let total = 0;
     for (let dy = -R; dy <= R; dy++) {
-      for (let dx = -R; dx <= R; dx++) total += kernelShell(Math.hypot(dx, dy) / R, KERNEL_B);
+      for (let dx = -R; dx <= R; dx++) {
+        total += kernelShell(Math.hypot(dx, dy) / R, KERNEL_B);
+      }
     }
     let worst = 0;
     for (const [x, y] of [
@@ -97,7 +101,9 @@ describe("kernel", () => {
   it("builds multi-peak kernels too", () => {
     const t = buildTaps(10, [0.5, 1]);
     let sum = 0;
-    for (let i = 0; i < t.count; i++) sum += 2 * t.data[i * 3 + 2];
+    for (let i = 0; i < t.count; i++) {
+      sum += 2 * t.data[i * 3 + 2];
+    }
     expect(sum).toBeCloseTo(1, 5);
   });
 });
@@ -128,7 +134,9 @@ describe("rules and species", () => {
   });
 
   it("cover every species option and fall back for unknown ids", () => {
-    for (const o of SPECIES_OPTIONS) expect(SPECIES[o.value].rules.length).toBeGreaterThan(0);
+    for (const o of SPECIES_OPTIONS) {
+      expect(SPECIES[o.value].rules.length).toBeGreaterThan(0);
+    }
     expect(speciesFor("nope")).toBe(SPECIES.mixed);
     for (const id of Object.keys(RULES) as RuleId[]) {
       expect(PATCH_SEEDS[id]).toBeDefined();
@@ -160,7 +168,11 @@ describe("CPU step", () => {
     for (let i = 1; i <= 150; i++) {
       leniaStep(A, B, W, H, RULES.orbium, TAPS, opts);
       [A, B] = [B, A];
-      for (let j = 0; j < A.length; j++) if (!(A[j] >= 0 && A[j] <= 1)) outOfRange++;
+      for (const a of A) {
+        if (!(a >= 0 && a <= 1)) {
+          outOfRange++;
+        }
+      }
       if (i % 50 === 0) {
         masses.push(mass(A));
         centreOfMass(A, W, H, com);
@@ -213,13 +225,15 @@ describe("CPU step", () => {
 describe("seeding", () => {
   it("draws patches as discs, the same values in every orientation", () => {
     const base = fillPatch(30, 0, new Float32Array(PATCH_SIZE * PATCH_SIZE));
-    const sorted = (a: Float32Array) => [...a].filter((v) => v > 0).sort((p, q) => p - q);
+    const sorted = (a: Float32Array) => [...a].filter((v) => v > 0).toSorted((p, q) => p - q);
     const ref = sorted(base);
     expect(ref.length).toBeGreaterThan(Math.PI * (PATCH_RADIUS - 1) ** 2);
     let mismatches = 0;
     for (let o = 1; o < 8; o++) {
       const p = sorted(fillPatch(30, o, new Float32Array(PATCH_SIZE * PATCH_SIZE)));
-      if (p.length !== ref.length || p.some((v, i) => v !== ref[i])) mismatches++;
+      if (p.length !== ref.length || p.some((v, i) => v !== ref[i])) {
+        mismatches++;
+      }
     }
     expect(mismatches).toBe(0);
     // A quarter turn moves cell (x, y) from the centre to (-y, x).
@@ -248,7 +262,11 @@ describe("seeding", () => {
     expect(a).toEqual(b);
     expect(a).not.toEqual(c);
     let bad = 0;
-    for (const v of a) if (!(v >= 0 && v <= 1)) bad++;
+    for (const v of a) {
+      if (!(v >= 0 && v <= 1)) {
+        bad++;
+      }
+    }
     expect(bad).toBe(0);
     // Mass of one to six patches (each about half its disc), none overlapping.
     const per = Math.PI * PATCH_RADIUS * PATCH_RADIUS * 0.5;
@@ -319,16 +337,26 @@ describe("grid and stats", () => {
     let found = 0;
     let bad = 0;
     for (let k = 0; k < 50; k++) {
-      if (!pickSpawnSpot(bytes, w, h, rng, out)) continue;
+      if (!pickSpawnSpot(bytes, w, h, rng, out)) {
+        continue;
+      }
       found++;
-      if (out[0] < 0 || out[1] < 0 || out[0] + PATCH_SIZE > w || out[1] + PATCH_SIZE > h) bad++;
-      if (out[0] - KERNEL_R < 2 * tx || out[0] + PATCH_SIZE + KERNEL_R > 12 * tx) bad++;
+      if (out[0] < 0 || out[1] < 0 || out[0] + PATCH_SIZE > w || out[1] + PATCH_SIZE > h) {
+        bad++;
+      }
+      if (out[0] - KERNEL_R < 2 * tx || out[0] + PATCH_SIZE + KERNEL_R > 12 * tx) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(found).toBeGreaterThan(0);
     fill(0, 0);
     let full = 0;
-    for (let k = 0; k < 20; k++) if (pickSpawnSpot(bytes, w, h, rng, out)) full++;
+    for (let k = 0; k < 20; k++) {
+      if (pickSpawnSpot(bytes, w, h, rng, out)) {
+        full++;
+      }
+    }
     expect(full).toBe(0);
   });
 });
@@ -337,12 +365,18 @@ describe("life cycle", () => {
   it("fades in, holds, and fades out before asking for a reseed", () => {
     const life = createLife();
     let reseeds = 0;
-    for (let t = 0; t < FADE_SECONDS + 0.5; t += 0.1) if (advanceLife(life, 0.1, 0)) reseeds++;
+    for (let t = 0; t < FADE_SECONDS + 0.5; t += 0.1) {
+      if (advanceLife(life, 0.1, 0)) {
+        reseeds++;
+      }
+    }
     expect(life.phase).toBe("live");
     expect(life.fade).toBe(1);
     life.phase = "out";
     let frames = 0;
-    while (!advanceLife(life, 0.1, 0) && frames < 1000) frames++;
+    while (!advanceLife(life, 0.1, 0) && frames < 1000) {
+      frames++;
+    }
     expect(reseeds).toBe(0);
     expect(life.fade).toBe(0);
     expect(frames).toBeGreaterThan(FADE_SECONDS / 0.1 - 3);

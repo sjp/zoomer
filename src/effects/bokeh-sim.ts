@@ -40,12 +40,12 @@ export interface Lights {
   /** Lights simulated: the target plus any still fading out after it dropped. */
   readonly live: number;
   /** Scales x positions by `k`, keeping lights in place relative to a resized width. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances `dt` seconds and writes the visible lights to `data`, LIGHT_FLOATS
    * at `stride` floats apart. Returns how many.
    */
-  step(dt: number, f: LightFrame, data: Float32Array, stride: number): number;
+  step: (dt: number, f: LightFrame, data: Float32Array, stride: number) => number;
 }
 
 export function createLights(
@@ -88,7 +88,9 @@ export function createLights(
       return live;
     },
     rescaleX(k) {
-      for (let i = 0; i < max; i++) xs[i] *= k;
+      for (let i = 0; i < max; i++) {
+        xs[i] *= k;
+      }
     },
     step(dt, f, data, stride) {
       time += dt;
@@ -124,7 +126,9 @@ export function createLights(
         const pulse = 1 - f.twinkle * 0.6 * tw;
         // Nearer, larger discs spread their light wider and look fainter.
         const alpha = 0.75 * Math.exp(-0.6 * e) * pulse * f.brightness * l * l;
-        if (alpha <= 0.002) continue;
+        if (alpha <= 0.002) {
+          continue;
+        }
         const o = visible * stride;
         data[o] = xs[i] * scale;
         data[o + 1] = ys[i] * scale;

@@ -8,7 +8,7 @@
  * The writers convert to device pixels, y down, for the renderers.
  */
 import { hexToUnitRgb, type Rgb } from "./color";
-import { COLOUR_OPTIONS, CORNER_OPTIONS, KITE_OPTIONS } from "./kite.meta";
+import type { COLOUR_OPTIONS, CORNER_OPTIONS, KITE_OPTIONS } from "./kite.meta";
 import { approach, clamp } from "./math";
 import { hash32 } from "./noise";
 import { STREAK_FLOATS } from "./streaks";
@@ -143,7 +143,11 @@ function box(): KiteShape {
   // Corners in xz: front, right, back, left. Point (corner k, level l) is k * 4 + l.
   const cx = [0, BOX_R, 0, -BOX_R];
   const cz = [BOX_R, 0, -BOX_R, 0];
-  for (let k = 0; k < 4; k++) for (const y of BOX_LEVELS) points.push(cx[k], y, cz[k]);
+  for (let k = 0; k < 4; k++) {
+    for (const y of BOX_LEVELS) {
+      points.push(cx[k], y, cz[k]);
+    }
+  }
   const tailPoint = points.length / 3;
   points.push(0, -1, 0);
   const bridlePoint = points.length / 3;
@@ -174,7 +178,9 @@ function box(): KiteShape {
     }
   }
   const spars: number[] = [];
-  for (let k = 0; k < 4; k++) spars.push(k * 4, k * 4 + 3);
+  for (let k = 0; k < 4; k++) {
+    spars.push(k * 4, k * 4 + 3);
+  }
   return toShape({
     points,
     tris,
@@ -529,7 +535,9 @@ export function stepTail(
     const f = s / steps;
     t[0] = x0 + (x1 - x0) * f;
     t[1] = y0 + (y1 - y0) * f;
-    if (!(h > 0)) continue;
+    if (!(h > 0)) {
+      continue;
+    }
     for (let i = 1; i < TAIL_POINTS; i++) {
       const o = i * 2;
       const vx = v[o] + (wx - v[o]) * TAIL_DRAG * h;
@@ -640,8 +648,12 @@ export function stepKite(
   const step = Number.isFinite(dt) ? clamp(dt, 0, MAX_DT) : 0;
   const w = clamp(Number.isFinite(wind) ? wind : 0.5, 0, 1);
   const sideTarget = corner === "left" ? 0 : 1;
-  if (Number.isNaN(state.wind)) state.wind = w;
-  if (Number.isNaN(state.side)) state.side = sideTarget;
+  if (Number.isNaN(state.wind)) {
+    state.wind = w;
+  }
+  if (Number.isNaN(state.side)) {
+    state.side = sideTarget;
+  }
   state.wind = approach(state.wind, w, WIND_RATE * step);
   state.side = approach(state.side, sideTarget, step / CORNER_SECONDS);
   const side = ease(state.side);
@@ -663,8 +675,11 @@ export function stepKite(
   const hx = state.world[tp];
   const hy = state.world[tp + 1];
   const spacing = shape.tailLength / (TAIL_POINTS - 1);
-  if (!state.tailReady) layTail(state, hx, hy, spacing);
-  else stepTail(state, step, hx0, hy0, hx, hy, spacing);
+  if (!state.tailReady) {
+    layTail(state, hx, hy, spacing);
+  } else {
+    stepTail(state, step, hx0, hy0, hx, hy, spacing);
+  }
 
   const rw = 0.6 + 0.8 * state.wind;
   state.ripple = (state.ripple + RIPPLE_SPEED * rw * (1 + 0.6 * gust) * step) % TAU;
@@ -890,7 +905,9 @@ export function writeKite(
     const f = faceOrder[k];
     const light = faceLight[f];
     for (let t = 0; t < triCount; t++) {
-      if (shape.face[t] !== f) continue;
+      if (shape.face[t] !== f) {
+        continue;
+      }
       const a = tris[t * 3] * 3;
       const b = tris[t * 3 + 1] * 3;
       const c = tris[t * 3 + 2] * 3;
@@ -910,7 +927,9 @@ export function writeKite(
         Math.min(1, col[2] * light + 0.03 * Math.max(0, light - 0.9)),
         FABRIC_ALPHA,
       );
-      if (faceDepth[f] < -50) back++;
+      if (faceDepth[f] < -50) {
+        back++;
+      }
     }
   }
   kiteCounts.back = back;

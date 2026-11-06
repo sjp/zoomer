@@ -136,7 +136,9 @@ function paletteData(p: MarblePalette): PaletteData {
     p.colours.forEach((hex, i) => {
       const c = hexToUnitRgb(hex);
       colours.set(c, i * 3);
-      for (let k = 0; k < 3; k++) mean[k] += c[k] / p.colours.length;
+      for (let k = 0; k < 3; k++) {
+        mean[k] += c[k] / p.colours.length;
+      }
     });
     d = { colours, count: p.colours.length, mean };
     PALETTE_DATA.set(p, d);
@@ -273,7 +275,9 @@ export const marble = defineEffect(marbleMeta, {
 
           sim.step(dt, p, extent);
           const k = sim.bakeCount();
-          if (k > 0) bake(sim, k, pxPerUnit);
+          if (k > 0) {
+            bake(sim, k, pxPerUnit);
+          }
 
           uploadOps(sim, 0, sim.ops.length);
           bindBase();

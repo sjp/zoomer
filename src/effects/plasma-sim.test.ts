@@ -68,7 +68,9 @@ describe("plasmaLayout", () => {
             l.cx - l.r >= x0 &&
             l.cx + l.r <= x1 &&
             l.cy + l.r <= y1;
-          if (!ok) bad.push(`${String(aspect)} ${corner} ${String(size)}`);
+          if (!ok) {
+            bad.push(`${String(aspect)} ${corner} ${String(size)}`);
+          }
         }
       }
     }
@@ -87,7 +89,7 @@ describe("plasmaLayout", () => {
     expect(globeRadius(10)).toBe(plasmaMeta.params.size.max / 2);
     expect(globeRadius(Number.NaN)).toBeGreaterThan(0);
     const l = plasmaLayout(Number.NaN, "right", Number.NaN, createLayout());
-    expect([l.cx, l.cy, l.r, ...l.box].every(Number.isFinite)).toBe(true);
+    expect([l.cx, l.cy, l.r, ...l.box].every((v) => Number.isFinite(v))).toBe(true);
   });
 });
 
@@ -101,7 +103,9 @@ describe("end points", () => {
       let spacing = Infinity;
       for (let f = 0; f < 60 * 120; f++) {
         stepPlasma(p, DT, n, 2);
-        if (f % 10 !== 0) continue;
+        if (f % 10 !== 0) {
+          continue;
+        }
         for (let i = 0; i < n; i++) {
           const e = p.ends.subarray(3 * i, 3 * i + 3);
           off = Math.max(off, Math.abs(Math.hypot(e[0], e[1], e[2]) - 1));
@@ -148,7 +152,9 @@ describe("end points", () => {
     stepPlasma(p, 0.2, 6, 1);
     expect(p.fade[4]).toBeCloseTo(0.2 * FADE_RATE, 12);
     // Long frames are clamped, so it takes a few of them.
-    for (let f = 0; f < 12; f++) stepPlasma(p, 10, 6, 1);
+    for (let f = 0; f < 12; f++) {
+      stepPlasma(p, 10, 6, 1);
+    }
     expect(p.fade[5]).toBe(1);
     const before = p.ends.slice();
     stepPlasma(p, Number.NaN, 6, 1);
@@ -172,10 +178,18 @@ describe("paths", () => {
       filamentPath(p, i, out);
       const e = p.ends.subarray(3 * i, 3 * i + 3);
       const last = 3 * PATH_SEGMENTS;
-      if (Math.abs(Math.hypot(out[0], out[1], out[2]) - CORE_R) > 1e-9) bad++;
-      for (let c = 0; c < 3; c++) if (Math.abs(out[last + c] - e[c] * GLASS_IN) > 1e-9) bad++;
+      if (Math.abs(Math.hypot(out[0], out[1], out[2]) - CORE_R) > 1e-9) {
+        bad++;
+      }
+      for (let c = 0; c < 3; c++) {
+        if (Math.abs(out[last + c] - e[c] * GLASS_IN) > 1e-9) {
+          bad++;
+        }
+      }
       for (let k = 0; k <= PATH_SEGMENTS; k++) {
-        if (Math.hypot(out[3 * k], out[3 * k + 1], out[3 * k + 2]) > GLASS_IN + 1e-9) bad++;
+        if (Math.hypot(out[3 * k], out[3 * k + 1], out[3 * k + 2]) > GLASS_IN + 1e-9) {
+          bad++;
+        }
       }
       for (let b = 0; b < p.branches[i]; b++) {
         branchPath(p, i, b, out, end, bout);
@@ -184,9 +198,13 @@ describe("paths", () => {
           bout[3 * BRANCH_SEGMENTS + 1],
           bout[3 * BRANCH_SEGMENTS + 2],
         );
-        if (Math.abs(r - GLASS_IN) > 1e-9) bad++;
+        if (Math.abs(r - GLASS_IN) > 1e-9) {
+          bad++;
+        }
         // The branch leaves from the outer part of the main path.
-        if (Math.hypot(bout[0], bout[1], bout[2]) < 0.4) bad++;
+        if (Math.hypot(bout[0], bout[1], bout[2]) < 0.4) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -212,8 +230,12 @@ describe("paths", () => {
       stepPlasma(p, DT, MAX_FILAMENTS, drift);
       filamentPath(p, i, b);
       branchPath(p, i, 0, b, end, bb);
-      for (let k = 0; k < a.length; k++) worst = Math.max(worst, Math.abs(a[k] - b[k]));
-      for (let k = 0; k < ba.length; k++) worst = Math.max(worst, Math.abs(ba[k] - bb[k]));
+      for (let k = 0; k < a.length; k++) {
+        worst = Math.max(worst, Math.abs(a[k] - b[k]));
+      }
+      for (let k = 0; k < ba.length; k++) {
+        worst = Math.max(worst, Math.abs(ba[k] - bb[k]));
+      }
     }
     // No point jumps: at most a small fraction of the sphere's radius per frame.
     expect(worst).toBeLessThan(bound);
@@ -242,7 +264,9 @@ describe("brightness", () => {
     let off = 0;
     for (let i = 0; i < MAX_FILAMENTS; i++) {
       const b = filamentBrightness(p, i);
-      if (i < 9 ? b <= 0.6 || b > 1 : b !== 0) off++;
+      if (i < 9 ? b <= 0.6 || b > 1 : b !== 0) {
+        off++;
+      }
     }
     expect(off).toBe(0);
   });

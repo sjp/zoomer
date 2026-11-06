@@ -52,7 +52,9 @@ describe("globeLayout", () => {
             l.cx - l.r - NUDGE >= x0 &&
             l.cx + l.r + NUDGE <= x1 &&
             l.cy + l.r + NUDGE <= y1;
-          if (!ok) bad.push(`${String(aspect)} ${pos} ${String(size)}`);
+          if (!ok) {
+            bad.push(`${String(aspect)} ${pos} ${String(size)}`);
+          }
         }
       }
     }
@@ -89,9 +91,15 @@ describe("snow", () => {
     expect(Array.from(a.x)).not.toEqual(Array.from(c.x));
     let bad = 0;
     for (let i = 0; i < a.count; i++) {
-      if (!a.settled[i] || Math.abs(a.y[i] - moundY(a.x[i])) > 1e-12) bad++;
-      if (Math.hypot(a.x[i], a.y[i]) > FLAKE_DISC + 1e-9) bad++;
-      if (a.radius[i] < FLAKE_R[0] || a.radius[i] > FLAKE_R[1]) bad++;
+      if (!a.settled[i] || Math.abs(a.y[i] - moundY(a.x[i])) > 1e-12) {
+        bad++;
+      }
+      if (Math.hypot(a.x[i], a.y[i]) > FLAKE_DISC + 1e-9) {
+        bad++;
+      }
+      if (a.radius[i] < FLAKE_R[0] || a.radius[i] > FLAKE_R[1]) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     const e = moundEdge();
@@ -109,7 +117,9 @@ describe("snow", () => {
       stepSnow(s, k % 7 === 0 ? 0.1 : DT, 10);
       for (let i = 0; i < s.count; i++) {
         worst = Math.max(worst, Math.hypot(s.x[i], s.y[i]));
-        if (s.y[i] < moundY(s.x[i]) - 1e-9) below++;
+        if (s.y[i] < moundY(s.x[i]) - 1e-9) {
+          below++;
+        }
       }
     }
     expect(worst).toBeLessThanOrEqual(FLAKE_DISC + 1e-9);
@@ -127,7 +137,9 @@ describe("snow", () => {
       while (!all && t < 60) {
         stepSnow(s, DT, 0);
         t += DT;
-        if (Math.abs(t - 5) < DT / 2) early.push(s.settled.reduce((a, v) => a + v, 0) / s.count);
+        if (Math.abs(t - 5) < DT / 2) {
+          early.push(s.settled.reduce((a, v) => a + v, 0) / s.count);
+        }
         all = s.settled.every((v) => v === 1);
       }
       times.push(all ? t : Infinity);
@@ -141,7 +153,9 @@ describe("snow", () => {
   it("leaves settled flakes alone until the next shake", () => {
     const s = createSnow(5, 100);
     const x0 = Array.from(s.x);
-    for (let k = 0; k < 600; k++) stepSnow(s, DT, 0);
+    for (let k = 0; k < 600; k++) {
+      stepSnow(s, DT, 0);
+    }
     expect(Array.from(s.x)).toEqual(x0);
     shakeSnow(s);
     stepSnow(s, DT, 0);
@@ -153,7 +167,11 @@ describe("snow", () => {
       const s = createSnow(1, 10);
       shakeSnow(s, false);
       let n = 0;
-      for (let k = 0; k < seconds * 60; k++) if (stepSnow(s, DT, interval)) n++;
+      for (let k = 0; k < seconds * 60; k++) {
+        if (stepSnow(s, DT, interval)) {
+          n++;
+        }
+      }
       return n;
     };
     expect(count(0, 120)).toBe(0);
@@ -208,7 +226,9 @@ describe("writeFlakes", () => {
     for (let i = 0; i < n; i++) {
       const o = i * FLAKE_STRIDE;
       const d = Math.hypot(out[o] - l.cx - 0.01, out[o + 1] - l.cy);
-      if (d + out[o + 2] > l.r) bad++;
+      if (d + out[o + 2] > l.r) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });

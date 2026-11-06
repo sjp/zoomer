@@ -127,7 +127,9 @@ export function swingState(t: number, amp: number, out: Float64Array, half = HAL
  */
 export function ballAngle(i: number, count: number, lifted: number, state: Float64Array): number {
   if (state[3] === 0) {
-    if (i < lifted) return -state[0];
+    if (i < lifted) {
+      return -state[0];
+    }
   } else if (i >= count - lifted) {
     return state[1];
   }
@@ -257,7 +259,9 @@ export function cradleLayout(
 
 /** Sorts `order[0..count)` (ball indices) by `depth`, farthest (smallest) first. In place. */
 export function sortByDepth(depth: ArrayLike<number>, count: number, order: Int32Array): void {
-  for (let i = 0; i < count; i++) order[i] = i;
+  for (let i = 0; i < count; i++) {
+    order[i] = i;
+  }
   for (let i = 1; i < count; i++) {
     const k = order[i];
     let j = i - 1;
@@ -381,8 +385,10 @@ export const SCENES: Readonly<Record<CradleScene, ScenePalette>> = {
   },
 };
 
+const isCradleScene = (v: string): v is CradleScene => Object.hasOwn(SCENES, v);
+
 export function sceneOf(id: string): ScenePalette {
-  return Object.hasOwn(SCENES, id) ? SCENES[id as CradleScene] : SCENES.studio;
+  return isCradleScene(id) ? SCENES[id] : SCENES.studio;
 }
 
 /** Ball material: reflectance tint at normal incidence, diffuse base colour, extra glint. */
@@ -398,8 +404,10 @@ export const FINISHES: Readonly<Record<CradleFinish, Finish>> = {
   glass: { f0: [0.05, 0.05, 0.05], base: [0.008, 0.008, 0.01], glint: 1.6 },
 };
 
+const isCradleFinish = (v: string): v is CradleFinish => Object.hasOwn(FINISHES, v);
+
 export function finishOf(id: string): Finish {
-  return Object.hasOwn(FINISHES, id) ? FINISHES[id as CradleFinish] : FINISHES.chrome;
+  return isCradleFinish(id) ? FINISHES[id] : FINISHES.chrome;
 }
 
 /** Side of a `corner` select value: +1 bottom right, -1 bottom left. */

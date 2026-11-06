@@ -118,7 +118,13 @@ export const snow = defineEffect(snowMeta, {
             if (mistSet.bottom !== p.backgroundBottom || mistSet.color !== p.color) {
               // Mist is a lighter, slightly snow-tinted horizon colour.
               const mist = mixRgb(hexToRgb(p.backgroundBottom), hexToRgb(p.color), 0.45);
-              mistU.f3("uMist", (mist[0] | 0) / 255, (mist[1] | 0) / 255, (mist[2] | 0) / 255);
+              // Channels are finite 0..255, so truncating matches the old `| 0`.
+              mistU.f3(
+                "uMist",
+                Math.trunc(mist[0]) / 255,
+                Math.trunc(mist[1]) / 255,
+                Math.trunc(mist[2]) / 255,
+              );
               mistSet.bottom = p.backgroundBottom;
               mistSet.color = p.color;
             }

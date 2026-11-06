@@ -57,12 +57,16 @@ describe("swags", () => {
         const first = sim.stringFirst[s];
         const last = first + sim.stringPoints[s] - 1;
         // Ends at the anchors, spanning a little past the frame on both sides.
-        if (!(sim.pointX[first] < 0 && sim.pointX[last] > 1920)) bad++;
+        if (!(sim.pointX[first] < 0 && sim.pointX[last] > 1920)) {
+          bad++;
+        }
         // The middle of each swag hangs below the straight line between its anchors.
         for (let i = first; i + 40 <= last; i += 40) {
           const mid = i + 20;
           const chord = (sim.pointY[i] + sim.pointY[i + 40]) / 2;
-          if (!(sim.pointY[mid] > chord + 10)) bad++;
+          if (!(sim.pointY[mid] > chord + 10)) {
+            bad++;
+          }
         }
       }
     }
@@ -77,14 +81,20 @@ describe("swags", () => {
       const sim = built(3, "swags", seed);
       for (let b = 1; b < sim.bulbCount; b++) {
         const s = sim.bulbString[b];
-        if (sim.bulbString[b - 1] !== s) continue;
+        if (sim.bulbString[b - 1] !== s) {
+          continue;
+        }
         const gap = Math.hypot(sim.bulbX[b] - sim.bulbX[b - 1], sim.bulbY[b] - sim.bulbY[b - 1]);
         const spacing = BULB_SPACING * (1 - 0.3 * sim.stringDepth[s]);
         checked++;
         // Chords are a little shorter than the arc where the wire bends, and
         // shortest across the kink at an anchor.
-        if (!(gap <= spacing + 1e-6 && gap > spacing * 0.75)) bad++;
-        if (gap > spacing * 0.97) even++;
+        if (!(gap <= spacing + 1e-6 && gap > spacing * 0.75)) {
+          bad++;
+        }
+        if (gap > spacing * 0.97) {
+          even++;
+        }
       }
     }
     expect(checked).toBeGreaterThan(300);
@@ -144,7 +154,9 @@ describe("curtain", () => {
           for (let i = 0; i < n; i++) {
             const x = bulbs[i * BULB_FLOATS];
             const r = bulbs[i * BULB_FLOATS + 2];
-            if (x + r > width / 3 && x - r < (2 * width) / 3) bad++;
+            if (x + r > width / 3 && x - r < (2 * width) / 3) {
+              bad++;
+            }
           }
         }
       }
@@ -195,7 +207,9 @@ describe("twinkle and chase", () => {
     let off = 0;
     for (let t = 0; t < 20; t += 0.5) {
       for (let i = 0; i < sim.bulbCount; i++) {
-        if (sim.level(i, frame({ time: t, pattern: "steady", twinkle: 1 })) !== 1) off++;
+        if (sim.level(i, frame({ time: t, pattern: "steady", twinkle: 1 })) !== 1) {
+          off++;
+        }
       }
     }
     expect(off).toBe(0);
@@ -228,13 +242,17 @@ describe("rendering data", () => {
     const sharp = sim.step(frame({ focus: 0 }), bulbs, wires);
     const allWires = sim.wireCount;
     let maxBlur = 0;
-    for (let i = 0; i < sharp; i++) maxBlur = Math.max(maxBlur, bulbs[i * BULB_FLOATS + 7]);
+    for (let i = 0; i < sharp; i++) {
+      maxBlur = Math.max(maxBlur, bulbs[i * BULB_FLOATS + 7]);
+    }
     expect(maxBlur).toBe(0);
 
     const n = sim.step(frame({ focus: 1 }), bulbs, wires);
     expect(sim.wireCount).toBeLessThan(allWires);
     let biggest = 0;
-    for (let i = 0; i < n; i++) biggest = Math.max(biggest, bulbs[i * BULB_FLOATS + 2]);
+    for (let i = 0; i < n; i++) {
+      biggest = Math.max(biggest, bulbs[i * BULB_FLOATS + 2]);
+    }
     expect(biggest).toBeGreaterThan(BOKEH_RADIUS * 0.6);
     expect(biggest).toBeLessThanOrEqual(BOKEH_RADIUS);
   });
@@ -250,7 +268,9 @@ describe("rendering data", () => {
     for (let i = 0; i < n * BULB_FLOATS; i++) {
       const k = i % BULB_FLOATS;
       const expected = k < 3 ? a[i] * 2 : a[i];
-      if (Math.abs(b[i] - expected) > 1e-3) bad++;
+      if (Math.abs(b[i] - expected) > 1e-3) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });

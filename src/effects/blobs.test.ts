@@ -113,7 +113,9 @@ describe("writeBlobUniforms", () => {
     expect(2 ** (-xyr[2] * xyr[2] * out[6])).toBeCloseTo(Math.exp(-1), 5);
     expect(out[7]).toBe(1);
     // The shader stops at uCount, so later slots are left alone.
-    for (let i = 3 * 4; i < out.length; i++) expect(out[i]).toBe(9);
+    for (let i = 3 * 4; i < out.length; i++) {
+      expect(out[i]).toBe(9);
+    }
   });
 
   it("writes each blob's fade weight", () => {
@@ -144,7 +146,9 @@ describe("advanceKeyframes", () => {
       renders += due;
       const m = keyframeMix(c, T);
       // Between keyframes the B weight only grows.
-      if (due === 0 && m <= lastMix) monotonic = false;
+      if (due === 0 && m <= lastMix) {
+        monotonic = false;
+      }
       lastMix = m;
     }
     expect(monotonic).toBe(true);
@@ -204,9 +208,9 @@ describe("updateKeyframes", () => {
       frame(dt: number, speed: number, invalid = false) {
         time += dt * speed;
         const due = advanceKeyframes(clock, dt, T, invalid);
-        updateKeyframes(keys, due, invalid, time, speed, speed !== lastSpeed, clock, T, (k, t) =>
-          renders.push([k, t]),
-        );
+        updateKeyframes(keys, due, invalid, time, speed, speed !== lastSpeed, clock, T, (k, t) => {
+          renders.push([k, t]);
+        });
         lastSpeed = speed;
       },
       /** The sim time the blit shows: A cross-faded towards B. */
@@ -246,7 +250,9 @@ describe("updateKeyframes", () => {
     const h = harness();
     h.frame(1 / 120, 1, true);
     h.renders.length = 0;
-    for (let i = 0; i < 120; i++) h.frame(1 / 120, 1);
+    for (let i = 0; i < 120; i++) {
+      h.frame(1 / 120, 1);
+    }
     expect(h.renders.length).toBeGreaterThanOrEqual(29);
     expect(h.renders.length).toBeLessThanOrEqual(31);
     for (let i = 1; i < h.renders.length; i++) {
@@ -269,7 +275,9 @@ describe("updateKeyframes", () => {
     // A was rendered at the old speed: the cross-fade lags by at most (2 - 1) * T / 4...
     expect(Math.abs(h.shown() - h.time)).toBeLessThanOrEqual(T / 4 + 1e-12);
     // ...until A is replaced, one interval later.
-    for (let i = 0; i < 6; i++) h.frame(1 / 120, 2);
+    for (let i = 0; i < 6; i++) {
+      h.frame(1 / 120, 2);
+    }
     expect(Math.abs(h.shown() - h.time)).toBeLessThan(1e-9);
   });
 
@@ -278,7 +286,9 @@ describe("updateKeyframes", () => {
     h.frame(1 / 120, 0, true);
     h.renders.length = 0;
     // Paused: both keyframes hold the same time, so nothing new is rendered...
-    for (let i = 0; i < 10; i++) h.frame(1 / 120, 0);
+    for (let i = 0; i < 10; i++) {
+      h.frame(1 / 120, 0);
+    }
     expect(h.renders).toEqual([]);
     // ...until the image changes.
     h.frame(1 / 120, 0, true);

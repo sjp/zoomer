@@ -343,7 +343,9 @@ export const cloudsea = defineEffect(cloudseaMeta, {
       /** Set by `track` when a scene uniform uploads, meaning the cached scene is stale. */
       let changed = false;
       const track = (uploaded: boolean) => {
-        if (uploaded) changed = true;
+        if (uploaded) {
+          changed = true;
+        }
       };
 
       return {

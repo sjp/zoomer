@@ -60,7 +60,9 @@ const PALETTE_DATA = new Map<readonly string[], Float32Array>(
 );
 const paletteData = (name: string) => {
   const data = PALETTE_DATA.get(palette(name));
-  if (!data) throw new Error(`glass: no palette data for "${name}"`);
+  if (!data) {
+    throw new Error(`glass: no palette data for "${name}"`);
+  }
   return data;
 };
 

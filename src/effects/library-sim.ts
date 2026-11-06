@@ -215,7 +215,8 @@ const unit = (h: number) => h / 4294967296;
  */
 export function cloudLight(seed: number, time: number): number {
   const slot = Math.floor(Math.max(0, time) / CLOUD_SLOT);
-  let h = hash32((hash32(seed | 0) ^ Math.imul(slot + 1, 0x9e3779b1)) >>> 0);
+  // `hash32` reads its argument as an int32 anyway, so `seed` needs no `| 0` first.
+  let h = hash32((hash32(seed) ^ Math.imul(slot + 1, 0x9e3779b1)) >>> 0);
   const start = unit(h) * CLOUD_START;
   h = hash32(h);
   const depth = CLOUD_DEPTH[0] + (CLOUD_DEPTH[1] - CLOUD_DEPTH[0]) * unit(h);
@@ -284,7 +285,9 @@ export function createMotes(seed: number, max: number): Motes {
     m.phase[i] = rng() * 2 * Math.PI;
     m.spin[i] = SPIN[0] + (SPIN[1] - SPIN[0]) * rng();
   }
-  for (let k = 0; k < FLOW.length; k++) m.flowPhase[k] = rng() * 2 * Math.PI;
+  for (let k = 0; k < FLOW.length; k++) {
+    m.flowPhase[k] = rng() * 2 * Math.PI;
+  }
   return m;
 }
 
@@ -337,7 +340,9 @@ export function stepMotes(
     m.s[i] = wrap(m.s[i] + (vel.s * dt) / g.length, 0, 1);
     m.t[i] = wrap(m.t[i] + (vel.t * dt) / g.halfBox, -1, 2);
     m.phase[i] += m.spin[i] * dt;
-    if (m.phase[i] > 2 * Math.PI) m.phase[i] -= 2 * Math.PI;
+    if (m.phase[i] > 2 * Math.PI) {
+      m.phase[i] -= 2 * Math.PI;
+    }
   }
 }
 

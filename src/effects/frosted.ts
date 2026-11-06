@@ -256,7 +256,9 @@ export const frosted = defineEffect(frostedMeta, {
             u.f2("uToUnits", aspect / lw, 1 / lh);
             invalid = true;
           }
-          if (u.f1("uBlur", blurWidth(p.blur, glassNow[0], 2 / lh))) invalid = true;
+          if (u.f1("uBlur", blurWidth(p.blur, glassNow[0], 2 / lh))) {
+            invalid = true;
+          }
 
           const want = Math.max(2, Math.min(MAX_SHAPES, Math.round(p.shapes) || 2));
           if (Number.isNaN(live)) {
@@ -270,10 +272,14 @@ export const frosted = defineEffect(frostedMeta, {
             const before = life[i];
             const l = stepLife(life, i, want, fadeStep, fadeStep);
             weight[i] = smoothstep(0, 1, l);
-            if (l !== before) invalid = true;
+            if (l !== before) {
+              invalid = true;
+            }
           }
           live = trimLive(life, live, want);
-          if (u.i1("uCount", count)) invalid = true;
+          if (u.i1("uCount", count)) {
+            invalid = true;
+          }
 
           if (
             p.palette !== lastPalette ||

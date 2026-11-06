@@ -86,7 +86,9 @@ export function buildRamp(
   let k = 0;
   for (let i = 0; i < size; i++) {
     const h = size > 1 ? i / (size - 1) : 0;
-    while (k < stops.length - 2 && h > stops[k + 1].at) k++;
+    while (k < stops.length - 2 && h > stops[k + 1].at) {
+      k++;
+    }
     const s0 = stops[k];
     const s1 = stops[Math.min(k + 1, stops.length - 1)];
     const span = s1.at - s0.at;
@@ -186,7 +188,9 @@ export function buildHearthProfile(out: Float32Array, refWidth: number, layout: 
       const dx = Math.abs(d);
       const l = len * halfW;
       const r = rad * halfW;
-      if (dx >= l) continue;
+      if (dx >= l) {
+        continue;
+      }
       const t = 0.5 + (0.5 * d) / l;
       const y0 = floorH + (bottomL + (bottomR - bottomL) * t) * halfW;
       // Body 2r tall; within r of either end, a circular cap.
@@ -270,12 +274,16 @@ export function stepEmbers(
   rng: () => number,
   curl: (x: number, y: number, t: number) => number,
 ) {
-  if (dt <= 0) return;
+  if (dt <= 0) {
+    return;
+  }
   const { layout } = env;
   s.spawnDebt = Math.min(s.spawnDebt + Math.max(0, env.rate) * dt, s.max);
   while (s.spawnDebt >= 1) {
     s.spawnDebt -= 1;
-    if (s.count >= s.max) continue;
+    if (s.count >= s.max) {
+      continue;
+    }
     const i = s.count++;
     s.x[i] = layout.cx + (rng() + rng() - 1) * layout.halfW * 0.55;
     s.y[i] = layout.baseY + rng() * layout.flameH * 0.35;
@@ -321,7 +329,9 @@ export function stepEmbers(
 
 /** Ember opacity 0..1: a quick fade-in, a slow fade-out and a gentle twinkle. */
 export function emberAlpha(age: number, life: number, seed: number, time: number): number {
-  if (life <= 0 || age >= life) return 0;
+  if (life <= 0 || age >= life) {
+    return 0;
+  }
   const fadeIn = Math.min(1, age / 0.3);
   const out = 1 - age / life;
   return fadeIn * out * out * (0.72 + 0.28 * Math.sin(time * 9 + seed));

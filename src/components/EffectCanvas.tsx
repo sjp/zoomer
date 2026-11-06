@@ -89,7 +89,9 @@ function createInstance(
   try {
     if (effect.context === "webgl2") {
       const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
-      if (!gl) return fail("WebGL2 is unavailable in this browser.");
+      if (!gl) {
+        return fail("WebGL2 is unavailable in this browser.");
+      }
       // A lost context is restored later, which retries creation; not an error.
       return gl.isContextLost() ? null : effect.create(gl);
     }
@@ -136,7 +138,9 @@ export function EffectCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !effect) return;
+    if (!canvas || !effect) {
+      return undefined;
+    }
 
     const reportError = (message: string) => onErrorRef.current?.(message);
     onErrorRef.current?.(undefined);
@@ -145,7 +149,9 @@ export function EffectCanvas({
     // Times the effect's GL commands on the GPU, when the browser allows it.
     let gpuTimer: GpuTimer | undefined;
     const startGpuTimer = () => {
-      if (!instance || effect.context !== "webgl2") return;
+      if (!instance || effect.context !== "webgl2") {
+        return;
+      }
       try {
         // Returns the context createInstance already made.
         const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
@@ -184,7 +190,9 @@ export function EffectCanvas({
       if (effect.context === "webgl2") {
         try {
           const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
-          if (gl && !gl.isContextLost()) beginFrame(gl, canvas.width, canvas.height);
+          if (gl && !gl.isContextLost()) {
+            beginFrame(gl, canvas.width, canvas.height);
+          }
         } catch {
           // Best effort: the next effect resets its own state each frame.
         }
@@ -195,7 +203,9 @@ export function EffectCanvas({
     const fixed = RESOLUTIONS[resolution].size;
 
     const resizeInstance = () => {
-      if (!instance || !viewport) return;
+      if (!instance || !viewport) {
+        return;
+      }
       try {
         instance.resize(viewport);
       } catch (err) {
@@ -211,7 +221,9 @@ export function EffectCanvas({
       // ResizeObserver fires once on observe, and for layout changes that don't alter
       // the buffer size. Assigning width/height reallocates the drawing buffer even when
       // unchanged, and effects may rebuild framebuffers on resize, so skip no-ops.
-      if (viewport && viewport.width === width && viewport.height === height) return;
+      if (viewport?.width === width && viewport.height === height) {
+        return;
+      }
       canvas.width = width;
       canvas.height = height;
       viewport = { width, height, scale: height / 1080 };
@@ -252,7 +264,9 @@ export function EffectCanvas({
       if (!instance) {
         // Failed, crashed, or waiting for a lost context: hide the meter and restart
         // the sample window so stale numbers never show.
-        if (statsShown) onStatsRef.current?.(undefined);
+        if (statsShown) {
+          onStatsRef.current?.(undefined);
+        }
         statsShown = false;
         statsStart = now;
         statsFrames = 0;
@@ -261,7 +275,9 @@ export function EffectCanvas({
         last = now;
         return;
       }
-      if (!shouldDraw(now, FRAME_RATES[frameRateRef.current].fps)) return;
+      if (!shouldDraw(now, FRAME_RATES[frameRateRef.current].fps)) {
+        return;
+      }
       const dt = frameDelta(now, last);
       last = now;
       const start = performance.now();
@@ -315,8 +331,11 @@ export function EffectCanvas({
       className="effect-canvas"
       ref={(node) => {
         canvasRef.current = node;
-        if (typeof ref === "function") ref(node);
-        else if (ref) ref.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
       }}
     />
   );

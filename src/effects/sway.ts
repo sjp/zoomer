@@ -54,7 +54,9 @@ export function createSwell(period: number, waves: readonly SwellWave[]): Swell 
   if (!(period > 0) || !Number.isFinite(period)) {
     throw new Error(`createSwell: period must be positive, got ${String(period)}`);
   }
-  if (waves.length === 0) throw new Error("createSwell: needs at least one wave");
+  if (waves.length === 0) {
+    throw new Error("createSwell: needs at least one wave");
+  }
   let sum = 0;
   for (const w of waves) {
     if (!Number.isInteger(w.cycles) || w.cycles < 1) {
@@ -62,7 +64,9 @@ export function createSwell(period: number, waves: readonly SwellWave[]): Swell 
     }
     sum += Math.abs(w.amplitude);
   }
-  if (!(sum > 0)) throw new Error("createSwell: the waves' amplitudes sum to zero");
+  if (!(sum > 0)) {
+    throw new Error("createSwell: the waves' amplitudes sum to zero");
+  }
   return { period, waves, norm: 1 / sum };
 }
 
@@ -88,8 +92,9 @@ export function advanceSwell(swell: Swell, phase: number, dt: number, speed = 1)
 /** The swell at `phase` (any real; periodic with period 1), in [-1, 1]. */
 export function swellAt(swell: Swell, phase: number): number {
   let s = 0;
-  for (const w of swell.waves)
+  for (const w of swell.waves) {
     s += w.amplitude * Math.sin(TAU * fract(w.cycles * phase + w.offset));
+  }
   return s * swell.norm;
 }
 

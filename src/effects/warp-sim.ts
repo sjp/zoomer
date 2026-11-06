@@ -36,7 +36,7 @@ export interface Starfield {
   /** Stars simulated: the count plus any still fading out after it dropped. */
   readonly live: number;
   /** Advances `dt` seconds and writes the visible streaks to `data`. Returns how many. */
-  step(dt: number, f: StarFrame, data: Float32Array): number;
+  step: (dt: number, f: StarFrame, data: Float32Array) => number;
 }
 
 export function createStarfield(max: number, random: () => number = Math.random): Starfield {
@@ -53,7 +53,9 @@ export function createStarfield(max: number, random: () => number = Math.random)
     zs[i] = z;
     mix[i] = random();
   };
-  for (let i = 0; i < max; i++) spawn(i, random());
+  for (let i = 0; i < max; i++) {
+    spawn(i, random());
+  }
 
   return {
     xs,
@@ -106,7 +108,9 @@ export function createStarfield(max: number, random: () => number = Math.random)
         const fzt = focal / (z + tail);
         const depth = 1 - z;
         const alpha = Math.min(1, depth * 1.6) * l;
-        if (alpha <= 0) continue;
+        if (alpha <= 0) {
+          continue;
+        }
         const t = mix[i] * f.tintAmount;
         const o = count * STREAK_FLOATS;
         data[o] = cx + x * fzt;

@@ -50,10 +50,16 @@ describe("starBrightness", () => {
     const rng = createRng(5);
     const n = 200_000;
     const samples = new Float64Array(n);
-    for (let i = 0; i < n; i++) samples[i] = starBrightness(rng());
+    for (let i = 0; i < n; i++) {
+      samples[i] = starBrightness(rng());
+    }
     for (const x of [0.3, 0.6, 1.2, 2.4]) {
       let above = 0;
-      for (const b of samples) if (b > x) above++;
+      for (const b of samples) {
+        if (b > x) {
+          above++;
+        }
+      }
       const expected = (x / STAR_MIN) ** -STAR_ALPHA;
       expect(above / n).toBeGreaterThan(expected * 0.93);
       expect(above / n).toBeLessThan(expected * 1.07);
@@ -109,7 +115,11 @@ describe("buildStars", () => {
     const { out, count } = make(9, 1, 3, false);
     let above = 0;
     const x = 0.6;
-    for (let i = 0; i < count; i++) if (out[i * STAR_STRIDE + 3] > x) above++;
+    for (let i = 0; i < count; i++) {
+      if (out[i * STAR_STRIDE + 3] > x) {
+        above++;
+      }
+    }
     const expected = (x / STAR_MIN) ** -STAR_ALPHA;
     expect(above / count).toBeGreaterThan(expected * 0.75);
     expect(above / count).toBeLessThan(expected * 1.25);
@@ -136,7 +146,9 @@ describe("buildStars", () => {
       const o = i * STAR_STRIDE;
       const ax = Math.abs(out[o]);
       const eligible = ax > aspect / 6 && ax < aspect / 2 - 0.02 && Math.abs(out[o + 1]) <= 0.48;
-      if (eligible && out[o + 3] > prev) brighterLeftOut++;
+      if (eligible && out[o + 3] > prev) {
+        brighterLeftOut++;
+      }
     }
     expect(brighterLeftOut).toBe(0);
     expect(make(1, 1, aspect, false).spikes).toBe(0);
@@ -167,7 +179,9 @@ describe("layout and drift", () => {
     const a = new Float64Array(OFFSET_FLOATS);
     const b = new Float64Array(OFFSET_FLOATS);
     offsetsAt(layout, 1e7, a);
-    for (const v of a) expect(v >= 0 && v < 1).toBe(true);
+    for (const v of a) {
+      expect(v >= 0 && v < 1).toBe(true);
+    }
     offsetsAt(layout, 100, a);
     offsetsAt(layout, 101, b);
     for (let i = 0; i < OFFSET_FLOATS; i++) {

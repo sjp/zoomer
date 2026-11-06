@@ -7,7 +7,9 @@ describe("describeError", () => {
   });
 
   it("falls back to the error's name when the message is empty", () => {
-    expect(describeError(new TypeError())).toBe("TypeError");
+    const err = new TypeError("placeholder");
+    err.message = "";
+    expect(describeError(err)).toBe("TypeError");
   });
 
   it("passes strings through", () => {

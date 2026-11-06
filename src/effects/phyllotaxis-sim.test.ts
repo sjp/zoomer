@@ -36,9 +36,13 @@ function nearestDistances(phi: number, n: number, from: number, to: number): num
   for (let i = from; i < to; i++) {
     let best = Infinity;
     for (let k = 1; k <= n; k++) {
-      if (k === i) continue;
+      if (k === i) {
+        continue;
+      }
       const d = (xs[k] - xs[i]) ** 2 + (ys[k] - ys[i]) ** 2;
-      if (d < best) best = d;
+      if (d < best) {
+        best = d;
+      }
     }
     out.push(Math.sqrt(best));
   }
@@ -110,7 +114,9 @@ describe("growth", () => {
     stepHead(h, 1, 0.3, 0, phi, 400);
     seedAt(h, 100, phi, p);
     const { birth, angle, rho } = p;
-    for (let i = 0; i < 50; i++) stepHead(h, 0.1, 0.5, 0, phi, 400);
+    for (let i = 0; i < 50; i++) {
+      stepHead(h, 0.1, 0.5, 0, phi, 400);
+    }
     seedAt(h, Math.floor(h.s) - birth, phi, p);
     expect(p.birth).toBe(birth);
     const da = Math.atan2(Math.sin(p.angle - angle), Math.cos(p.angle - angle));
@@ -132,7 +138,9 @@ describe("growth", () => {
     stepHead(h, 1 / 60, 0.5, 0, GOLDEN_ANGLE, 2000);
     expect(h.count).toBeGreaterThan(1000);
     expect(h.count).toBeLessThan(1100);
-    for (let i = 0; i < 600; i++) stepHead(h, 1 / 60, 0.5, 0, GOLDEN_ANGLE, 2000);
+    for (let i = 0; i < 600; i++) {
+      stepHead(h, 1 / 60, 0.5, 0, GOLDEN_ANGLE, 2000);
+    }
     expect(h.count).toBe(2000);
   });
 
@@ -148,10 +156,16 @@ describe("spiralHue", () => {
   it("is constant along a 34-spiral and steps by 1/34 to the next one", () => {
     let bad = 0;
     for (let n = -200; n < 200; n++) {
-      if (spiralHue(n + 34) !== spiralHue(n)) bad++;
+      if (spiralHue(n + 34) !== spiralHue(n)) {
+        bad++;
+      }
       const step = (spiralHue(n + 21) - spiralHue(n) + 1) % 1;
-      if (Math.abs(step - 1 / 34) > 1e-12) bad++;
-      if (!(spiralHue(n) >= 0 && spiralHue(n) < 1)) bad++;
+      if (Math.abs(step - 1 / 34) > 1e-12) {
+        bad++;
+      }
+      if (!(spiralHue(n) >= 0 && spiralHue(n) < 1)) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
   });
@@ -197,8 +211,16 @@ describe("layout and writers", () => {
       expect(n).toBe(seedCount(h));
       expect(k).toBe((style.petals ? PETALS * 2 : 0) + (style.backing ? 1 : 0));
       let bad = 0;
-      for (let i = 0; i < n * SEED_STRIDE; i++) if (!Number.isFinite(seeds[i])) bad++;
-      for (let i = 0; i < k * PETAL_STRIDE; i++) if (!Number.isFinite(petals[i])) bad++;
+      for (let i = 0; i < n * SEED_STRIDE; i++) {
+        if (!Number.isFinite(seeds[i])) {
+          bad++;
+        }
+      }
+      for (let i = 0; i < k * PETAL_STRIDE; i++) {
+        if (!Number.isFinite(petals[i])) {
+          bad++;
+        }
+      }
       expect(bad).toBe(0);
       // Outermost first: the first instance is near the rim, the last at the centre.
       const r0 = Math.hypot(seeds[0] - l.cx * 2, seeds[1] - l.cy * 2);

@@ -12,6 +12,7 @@
 import type { Rgb } from "./color";
 import { clamp, smoothstep } from "./math";
 import { createRng, hash32 } from "./noise";
+import { lookup } from "./lookup";
 
 export type PaletteId = "reef" | "sunset" | "deep" | "bleached";
 export type ColonyKind = "branching" | "fan" | "mound";
@@ -55,7 +56,7 @@ export function heightAt(x: number, aspect: number, height: number): number {
 
 /** A seed per growth cycle, so each regrowth is a new reef. */
 export function cycleSeed(seed: number, cycle: number): number {
-  return hash32(Math.imul(Math.floor(seed) | 0, 0x9e3779b1) ^ hash32(cycle + 0x3c0a1));
+  return hash32(Math.imul(Math.floor(seed), 0x9e3779b1) ^ hash32(cycle + 0x3c0a1));
 }
 
 export interface Colony {
@@ -89,8 +90,9 @@ export function layoutColonies(rng: () => number, aspect: number, density: numbe
     const x = k % 2 === 0 ? inset : a - inset;
     const central = 1 - inset / half;
     let kind: ColonyKind;
-    if (central < 0.35) kind = "mound";
-    else {
+    if (central < 0.35) {
+      kind = "mound";
+    } else {
       const r = rng();
       kind = r < 0.5 ? "branching" : r < 0.8 ? "fan" : "mound";
     }
@@ -106,7 +108,7 @@ export function layoutColonies(rng: () => number, aspect: number, density: numbe
       end: Math.min(LAST_ARRIVAL, 0.62 + 0.35 * rng()),
     });
   }
-  return out.sort((p, q) => q.fog - p.fog);
+  return out.toSorted((p, q) => q.fog - p.fog);
 }
 
 /** The reef's instances, ready to upload, and per-instance bookkeeping for tests. */
@@ -290,7 +292,9 @@ function growBranches(
   while (tips.length > 0 && reef.count < limit) {
     const next: Tip[] = [];
     for (const tip of tips) {
-      if (reef.count >= limit) break;
+      if (reef.count >= limit) {
+        break;
+      }
       const target = style.fan
         ? clamp(Math.atan2(tip.x - bx, tip.y + 0.08) * 1.1, -0.95, 0.95)
         : lean;
@@ -353,15 +357,21 @@ function growBranches(
     tips = next;
   }
   normaliseArrivals(reef, first, c);
-  if (style.fan) crossLink(reef, rng, ci, c, first, aspect);
+  if (style.fan) {
+    crossLink(reef, rng, ci, c, first, aspect);
+  }
 }
 
 /** Maps path lengths (stored in t0, t1) onto the colony's start..end arrival range. */
 function normaliseArrivals(reef: Reef, first: number, c: Colony): void {
   const d = reef.data;
   let sMax = 0;
-  for (let i = first; i < reef.count; i++) sMax = Math.max(sMax, d[i * INSTANCE_FLOATS + 7]);
-  if (!(sMax > 0)) return;
+  for (let i = first; i < reef.count; i++) {
+    sMax = Math.max(sMax, d[i * INSTANCE_FLOATS + 7]);
+  }
+  if (!(sMax > 0)) {
+    return;
+  }
   const k = (c.end - c.start) / sMax;
   for (let i = first; i < reef.count; i++) {
     const o = i * INSTANCE_FLOATS;
@@ -386,7 +396,9 @@ function crossLink(
   const d = reef.data;
   const last = reef.count;
   const n = last - first;
-  if (n < 2) return;
+  if (n < 2) {
+    return;
+  }
   // Arrival per frame height of growth: the colony's own rate, from its first step.
   const o0 = first * INSTANCE_FLOATS;
   const rate = (d[o0 + 7] - d[o0 + 6]) / FAN.step;
@@ -397,14 +409,22 @@ function crossLink(
     const xi = d[oi + 2];
     const yi = d[oi + 3];
     for (let j = i + 1; j < last && links < budget; j++) {
-      if (reef.parent[j] === i || reef.parent[i] === j) continue;
+      if (reef.parent[j] === i || reef.parent[i] === j) {
+        continue;
+      }
       const oj = j * INSTANCE_FLOATS;
       const dx = d[oj + 2] - xi;
       const dy = d[oj + 3] - yi;
-      if (Math.abs(dy) > Math.abs(dx) * 0.8) continue;
+      if (Math.abs(dy) > Math.abs(dx) * 0.8) {
+        continue;
+      }
       const len = Math.hypot(dx, dy);
-      if (len < 0.006 || len > 0.02) continue;
-      if (rng() > 0.25) continue;
+      if (len < 0.006 || len > 0.02) {
+        continue;
+      }
+      if (rng() > 0.25) {
+        continue;
+      }
       // Start at the later end, so the link never appears before either branch.
       const late = d[oi + 7] >= d[oj + 7] ? i : j;
       const early = late === i ? j : i;
@@ -413,12 +433,16 @@ function crossLink(
       const r = Math.min(d[ol + 5], d[oe + 5]) * 0.7;
       const t0 = d[ol + 7];
       const t1 = Math.min(LAST_ARRIVAL, t0 + len * rate);
-      if (reef.count >= capacity(reef)) return;
+      if (reef.count >= capacity(reef)) {
+        return;
+      }
       const x0 = d[ol + 2];
       const y0 = d[ol + 3];
       const x1 = d[oe + 2];
       const y1 = d[oe + 3];
-      if (Math.min(x0, x1) - r < 0 || Math.max(x0, x1) + r > aspect) continue;
+      if (Math.min(x0, x1) - r < 0 || Math.max(x0, x1) + r > aspect) {
+        continue;
+      }
       push(
         reef,
         ci,
@@ -467,14 +491,18 @@ function growMound(
     const y = Math.max(0, Math.sin(theta) * dist * 0.6);
     let r = size * (0.35 + 0.3 * rng()) * (1 - 0.4 * (dist / size));
     r = Math.min(r, capX(x) - y, x, aspect - x);
-    if (!(r >= 0.005)) continue;
+    if (!(r >= 0.005)) {
+      continue;
+    }
     const delay = (dist / size) * 0.45 + 0.1 * rng();
     const t0 = c.start + span * delay;
     discs.push({ x, y, r, t0, t1: Math.min(c.end, t0 + span * 0.5) });
   }
   discs.sort((p, q) => q.r - p.r);
   for (const disc of discs) {
-    if (reef.count >= capacity(reef)) return;
+    if (reef.count >= capacity(reef)) {
+      return;
+    }
     const t1 = Math.max(disc.t0 + 1e-3, disc.t1);
     push(
       reef,
@@ -515,8 +543,11 @@ export function buildReef(
   reef.count = 0;
   reef.colonies = layoutColonies(rng, a, density);
   reef.colonies.forEach((c, ci) => {
-    if (c.kind === "mound") growMound(reef, rng, ci, c, a, h);
-    else growBranches(reef, rng, ci, c, c.kind === "fan" ? FAN : STAGHORN, a, h);
+    if (c.kind === "mound") {
+      growMound(reef, rng, ci, c, a, h);
+    } else {
+      growBranches(reef, rng, ci, c, c.kind === "fan" ? FAN : STAGHORN, a, h);
+    }
   });
   return reef;
 }
@@ -596,7 +627,7 @@ export const PALETTES: Readonly<Record<PaletteId, CoralPalette>> = {
 
 /** The palette for a select value; unknown values fall back to "reef". */
 export function paletteFor(id: string): CoralPalette {
-  return Object.hasOwn(PALETTES, id) ? PALETTES[id as PaletteId] : PALETTES.reef;
+  return lookup(PALETTES, id, "reef");
 }
 
 /** Caustic phase rates (radians per second at speed 1); each phase wraps at 2π. */
@@ -608,7 +639,9 @@ export function advanceCaustics(phases: Float32Array, dt: number): void {
   const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
   for (let i = 0; i < CAUSTIC_RATES.length; i++) {
     let v = (phases[i] + step * CAUSTIC_RATES[i]) % tau;
-    if (v < 0) v += tau;
+    if (v < 0) {
+      v += tau;
+    }
     phases[i] = v;
   }
 }

@@ -129,7 +129,9 @@ export function indexInv(every: number): number {
 
 /** Whether contour level `k` is an index contour, for `inv` from `indexInv`, as the shader tests it. */
 export function isIndexLevel(k: number, inv: number): boolean {
-  if (!(inv > 0)) return false;
+  if (!(inv > 0)) {
+    return false;
+  }
   const r = (k + LEVEL_CENTRE) * inv;
   return r - Math.floor(r) < inv;
 }
@@ -154,7 +156,9 @@ export function fillUniform(mode: string): readonly [number, number] {
  * colour of their mid-height.
  */
 export function fillT(h: number, levels: number, fill: readonly [number, number]): number {
-  if (fill[0] === 0) return 0;
+  if (fill[0] === 0) {
+    return 0;
+  }
   const smooth = Math.min(Math.max(h, 0), 1);
   const band = Math.floor(h * levels);
   const banded = Math.min(Math.max((band + LEVEL_CENTRE) / levels, 0), 1);
@@ -392,7 +396,7 @@ export const contours = defineEffect(contoursMeta, {
       /** Noise z, kept in float64 on the CPU and wrapped to the noise's period. */
       let z = 0;
       let sizeDirty = true;
-      let lastLineWidth = NaN;
+      let lastLineWidth = Number.NaN;
 
       return {
         resize(v) {
@@ -410,7 +414,7 @@ export const contours = defineEffect(contoursMeta, {
           if (sizeDirty) {
             target.resize(width, height, fieldDivisor(height));
             sizeDirty = false;
-            lastLineWidth = NaN;
+            lastLineWidth = Number.NaN;
           }
 
           // Height field pass, only when the field changed.
@@ -418,14 +422,18 @@ export const contours = defineEffect(contoursMeta, {
           // Field units per frame height; the field is centred on the canvas.
           const freq = 1 / Math.max(0.01, p.scale);
           const aspect = width / height;
-          if (nu.f1("uFloat", target.isFloat ? 1 : 0)) fieldDirty = true;
+          if (nu.f1("uFloat", target.isFloat ? 1 : 0)) {
+            fieldDirty = true;
+          }
           if (nu.f2("uPixToWorld", (aspect * freq) / target.width, freq / target.height)) {
             fieldDirty = true;
           }
           if (nu.f2("uWorldOffset", -0.5 * aspect * freq + 3.7, -0.5 * freq - 1.9)) {
             fieldDirty = true;
           }
-          if (nu.f1("uZ", z)) fieldDirty = true;
+          if (nu.f1("uZ", z)) {
+            fieldDirty = true;
+          }
           if (fieldDirty) {
             target.bind();
             triangle.draw();

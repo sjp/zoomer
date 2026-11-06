@@ -254,9 +254,13 @@ export const neon = defineEffect(neonMeta, {
       const build = (text: string, position: NeonPosition, aspect: number) => {
         const lines = signLines(text);
         hasSign = lines.length > 0;
-        if (!hasSign) return;
+        if (!hasSign) {
+          return;
+        }
         const measure = new OffscreenCanvas(1, 1).getContext("2d");
-        if (measure) measure.font = `${String(FONT_WEIGHT)} 100px ${FONT_FAMILY}`;
+        if (measure) {
+          measure.font = `${String(FONT_WEIGHT)} 100px ${FONT_FAMILY}`;
+        }
         const widths = lines.map((l) => {
           // Undefined without a context, and from the tests' fake one, whose methods all return undefined.
           const metrics = measure?.measureText(l.text);
@@ -303,7 +307,7 @@ export const neon = defineEffect(neonMeta, {
         // Clips along each line's tubes.
         const cover = new Float32Array(cols * rows);
         const shade = new Float32Array(cols * rows);
-        const halfPitch = (0.5 * LINE_PITCH * layout.font * toTexel) | 0;
+        const halfPitch = Math.trunc(0.5 * LINE_PITCH * layout.font * toTexel);
         lines.forEach((l, k) => {
           const c = rowCentre(k);
           const top = Math.max(0, Math.floor(c - halfPitch));
@@ -355,7 +359,9 @@ export const neon = defineEffect(neonMeta, {
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          if (Number.isFinite(dt) && dt > 0) time += dt;
+          if (Number.isFinite(dt) && dt > 0) {
+            time += dt;
+          }
           const aspect = width / height;
           const position: NeonPosition =
             p.position === "left" || p.position === "right" ? p.position : "centre";

@@ -7,6 +7,7 @@
 import { clamp, wrap } from "./math";
 import { createRng } from "./noise";
 import type { PALETTE_OPTIONS, POSITION_OPTIONS, SYSTEM_OPTIONS } from "./lorenz.meta";
+import { lookup } from "./lookup";
 
 export type SystemId = (typeof SYSTEM_OPTIONS)[number]["value"];
 export type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
@@ -73,7 +74,7 @@ export const SYSTEMS: Readonly<Record<SystemId, AttractorSystem>> = {
 };
 
 export function systemFor(id: string): AttractorSystem {
-  return id in SYSTEMS ? SYSTEMS[id as SystemId] : SYSTEMS.lorenz;
+  return lookup(SYSTEMS, id, "lorenz");
 }
 
 /** The system's velocity at (x, y, z), written to `out[o..o+2]`. */
@@ -151,13 +152,17 @@ export interface Trajectory {
 export function buildTrajectory(sys: AttractorSystem): Trajectory {
   const p = Float64Array.from(sys.start);
   const k = rk4Scratch();
-  for (let i = 0; i < sys.burnIn; i++) rk4Step(sys, p, sys.step, k);
+  for (let i = 0; i < sys.burnIn; i++) {
+    rk4Step(sys, p, sys.step, k);
+  }
   const points = new Float32Array(TRAJ_SAMPLES * 4);
   const speeds = new Float64Array(TRAJ_SAMPLES);
   const lo = [Infinity, Infinity, Infinity];
   const hi = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < TRAJ_SAMPLES; i++) {
-    for (let s = 0; s < sys.stride; s++) rk4Step(sys, p, sys.step, k);
+    for (let s = 0; s < sys.stride; s++) {
+      rk4Step(sys, p, sys.step, k);
+    }
     for (let a = 0; a < 3; a++) {
       points[i * 4 + a] = p[a];
       lo[a] = Math.min(lo[a], p[a]);
@@ -284,7 +289,9 @@ export const EDGE_MARGIN = 0.04;
  * heights: a quarter-ish of the width to one side, pulled in so it stays on screen.
  */
 export function anchorX(position: string, aspect: number): number {
-  if (position !== "left" && position !== "right") return 0;
+  if (position !== "left" && position !== "right") {
+    return 0;
+  }
   const side = Math.max(
     0,
     Math.min(SIDE_FRACTION * aspect, aspect / 2 - EDGE_MARGIN - SIZE * REACH),
@@ -319,12 +326,14 @@ export const PALETTES: Readonly<Record<PaletteId, Palette>> = {
 };
 
 export function paletteFor(id: string): Palette {
-  return id in PALETTES ? PALETTES[id as PaletteId] : PALETTES.cyanamber;
+  return lookup(PALETTES, id, "cyanamber");
 }
 
 /** The palette's colour at t, written to `out`. */
 export function paletteColor(p: Palette, t: number, out: Float64Array): Float64Array {
-  for (let i = 0; i < 3; i++) out[i] = p.a[i] + p.b[i] * Math.cos(TAU * (p.c * t + p.d[i]));
+  for (let i = 0; i < 3; i++) {
+    out[i] = p.a[i] + p.b[i] * Math.cos(TAU * (p.c * t + p.d[i]));
+  }
   return out;
 }
 

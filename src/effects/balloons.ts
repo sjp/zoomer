@@ -55,7 +55,11 @@ const FLAME: Rgb = [1, 0.62, 0.28];
 
 /** Index of a light select value, or -1; a loop, so nothing is allocated per frame. */
 function lightIndex(id: string): number {
-  for (let i = 0; i < LIGHT_OPTIONS.length; i++) if (LIGHT_OPTIONS[i].value === id) return i;
+  for (let i = 0; i < LIGHT_OPTIONS.length; i++) {
+    if (LIGHT_OPTIONS[i].value === id) {
+      return i;
+    }
+  }
   return -1;
 }
 
@@ -344,7 +348,9 @@ export const balloons = defineEffect(balloonsMeta, {
       const batch = scope.own(
         createSpriteBatch(gl, MAX_BALLOONS, [4, 4, 4, 4, 2], [BALLOON_STRIP]),
       );
-      if (batch.stride !== BALLOON_FLOATS) throw new Error("balloons: instance layout mismatch");
+      if (batch.stride !== BALLOON_FLOATS) {
+        throw new Error("balloons: instance layout mismatch");
+      }
 
       gl.useProgram(hillProgram);
       hillU.i1("uHeights", 0);

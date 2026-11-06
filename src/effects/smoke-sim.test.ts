@@ -167,7 +167,9 @@ describe("simSteps", () => {
       const clock: StepClock = { acc: 0 };
       let steps = 0;
       const frames = Math.round(10 / dt);
-      for (let i = 0; i < frames; i++) steps += simSteps(clock, dt);
+      for (let i = 0; i < frames; i++) {
+        steps += simSteps(clock, dt);
+      }
       expect(Math.abs(steps * SIM_DT - frames * dt)).toBeLessThanOrEqual(SIM_DT + 1e-9);
     }
   });

@@ -33,9 +33,13 @@ export function fract(x: number): number {
  */
 export function wrap(v: number, lo: number, span: number): number {
   const hi = lo + span;
-  if (v >= lo && v < hi) return v;
+  if (v >= lo && v < hi) {
+    return v;
+  }
   let w = lo + ((v - lo) % span);
-  if (w < lo) w += span;
+  if (w < lo) {
+    w += span;
+  }
   // Rounding can land a value just below `lo` exactly on `hi`.
   return w >= hi ? lo : w;
 }

@@ -45,8 +45,9 @@ export const GLOW_MARGIN = 3 * GLOW_BLUR + 3;
 
 /** Width of the lettering's region (frame heights) at this aspect ratio. */
 export function regionWidth(aspect: number, position: NeonPosition): number {
-  if (position === "centre")
+  if (position === "centre") {
     return Math.max(0.1, Math.min(aspect - 2 * SIDE_MARGIN, 0.62 * aspect));
+  }
   return Math.max(0.1, 0.42 * aspect - SIDE_MARGIN);
 }
 
@@ -156,7 +157,9 @@ function edt1d(f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Fl
   z[0] = -Infinity;
   z[1] = Infinity;
   for (let q = 1; q < n; q++) {
-    if (f[q] === Infinity) continue;
+    if (f[q] === Infinity) {
+      continue;
+    }
     if (f[v[k]] === Infinity) {
       v[k] = q;
       continue;
@@ -173,7 +176,9 @@ function edt1d(f: Float64Array, n: number, d: Float64Array, v: Int32Array, z: Fl
   }
   k = 0;
   for (let q = 0; q < n; q++) {
-    while (z[k + 1] < q) k++;
+    while (z[k + 1] < q) {
+      k++;
+    }
     const dq = q - v[k];
     d[q] = f[v[k]] === Infinity ? Infinity : dq * dq + f[v[k]];
   }
@@ -190,22 +195,32 @@ export function squaredDistance(
   target: number,
 ): Float64Array {
   const out = new Float64Array(w * h);
-  for (let i = 0; i < w * h; i++) out[i] = mask[i] === target ? 0 : Infinity;
+  for (let i = 0; i < w * h; i++) {
+    out[i] = mask[i] === target ? 0 : Infinity;
+  }
   const n = Math.max(w, h);
   const f = new Float64Array(n);
   const d = new Float64Array(n);
   const v = new Int32Array(n);
   const z = new Float64Array(n + 1);
   for (let x = 0; x < w; x++) {
-    for (let y = 0; y < h; y++) f[y] = out[y * w + x];
+    for (let y = 0; y < h; y++) {
+      f[y] = out[y * w + x];
+    }
     edt1d(f, h, d, v, z);
-    for (let y = 0; y < h; y++) out[y * w + x] = d[y];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = d[y];
+    }
   }
   for (let y = 0; y < h; y++) {
     const row = y * w;
-    for (let x = 0; x < w; x++) f[x] = out[row + x];
+    for (let x = 0; x < w; x++) {
+      f[x] = out[row + x];
+    }
     edt1d(f, w, d, v, z);
-    for (let x = 0; x < w; x++) out[row + x] = d[x];
+    for (let x = 0; x < w; x++) {
+      out[row + x] = d[x];
+    }
   }
   return out;
 }
@@ -226,7 +241,9 @@ export function centrelineDistance(
 ): { dist: Float32Array; halfStroke: number } {
   const dist = new Float32Array(w * h).fill(maxDist);
   // A one-line sign leaves line 2's mask empty: skip its transforms.
-  if (!mask.subarray(0, w * h).includes(1)) return { dist, halfStroke: 0 };
+  if (!mask.subarray(0, w * h).includes(1)) {
+    return { dist, halfStroke: 0 };
+  }
   const toInk = squaredDistance(mask, w, h, 1);
   const toGap = squaredDistance(mask, w, h, 0);
   let sum = 0;
@@ -266,13 +283,21 @@ function boxPass(
   for (let l = 0; l < lines; l++) {
     const base = horizontal ? l * w : l;
     let acc = 0;
-    for (let i = -r; i <= r; i++) if (i >= 0 && i < len) acc += src[base + i * step];
+    for (let i = -r; i <= r; i++) {
+      if (i >= 0 && i < len) {
+        acc += src[base + i * step];
+      }
+    }
     for (let i = 0; i < len; i++) {
       dst[base + i * step] = acc * norm;
       const out = i - r;
       const inn = i + r + 1;
-      if (out >= 0) acc -= src[base + out * step];
-      if (inn < len) acc += src[base + inn * step];
+      if (out >= 0) {
+        acc -= src[base + out * step];
+      }
+      if (inn < len) {
+        acc += src[base + inn * step];
+      }
     }
   }
 }
@@ -314,7 +339,9 @@ export function glowField(
   for (let y = 0; y < field.rows; y++) {
     const gy = Math.floor(y * per) + GLOW_MARGIN;
     for (let x = 0; x < field.cols; x++) {
-      if (dist[y * field.cols + x] >= radius) continue;
+      if (dist[y * field.cols + x] >= radius) {
+        continue;
+      }
       const gx = Math.floor(x * per) + GLOW_MARGIN;
       a[gy * glow.cols + gx] += area;
     }
@@ -347,13 +374,17 @@ export function placeClips(
   for (let x = 0; x < cols; x++) {
     for (let y = top; y < bottom; y++) {
       if (dist[y * cols + x] < on) {
-        if (first < 0) first = x;
+        if (first < 0) {
+          first = x;
+        }
         last = x;
         break;
       }
     }
   }
-  if (first < 0) return [];
+  if (first < 0) {
+    return [];
+  }
   const span = last - first;
   const count = clamp(Math.round((span * FIELD_TEXEL) / 170), 1, max);
   const out: [number, number][] = [];
@@ -364,9 +395,13 @@ export function placeClips(
     let bestCost = Infinity;
     for (let dx = -6 * reach; dx <= 6 * reach; dx++) {
       const x = Math.round(target) + dx;
-      if (x < 0 || x >= cols) continue;
+      if (x < 0 || x >= cols) {
+        continue;
+      }
       for (let y = top; y < bottom; y++) {
-        if (dist[y * cols + x] >= on) continue;
+        if (dist[y * cols + x] >= on) {
+          continue;
+        }
         const cost = Math.abs(y - midRow) + 0.6 * Math.abs(dx);
         if (cost < bestCost) {
           bestCost = cost;

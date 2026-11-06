@@ -6,11 +6,11 @@
  * and clears the flag. Allocates nothing after creation.
  */
 export interface ChangeKey {
-  set(index: number, value: number): void;
+  set: (index: number, value: number) => void;
   /** Whether anything changed since the last `take()`; clears the flag. */
-  take(): boolean;
+  take: () => boolean;
   /** Forces the next `take()` to return true. */
-  invalidate(): void;
+  invalidate: () => void;
 }
 
 export function createChangeKey(length: number): ChangeKey {

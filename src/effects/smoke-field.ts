@@ -19,6 +19,7 @@ import {
   glslFloat,
   type RenderTarget,
   type Scope,
+  typedParameters,
   type Uniforms,
 } from "./gl";
 import { hash32, HASH32_GLSL } from "./noise";
@@ -142,13 +143,13 @@ export interface SmokeField {
    * Sets the grid size. A change replaces the field with a clear one (no
    * resampling). Returns whether a field exists. Leaves GL state as it was.
    */
-  resize(width: number, height: number): boolean;
+  resize: (width: number, height: number) => boolean;
   /**
    * Runs `n` fixed steps with the advection program, which must be bound with
    * its uniforms set. Uses texture unit 0 (the caller makes it active), and
    * leaves the last target's framebuffer bound and its viewport set.
    */
-  advance(n: number): void;
+  advance: (n: number) => void;
 }
 
 /**
@@ -178,7 +179,7 @@ export function createSmokeField(
   });
   const uniforms = createUniforms(gl, program, SMOKE_FIELD_UNIFORMS);
   const triangle = scope.own(createFullscreenTriangle(gl));
-  const prevProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+  const prevProgram = typedParameters(gl).getParameter(gl.CURRENT_PROGRAM);
   gl.useProgram(program);
   uniforms.i1("uField", 0);
   gl.useProgram(prevProgram);
@@ -190,7 +191,9 @@ export function createSmokeField(
   let gridH = 0;
   let stepNo = 0;
   const deleteTargets = () => {
-    for (const t of targets) t.dispose();
+    for (const t of targets) {
+      t.dispose();
+    }
     targets = [];
   };
   scope.defer(deleteTargets);
@@ -209,7 +212,9 @@ export function createSmokeField(
       return targets.length === 2 ? targets[current].texture : null;
     },
     resize(w, h) {
-      if (w === gridW && h === gridH) return targets.length === 2;
+      if (w === gridW && h === gridH) {
+        return targets.length === 2;
+      }
       deleteTargets();
       gridW = w;
       gridH = h;
@@ -225,7 +230,9 @@ export function createSmokeField(
       return true;
     },
     advance(n) {
-      if (targets.length < 2) return;
+      if (targets.length < 2) {
+        return;
+      }
       for (let i = 0; i < n; i++) {
         const src = targets[current];
         current ^= 1;
@@ -233,7 +240,9 @@ export function createSmokeField(
         dst.bind();
         // Every cell is overwritten, so tiled GPUs need not load the old contents.
         gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-        if (quantise) uniforms.u1("uSeed", hash32(++stepNo));
+        if (quantise) {
+          uniforms.u1("uSeed", hash32(++stepNo));
+        }
         gl.bindTexture(gl.TEXTURE_2D, src.texture);
         triangle.draw();
       }

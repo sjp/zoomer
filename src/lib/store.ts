@@ -14,13 +14,19 @@ export function createStore<T>(initial: T): Store<T> {
   return {
     get: () => value,
     set: (next) => {
-      if (Object.is(next, value)) return;
+      if (Object.is(next, value)) {
+        return;
+      }
       value = next;
-      for (const listener of listeners) listener();
+      for (const listener of listeners) {
+        listener();
+      }
     },
     subscribe: (listener) => {
       listeners.add(listener);
-      return () => listeners.delete(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
   };
 }

@@ -66,7 +66,9 @@ describe("event schedule", () => {
     let released = 0;
     let stale = 0;
     for (let at = takeEvent(s, 1000, 1); !Number.isNaN(at); at = takeEvent(s, 1000, 1)) {
-      if (at < 1000 - SCHEDULE_MAX_LAG) stale++;
+      if (at < 1000 - SCHEDULE_MAX_LAG) {
+        stale++;
+      }
       released++;
     }
     expect(stale).toBe(0);
@@ -76,17 +78,23 @@ describe("event schedule", () => {
 
 describe("particle mix", () => {
   it("has weights summing to one", () => {
-    for (const w of Object.values(MIX_WEIGHTS)) expect(w[0] + w[1] + w[2]).toBeCloseTo(1, 9);
+    for (const w of Object.values(MIX_WEIGHTS)) {
+      expect(w[0] + w[1] + w[2]).toBeCloseTo(1, 9);
+    }
   });
 
   it("matches the mix on average in a running chamber", () => {
     for (const mix of ["natural", "alpha", "muon"] as const) {
       const c = createChamber(11);
-      for (let t = 0; t <= 600; t += 0.25) stepChamber(c, t, 4, mix, false, 1920);
+      for (let t = 0; t <= 600; t += 0.25) {
+        stepChamber(c, t, 4, mix, false, 1920);
+      }
       const total = c.started[0] + c.started[1] + c.started[2];
       const w = MIX_WEIGHTS[mix];
       let worst = 0;
-      for (let k = 0; k < 3; k++) worst = Math.max(worst, Math.abs(c.started[k] / total - w[k]));
+      for (let k = 0; k < 3; k++) {
+        worst = Math.max(worst, Math.abs(c.started[k] / total - w[k]));
+      }
       expect(total).toBeGreaterThan(1500);
       expect(worst).toBeLessThan(0.04);
     }
@@ -131,7 +139,9 @@ describe("track geometry", () => {
         for (const magnetic of [false, true]) {
           const { tracks, failed } = spawnMany(kind, magnetic, 120, w);
           const where = `${String(w)} ${String(kind)} ${String(magnetic)}`;
-          if (failed > 6) bad.push(`${where}: ${String(failed)} failed`);
+          if (failed > 6) {
+            bad.push(`${where}: ${String(failed)} failed`);
+          }
           for (const t of tracks) {
             checked++;
             if (t.count < 2 || t.count > MAX_POINTS || t.length < MIN_LENGTH) {
@@ -144,7 +154,9 @@ describe("track geometry", () => {
               if (!(x >= lo && x <= w - lo && y >= lo && y <= REF_HEIGHT - lo)) {
                 bad.push(`${where}: (${String(x)}, ${String(y)}) out of frame`);
               }
-              if (i === 0) continue;
+              if (i === 0) {
+                continue;
+              }
               const step = Math.hypot(x - t.pts[2 * i - 2], y - t.pts[2 * i - 1]);
               // Continuous: no zero-length steps, and electrons step at most 14 px.
               if (!(step > 0) || (kind === ELECTRON && step > 14.01)) {
@@ -152,7 +164,9 @@ describe("track geometry", () => {
               }
               sum += step;
             }
-            if (Math.abs(sum - t.length) > 0.01 * t.length + 0.1) bad.push(`${where}: length`);
+            if (Math.abs(sum - t.length) > 0.01 * t.length + 0.1) {
+              bad.push(`${where}: length`);
+            }
           }
         }
       }
@@ -167,10 +181,15 @@ describe("track geometry", () => {
     const electrons = spawnMany(ELECTRON, false, 100).tracks;
     let bad = 0;
     for (const t of alphas) {
-      if (t.count !== 2 || t.length < ALPHA_LENGTH[0] - 0.01 || t.length > ALPHA_LENGTH[1] + 0.01)
+      if (t.count !== 2 || t.length < ALPHA_LENGTH[0] - 0.01 || t.length > ALPHA_LENGTH[1] + 0.01) {
         bad++;
+      }
     }
-    for (const t of muons) if (t.count !== 2 || t.length < MUON_MIN - 0.01) bad++;
+    for (const t of muons) {
+      if (t.count !== 2 || t.length < MUON_MIN - 0.01) {
+        bad++;
+      }
+    }
     let wiggle = 0;
     for (const t of electrons) {
       const n = t.count - 1;
@@ -190,8 +209,12 @@ describe("track geometry", () => {
     let longOnes = 0;
     let complete = 0;
     for (const t of tracks) {
-      if (!t.spiral) bad++;
-      if (t.count < 12) continue;
+      if (!t.spiral) {
+        bad++;
+      }
+      if (t.count < 12) {
+        continue;
+      }
       longOnes++;
       // Curvature (turn per unit length) from successive points must not fall.
       let prev = 0;
@@ -204,7 +227,9 @@ describe("track geometry", () => {
         const turn = Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by));
         // Each step turns before it moves, so its turn belongs to its own length.
         const k = turn / Math.hypot(bx, by);
-        if (k < prev * 0.97 - 1e-4) bad++;
+        if (k < prev * 0.97 - 1e-4) {
+          bad++;
+        }
         prev = Math.max(prev, k);
         total += turn;
       }
@@ -212,7 +237,9 @@ describe("track geometry", () => {
       // turned all the way round at least once.
       if (prev > 1 / (1.5 * SPIRAL_MIN_RADIUS)) {
         complete++;
-        if (total < 2 * Math.PI) bad++;
+        if (total < 2 * Math.PI) {
+          bad++;
+        }
       }
     }
     expect(longOnes).toBeGreaterThan(100);
@@ -225,7 +252,9 @@ describe("track geometry", () => {
     let ok = true;
     for (let s = 0; s <= 1000; s += 5) {
       const r = spiralRadius(200, 800, s);
-      if (r > prev) ok = false;
+      if (r > prev) {
+        ok = false;
+      }
       prev = r;
     }
     expect(ok).toBe(true);
@@ -238,10 +267,14 @@ describe("track geometry", () => {
     let centre = 0;
     let total = 0;
     for (let i = 0; i < 3000; i++) {
-      if (!spawnTrack(tr, ALPHA, 0, w, false, rand)) continue;
+      if (!spawnTrack(tr, ALPHA, 0, w, false, rand)) {
+        continue;
+      }
       const mx = 0.5 * (tr.pts[0] + tr.pts[2]);
       total++;
-      if (Math.abs(mx / w - 0.5) < CENTRE_HALF) centre++;
+      if (Math.abs(mx / w - 0.5) < CENTRE_HALF) {
+        centre++;
+      }
     }
     // Uniform anchors would put 2 * CENTRE_HALF of them in the band; keeping
     // CENTRE_KEEP of those cuts that share to well under 60% of it.
@@ -265,14 +298,26 @@ describe("track look", () => {
       [0.45, 2],
       [0.12, 4.5],
     ]) {
-      if (trackEnvelope(0, grow, life) !== 0 || trackEnvelope(life, grow, life) !== 0) bad++;
-      if (trackEnvelope(-1, grow, life) !== 0 || trackEnvelope(life + 1, grow, life) !== 0) bad++;
-      if (!(trackEnvelope(1e-3, grow, life) < 0.01)) bad++;
-      if (!(trackEnvelope(life - 1e-3, grow, life) < 0.01)) bad++;
-      if (Math.abs(trackEnvelope(grow, grow, life) - 1) > 1e-9) bad++;
+      if (trackEnvelope(0, grow, life) !== 0 || trackEnvelope(life, grow, life) !== 0) {
+        bad++;
+      }
+      if (trackEnvelope(-1, grow, life) !== 0 || trackEnvelope(life + 1, grow, life) !== 0) {
+        bad++;
+      }
+      if (!(trackEnvelope(1e-3, grow, life) < 0.01)) {
+        bad++;
+      }
+      if (!(trackEnvelope(life - 1e-3, grow, life) < 0.01)) {
+        bad++;
+      }
+      if (Math.abs(trackEnvelope(grow, grow, life) - 1) > 1e-9) {
+        bad++;
+      }
       for (let a = 0; a <= life; a += 0.01) {
         const e = trackEnvelope(a, grow, life);
-        if (!(e >= 0 && e <= 1)) bad++;
+        if (!(e >= 0 && e <= 1)) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -305,7 +350,9 @@ describe("chamber", () => {
   it("is deterministic for a seed", () => {
     const run = (seed: number) => {
       const c = createChamber(seed);
-      for (let t = 0; t <= 60; t += 1 / 30) stepChamber(c, t, 2, "natural", true, 1920);
+      for (let t = 0; t <= 60; t += 1 / 30) {
+        stepChamber(c, t, 2, "natural", true, 1920);
+      }
       return [c.count, ...c.started, c.list[0].pts[0], c.list[0].start];
     };
     expect(run(4)).toEqual(run(4));
@@ -318,12 +365,18 @@ describe("chamber", () => {
     let last = 0;
     for (let t = 0; t <= 120; t += 0.1) {
       stepChamber(c, t, 6, "alpha", false, 1920);
-      if (c.count > MAX_TRACKS) over = true;
+      if (c.count > MAX_TRACKS) {
+        over = true;
+      }
       last = t;
     }
     expect(over).toBe(false);
     let stale = 0;
-    for (let i = 0; i < c.count; i++) if (last - c.list[i].start >= c.list[i].life) stale++;
+    for (let i = 0; i < c.count; i++) {
+      if (last - c.list[i].start >= c.list[i].life) {
+        stale++;
+      }
+    }
     expect(c.count).toBeGreaterThan(0);
     expect(stale).toBe(0);
     stepChamber(c, 200, 0, "alpha", false, 1920);

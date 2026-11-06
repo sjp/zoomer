@@ -288,7 +288,9 @@ export const dunes = defineEffect(dunesMeta, {
       /** Set by `track` when any scene uniform uploads, meaning the cache is stale. */
       let changed = false;
       const track = (uploaded: boolean) => {
-        if (uploaded) changed = true;
+        if (uploaded) {
+          changed = true;
+        }
       };
 
       return {
@@ -308,7 +310,9 @@ export const dunes = defineEffect(dunesMeta, {
           const aspect = width / height;
 
           // Sun: the start phase sets the height, drift carries it round the cycle.
-          if (p.sunDrift) drift = fract(drift + dt / (Math.max(1, p.driftSpeed) * 60));
+          if (p.sunDrift) {
+            drift = fract(drift + dt / (Math.max(1, p.driftSpeed) * 60));
+          }
           sunAt(startPhase(p.sunHeight) + drift, sun);
           const el = sun.elevation;
           const az = sun.azimuth;

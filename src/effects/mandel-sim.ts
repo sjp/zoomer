@@ -34,6 +34,7 @@ import {
   mandelMeta,
 } from "./mandel.meta";
 import { clamp, smoothstep, wrap } from "./math";
+import { lookup } from "./lookup";
 
 export const TAU = 2 * Math.PI;
 const DEG = Math.PI / 180;
@@ -144,11 +145,11 @@ export const TARGETS: Readonly<Record<TargetName, MandelTarget>> = {
   },
 };
 
-export const TARGET_NAMES = Object.keys(TARGETS) as TargetName[];
+export const TARGET_NAMES: TargetName[] = ["seahorse", "elephant", "spiral", "minibrot"];
 
 /** The target for a `target` select value; seahorse for an unknown value. */
 export function targetFor(name: string): MandelTarget {
-  return Object.hasOwn(TARGETS, name) ? TARGETS[name as TargetName] : TARGETS.seahorse;
+  return lookup(TARGETS, name, "seahorse");
 }
 
 /** Doublings of zoom in one loop. */
@@ -287,7 +288,9 @@ export const ESCAPE_R2 = 256;
 export function inMainBulbs(cr: number, ci: number): boolean {
   const x = cr - 0.25;
   const q = x * x + ci * ci;
-  if (q * (q + x) <= 0.25 * ci * ci) return true;
+  if (q * (q + x) <= 0.25 * ci * ci) {
+    return true;
+  }
   return (cr + 1) * (cr + 1) + ci * ci <= 0.0625;
 }
 
@@ -298,14 +301,18 @@ export function inMainBulbs(cr: number, ci: number): boolean {
  * iteration squares |z|, which doubles log2|z| and adds 1 to `i`.
  */
 export function smoothIter(cr: number, ci: number, maxIter: number): number {
-  if (inMainBulbs(cr, ci)) return Infinity;
+  if (inMainBulbs(cr, ci)) {
+    return Infinity;
+  }
   let zr = 0;
   let zi = 0;
   for (let i = 0; i < maxIter; i++) {
     const x2 = zr * zr;
     const y2 = zi * zi;
     const r2 = x2 + y2;
-    if (r2 > ESCAPE_R2) return i + 1 - Math.log2(0.5 * Math.log2(r2));
+    if (r2 > ESCAPE_R2) {
+      return i + 1 - Math.log2(0.5 * Math.log2(r2));
+    }
     zi = 2 * zr * zi + ci;
     zr = x2 - y2 + cr;
   }
@@ -358,11 +365,11 @@ export const PALETTES: Readonly<Record<PaletteName, Palette>> = {
   },
 };
 
-export const PALETTE_NAMES = Object.keys(PALETTES) as PaletteName[];
+export const PALETTE_NAMES: PaletteName[] = ["ocean", "fire", "pastel", "mono"];
 
 /** The palette for a `palette` select value; ocean for an unknown value. */
 export function paletteFor(name: string): Palette {
-  return Object.hasOwn(PALETTES, name) ? PALETTES[name as PaletteName] : PALETTES.ocean;
+  return lookup(PALETTES, name, "ocean");
 }
 
 /** Width of the palette lookup texture. */

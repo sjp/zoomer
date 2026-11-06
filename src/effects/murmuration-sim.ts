@@ -20,6 +20,7 @@ import { glslFloat as f } from "./gl";
 import { clamp, smoothstep } from "./math";
 import { createRng, hash32 } from "./noise";
 import { MAX_BIRDS, type HORIZON_OPTIONS, type SKY_OPTIONS } from "./murmuration.meta";
+import { lookup } from "./lookup";
 
 export { type StepClock, takeSteps } from "./reaction-sim";
 
@@ -101,12 +102,10 @@ export interface BirdCounts {
 
 /** Bird counts for the `birds` and `quality` params; unknown qualities count as high. */
 export function birdCounts(birds: number, quality: string, out: BirdCounts): BirdCounts {
-  const f = Object.hasOwn(QUALITY_BIRDS, quality)
-    ? QUALITY_BIRDS[quality as keyof typeof QUALITY_BIRDS]
-    : 1;
+  const share = lookup(QUALITY_BIRDS, quality, "high");
   const b = Number.isFinite(birds) ? clamp(birds, 0, MAX_BIRDS) : MAX_BIRDS;
-  out.draw = Math.round(b * f);
-  out.update = Math.max(out.draw, Math.round(MAX_BIRDS * f));
+  out.draw = Math.round(b * share);
+  out.update = Math.max(out.draw, Math.round(MAX_BIRDS * share));
   return out;
 }
 
@@ -371,7 +370,7 @@ export const SKIES = {
 
 /** The sky for a select value; unknown values fall back to dusk. */
 export function skyFor(id: string): Sky {
-  return Object.hasOwn(SKIES, id) ? SKIES[id as SkyId] : SKIES.dusk;
+  return lookup(SKIES, id, "dusk");
 }
 
 export type HorizonId = (typeof HORIZON_OPTIONS)[number]["value"];
@@ -389,7 +388,9 @@ export const HORIZON_MAX = 0.24;
  */
 export function buildHorizon(kind: string, aspect: number, out: Float32Array): Float32Array {
   out.fill(0);
-  if (kind !== "reeds" && kind !== "trees") return out;
+  if (kind !== "reeds" && kind !== "trees") {
+    return out;
+  }
   const rng = createRng(kind === "reeds" ? 4211 : 5323);
   const n = out.length;
   /** Width of one column, heights. */
@@ -423,7 +424,9 @@ export function buildHorizon(kind: string, aspect: number, out: Float32Array): F
       x += r * (0.8 + 0.9 * rng());
     }
   }
-  for (let c = 0; c < n; c++) out[c] = Math.min(out[c], HORIZON_MAX);
+  for (let c = 0; c < n; c++) {
+    out[c] = Math.min(out[c], HORIZON_MAX);
+  }
   return out;
 }
 
@@ -433,7 +436,9 @@ function raise(out: Float32Array, colW: number, x: number, halfW: number, h: num
   const c1 = Math.min(out.length - 1, Math.ceil((x + halfW) / colW));
   for (let c = c0; c <= c1; c++) {
     const d = Math.abs((c + 0.5) * colW - x) / halfW;
-    if (d < 1) out[c] = Math.max(out[c], h * (1 - d));
+    if (d < 1) {
+      out[c] = Math.max(out[c], h * (1 - d));
+    }
   }
 }
 
@@ -443,6 +448,8 @@ function dome(out: Float32Array, colW: number, x: number, r: number, top: number
   const c1 = Math.min(out.length - 1, Math.ceil((x + r) / colW));
   for (let c = c0; c <= c1; c++) {
     const d = ((c + 0.5) * colW - x) / r;
-    if (Math.abs(d) < 1) out[c] = Math.max(out[c], top - r + r * Math.sqrt(1 - d * d));
+    if (Math.abs(d) < 1) {
+      out[c] = Math.max(out[c], top - r + r * Math.sqrt(1 - d * d));
+    }
   }
 }

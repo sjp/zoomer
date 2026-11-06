@@ -78,16 +78,18 @@ const STAMP_W = 250;
 const STAMP_H = 30;
 const STAMP_MARGIN = 26;
 
-const REGION_IDS = ["coast", "islands", "inland", "world"];
+const REGION_IDS: readonly (TerrainRegion | "world")[] = ["coast", "islands", "inland", "world"];
 const PALETTE_IDS = Object.keys(PALETTES);
 
 /** The rain noise: one tiling octave per channel, shared by every instance. */
 let noiseData: Uint8Array | undefined;
-const getNoiseData = () =>
-  (noiseData ??= buildPeriodicNoiseTexture(
+const getNoiseData = () => {
+  noiseData ??= buildPeriodicNoiseTexture(
     NOISE_SIZE,
     NOISE_PERIODS.map((period, i) => ({ period, seed: 1051 + i })),
-  ));
+  );
+  return noiseData;
+};
 
 /** The static map: land and sea, coastline, grid, range rings and labels. Drawn on rebuild only. */
 const MAP_FRAGMENT = /* glsl */ `#version 300 es
@@ -421,16 +423,18 @@ export const radar = defineEffect(radarMeta, {
       if (typeof Image !== "undefined") {
         const img = new Image();
         img.decoding = "async";
-        img.onload = () => {
+        const onLoad = () => {
           pendingMask = img;
         };
-        img.onerror = () => {
+        const onError = () => {
           console.warn(`Weather Radar: couldn't load ${MASK_URL}`);
         };
+        img.addEventListener("load", onLoad);
+        img.addEventListener("error", onError);
         img.src = MASK_URL;
         scope.defer(() => {
-          img.onload = null;
-          img.onerror = null;
+          img.removeEventListener("load", onLoad);
+          img.removeEventListener("error", onError);
           pendingMask = undefined;
         });
       }
@@ -457,8 +461,12 @@ export const radar = defineEffect(radarMeta, {
       let scale = 1;
 
       const canvas2d = (c: OffscreenCanvas | undefined, w: number, h: number) => {
-        if (typeof OffscreenCanvas === "undefined") return undefined;
-        if (!c || c.width !== w || c.height !== h) c = new OffscreenCanvas(w, h);
+        if (typeof OffscreenCanvas === "undefined") {
+          return undefined;
+        }
+        if (!c || c.width !== w || c.height !== h) {
+          c = new OffscreenCanvas(w, h);
+        }
         return c;
       };
       const uploadCanvas = (tex: WebGLTexture, c: OffscreenCanvas) => {
@@ -472,7 +480,9 @@ export const radar = defineEffect(radarMeta, {
       const drawLabels = (seed: number, paletteId: string): boolean => {
         labelCanvas = canvas2d(labelCanvas, width, height);
         const ctx = labelCanvas?.getContext("2d");
-        if (!labelCanvas || !ctx) return false;
+        if (!labelCanvas || !ctx) {
+          return false;
+        }
         const palette = PALETTES[paletteId];
         ctx.clearRect(0, 0, width, height);
         ctx.font = `500 ${String(Math.round(LABEL_FONT_PX * scale))}px system-ui, sans-serif`;
@@ -499,7 +509,9 @@ export const radar = defineEffect(radarMeta, {
           mapTarget?.dispose();
           mapTarget = null;
           mapTarget = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
-          if (!mapTarget) throw new Error("Weather Radar: RGBA8 is not renderable");
+          if (!mapTarget) {
+            throw new Error("Weather Radar: RGBA8 is not renderable");
+          }
         }
         const world = region === "world";
         const labels = !world && drawLabels(seed, paletteId);
@@ -532,7 +544,9 @@ export const radar = defineEffect(radarMeta, {
       const drawStamp = (ms: number, paletteId: string, w: number, h: number) => {
         stampCanvas = canvas2d(stampCanvas, w, h);
         const ctx = stampCanvas?.getContext("2d");
-        if (!stampCanvas || !ctx) return;
+        if (!stampCanvas || !ctx) {
+          return;
+        }
         const palette = PALETTES[paletteId];
         date.setTime(ms);
         ctx.clearRect(0, 0, w, h);
@@ -559,7 +573,7 @@ export const radar = defineEffect(radarMeta, {
           beginFrame(gl, width, height);
           const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
           const aspect = width / height;
-          const regionIndex = Math.max(0, REGION_IDS.indexOf(p.region));
+          const regionIndex = Math.max(0, (REGION_IDS as readonly string[]).indexOf(p.region));
           const region = REGION_IDS[regionIndex];
           const paletteId = has(PALETTES, p.palette) ? p.palette : "classic";
           const palette = PALETTES[paletteId];
@@ -569,8 +583,9 @@ export const radar = defineEffect(radarMeta, {
           // Weather clocks: the rain always moves (at `speed`); the sweep is independent.
           if (seed !== offsetSeed) {
             offsetSeed = seed;
-            for (let i = 0; i < offsets.length; i++)
+            for (let i = 0; i < offsets.length; i++) {
               offsets[i] = fract(seed * 0.6180339887 + i * 0.37);
+            }
           }
           const travel = step * p.speed * WIND_SPEED;
           weatherTime += step * p.speed;
@@ -594,7 +609,7 @@ export const radar = defineEffect(radarMeta, {
             terrainKey.set(0, regionIndex);
             terrainKey.set(1, seed);
             if (terrainKey.take()) {
-              buildTerrain(region as TerrainRegion, seed, terrain.data);
+              buildTerrain(region, seed, terrain.data);
               gl.activeTexture(gl.TEXTURE0);
               terrain.upload();
               mapKey.invalidate();
@@ -606,7 +621,9 @@ export const radar = defineEffect(radarMeta, {
           mapKey.set(3, seed);
           mapKey.set(4, PALETTE_IDS.indexOf(paletteId));
           mapKey.set(5, maskLoaded);
-          if (mapKey.take() || !mapTarget) bakeMap(region, seed, paletteId);
+          if (mapKey.take() || !mapTarget) {
+            bakeMap(region, seed, paletteId);
+          }
 
           lutKey.set(0, PALETTE_IDS.indexOf(paletteId));
           if (lutKey.take()) {
@@ -622,7 +639,9 @@ export const radar = defineEffect(radarMeta, {
           stampKey.set(1, PALETTE_IDS.indexOf(paletteId));
           stampKey.set(2, stampW);
           stampKey.set(3, stampH);
-          if (stampKey.take()) drawStamp(minute * 60000, paletteId, stampW, stampH);
+          if (stampKey.take()) {
+            drawStamp(minute * 60000, paletteId, stampW, stampH);
+          }
 
           // Rain intensity at reduced resolution.
           target.resize(width, height, qualityDivisor(p.quality, DIVISORS));

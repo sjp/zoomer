@@ -40,7 +40,9 @@ describe("colour quantisation", () => {
     let bad = 0;
     for (let i = 0; i <= 2000; i++) {
       const l = rainLevel(i / 2000);
-      if (l < prev) bad++;
+      if (l < prev) {
+        bad++;
+      }
       prev = l;
     }
     expect(bad).toBe(0);
@@ -59,7 +61,11 @@ describe("colour quantisation", () => {
       expect(out[3]).toBe(0);
       expect(out[(SCALE_SIZE - 1) * 4 + 3]).toBe(Math.round(255 * palette.alpha[LEVEL_COUNT - 1]));
       let bad = 0;
-      for (let j = 1; j < SCALE_SIZE; j++) if (out[j * 4 + 3] < out[(j - 1) * 4 + 3]) bad++;
+      for (let j = 1; j < SCALE_SIZE; j++) {
+        if (out[j * 4 + 3] < out[(j - 1) * 4 + 3]) {
+          bad++;
+        }
+      }
       expect(bad).toBe(0);
       expect(palette.steps).toHaveLength(LEVEL_COUNT);
       expect(palette.alpha).toHaveLength(LEVEL_COUNT);
@@ -97,7 +103,9 @@ describe("storm cells", () => {
         const moved = Math.hypot(b[i * 4] - a[i * 4], b[i * 4 + 1] - a[i * 4 + 1]);
         if (moved > 0.05) {
           respawns++;
-          if (a[i * 4 + 3] > 0.01 || b[i * 4 + 3] > 0.01) maxStep = Infinity;
+          if (a[i * 4 + 3] > 0.01 || b[i * 4 + 3] > 0.01) {
+            maxStep = Infinity;
+          }
         }
       }
       a.set(b);
@@ -126,8 +134,12 @@ describe("sweep", () => {
     const dt = 1 / 60;
     for (let i = 0; i < 60 * SWEEP_PERIOD * 3 + 7; i++) {
       const next = advanceSweep(angle, dt);
-      if (next < angle) wraps++;
-      if (next < 0 || next >= TAU) outOfRange++;
+      if (next < angle) {
+        wraps++;
+      }
+      if (next < 0 || next >= TAU) {
+        outOfRange++;
+      }
       // The direction the line points moves by the same small step every frame.
       const step = Math.hypot(Math.cos(next) - Math.cos(angle), Math.sin(next) - Math.sin(angle));
       maxStep = Math.max(maxStep, step);
@@ -152,8 +164,12 @@ describe("front", () => {
       if (pos < prev) {
         wraps++;
         // Before the wrap all rain is downwind of the canvas; after it, all upwind.
-        if (prev - 3 * FRONT_BEHIND < span[1]) bad++;
-        if (pos + 3 * FRONT_AHEAD > span[0]) bad++;
+        if (prev - 3 * FRONT_BEHIND < span[1]) {
+          bad++;
+        }
+        if (pos + 3 * FRONT_AHEAD > span[0]) {
+          bad++;
+        }
       }
       prev = pos;
     }
@@ -168,7 +184,11 @@ describe("noise offsets", () => {
     let bad = 0;
     for (let i = 0; i < 5000; i++) {
       advanceOffsets(offsets, 0.01);
-      for (const v of offsets) if (!(v >= 0 && v < 1)) bad++;
+      for (const v of offsets) {
+        if (!(v >= 0 && v < 1)) {
+          bad++;
+        }
+      }
     }
     expect(bad).toBe(0);
     const moved = new Float32Array(OFFSET_PAIRS * 2);
@@ -188,7 +208,11 @@ describe("terrain and labels", () => {
   it("has both land and water in every region", () => {
     for (const t of terrains.values()) {
       let land = 0;
-      for (const h of t) if (h > 0) land++;
+      for (const h of t) {
+        if (h > 0) {
+          land++;
+        }
+      }
       const frac = land / t.length;
       expect(frac).toBeGreaterThan(0.15);
       expect(frac).toBeLessThan(0.97);
@@ -216,10 +240,18 @@ describe("terrain and labels", () => {
         expect(new Set(labels.map((l) => l.name)).size).toBe(labels.length);
         let bad = 0;
         for (const l of labels) {
-          if (!(PLACE_NAMES as readonly string[]).includes(l.name)) bad++;
-          if (sampleTerrain(t, l.x, l.y) < LABEL_MIN_HEIGHT) bad++;
-          if (inSpeakerZone(l.x, aspect) || inSpeakerZone(l.x + LABEL_WIDTH, aspect)) bad++;
-          if (l.x < 0 || l.x + LABEL_WIDTH > aspect || l.y < 0 || l.y > 1) bad++;
+          if (!(PLACE_NAMES as readonly string[]).includes(l.name)) {
+            bad++;
+          }
+          if (sampleTerrain(t, l.x, l.y) < LABEL_MIN_HEIGHT) {
+            bad++;
+          }
+          if (inSpeakerZone(l.x, aspect) || inSpeakerZone(l.x + LABEL_WIDTH, aspect)) {
+            bad++;
+          }
+          if (l.x < 0 || l.x + LABEL_WIDTH > aspect || l.y < 0 || l.y > 1) {
+            bad++;
+          }
         }
         expect(bad).toBe(0);
         expect(placeLabels(t, aspect, 3)).toEqual(labels);

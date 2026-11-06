@@ -63,8 +63,12 @@ export function takeEvent(s: EventSchedule, t: number, rate: number): number {
     s.rate = rate;
     s.next = t + eventGap(s.rand, rate);
   }
-  if (t - s.next > SCHEDULE_MAX_LAG) s.next = t + eventGap(s.rand, rate);
-  if (t < s.next) return Number.NaN;
+  if (t - s.next > SCHEDULE_MAX_LAG) {
+    s.next = t + eventGap(s.rand, rate);
+  }
+  if (t < s.next) {
+    return Number.NaN;
+  }
   const at = s.next;
   s.next = at + eventGap(s.rand, rate);
   return at;
@@ -253,11 +257,15 @@ export function ellipseEntry(
   const qx = dx / rx;
   const qy = dy / ry;
   const c = px * px + py * py - 1;
-  if (c <= 0) return 0;
+  if (c <= 0) {
+    return 0;
+  }
   const a = qx * qx + qy * qy;
   const b = 2 * (px * qx + py * qy);
   const disc = b * b - 4 * a * c;
-  if (disc < 0) return Number.POSITIVE_INFINITY;
+  if (disc < 0) {
+    return Number.POSITIVE_INFINITY;
+  }
   const t = (-b - Math.sqrt(disc)) / (2 * a);
   return t > 0 ? t : Number.POSITIVE_INFINITY;
 }
@@ -294,7 +302,9 @@ export function spawnMeteor(
     const rx0 = x - f.radiantX;
     const ry0 = y - f.radiantY;
     const dist = Math.hypot(rx0, ry0);
-    if (dist < RADIANT_CLEARANCE) continue;
+    if (dist < RADIANT_CLEARANCE) {
+      continue;
+    }
     const c = Math.cos(jitter);
     const s = Math.sin(jitter);
     const ux = rx0 / dist;
@@ -312,10 +322,16 @@ export function spawnMeteor(
       EXCLUDE_RX * w * soft,
       EXCLUDE_RY * REF_HEIGHT * soft,
     );
-    if (cut === 0) continue;
+    if (cut === 0) {
+      continue;
+    }
     length = Math.min(length, cut - 10);
-    if (dy < 0) length = Math.min(length, (y - f.floor) / -dy);
-    if (length < MIN_LENGTH) continue;
+    if (dy < 0) {
+      length = Math.min(length, (y - f.floor) / -dy);
+    }
+    if (length < MIN_LENGTH) {
+      continue;
+    }
     m.start = at;
     m.x = x;
     m.y = y;
@@ -353,9 +369,13 @@ export const meteorLife = (m: Meteor) => m.duration + m.trailLife;
  * bright meteor. 0 at and outside both ends, never above 1.
  */
 export function coreEnvelope(u: number, bright: boolean): number {
-  if (!(u > 0 && u < 1)) return 0;
+  if (!(u > 0 && u < 1)) {
+    return 0;
+  }
   const base = smoothstep(0, 0.12, u) * (1 - smoothstep(0.65, 1, u));
-  if (!bright) return base;
+  if (!bright) {
+    return base;
+  }
   const f = u > FLARE_FROM ? Math.sin((Math.PI * (u - FLARE_FROM)) / (1 - FLARE_FROM)) : 0;
   return Math.min(1, 0.7 * base + 0.95 * f * f);
 }
@@ -367,8 +387,12 @@ export function coreEnvelope(u: number, bright: boolean): number {
  * never above 1; always 0 without a trail.
  */
 export function trailEnvelope(age: number, duration: number, trailLife: number): number {
-  if (!(trailLife > 0) || !(age > 0) || age >= duration + trailLife) return 0;
-  if (age < duration) return smoothstep(0, 1, age / duration);
+  if (!(trailLife > 0) || !(age > 0) || age >= duration + trailLife) {
+    return 0;
+  }
+  if (age < duration) {
+    return smoothstep(0, 1, age / duration);
+  }
   const s = (age - duration) / trailLife;
   return (1 - s) * (1 - s);
 }
@@ -447,7 +471,9 @@ export interface MeteorShower {
 
 export function createShower(seed: number): MeteorShower {
   const list: Meteor[] = [];
-  for (let i = 0; i < MAX_ACTIVE; i++) list.push(createMeteor());
+  for (let i = 0; i < MAX_ACTIVE; i++) {
+    list.push(createMeteor());
+  }
   return {
     list,
     count: 0,
@@ -471,7 +497,9 @@ export function stepShower(
 ): void {
   for (let i = 0; i < s.count; i++) {
     const m = s.list[i];
-    if (t - m.start < meteorLife(m)) continue;
+    if (t - m.start < meteorLife(m)) {
+      continue;
+    }
     const last = --s.count;
     s.list[i] = s.list[last];
     s.list[last] = m;
@@ -599,7 +627,9 @@ export function layoutGround(
     return out;
   }
   let top = 0;
-  for (let c = 0; c < HILL_COLUMNS * HILL_CHANNELS; c++) top = Math.max(top, table[c]);
+  for (let c = 0; c < HILL_COLUMNS * HILL_CHANNELS; c++) {
+    top = Math.max(top, table[c]);
+  }
   top *= REF_HEIGHT;
   const side = hillSide(seed);
   const rand = createRng(Math.floor(seed) * 977 + 3);

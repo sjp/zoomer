@@ -63,11 +63,15 @@ export function maxSectors(trailLength: number): number {
  * In [0, PROFILE_MAX].
  */
 export function tailProfile(delta: number, length: number, radius: number, comet: boolean): number {
-  if (!(delta > 0 && delta < length)) return 0;
+  if (!(delta > 0 && delta < length)) {
+    return 0;
+  }
   const arcHead = delta * radius;
   const ends =
     smoothstep(0, END_TAPER, arcHead) * smoothstep(0, END_TAPER, (length - delta) * radius);
-  if (!comet) return ends;
+  if (!comet) {
+    return ends;
+  }
   const t = 1 - delta / length;
   return ends * (COMET_TAIL * t * t + COMET_HEAD * 2 ** (-arcHead / HEAD_LENGTH));
 }
@@ -88,7 +92,9 @@ const scratch = createStar();
 
 /** One star's contribution (brightness x profile x coverage) at (r, phi), `delta` behind its head. */
 function contribution(star: Star, r: number, delta: number, s: TrailSettings): number {
-  if (!star.occupied) return 0;
+  if (!star.occupied) {
+    return 0;
+  }
   const cov = radialCoverage(r - star.radius, star.halfWidth);
   return cov > 0 ? star.bright * cov * tailProfile(delta, s.length, star.radius, s.comet) : 0;
 }
@@ -122,7 +128,9 @@ export function trailsAtBruteForce(r: number, phi: number, s: TrailSettings): nu
     for (let k = 0; k < n; k++) {
       const star = cellStar(ring, k, n, s.density, s.salt, scratch);
       let delta = (star.angle - phi) % TAU;
-      if (delta < 0) delta += TAU;
+      if (delta < 0) {
+        delta += TAU;
+      }
       sum += contribution(star, r, delta, s);
     }
   }
@@ -142,9 +150,11 @@ export const POLES = {
 
 export type PoleId = keyof typeof POLES;
 
+const isPoleId = (v: string): v is PoleId => Object.hasOwn(POLES, v);
+
 /** Pole position in reference px (y up) for a frame `refWidth` wide; unknown ids fall back to top right. */
 export function polePosition(pole: string, refWidth: number, out: [number, number]) {
-  const [fx, fy] = Object.hasOwn(POLES, pole) ? POLES[pole as PoleId] : POLES.topRight;
+  const [fx, fy] = isPoleId(pole) ? POLES[pole] : POLES.topRight;
   out[0] = fx * refWidth;
   out[1] = fy * 1080;
   return out;
@@ -178,6 +188,8 @@ const GROUND: Record<Exclude<ForegroundKind, "none">, GroundStyle> = {
   mountains: { shape: { amp: 2.4, ridge: 0.85, freq: 1.2 }, lift: 0.05 },
   tree: { shape: { amp: 0.9, ridge: 0, freq: 0.5 }, lift: -0.03 },
 };
+
+const isGroundKind = (v: string): v is keyof typeof GROUND => Object.hasOwn(GROUND, v);
 
 /** The lone tree, in reference px (y up). */
 export interface LoneTree {
@@ -220,8 +232,10 @@ export function buildForeground(
   tree: LoneTree,
 ): boolean {
   out.fill(0);
-  if (!Object.hasOwn(GROUND, kind)) return false;
-  const style = GROUND[kind as keyof typeof GROUND];
+  if (!isGroundKind(kind)) {
+    return false;
+  }
+  const style = GROUND[kind];
   const profiles = new Float32Array(MAX_LAYERS * HILL_COLUMNS);
   const lo = new Float64Array(MAX_LAYERS);
   const hi = new Float64Array(MAX_LAYERS);

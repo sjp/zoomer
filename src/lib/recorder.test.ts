@@ -56,16 +56,14 @@ describe("videoBitrate", () => {
 });
 
 /** A MediaRecorder stand-in that the test drives by hand. */
-class FakeRecorder {
+class FakeRecorder extends EventTarget {
   static last: FakeRecorder;
   static isTypeSupported = (type: string) => type.startsWith("video/webm");
   state: "inactive" | "recording" = "inactive";
-  ondataavailable: ((e: { data: Blob }) => void) | null = null;
-  onerror: (() => void) | null = null;
-  onstop: (() => void) | null = null;
   stopCalls = 0;
   readonly options: { mimeType: string; videoBitsPerSecond: number };
   constructor(_stream: unknown, options: { mimeType: string; videoBitsPerSecond: number }) {
+    super();
     this.options = options;
     FakeRecorder.last = this;
   }
@@ -74,10 +72,16 @@ class FakeRecorder {
   }
   stop() {
     this.stopCalls++;
-    if (this.state === "inactive") throw new Error("InvalidStateError");
+    if (this.state === "inactive") {
+      throw new Error("InvalidStateError");
+    }
     this.state = "inactive";
-    this.ondataavailable?.({ data: new Blob(["frame"]) });
-    this.onstop?.();
+    this.dispatchEvent(Object.assign(new Event("dataavailable"), { data: new Blob(["frame"]) }));
+    this.dispatchEvent(new Event("stop"));
+  }
+  /** What a browser does when recording fails. */
+  fail() {
+    this.dispatchEvent(new Event("error"));
   }
 }
 
@@ -124,7 +128,7 @@ describe("recordCanvas", () => {
     const recorder = FakeRecorder.last;
     // Browsers stop the recorder themselves before firing error.
     recorder.state = "inactive";
-    recorder.onerror?.();
+    recorder.fail();
     await expect(result).rejects.toThrow("Recording failed.");
     expect(track.stop).toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
@@ -135,7 +139,7 @@ describe("recordCanvas", () => {
   it("stops a recorder that is still running when it reports an error", async () => {
     const { canvas } = fakeCanvas();
     const result = recordCanvas(canvas, 5);
-    FakeRecorder.last.onerror?.();
+    FakeRecorder.last.fail();
     await expect(result).rejects.toThrow("Recording failed.");
     expect(FakeRecorder.last.state).toBe("inactive");
   });

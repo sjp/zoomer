@@ -42,8 +42,14 @@ function scene(seed: number, spacing: number, waviness: number, refWidth = 1920,
  * compares numbers), or -1 when they match.
  */
 function firstDiff(a: Float32Array, b: Float32Array): number {
-  if (a.length !== b.length) return Math.min(a.length, b.length);
-  for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return i;
+  if (a.length !== b.length) {
+    return Math.min(a.length, b.length);
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (!Object.is(a[i], b[i])) {
+      return i;
+    }
+  }
   return -1;
 }
 
@@ -82,17 +88,19 @@ describe("placeStones", () => {
             x + r * STONE_PAD < w &&
             y - r * STONE_PAD > 0 &&
             y + r * STONE_PAD < 1080;
-          if (!placed)
+          if (!placed) {
             fail(
               `seed ${String(seed)}, stone ${String(i)} at ${String(x)}, ${String(y)}, r ${String(r)}`,
             );
+          }
           for (let j = 0; j < i; j++) {
             const o = j * STONE_FLOATS;
             const apart =
               stonesApart(r, pos[o + 2], x - pos[o], y - pos[o + 1]) &&
               Math.hypot(x - pos[o], y - pos[o + 1]) > 3 * (r + pos[o + 2]);
-            if (!apart)
+            if (!apart) {
               fail(`seed ${String(seed)}: stones ${String(j)} and ${String(i)} too close`);
+            }
           }
         }
       }
@@ -120,9 +128,13 @@ describe("placeStones", () => {
                   const rz = layout[o + 3];
                   const n = (phi - layout[o]) * inv;
                   const t = (x - pos[o] - layout[o + 1] * (y - pos[o + 1])) * inv;
-                  if (Math.abs(t) < GAP * rz && Math.abs(n) < BOX_N * rz) inside++;
+                  if (Math.abs(t) < GAP * rz && Math.abs(n) < BOX_N * rz) {
+                    inside++;
+                  }
                 }
-                if (inside > overlaps) overlaps = inside;
+                if (inside > overlaps) {
+                  overlaps = inside;
+                }
               }
             }
           }
@@ -139,7 +151,9 @@ describe("waveLayout", () => {
       for (const wav of [0.25, 1]) {
         const w = waveLayout(new Float64Array(6), seed, 3, wav);
         let max = 0;
-        for (let x = 0; x < 4000; x += 3) max = Math.max(max, Math.abs(straightSlope(w, x)));
+        for (let x = 0; x < 4000; x += 3) {
+          max = Math.max(max, Math.abs(straightSlope(w, x)));
+        }
         expect(max).toBeLessThanOrEqual(WAVE_SLOPE * wav + 1e-9);
         expect(max).toBeGreaterThan(0.3 * WAVE_SLOPE * wav);
       }
@@ -172,7 +186,9 @@ describe("fillStoneLayout", () => {
         expect(layout[o + 3]).toBeGreaterThan(pos[o + 2] * STONE_PAD);
         expect(layout[o + 3]).toBeCloseTo(ringRadius(pos[o + 2], spacing, g), 3);
       }
-      for (let i = count * STONE_FLOATS; i < size; i++) expect(layout[i]).toBe(0);
+      for (let i = count * STONE_FLOATS; i < size; i++) {
+        expect(layout[i]).toBe(0);
+      }
     }
   });
 });
@@ -188,12 +204,16 @@ describe("stoneDistance", () => {
       for (let t = -400; t <= 400; t += step) {
         const r = Math.hypot(t, n);
         const l = stoneDistance(t, n, r, rz);
-        if (t > -400) jump = Math.max(jump, Math.abs(l - prev));
+        if (t > -400) {
+          jump = Math.max(jump, Math.abs(l - prev));
+        }
         prev = l;
         if ((Math.abs(t) >= GAP * rz || Math.abs(n) >= rz) && Math.abs(l - Math.abs(n)) > 1e-9) {
           wrong++;
         }
-        if (r < rz && Math.abs(l - r) > 1e-9) wrong++;
+        if (r < rz && Math.abs(l - r) > 1e-9) {
+          wrong++;
+        }
       }
     }
     expect(jump).toBeLessThanOrEqual(step * (1 + RING_STEEP) + 1e-9);
@@ -212,9 +232,13 @@ describe("rakePhase", () => {
         let far = true;
         for (let i = 0; i < count; i++) {
           const o = i * STONE_FLOATS;
-          if (Math.hypot(x - pos[o], y - pos[o + 1]) < 3 * layout[o + 3]) far = false;
+          if (Math.hypot(x - pos[o], y - pos[o + 1]) < 3 * layout[o + 3]) {
+            far = false;
+          }
         }
-        if (!far) continue;
+        if (!far) {
+          continue;
+        }
         rakePhase(out, x, y, wave, pos, layout, count);
         expect(out[0]).toBeCloseTo(straightField(wave, x, y), 9);
         expect(out[1]).toBeCloseTo(straightSlope(wave, x), 9);
@@ -277,7 +301,9 @@ describe("rakePhase", () => {
           const rz = layout[o + 3];
           for (let y = pos[o + 1] - 2.5 * rz; y < pos[o + 1] + 2.5 * rz; y += 3.1) {
             for (let x = pos[o] - 2.5 * rz; x < pos[o] + 2.5 * rz; x += 3.1) {
-              if (Math.hypot(x - pos[o], y - pos[o + 1]) < pos[o + 2]) continue;
+              if (Math.hypot(x - pos[o], y - pos[o + 1]) < pos[o + 2]) {
+                continue;
+              }
               rakePhase(out, x, y, wave, pos, layout, count);
               const h = height(out[0], spacing);
               rakePhase(out2, x + step, y, wave, pos, layout, count);
@@ -286,7 +312,9 @@ describe("rakePhase", () => {
               jump = Math.max(jump, Math.abs(height(out2[0], spacing) - h));
 
               const ratio = Math.hypot(out[1], out[2]) / Math.hypot(1, straightSlope(wave, x));
-              if (ratio === 0) continue; // flat pocket
+              if (ratio === 0) {
+                continue;
+              } // flat pocket
               n++;
               if (Math.abs(ratio - 1) > tol) {
                 // Only the rim where the rings stop may be steeper.
@@ -327,7 +355,9 @@ describe("rakePhase", () => {
           const dy = (hy - height(out2[0], spacing)) / (2 * e);
           n++;
           // Creases (where the winning branch changes) can fall between the samples.
-          if (Math.abs(dx - k * out[1]) > 1e-3 || Math.abs(dy - k * out[2]) > 1e-3) bad++;
+          if (Math.abs(dx - k * out[1]) > 1e-3 || Math.abs(dy - k * out[2]) > 1e-3) {
+            bad++;
+          }
         }
       }
     }
@@ -342,10 +372,14 @@ describe("rerake", () => {
     let t = 0;
     let swept = 0;
     while (s.progress < 0) {
-      if (!Object.is(sweepX(s, 1920), SWEEP_OFF)) swept++;
+      if (!Object.is(sweepX(s, 1920), SWEEP_OFF)) {
+        swept++;
+      }
       stepRerake(s, dt, true);
       t += dt;
-      if (!(t < RERAKE_INTERVAL + 2 * dt)) break;
+      if (!(t < RERAKE_INTERVAL + 2 * dt)) {
+        break;
+      }
     }
     expect(swept).toBe(0);
     expect(t).toBeLessThan(RERAKE_INTERVAL + 2 * dt);
@@ -357,9 +391,13 @@ describe("rerake", () => {
     for (;;) {
       const done = stepRerake(s, dt, true);
       sweepTime += dt;
-      if (done) break;
+      if (done) {
+        break;
+      }
       const x = sweepX(s, 1920);
-      if (!(x > prev) && backwards.length < 10) backwards.push(`${String(prev)} -> ${String(x)}`);
+      if (!(x > prev) && backwards.length < 10) {
+        backwards.push(`${String(prev)} -> ${String(x)}`);
+      }
       prev = x;
     }
     expect(backwards).toEqual([]);
@@ -373,11 +411,15 @@ describe("rerake", () => {
 
   it("never starts while disabled, but finishes a sweep under way", () => {
     const s = createRerake();
-    for (let i = 0; i < 1000; i++) stepRerake(s, 1, false);
+    for (let i = 0; i < 1000; i++) {
+      stepRerake(s, 1, false);
+    }
     expect(s.progress).toBe(-1);
     stepRerake(s, RERAKE_INTERVAL, true);
     expect(s.progress).toBe(0);
-    for (let i = 0; i < RERAKE_DURATION - 1; i++) expect(stepRerake(s, 1, false)).toBe(false);
+    for (let i = 0; i < RERAKE_DURATION - 1; i++) {
+      expect(stepRerake(s, 1, false)).toBe(false);
+    }
     expect(stepRerake(s, 1.5, false)).toBe(true);
     expect(s.generation).toBe(1);
   });

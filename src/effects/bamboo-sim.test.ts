@@ -45,16 +45,24 @@ describe("sway", () => {
     for (let i = 0; i < 200; i++) {
       const phase = i / 200;
       const x = (i * 0.37) % 1;
-      if (stemSway(phase, 0.1, x, 1.8, 0, 0.1) !== 0) bad++;
-      if (stemSway(phase, 0.1, x, 1.8, -0.5, 0.1) !== 0) bad++;
+      if (stemSway(phase, 0.1, x, 1.8, 0, 0.1) !== 0) {
+        bad++;
+      }
+      if (stemSway(phase, 0.1, x, 1.8, -0.5, 0.1) !== 0) {
+        bad++;
+      }
       let prev = 0;
       for (let k = 1; k <= 20; k++) {
         const t = k / 20;
         const s = stemSway(phase, 0.1, x, 1.8, t, 0.1);
-        if (Math.abs(s) > 0.1 * t * t + 1e-12) bad++;
+        if (Math.abs(s) > 0.1 * t * t + 1e-12) {
+          bad++;
+        }
         // Without lag every point reads the same driver, so |sway| grows with t.
         const s0 = Math.abs(stemSway(phase, 0.1, x, 0, t, 0.1));
-        if (s0 < prev - 1e-12) bad++;
+        if (s0 < prev - 1e-12) {
+          bad++;
+        }
         prev = s0;
       }
     }
@@ -70,7 +78,9 @@ describe("sway", () => {
     let wrapped = false;
     for (let i = 0; i < 2000; i++) {
       const next = advanceSwell(BAMBOO_SWELL, phase, 1 / 60, swaySpeed(1));
-      if (next < phase) wrapped = true;
+      if (next < phase) {
+        wrapped = true;
+      }
       phase = next;
       const s = stemSway(phase, 0.05, 0.3, 1.8, 0.8, 0.1);
       worst = Math.max(worst, Math.abs(s - prev));
@@ -88,9 +98,15 @@ describe("sway", () => {
       const x = (i * 0.618) % 1;
       const d = swayDriver(phase, 0.2, x, 1);
       const g = gustAt(x, phase);
-      if (!(d >= -1 && d <= 1)) bad++;
-      if (!(g >= 0 && g <= 1)) bad++;
-      if (Math.abs(gustAt(x, phase + 1) - g) > 1e-9) bad++;
+      if (!(d >= -1 && d <= 1)) {
+        bad++;
+      }
+      if (!(g >= 0 && g <= 1)) {
+        bad++;
+      }
+      if (Math.abs(gustAt(x, phase + 1) - g) > 1e-9) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     // A gust peak further right arrives later: the field moves left to right.
@@ -133,11 +149,17 @@ describe("buildStems", () => {
     expect(STEM_ATTRIBUTES.reduce((a, b) => a + b, 0)).toBe(STEM_FLOATS);
     let bad = 0;
     for (let l = 0; l < LAYERS.length; l++) {
-      if (layout.counts[l] !== layerCount(LAYERS[l], DENSITY_MAX)) bad++;
-      if (l > 0 && layout.starts[l] !== layout.starts[l - 1] + layout.counts[l - 1]) bad++;
+      if (layout.counts[l] !== layerCount(LAYERS[l], DENSITY_MAX)) {
+        bad++;
+      }
+      if (l > 0 && layout.starts[l] !== layout.starts[l - 1] + layout.counts[l - 1]) {
+        bad++;
+      }
       for (let k = 1; k < layout.counts[l]; k++) {
         const o = (layout.starts[l] + k) * STEM_FLOATS;
-        if (data[o + 3] < data[o - STEM_FLOATS + 3]) bad++;
+        if (data[o + 3] < data[o - STEM_FLOATS + 3]) {
+          bad++;
+        }
       }
     }
     expect(bad).toBe(0);
@@ -159,7 +181,9 @@ describe("buildStems", () => {
           for (let k = 0; k < layout.counts[l]; k++) {
             const o = (layout.starts[l] + k) * STEM_FLOATS;
             const reach = stemClearance(data[o + 1], data[o + 2], data[o + 6], data[o + 3]);
-            if (Math.abs(data[o] - 0.5) - reach < OPENING_HALF) bad++;
+            if (Math.abs(data[o] - 0.5) - reach < OPENING_HALF) {
+              bad++;
+            }
             checked++;
           }
         }
@@ -182,7 +206,9 @@ describe("buildStems", () => {
           const off = stemSway(p / 60, phase0, x, lag, t, SWAY_MAX * sway);
           const cx = x + off / REFERENCE_ASPECT;
           const edge = (hw * 1.08) / 1080 / REFERENCE_ASPECT;
-          if (Math.abs(cx - 0.5) - edge < OPENING_HALF) bad++;
+          if (Math.abs(cx - 0.5) - edge < OPENING_HALF) {
+            bad++;
+          }
         }
       }
     }
@@ -197,8 +223,12 @@ describe("buildStems", () => {
       const { data, layout } = stems(seed, 1.5, "none");
       for (let i = 0; i < layout.total; i++) {
         const x = data[i * STEM_FLOATS];
-        if (x < X_MARGIN || x > 1 - X_MARGIN) bad++;
-        if (Math.abs(x - 0.5) < 1 / 6) centre++;
+        if (x < X_MARGIN || x > 1 - X_MARGIN) {
+          bad++;
+        }
+        if (Math.abs(x - 0.5) < 1 / 6) {
+          centre++;
+        }
         total++;
       }
     }
@@ -229,12 +259,22 @@ describe("buildLeaves", () => {
         for (let k = 0; k < leaves.counts[l]; k++) {
           const o = (leaves.starts[l] + k) * LEAF_FLOATS;
           // On one of this layer's stems, above its root, in the upper half.
-          if (!xs.has(out[o])) bad++;
-          if (!(out[o + 3] >= CLUSTER_TOP && out[o + 3] < 0.5 && out[o + 3] < out[o + 1])) bad++;
+          if (!xs.has(out[o])) {
+            bad++;
+          }
+          if (!(out[o + 3] >= CLUSTER_TOP && out[o + 3] < 0.5 && out[o + 3] < out[o + 1])) {
+            bad++;
+          }
           const cycles = out[o + 13];
-          if (!Number.isInteger(cycles) || cycles < FLUTTER_MIN || cycles > FLUTTER_MAX) bad++;
-          if (!(out[o + 10] > 0 && out[o + 11] > 0)) bad++;
-          if (out[o + 15] === 1) twigs++;
+          if (!Number.isInteger(cycles) || cycles < FLUTTER_MIN || cycles > FLUTTER_MAX) {
+            bad++;
+          }
+          if (!(out[o + 10] > 0 && out[o + 11] > 0)) {
+            bad++;
+          }
+          if (out[o + 15] === 1) {
+            twigs++;
+          }
         }
       }
       expect(bad).toBe(0);
@@ -259,8 +299,12 @@ describe("flutter", () => {
     for (let i = 0; i < 300; i++) {
       const p = i / 300;
       const a = flutterAngle(p, 0.3, 31, 0.2);
-      if (Math.abs(a) > 0.2 + 1e-12) bad++;
-      if (Math.abs(flutterAngle(p + 1, 0.3, 31, 0.2) - a) > 1e-9) bad++;
+      if (Math.abs(a) > 0.2 + 1e-12) {
+        bad++;
+      }
+      if (Math.abs(flutterAngle(p + 1, 0.3, 31, 0.2) - a) > 1e-9) {
+        bad++;
+      }
     }
     expect(bad).toBe(0);
     expect(flutterStrength(1, 1)).toBeGreaterThan(flutterStrength(0, 0));
@@ -276,10 +320,16 @@ describe("geometry and presets", () => {
     let bad = 0;
     for (const light of Object.values(LIGHTS)) {
       for (const v of Object.values(light)) {
-        if (Array.isArray(v)) for (const c of v) if (!(c >= 0 && c <= 1)) bad++;
+        if (Array.isArray(v)) {
+          for (const c of v) {
+            if (!(c >= 0 && c <= 1)) {
+              bad++;
+            }
+          }
+        }
       }
     }
-    expect(Object.keys(LIGHTS).sort()).toEqual(["midday", "misty", "morning"]);
+    expect(Object.keys(LIGHTS).toSorted()).toEqual(["midday", "misty", "morning"]);
     expect(bad).toBe(0);
   });
 });

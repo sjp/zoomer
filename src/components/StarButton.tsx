@@ -32,15 +32,17 @@ export function StarButton({
   return (
     <button
       type="button"
-      className={className ? `star-button ${className}` : "star-button"}
+      className={
+        className !== undefined && className !== "" ? `star-button ${className}` : "star-button"
+      }
       aria-pressed={starred}
       aria-label={label}
       title={label + titleSuffix}
-      aria-hidden={hidden || undefined}
-      tabIndex={hidden ? -1 : undefined}
+      aria-hidden={hidden === true ? true : undefined}
+      tabIndex={hidden === true ? -1 : undefined}
       // In the list, keep focus in the search box.
       onMouseDown={
-        hidden
+        hidden === true
           ? (e) => {
               e.preventDefault();
             }

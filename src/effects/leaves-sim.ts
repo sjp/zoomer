@@ -65,7 +65,9 @@ export function fanStrip(outline: readonly number[]): number[] {
 /** Samples `r(θ)` at `OUTLINE_POINTS` angles from +x, scaled so the largest radius is 1. */
 function polarOutline(r: (theta: number) => number): number[] {
   const radii: number[] = [];
-  for (let k = 0; k < OUTLINE_POINTS; k++) radii.push(r((k * TAU) / OUTLINE_POINTS));
+  for (let k = 0; k < OUTLINE_POINTS; k++) {
+    radii.push(r((k * TAU) / OUTLINE_POINTS));
+  }
   const max = Math.max(...radii);
   const out: number[] = [];
   radii.forEach((radius, k) => {
@@ -178,24 +180,24 @@ export const SEASONS: Readonly<Record<string, Season>> = {
   autumn: {
     shapes: [SHAPE_OVAL, SHAPE_MAPLE],
     vein: true,
-    palette: ["#b5301c", "#d65a24", "#e8912b", "#efbf45", "#8c4a26", "#a33a24"].map(hex),
+    palette: ["#b5301c", "#d65a24", "#e8912b", "#efbf45", "#8c4a26", "#a33a24"].map((v) => hex(v)),
     backShade: 0.78,
     sizeMul: 1,
     countMul: 1,
     top: "#f1d7ae",
     bottom: "#b9774a",
-    foliage: ["#8f3b1a", "#c2682a", "#6b3a1c"].map(hex),
+    foliage: ["#8f3b1a", "#c2682a", "#6b3a1c"].map((v) => hex(v)),
   },
   blossom: {
     shapes: [SHAPE_PETAL, SHAPE_ROUND_PETAL],
     vein: false,
-    palette: ["#fbd5e0", "#f6b9cb", "#fde9ef", "#efa5bb", "#fff6f8"].map(hex),
+    palette: ["#fbd5e0", "#f6b9cb", "#fde9ef", "#efa5bb", "#fff6f8"].map((v) => hex(v)),
     backShade: 0.93,
     sizeMul: 0.6,
     countMul: 1.5,
     top: "#a9cbe8",
     bottom: "#f3d9e2",
-    foliage: ["#f2b6c8", "#e795ad", "#fbd9e3"].map(hex),
+    foliage: ["#f2b6c8", "#e795ad", "#fbd9e3"].map((v) => hex(v)),
   },
 };
 
@@ -271,12 +273,12 @@ export interface Pieces {
   /** The latest gust strength, in [0, 1]. */
   readonly gust: number;
   /** Scales x positions by `k`, keeping pieces in place relative to a resized width. */
-  rescaleX(k: number): void;
+  rescaleX: (k: number) => void;
   /**
    * Advances `dt` seconds and writes the visible pieces to `data`, far layer
    * first, PIECE_FLOATS at `stride` floats apart. Returns how many.
    */
-  step(dt: number, f: PieceFrame, data: Float32Array, stride: number): number;
+  step: (dt: number, f: PieceFrame, data: Float32Array, stride: number) => number;
 }
 
 /** A start position in reference units, written by a `PieceOptions.spawn` callback. */
@@ -348,7 +350,9 @@ export function createPieces(
   // Interleave layers by index so any count keeps the same proportions.
   const pattern: number[] = [];
   for (let l = 0; l < LAYERS.length; l++) {
-    for (let k = 0; k < Math.round(LAYERS[l].share * 40); k++) pattern.push(l);
+    for (let k = 0; k < Math.round(LAYERS[l].share * 40); k++) {
+      pattern.push(l);
+    }
   }
   for (let i = pattern.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -393,7 +397,9 @@ export function createPieces(
       return gust;
     },
     rescaleX(k) {
-      for (let i = 0; i < max; i++) xs[i] *= k;
+      for (let i = 0; i < max; i++) {
+        xs[i] *= k;
+      }
     },
     step(dt, f, data, stride) {
       time += dt;
@@ -430,14 +436,16 @@ export function createPieces(
         for (let s = 0; s < shapes.length; s++) {
           const first = visible;
           for (let i = 0; i < n; i++) {
-            if (layer[i] !== l || Math.floor(shapePick[i] * shapes.length) !== s) continue;
+            if (layer[i] !== l || Math.floor(shapePick[i] * shapes.length) !== s) {
+              continue;
+            }
 
             const psi = swayPhase[i] + time * swayRate[i];
             const swayPx = swayOffset(psi) * ampLayer * swayAmp[i];
             let x: number;
             let y: number;
             if (parked[i]) {
-              if (i >= target || !spawn?.(point, l)) {
+              if (i >= target || spawn?.(point, l) !== true) {
                 stepLife(life, i, target, fadeStep, outStep);
                 continue;
               }
@@ -448,8 +456,11 @@ export function createPieces(
             } else {
               x = xs[i] + vxLayer * dt;
               y = ys[i] + fallPx * L.pace * paceJitter[i] * fallFactor(psi) * dt;
-              if (x < -margin) x += spanX;
-              else if (x > refWidth + margin) x -= spanX;
+              if (x < -margin) {
+                x += spanX;
+              } else if (x > refWidth + margin) {
+                x -= spanX;
+              }
               if (y > 1080 + margin) {
                 if (!spawn) {
                   // Respawn above the top at a new position across the padded width.
@@ -463,14 +474,18 @@ export function createPieces(
                   stepLife(life, i, target, fadeStep, outStep);
                   continue;
                 }
-              } else if (y < -margin) y += spanY;
+              } else if (y < -margin) {
+                y += spanY;
+              }
             }
             xs[i] = x;
             ys[i] = y;
 
             const life01 = stepLife(life, i, target, fadeStep, outStep);
             const alpha = L.alpha * life01 * life01;
-            if (alpha <= 0.003) continue;
+            if (alpha <= 0.003) {
+              continue;
+            }
 
             // Tumbling: the flip narrows the piece as it turns edge-on, and its
             // shading follows how squarely it faces the light.
@@ -553,7 +568,9 @@ export function writeFoliage(
   scale: number,
   season: Season,
 ): number {
-  if (!(amount > 0)) return 0;
+  if (!(amount > 0)) {
+    return 0;
+  }
   const colors = season.foliage;
   for (let b = 0; b < BLOBS.length; b++) {
     const [side, fx, fy, r, c] = BLOBS[b];

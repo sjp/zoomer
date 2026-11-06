@@ -294,7 +294,9 @@ export const vines = defineEffect(vinesMeta, {
         for (let p = 0; p < MAX_PLANTS; p++) {
           const lo = sim.dirtyLo[p];
           const hi = sim.dirtyHi[p];
-          if (lo > hi) continue;
+          if (lo > hi) {
+            continue;
+          }
           if (!bound) {
             gl.bindBuffer(gl.ARRAY_BUFFER, segBuffer);
             bound = true;
@@ -308,17 +310,27 @@ export const vines = defineEffect(vinesMeta, {
             (hi - lo + 1) * SEG_FLOATS,
           );
         }
-        if (bound) gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        if (bound) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        }
         sim.clearDirty();
       };
 
       const drawStems = (shadow: boolean) => {
         // Slots past the last plant in use are zero (degenerate), so stop there.
         let last = -1;
-        for (let p = 0; p < MAX_PLANTS; p++) if (sim.active[p]) last = p;
-        if (last < 0) return;
+        for (let p = 0; p < MAX_PLANTS; p++) {
+          if (sim.active[p]) {
+            last = p;
+          }
+        }
+        if (last < 0) {
+          return;
+        }
         const count = last * PLANT_SEGS + sim.segUsed[last];
-        if (count <= 0) return;
+        if (count <= 0) {
+          return;
+        }
         if (shadow) {
           stemU.f3("uOffset", STEM_SHADOW[0] * scale, STEM_SHADOW[1] * scale, 1.15);
           stemU.f1("uSoft", 2.5 * scale);
@@ -350,7 +362,9 @@ export const vines = defineEffect(vinesMeta, {
           if (!warmed) {
             // Start part-grown rather than on a bare wall.
             warmed = true;
-            for (let t = 0; t < PREWARM; t += 0.1) sim.step(0.1, f);
+            for (let t = 0; t < PREWARM; t += 0.1) {
+              sim.step(0.1, f);
+            }
           }
           sim.step(dt, f);
           uploadSegments();

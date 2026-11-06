@@ -24,6 +24,7 @@
  * the identity, so starting one never jumps.
  */
 import { createRng } from "./noise";
+import { lookup } from "./lookup";
 
 /** Operation kinds as packed for the shader; a comb's kind is its tine count (>= 1). */
 export const KIND_DROP = 0;
@@ -80,7 +81,7 @@ export type MarblePaletteName = keyof typeof PALETTES;
 
 /** The named palette, or Classic for an unknown name. */
 export function marblePalette(name: string): MarblePalette {
-  return name in PALETTES ? PALETTES[name as MarblePaletteName] : PALETTES.classic;
+  return lookup(PALETTES, name, "classic");
 }
 
 /** Smooth ease in and out of [0, 1], clamped. */
@@ -246,11 +247,11 @@ export interface MarbleSim {
   /** Bakes committed so far. */
   readonly bakes: number;
   /** Advances by `dt` real seconds, starting strokes and drops when they are due and fit. */
-  step(dt: number, settings: MarbleSettings, extent: Extent): void;
+  step: (dt: number, settings: MarbleSettings, extent: Extent) => void;
   /** How many of the oldest operations to bake now, or 0 when no bake is due. */
-  bakeCount(): number;
+  bakeCount: () => number;
   /** Forgets the oldest `k` operations, which the caller has baked into its base. */
-  commitBake(k: number): void;
+  commitBake: (k: number) => void;
 }
 
 export interface MarbleOptions {
@@ -288,7 +289,9 @@ export function createMarble(o: MarbleOptions): MarbleSim {
 
   function pickColour(): number {
     let c = Math.floor(rng() * colours);
-    if (colours > 1 && c === lastColour) c = (c + 1 + Math.floor(rng() * (colours - 1))) % colours;
+    if (colours > 1 && c === lastColour) {
+      c = (c + 1 + Math.floor(rng() * (colours - 1))) % colours;
+    }
     lastColour = c;
     return c;
   }
@@ -320,7 +323,9 @@ export function createMarble(o: MarbleOptions): MarbleSim {
       const x = range(-0.85, 0.85) * hx;
       const y = range(-0.8, 0.8) * hy;
       const rings = 3;
-      for (let r = 0; r < rings; r++) ops.push(drop(x, y, range(26, 44), -1, 0));
+      for (let r = 0; r < rings; r++) {
+        ops.push(drop(x, y, range(26, 44), -1, 0));
+      }
     }
   }
 
@@ -434,14 +439,20 @@ export function createMarble(o: MarbleOptions): MarbleSim {
     },
     bakeCount() {
       const n = ops.length;
-      if (n < BAKE_AT || (n < BAKE_FORCE_AT && sinceBake < BAKE_MIN_INTERVAL)) return 0;
+      if (n < BAKE_AT || (n < BAKE_FORCE_AT && sinceBake < BAKE_MIN_INTERVAL)) {
+        return 0;
+      }
       let k = 0;
-      while (k < n && isDone(ops[k], time)) k++;
+      while (k < n && isDone(ops[k], time)) {
+        k++;
+      }
       return k;
     },
     commitBake(k) {
       const n = Math.min(Math.max(Math.floor(k), 0), ops.length);
-      if (n === 0) return;
+      if (n === 0) {
+        return;
+      }
       ops.splice(0, n);
       sinceBake = 0;
       bakes++;

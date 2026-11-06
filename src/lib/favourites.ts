@@ -18,7 +18,9 @@ const FAVOURITES_KEY = "zoomer.favourites";
 
 /** The ids in a stored value; anything malformed reads as no favourites. */
 export function parseFavourites(value: string | null): string[] {
-  if (value === null) return [];
+  if (value === null) {
+    return [];
+  }
   try {
     const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
@@ -46,7 +48,9 @@ export function createFavourites(
     subscribe: store.subscribe,
     toggle: (id) => {
       const next = new Set(store.get());
-      if (!next.delete(id)) next.add(id);
+      if (!next.delete(id)) {
+        next.add(id);
+      }
       store.set(next);
       writePreference(FAVOURITES_KEY, JSON.stringify([...next]), storage);
     },

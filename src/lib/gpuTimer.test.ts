@@ -56,7 +56,11 @@ function fakeGl({ supported = true, gpuNsPerFrame = 2_000_000 } = {}) {
     },
   };
   const finish = () => {
-    for (const q of queries) if (q !== active) q.available = true;
+    for (const q of queries) {
+      if (q !== active) {
+        q.available = true;
+      }
+    }
   };
   return {
     gl: gl as unknown as WebGL2RenderingContext,

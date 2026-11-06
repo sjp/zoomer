@@ -166,14 +166,18 @@ export function flareAt(theta: number, tilt = 0): number {
 /** Eases the drawn tilt toward the `target` tilt (degrees) over `dt` seconds; NaN starts at the target. */
 export function easeTilt(current: number, target: number, dt: number): number {
   const t = clamp(Number.isFinite(target) ? target : 0, 0, MAX_TILT);
-  if (Number.isNaN(current)) return t;
+  if (Number.isNaN(current)) {
+    return t;
+  }
   return approach(current, t, Math.max(dt, 0) * TILT_RATE);
 }
 
 /** Total flare of `beams` (1 or 2) at rotation `phase` and `tilt` (degrees), 0..1. */
 export function flareTotal(phase: number, beams: number, tilt = 0): number {
   let f = flareAt(beamAngle(phase, 0), tilt);
-  if (beams > 1) f += flareAt(beamAngle(phase, 1), tilt);
+  if (beams > 1) {
+    f += flareAt(beamAngle(phase, 1), tilt);
+  }
   return clamp(f, 0, 1);
 }
 

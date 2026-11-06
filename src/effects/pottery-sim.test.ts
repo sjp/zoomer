@@ -119,9 +119,15 @@ describe("profileAt", () => {
     for (const form of FORM_IDS) {
       for (let phase = 0; phase < 3; phase += 0.01) {
         profileAt(phase, form, p);
-        if (p.height < 0.09 || p.height > 0.4) ok = false;
-        if (p.radius[0] > WHEEL_R) ok = false;
-        if (holeRadius(p) < 0 || holeRadius(p) >= p.radius[PROFILE_N - 1]) ok = false;
+        if (p.height < 0.09 || p.height > 0.4) {
+          ok = false;
+        }
+        if (p.radius[0] > WHEEL_R) {
+          ok = false;
+        }
+        if (holeRadius(p) < 0 || holeRadius(p) >= p.radius[PROFILE_N - 1]) {
+          ok = false;
+        }
       }
     }
     expect(ok).toBe(true);
@@ -184,7 +190,9 @@ describe("potteryLayout", () => {
 
 describe("clays", () => {
   it("has a palette for every option", () => {
-    for (const { value } of CLAY_OPTIONS) expect(clayFor(value)).toBe(CLAYS[value]);
+    for (const { value } of CLAY_OPTIONS) {
+      expect(clayFor(value)).toBe(CLAYS[value]);
+    }
     expect(clayFor("glaze")).toBe(CLAYS.terracotta);
     expect(formFor("teapot", 4)).toBe(CYCLE_FORMS[1]);
   });

@@ -46,7 +46,9 @@ export function boardLine(
   const n = Math.min(cols, chars.length);
   const start = align === "centre" ? Math.floor((cols - n) / 2) : 0;
   out.fill(0, offset, offset + cols);
-  for (let i = 0; i < n; i++) out[offset + start + i] = GLYPH_INDEX.get(chars[i]) ?? 0;
+  for (let i = 0; i < n; i++) {
+    out[offset + start + i] = GLYPH_INDEX.get(chars[i]) ?? 0;
+  }
 }
 
 /**
@@ -55,11 +57,17 @@ export function boardLine(
  */
 export function textPages(text: string, perPage: number): string[][] {
   const lines = text.split("\n");
-  while (lines.length > 0 && lines[lines.length - 1].trim() === "") lines.pop();
+  while (lines.length > 0 && lines[lines.length - 1].trim() === "") {
+    lines.pop();
+  }
   const per = Math.max(1, Math.floor(perPage));
   const pages: string[][] = [];
-  for (let i = 0; i < lines.length; i += per) pages.push(lines.slice(i, i + per));
-  if (pages.length === 0) pages.push([]);
+  for (let i = 0; i < lines.length; i += per) {
+    pages.push(lines.slice(i, i + per));
+  }
+  if (pages.length === 0) {
+    pages.push([]);
+  }
   return pages;
 }
 
@@ -84,7 +92,9 @@ const unit = (h: number) => h / 4294967296;
 export function createBoard(cols: number, rows: number): FlapBoard {
   const n = cols * rows;
   const rate = new Float32Array(n);
-  for (let i = 0; i < n; i++) rate[i] = 1 + RATE_JITTER * (2 * unit(hash32(i * 2 + 1)) - 1);
+  for (let i = 0; i < n; i++) {
+    rate[i] = 1 + RATE_JITTER * (2 * unit(hash32(i * 2 + 1)) - 1);
+  }
   return {
     cols,
     rows,
@@ -122,8 +132,12 @@ export function setTargets(
   const n = Math.min(count, b.cur.length);
   for (let i = 0; i < n; i++) {
     const t = targets[i] % GLYPH_COUNT;
-    if (b.target[i] === t) continue;
-    if (cellIdle(b, i)) b.delay[i] = staggerDelay(i % b.cols, Math.floor(i / b.cols), change);
+    if (b.target[i] === t) {
+      continue;
+    }
+    if (cellIdle(b, i)) {
+      b.delay[i] = staggerDelay(i % b.cols, Math.floor(i / b.cols), change);
+    }
     b.target[i] = t;
     changed = true;
   }
@@ -149,7 +163,9 @@ export function stepBoard(b: FlapBoard, dt: number, count: number, flipRate = FL
   let moving = false;
   const n = Math.min(count, b.cur.length);
   for (let i = 0; i < n; i++) {
-    if (cellIdle(b, i)) continue;
+    if (cellIdle(b, i)) {
+      continue;
+    }
     let left = step;
     if (b.delay[i] > 0) {
       const wait = Math.min(b.delay[i], left);
@@ -168,7 +184,9 @@ export function stepBoard(b: FlapBoard, dt: number, count: number, flipRate = FL
       }
       b.phase[i] = phase;
     }
-    if (!cellIdle(b, i)) moving = true;
+    if (!cellIdle(b, i)) {
+      moving = true;
+    }
   }
   return moving;
 }
@@ -283,10 +301,14 @@ export function tickClock(
   nowMs: number,
   localMinutes: (ms: number) => number,
 ): boolean {
-  if (nowMs < c.next && nowMs >= c.next - 60000) return false;
+  if (nowMs < c.next && nowMs >= c.next - 60000) {
+    return false;
+  }
   c.next = (Math.floor(nowMs / 60000) + 1) * 60000;
   const label = clockLabel(localMinutes(nowMs));
-  if (label === c.label) return false;
+  if (label === c.label) {
+    return false;
+  }
   c.label = label;
   return true;
 }

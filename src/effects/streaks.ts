@@ -164,7 +164,7 @@ export interface StreakRenderer {
   /** Per-streak data, `STREAK_FLOATS` floats each; fill it, then call `upload`. */
   data: Float32Array;
   /** Uploads the first `count` streaks of `data`. */
-  upload(count: number): void;
+  upload: (count: number) => void;
   /**
    * Draws the uploaded streaks, additively unless created with `blend: "alpha"`
    * (premultiplied source-over) or `blend: "max"` (the per-channel maximum, after
@@ -174,8 +174,8 @@ export interface StreakRenderer {
    * `zoom` scales each colour channel's positions about the centre (needs the
    * `chromatic` option); omit it to draw unscaled.
    */
-  draw(count: number, width: number, height: number, zoom?: Rgb): void;
-  dispose(): void;
+  draw: (count: number, width: number, height: number, zoom?: Rgb) => void;
+  dispose: () => void;
 }
 
 export function createStreakRenderer(
@@ -194,7 +194,7 @@ function buildStreakRenderer(
 ): StreakRenderer {
   const alpha = options.blend === "alpha";
   const maxBlend = options.blend === "max";
-  if (alpha && options.chromatic) {
+  if (alpha && options.chromatic === true) {
     throw new Error("Streaks: the chromatic option is additive only");
   }
   const deleteProgram = (p: WebGLProgram) => {
@@ -205,9 +205,10 @@ function buildStreakRenderer(
     deleteProgram,
   );
   const u = createUniforms(gl, program, ["uResolution"]);
-  const chromatic = options.chromatic
-    ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
-    : null;
+  const chromatic =
+    options.chromatic === true
+      ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
+      : null;
   const cu = chromatic ? createUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"]) : null;
   const data = new Float32Array(max * STREAK_FLOATS);
 
@@ -245,32 +246,40 @@ function buildStreakRenderer(
     data,
     upload(count) {
       const n = clampCount(count);
-      if (n <= 0) return;
+      if (n <= 0) {
+        return;
+      }
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * STREAK_FLOATS);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
     },
     draw(count, width, height, zoom) {
       const n = clampCount(count);
-      if (n <= 0) return;
+      if (n <= 0) {
+        return;
+      }
       gl.enable(gl.BLEND);
       gl.blendEquation(maxBlend ? gl.MAX : gl.FUNC_ADD);
       gl.blendFunc(gl.ONE, alpha ? gl.ONE_MINUS_SRC_ALPHA : gl.ONE);
-      const split = zoom && (zoom[0] !== 1 || zoom[1] !== 1 || zoom[2] !== 1);
+      const split = zoom !== undefined && (zoom[0] !== 1 || zoom[1] !== 1 || zoom[2] !== 1);
       if (split && cu) {
         gl.useProgram(cu.program);
         cu.f2("uResolution", width, height);
         cu.f2("uCenter", width / 2, height / 2);
         cu.v3("uZoom", zoom);
       } else {
-        if (split) throw new Error("Streaks: per-channel zoom needs the chromatic option");
+        if (split) {
+          throw new Error("Streaks: per-channel zoom needs the chromatic option");
+        }
         gl.useProgram(program);
         u.f2("uResolution", width, height);
       }
       gl.bindVertexArray(vao);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
       gl.bindVertexArray(null);
-      if (maxBlend) gl.blendEquation(gl.FUNC_ADD);
+      if (maxBlend) {
+        gl.blendEquation(gl.FUNC_ADD);
+      }
     },
     dispose: () => {
       scope.dispose();

@@ -235,7 +235,9 @@ export const cranes = defineEffect(cranesMeta, {
         gl.vertexAttribDivisor(loc, 0);
         offset += size;
       });
-      if (offset !== VERTEX_FLOATS) throw new Error("cranes: vertex layout mismatch");
+      if (offset !== VERTEX_FLOATS) {
+        throw new Error("cranes: vertex layout mismatch");
+      }
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, instances.byteLength, gl.DYNAMIC_DRAW);
       const instanceLayout = [4, 4, 4, 4, 3, 3];
@@ -247,7 +249,9 @@ export const cranes = defineEffect(cranesMeta, {
         gl.vertexAttribDivisor(loc, 1);
         offset += size;
       });
-      if (offset !== INSTANCE_FLOATS) throw new Error("cranes: instance layout mismatch");
+      if (offset !== INSTANCE_FLOATS) {
+        throw new Error("cranes: instance layout mismatch");
+      }
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 

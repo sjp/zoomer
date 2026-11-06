@@ -39,6 +39,7 @@ import { clamp, fract, smoothstep } from "./math";
 import { hexToRgb } from "./color";
 import { createRng, hash32 } from "./noise";
 import type { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
+import { lookup } from "./lookup";
 
 export { type StepClock, takeSteps } from "./reaction-sim";
 
@@ -95,9 +96,7 @@ export const AGENT_TIERS = {
 } as const satisfies Record<AgentTier, { count: number }>;
 /** Agent count for a select value; unknown values fall back to medium. */
 export function agentCount(id: string): number {
-  return Object.hasOwn(AGENT_TIERS, id)
-    ? AGENT_TIERS[id as AgentTier].count
-    : AGENT_TIERS.medium.count;
+  return lookup(AGENT_TIERS, id, "medium").count;
 }
 
 /** Floats per agent: x, y (uv) and heading (radians). */
@@ -160,17 +159,21 @@ export const LUT_SIZE = 256;
  * between its stops. Unknown ids fall back to gold.
  */
 export function buildPaletteLut(id: string, out: Uint8Array): Uint8Array {
-  const stops = (Object.hasOwn(PALETTES, id) ? PALETTES[id as PaletteId] : PALETTES.gold).stops;
+  const stops = lookup(PALETTES, id, "gold").stops;
   for (let i = 0; i < LUT_SIZE; i++) {
     const t = i / (LUT_SIZE - 1);
     let s = 0;
-    while (s < stops.length - 2 && t > stops[s + 1][0]) s++;
+    while (s < stops.length - 2 && t > stops[s + 1][0]) {
+      s++;
+    }
     const [t0, c0] = stops[s];
     const [t1, c1] = stops[s + 1];
     const f = smoothstep(t0, t1, t);
     const a = hexToRgb(c0);
     const b = hexToRgb(c1);
-    for (let c = 0; c < 3; c++) out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
+    for (let c = 0; c < 3; c++) {
+      out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
+    }
     out[i * 4 + 3] = 255;
   }
   return out;
@@ -266,10 +269,15 @@ const TAU = Math.PI * 2;
  */
 export function turn(f: number, l: number, r: number, bits: number): number {
   let a = 0;
-  if (f >= l && f >= r) a = 0;
-  else if (f < l && f < r) a = (bits & 1) === 0 ? TURN_ANGLE : -TURN_ANGLE;
-  else if (l > r) a = TURN_ANGLE;
-  else a = -TURN_ANGLE;
+  if (f >= l && f >= r) {
+    a = 0;
+  } else if (f < l && f < r) {
+    a = (bits & 1) === 0 ? TURN_ANGLE : -TURN_ANGLE;
+  } else if (l > r) {
+    a = TURN_ANGLE;
+  } else {
+    a = -TURN_ANGLE;
+  }
   return a + ((bits >>> 16) / 65536 - 0.5) * JITTER;
 }
 
@@ -321,8 +329,12 @@ export function physarumStep(
     const u = fract(x);
     const v = fract(y);
     let s = trail[Math.min(h - 1, Math.floor(v * h)) * w + Math.min(w - 1, Math.floor(u * w))];
-    if (cfg.food) s += foodField(u, v, aspect, cfg.food);
-    if (cfg.calmCentre) s -= CALM_REPEL * calmMask(u, v);
+    if (cfg.food) {
+      s += foodField(u, v, aspect, cfg.food);
+    }
+    if (cfg.calmCentre) {
+      s -= CALM_REPEL * calmMask(u, v);
+    }
     return s;
   };
   const sx = SENSOR_DISTANCE / w;

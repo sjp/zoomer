@@ -190,7 +190,9 @@ const BINARY_STARS = [
 
 /** "random" resolved per seed; anything else as given. */
 export function resolveKind(system: string, seed: number): SystemKind {
-  if (system === "binary" || system === "single") return system;
+  if (system === "binary" || system === "single") {
+    return system;
+  }
   return (hash32(Math.floor(seed) + 0x51ed) & 1) === 1 ? "binary" : "single";
 }
 
@@ -234,7 +236,9 @@ export function createSystem(kind: SystemKind, planets: number, seed: number): O
   const inner = clear + INNER_OFFSET;
   const ratio = Math.max(spread / inner, 1.2) ** (1 / (count - 1));
   const axes: number[] = [];
-  for (let i = 0; i < count; i++) axes.push(inner * ratio ** i * (i > 0 ? range(0.96, 1.04) : 1));
+  for (let i = 0; i < count; i++) {
+    axes.push(inner * ratio ** i * (i > 0 ? range(0.96, 1.04) : 1));
+  }
 
   // Each planet then gets the room halfway to its neighbours (less the gap) and
   // spends it on eccentricity, then its disc, then a ring or moons, so nothing
@@ -263,7 +267,9 @@ export function createSystem(kind: SystemKind, planets: number, seed: number): O
       for (let k = 0; k < 2 && moonSpecs.length < MAX_MOONS; k++) {
         const me = rng() * 0.08;
         const mr = range(1.8, 3);
-        if (ma * (1 + me) + mr > left) break;
+        if (ma * (1 + me) + mr > left) {
+          break;
+        }
         moonSpecs.push({ planet: i, a: ma, e: me, radius: mr });
         reach = ma * (1 + me) + mr;
         ma *= range(1.45, 1.6);
@@ -337,8 +343,12 @@ function star(
 
 /** Where the system's centre sits, as a fraction of the frame width. */
 export function centreFraction(centre: string): number {
-  if (centre === "left") return 0.27;
-  if (centre === "centre") return 0.5;
+  if (centre === "left") {
+    return 0.27;
+  }
+  if (centre === "centre") {
+    return 0.5;
+  }
   return 0.73;
 }
 

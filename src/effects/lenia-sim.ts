@@ -28,6 +28,7 @@
 import { clamp, smoothstep } from "./math";
 import { hexToRgb } from "./color";
 import { createRng } from "./noise";
+import { lookup } from "./lookup";
 import type { PALETTE_OPTIONS, SPECIES_OPTIONS } from "./lenia.meta";
 
 export { type StepClock, takeSteps } from "./reaction-sim";
@@ -107,7 +108,7 @@ export const SPECIES = {
 } as const satisfies Record<SpeciesId, { rules: readonly RuleId[]; soup: boolean }>;
 
 export function speciesFor(id: string): (typeof SPECIES)[SpeciesId] {
-  return Object.hasOwn(SPECIES, id) ? SPECIES[id as SpeciesId] : SPECIES.mixed;
+  return lookup(SPECIES, id, "mixed");
 }
 
 /** The kernel core, a smooth bump on (0, 1) peaking at 1 for r = 1/2. */
@@ -117,7 +118,9 @@ export function kernelCore(r: number): number {
 
 /** The unnormalised kernel shell at normalised radius r (0..1) for peaks `b`. */
 export function kernelShell(r: number, b: readonly number[]): number {
-  if (r <= 0 || r >= 1) return 0;
+  if (r <= 0 || r >= 1) {
+    return 0;
+  }
   const br = r * b.length;
   const i = Math.floor(br);
   return b[i] * kernelCore(br - i);
@@ -158,26 +161,32 @@ export function buildTaps(R: number, b: readonly number[]): TapTable {
     const row: [number, number][] = [];
     for (let dx = dy === 0 ? 1 : -R; dx <= R; dx++) {
       const w = kernelShell(Math.hypot(dx, dy) / R, b);
-      if (w > 0) row.push([dx, w]);
+      if (w > 0) {
+        row.push([dx, w]);
+      }
     }
     for (let i = 0; i < row.length; i += 2) {
       const [x1, w1] = row[i];
       const next = row.at(i + 1);
       // Only cells next to each other can share a fetch (the shell is contiguous per row).
-      if (next && next[0] === x1 + 1) {
+      if (next?.[0] === x1 + 1) {
         const w = w1 + next[1];
         pairs.push(x1 + next[1] / w, dy, w);
         total += w;
       } else {
         pairs.push(x1, dy, w1);
         total += w1;
-        if (next) i--;
+        if (next) {
+          i--;
+        }
       }
     }
   }
   const data = new Float32Array(pairs);
   // Each pair is read at +d and -d, so the full kernel sums to 2 * total.
-  for (let i = 2; i < data.length; i += 3) data[i] /= 2 * total;
+  for (let i = 2; i < data.length; i += 3) {
+    data[i] /= 2 * total;
+  }
   return { count: data.length / 3, data };
 }
 
@@ -202,7 +211,9 @@ function sampleX(A: Float32Array, w: number, h: number, x: number, y: number, fr
   }
   const row = (((y % h) + h) % h) * w;
   const a = A[row + (((x0 % w) + w) % w)];
-  if (f === 0) return a;
+  if (f === 0) {
+    return a;
+  }
   const b = A[row + ((((x0 + 1) % w) + w) % w)];
   return a + (b - a) * f;
 }
@@ -266,24 +277,31 @@ export function leniaStep(
     const x = s * taps.data[t * 3];
     ox[i] = Math.floor(x);
     fr[i] = x - ox[i];
-    if (fracBits > 0) fr[i] = Math.round(fr[i] * (1 << fracBits)) / (1 << fracBits);
+    if (fracBits > 0) {
+      fr[i] = Math.round(fr[i] * (1 << fracBits)) / (1 << fracBits);
+    }
     oy[i] = s * taps.data[t * 3 + 1];
     wt[i] = taps.data[t * 3 + 2];
   }
   for (let y = 0; y < h; y++) {
-    for (let i = 0; i < n; i++) rows[i] = ((((y + oy[i]) % h) + h) % h) * w;
+    for (let i = 0; i < n; i++) {
+      rows[i] = ((((y + oy[i]) % h) + h) % h) * w;
+    }
     for (let x = 0; x < w; x++) {
       let u = 0;
       for (let i = 0; i < n; i++) {
         let x0 = x + ox[i];
-        if (x0 < 0) x0 += w;
-        else if (x0 >= w) x0 -= w;
+        if (x0 < 0) {
+          x0 += w;
+        } else if (x0 >= w) {
+          x0 -= w;
+        }
         const x1 = x0 + 1 === w ? 0 : x0 + 1;
         const a = A[rows[i] + x0];
         u += wt[i] * (a + (A[rows[i] + x1] - a) * fr[i]);
       }
       const v = clamp(A[y * w + x] + dt * growth(u, rule.mu, rule.sigma), 0, 1);
-      out[y * w + x] = opts.quantise ? quantise16(v) : v;
+      out[y * w + x] = opts.quantise === true ? quantise16(v) : v;
     }
   }
 }
@@ -291,7 +309,9 @@ export function leniaStep(
 /** Total of A. */
 export function mass(A: Float32Array): number {
   let m = 0;
-  for (let i = 0; i < A.length; i++) m += A[i];
+  for (const a of A) {
+    m += a;
+  }
   return m;
 }
 
@@ -309,7 +329,9 @@ export function centreOfMass(A: Float32Array, w: number, h: number, out: Float64
     const ay = (2 * Math.PI * y) / h;
     for (let x = 0; x < w; x++) {
       const v = A[y * w + x];
-      if (v === 0) continue;
+      if (v === 0) {
+        continue;
+      }
       const ax = (2 * Math.PI * x) / w;
       sx += v * Math.sin(ax);
       cx += v * Math.cos(ax);
@@ -376,7 +398,9 @@ export function fillPatch(patchSeed: number, orient: number, out: Float32Array):
   const r2 = PATCH_RADIUS * PATCH_RADIUS;
   for (let dy = -c; dy <= c; dy++) {
     for (let dx = -c; dx <= c; dx++) {
-      if (dx * dx + dy * dy >= r2) continue;
+      if (dx * dx + dy * dy >= r2) {
+        continue;
+      }
       const v = rng();
       let x = orient & 4 ? -dx : dx;
       let y = dy;
@@ -404,7 +428,9 @@ export function spawnPatch(pick: number, ruleId: RuleId, soup: boolean, out: Flo
   const seeds = PATCH_SEEDS[ruleId];
   const n = Math.floor(clamp(pick, 0, 0.999999) * 8 * 1e6);
   const orient = n & 7;
-  if (soup || seeds.length === 0) return fillPatch(1000 + (n >>> 3), orient, out);
+  if (soup || seeds.length === 0) {
+    return fillPatch(1000 + (n >>> 3), orient, out);
+  }
   return fillPatch(seeds[(n >>> 3) % seeds.length], orient, out);
 }
 
@@ -460,14 +486,18 @@ export function seedField(
         }
       }
     }
-    if (!found) continue;
+    if (!found) {
+      continue;
+    }
     placed.push(cell[0], cell[1]);
     spawnPatch(rng(), ruleId, asSoup, patch);
     for (let py = 0; py < PATCH_SIZE; py++) {
       const y = (((cell[1] + py - c) % h) + h) % h;
       for (let px = 0; px < PATCH_SIZE; px++) {
         const v = patch[py * PATCH_SIZE + px];
-        if (v > 0) out[y * w + ((((cell[0] + px - c) % w) + w) % w)] = v;
+        if (v > 0) {
+          out[y * w + ((((cell[0] + px - c) % w) + w) % w)] = v;
+        }
       }
     }
   }
@@ -488,7 +518,9 @@ export function pickSpawnSpot(
   rng: () => number,
   out: Int32Array,
 ): boolean {
-  if (w < PATCH_SIZE || h < PATCH_SIZE) return false;
+  if (w < PATCH_SIZE || h < PATCH_SIZE) {
+    return false;
+  }
   const [tx, ty] = statsTile(w, h);
   const cell = SPOT_SCRATCH;
   for (let tries = 0; tries < 24; tries++) {
@@ -590,7 +622,9 @@ export function readStats(bytes: Uint8Array, out: FieldStats): FieldStats {
   let tiles = 0;
   let max = 0;
   for (let i = 0; i < bytes.length; i += 4) {
-    if (bytes[i + 2] === 0) continue;
+    if (bytes[i + 2] === 0) {
+      continue;
+    }
     sum += bytes[i];
     tiles++;
     max = Math.max(max, bytes[i + 1]);
@@ -632,12 +666,16 @@ export function advanceLife(life: Life, dt: number, cycle: number): boolean {
   life.age += t;
   if (life.phase === "in") {
     life.fade = Math.min(1, life.fade + t / FADE_SECONDS);
-    if (life.fade >= 1) life.phase = "live";
+    if (life.fade >= 1) {
+      life.phase = "live";
+    }
   } else if (life.phase === "out") {
     life.fade = Math.max(0, life.fade - t / FADE_SECONDS);
     return life.fade <= 0;
   }
-  if (cycle > 0 && life.age >= cycle) life.phase = "out";
+  if (cycle > 0 && life.age >= cycle) {
+    life.phase = "out";
+  }
   return false;
 }
 
@@ -654,7 +692,9 @@ export function judgeStats(
   ruleId: RuleId,
   cells: number,
 ): number {
-  if (life.phase === "out" || life.quiet < SETTLE_STEPS) return 0;
+  if (life.phase === "out" || life.quiet < SETTLE_STEPS) {
+    return 0;
+  }
   if (s.max < DEAD_MAX || s.mean > FULL_MEAN) {
     life.phase = "out";
     return 0;
@@ -709,17 +749,21 @@ export const LUT_SIZE = 256;
  * between its stops. Unknown ids fall back to bioluminescent.
  */
 export function buildPaletteLut(id: string, out: Uint8Array): Uint8Array {
-  const stops = Object.hasOwn(PALETTES, id) ? PALETTES[id as PaletteId] : PALETTES.bioluminescent;
+  const stops = lookup(PALETTES, id, "bioluminescent");
   for (let i = 0; i < LUT_SIZE; i++) {
     const t = i / (LUT_SIZE - 1);
     let s = 0;
-    while (s < stops.length - 2 && t > stops[s + 1][0]) s++;
+    while (s < stops.length - 2 && t > stops[s + 1][0]) {
+      s++;
+    }
     const [t0, c0] = stops[s];
     const [t1, c1] = stops[s + 1];
     const f = smoothstep(t0, t1, t);
     const a = hexToRgb(c0);
     const b = hexToRgb(c1);
-    for (let c = 0; c < 3; c++) out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
+    for (let c = 0; c < 3; c++) {
+      out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
+    }
     out[i * 4 + 3] = 255;
   }
   return out;

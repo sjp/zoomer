@@ -92,7 +92,7 @@ export function effectiveArrival(arrival: number, metric: number, limit: number)
 
 /** The seed for one growth cycle: a new pattern each cycle, the same for the same inputs. */
 export function cycleSeed(seed: number, cycle: number): number {
-  return hash32(Math.imul(Math.floor(seed) | 0, 0x9e3779b1) ^ hash32(cycle + 0x51ed));
+  return hash32(Math.imul(Math.floor(seed), 0x9e3779b1) ^ hash32(cycle + 0x51ed));
 }
 
 // --- Growth -----------------------------------------------------------------
@@ -178,7 +178,9 @@ class TipHeap {
     let i = this.items.length - 1;
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (!this.less(i, p)) break;
+      if (!this.less(i, p)) {
+        break;
+      }
       this.swap(i, p);
       i = p;
     }
@@ -194,9 +196,15 @@ class TipHeap {
       const l = 2 * i + 1;
       const r = l + 1;
       let m = i;
-      if (l < n && this.less(l, m)) m = l;
-      if (r < n && this.less(r, m)) m = r;
-      if (m === i) break;
+      if (l < n && this.less(l, m)) {
+        m = l;
+      }
+      if (r < n && this.less(r, m)) {
+        m = r;
+      }
+      if (m === i) {
+        break;
+      }
       this.swap(i, m);
       i = m;
     }
@@ -225,7 +233,9 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
     a: number,
     length: number,
   ) => {
-    if (branches.length >= MAX_BRANCHES || length < 1.5) return;
+    if (branches.length >= MAX_BRANCHES || length < 1.5) {
+      return;
+    }
     const id = branches.length;
     branches.push({ parent, depth, parentArrival: a, points: [x, y, a] });
     heap.push({
@@ -291,8 +301,12 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
     tip.heading += tip.curl * step + (rng() * 2 - 1) * WOBBLE;
     const nx = tip.x + Math.cos(tip.heading) * step;
     const ny = tip.y + Math.sin(tip.heading) * step;
-    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-    if (edgeMetric(nx / width, ny / height) < limit) continue;
+    if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
+      continue;
+    }
+    if (edgeMetric(nx / width, ny / height) < limit) {
+      continue;
+    }
     tip.steps++;
     if (
       tip.steps > GRACE &&
@@ -333,18 +347,24 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
         tip.left * 0.75,
       );
     }
-    if (tip.left > 0) heap.push(tip);
+    if (tip.left > 0) {
+      heap.push(tip);
+    }
   }
 
   // Normalise arrivals so the latest point arrives at ARRIVAL_FILL.
   let maxA = 0;
   for (const b of branches) {
-    for (let i = 2; i < b.points.length; i += 3) maxA = Math.max(maxA, b.points[i]);
+    for (let i = 2; i < b.points.length; i += 3) {
+      maxA = Math.max(maxA, b.points[i]);
+    }
   }
   const k = maxA > 0 ? ARRIVAL_FILL / maxA : 1;
   for (const b of branches) {
     b.parentArrival *= k;
-    for (let i = 2; i < b.points.length; i += 3) b.points[i] *= k;
+    for (let i = 2; i < b.points.length; i += 3) {
+      b.points[i] *= k;
+    }
   }
   return { width, height, branches };
 }
@@ -373,9 +393,13 @@ function blocked(
     const dy = j + 0.5 - y;
     for (let i = x0; i <= x1; i++) {
       const o = owner[j * width + i];
-      if (o < 0 || o === self || o === parent || branches[o].parent === self) continue;
+      if (o < 0 || o === self || o === parent || branches[o].parent === self) {
+        continue;
+      }
       const dx = i + 0.5 - x;
-      if (dx * dx + dy * dy <= r2) return true;
+      if (dx * dx + dy * dy <= r2) {
+        return true;
+      }
     }
   }
   return false;
@@ -429,12 +453,14 @@ export function stampSegment(
       const t = clamp((px * dx + py * dy) * inv, 0, 1);
       const ex = px - dx * t;
       const ey = py - dy * t;
-      const d = Math.sqrt(ex * ex + ey * ey);
+      const d = Math.hypot(ex, ey);
       const w = w0 + (w1 - w0) * t;
       const a = a0 + (a1 - a0) * t;
       const v = d <= w ? a + (THICKEN * d) / w : a + THICKEN + (d - w) * FALLOFF;
       const k = j * width + i;
-      if (v < arrival[k]) arrival[k] = v;
+      if (v < arrival[k]) {
+        arrival[k] = v;
+      }
     }
   }
 }
@@ -462,7 +488,9 @@ export function buildFrostField(seed: number, width: number, height: number): Fr
   for (const b of skeleton.branches) {
     const p = b.points;
     let len = 0;
-    for (let i = 3; i < p.length; i += 3) len += Math.hypot(p[i] - p[i - 3], p[i + 1] - p[i - 2]);
+    for (let i = 3; i < p.length; i += 3) {
+      len += Math.hypot(p[i] - p[i - 3], p[i + 1] - p[i - 2]);
+    }
     let s = 0;
     let w0 = branchHalfWidth(b.depth, 0, len);
     for (let i = 3; i < p.length; i += 3) {
@@ -511,9 +539,13 @@ export function buildFrostField(seed: number, width: number, height: number): Fr
           (SHEET_SPAN * Math.min(e, depth)) / depth +
           Math.max(0, e - depth) * H * FALLOFF +
           0.05 * fine;
-        if (sheet < a) a = sheet;
+        if (sheet < a) {
+          a = sheet;
+        }
       }
-      if (m < REACH_MIN - CLIP_MARGIN) a = NEVER;
+      if (m < REACH_MIN - CLIP_MARGIN) {
+        a = NEVER;
+      }
       data[k * 2] = Math.max(0, Math.min(NEVER, a));
       data[k * 2 + 1] = m;
     }
@@ -560,7 +592,9 @@ export function sceneLayout(scene: string, seed: number): SceneLayout {
   let lightCount = 0;
   let treeCount = 0;
   const light = (x: number, y: number, r: number, intensity: number, color: string) => {
-    if (lightCount >= MAX_LIGHTS) return;
+    if (lightCount >= MAX_LIGHTS) {
+      return;
+    }
     lights.set([x, y, r, intensity], lightCount * 4);
     unitHex(color, lightColors, lightCount * 3);
     lightCount++;
@@ -590,7 +624,9 @@ export function sceneLayout(scene: string, seed: number): SceneLayout {
       list.push([x, 0.08 + 0.1 * far, (0.42 - 0.22 * far) * (0.8 + 0.4 * rng()), far]);
     }
     list.sort((a, b) => b[3] - a[3]);
-    for (const t of list) trees.set(t, treeCount++ * 4);
+    for (const t of list) {
+      trees.set(t, treeCount++ * 4);
+    }
     for (let i = 0; i < 3; i++) {
       light((i + 0.2 + 0.6 * rng()) / 3, 0.1 + 0.06 * rng(), 0.02 + 0.015 * rng(), 0.3, WARM[i]);
     }

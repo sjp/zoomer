@@ -45,7 +45,9 @@ vi.mock("mediabunny", () => {
   }
   class VideoSampleSource {
     add(sample: VideoSample) {
-      if (seen.addError) return Promise.reject(seen.addError);
+      if (seen.addError) {
+        return Promise.reject(seen.addError);
+      }
       seen.added.push(sample.frame);
       return Promise.resolve();
     }
@@ -81,7 +83,9 @@ function frameSource() {
       return () => listeners.delete(l);
     },
     draw: (now: number) => {
-      for (const l of listeners) l(now);
+      for (const l of listeners) {
+        l(now);
+      }
     },
     get count() {
       return listeners.size;
@@ -93,7 +97,10 @@ const canvas = (width = 640, height = 360) => ({ width, height }) as HTMLCanvasE
 const opts = { seconds: 1, fps: 30, bitrate: 2_000_000 };
 
 /** Lets queued encoder promises run. */
-const flush = () => new Promise<void>((r) => setTimeout(r, 0));
+const flush = () =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 
 beforeEach(() => {
   Object.assign(seen, {
@@ -152,7 +159,9 @@ describe("recordMp4", () => {
     const result = recordMp4(canvas(), opts, frames.subscribe);
     await flush();
     // No yielding between draws, so the encoder never catches up.
-    for (let i = 0; i < 20; i++) frames.draw(i * 50);
+    for (let i = 0; i < 20; i++) {
+      frames.draw(i * 50);
+    }
     await flush();
     frames.draw(5000);
     await result;

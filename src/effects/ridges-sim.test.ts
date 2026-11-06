@@ -32,7 +32,9 @@ const buildTable = (count: number, seed: number, peaks: number) => {
 
 describe("palettes", () => {
   it("has an option for every palette and falls back to ink wash", () => {
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(paletteFor("jade")).toBe(PALETTES.jade);
     expect(paletteFor("nope")).toBe(PALETTES.ink);
     expect(paletteFor("toString")).toBe(PALETTES.ink);
@@ -83,7 +85,9 @@ describe("fillRidgeTable", () => {
         expect(lo).toBeCloseTo(base, 5);
         expect(hi).toBeCloseTo(base + amp, 5);
       }
-      for (let c = 0; c < (MAX_LAYERS - n) * COLUMNS; c++) expect(t[n * COLUMNS + c]).toBe(0);
+      for (let c = 0; c < (MAX_LAYERS - n) * COLUMNS; c++) {
+        expect(t[n * COLUMNS + c]).toBe(0);
+      }
     }
   });
 
@@ -172,14 +176,18 @@ describe("fillLayout", () => {
       let fading = 0;
       for (let i = 0; i < n; i++) {
         const t = (y - bands[i * LAYER_FLOATS]) * bands[i * LAYER_FLOATS + 1];
-        if (t > 0 && t < 1) fading++;
+        if (t > 0 && t < 1) {
+          fading++;
+        }
       }
       expect(fading).toBeLessThanOrEqual(2);
     }
   });
 
   it("gives every band a positive speed", () => {
-    for (let i = 0; i < MAX_LAYERS; i++) expect(bandSpeed(i, MAX_LAYERS)).toBeGreaterThan(0);
+    for (let i = 0; i < MAX_LAYERS; i++) {
+      expect(bandSpeed(i, MAX_LAYERS)).toBeGreaterThan(0);
+    }
   });
 });
 

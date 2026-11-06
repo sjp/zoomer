@@ -137,7 +137,9 @@ export function buildGrid(
     cellStart[c + 1] += cellStart[c];
     cursor[c] = cellStart[c];
   }
-  for (let i = 0; i < n; i++) order[cursor[cellOf[i]]++] = i;
+  for (let i = 0; i < n; i++) {
+    order[cursor[cellOf[i]]++] = i;
+  }
 }
 
 /**
@@ -180,7 +182,9 @@ export function findLinks(
 ): number {
   const { cols, rows, cellStart, order } = grid;
   const reach = filter ? Math.min(1, filter.reach) * maxDist : maxDist;
-  if (!(reach > 0)) return 0;
+  if (!(reach > 0)) {
+    return 0;
+  }
   const max2 = reach * reach;
   const inv = 1 / maxDist;
   const minX = filter ? filter.minX : -Infinity;
@@ -194,10 +198,14 @@ export function findLinks(
       const c = cy * cols + cx;
       const start = cellStart[c];
       const end = cellStart[c + 1];
-      if (start === end) continue;
+      if (start === end) {
+        continue;
+      }
       for (let s = start; s < end; s++) {
         const i = order[s];
-        if (weight && !(weight[i] > 0)) continue;
+        if (weight && !(weight[i] > 0)) {
+          continue;
+        }
         const x = xs[i];
         const y = ys[i];
         // Which edges of the view this point is beyond.
@@ -215,7 +223,9 @@ export function findLinks(
           } else {
             const nx = k === 1 ? cx + 1 : cx + k - 3;
             const ny = k === 1 ? cy : cy + 1;
-            if (nx < 0 || nx >= cols || ny >= rows) continue;
+            if (nx < 0 || nx >= cols || ny >= rows) {
+              continue;
+            }
             const nc = ny * cols + nx;
             from = cellStart[nc];
             to = cellStart[nc + 1];
@@ -227,7 +237,9 @@ export function findLinks(
             const dx = xj - x;
             const dy = yj - y;
             const d2 = dx * dx + dy * dy;
-            if (d2 >= max2) continue;
+            if (d2 >= max2) {
+              continue;
+            }
             if (
               (left && xj < minX) ||
               (right && xj > maxX) ||
@@ -236,8 +248,12 @@ export function findLinks(
             ) {
               continue;
             }
-            if (weight && !(weight[j] > 0)) continue;
-            if (count >= cap) return count;
+            if (weight && !(weight[j] > 0)) {
+              continue;
+            }
+            if (count >= cap) {
+              return count;
+            }
             outA[count] = i;
             outB[count] = j;
             outT[count] = Math.sqrt(d2) * inv;
@@ -364,7 +380,9 @@ export const constellation = defineEffect(constellationMeta, {
         resize(v) {
           const newRefWidth = v.width / v.scale;
           const k = newRefWidth / refWidth;
-          for (let i = 0; i < MAX_POINTS; i++) xs[i] *= k;
+          for (let i = 0; i < MAX_POINTS; i++) {
+            xs[i] *= k;
+          }
           ({ width, height, scale } = v);
           refWidth = newRefWidth;
         },
@@ -393,7 +411,9 @@ export const constellation = defineEffect(constellationMeta, {
             const dx = Math.cos(heading[i]) * step;
             const dy = Math.sin(heading[i]) * step;
             // A wrap moves the point, possibly on-screen: fade it in at its new place.
-            if (driftPoint(xs, ys, i, dx, dy, minX, minY, spanX, spanY)) life[i] = 0;
+            if (driftPoint(xs, ys, i, dx, dy, minX, minY, spanX, spanY)) {
+              life[i] = 0;
+            }
             stepLife(life, i, target, fadeStep, outStep);
           }
           live = trimLive(life, live, target);
@@ -425,7 +445,9 @@ export const constellation = defineEffect(constellationMeta, {
               linkFalloff(linkT[l]) *
               (0.3 + 0.35 * (near[a] + near[b])) *
               (la < lb ? la : lb);
-            if (alpha < MIN_LINK_ALPHA) continue;
+            if (alpha < MIN_LINK_ALPHA) {
+              continue;
+            }
             const o = drawn * STREAK_FLOATS;
             sd[o] = xs[a] * scale;
             sd[o + 1] = ys[a] * scale;
@@ -444,12 +466,16 @@ export const constellation = defineEffect(constellationMeta, {
           const baseRadius = p.pointSize * scale;
           let dots = 0;
           for (let i = 0; i < n; i++) {
-            if (life[i] <= 0) continue;
+            if (life[i] <= 0) {
+              continue;
+            }
             const k = near[i];
             const r = baseRadius * sizeVar[i] * (0.45 + 0.55 * k);
             const x = xs[i] * scale;
             const y = ys[i] * scale;
-            if (x < -r - 1 || y < -r - 1 || x > width + r + 1 || y > height + r + 1) continue;
+            if (x < -r - 1 || y < -r - 1 || x > width + r + 1 || y > height + r + 1) {
+              continue;
+            }
             const o = dots * ps;
             pd[o] = x;
             pd[o + 1] = y;

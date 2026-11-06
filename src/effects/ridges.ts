@@ -362,7 +362,9 @@ export const ridges = defineEffect(ridgesMeta, {
       /** Set by `track` when a scene uniform uploads, meaning the cached scene is stale. */
       let changed = false;
       const track = (uploaded: boolean) => {
-        if (uploaded) changed = true;
+        if (uploaded) {
+          changed = true;
+        }
       };
 
       return {
@@ -462,7 +464,9 @@ export const ridges = defineEffect(ridgesMeta, {
           }
           stepFlock(flock, dt, aspect, rand);
           const count = writeBirds(flock, birds.data, height, scale);
-          if (count === 0) return;
+          if (count === 0) {
+            return;
+          }
           birds.upload(count);
           gl.useProgram(birdProgram);
           bu.f2("uInvRes", 1 / width, 1 / height);

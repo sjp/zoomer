@@ -184,7 +184,9 @@ describe("blindsLight", () => {
 
 describe("cloud dimming", () => {
   it("is exactly 1 with no clouds", () => {
-    for (const n of [-1, 0, 0.5, 1]) expect(sunLevel(n, 0)).toBe(1);
+    for (const n of [-1, 0, 0.5, 1]) {
+      expect(sunLevel(n, 0)).toBe(1);
+    }
     expect(sunLevelAt(createNoise(1), 123.4, 0)).toBe(1);
   });
 
@@ -229,7 +231,9 @@ describe("cloud dimming", () => {
     sunColor(out, light, 1, 0.5);
     expect(out).toEqual([0.5, 0.425, 0.315]);
     sunColor(out, light, 1 - MAX_DIP, 1);
-    for (let i = 0; i < 3; i++) expect(out[i]).toBeCloseTo(light[i] * DIM_TINT[i] * 0.5, 10);
+    for (let i = 0; i < 3; i++) {
+      expect(out[i]).toBeCloseTo(light[i] * DIM_TINT[i] * 0.5, 10);
+    }
     expect(out[2] / out[0]).toBeGreaterThan(light[2] / light[0]);
   });
 });

@@ -26,7 +26,7 @@ describe("hexToRgb", () => {
     const hex = (n: number) => n.toString(16).padStart(2, "0");
     for (let v = 0; v < 256; v++) {
       const rgb: [number, number, number] = [v, 255 - v, (v * 7) & 255];
-      expect(hexToRgb(`#${rgb.map(hex).join("")}`)).toEqual(rgb);
+      expect(hexToRgb(`#${rgb.map((c) => hex(c)).join("")}`)).toEqual(rgb);
     }
   });
 

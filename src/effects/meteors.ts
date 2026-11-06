@@ -294,7 +294,9 @@ export const meteors = defineEffect(meteorsMeta, {
       /** Draws the sky, stars and ground into the background target. */
       const bake = (seed: number, groundId: string, milky: boolean) => {
         const target = background;
-        if (!target) return;
+        if (!target) {
+          return;
+        }
         const refWidth = width / scale;
         skyPole(refWidth, pole);
         fillHillTable(hills.data, seed, refWidth);
@@ -351,7 +353,9 @@ export const meteors = defineEffect(meteorsMeta, {
             background?.dispose();
             background = null;
             background = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
-            if (!background) throw new Error("Meteor Shower: RGBA8 render target unavailable");
+            if (!background) {
+              throw new Error("Meteor Shower: RGBA8 render target unavailable");
+            }
             bgInputs.invalidate();
           }
         },
@@ -364,7 +368,9 @@ export const meteors = defineEffect(meteorsMeta, {
           bgInputs.set(2, height);
           bgInputs.set(3, GROUND_INDEX[p.ground] ?? 0);
           bgInputs.set(4, p.milkyWay ? 1 : 0);
-          if (bgInputs.take()) bake(seed, p.ground, p.milkyWay);
+          if (bgInputs.take()) {
+            bake(seed, p.ground, p.milkyWay);
+          }
           if (seed !== showerSeed) {
             shower = createShower(seed);
             showerSeed = seed;

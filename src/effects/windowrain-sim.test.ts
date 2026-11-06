@@ -82,8 +82,10 @@ describe("grid", () => {
     buildGrid(sim);
     const listed = (c: number) => {
       const out: number[] = [];
-      for (let i = sim.head[c]; i !== -1; i = sim.next[i]) out.push(i);
-      return out.sort((a, b) => a - b);
+      for (let i = sim.head[c]; i !== -1; i = sim.next[i]) {
+        out.push(i);
+      }
+      return out.toSorted((a, b) => a - b);
     };
     expect(listed(cellOf(sim, 10, 10))).toEqual([0, 1]);
     expect(listed(cellOf(sim, 500, 300))).toEqual([2]);
@@ -194,12 +196,17 @@ describe("wipeCapsule", () => {
       const sy = y1 - y0;
       for (let i = 0; i < sim.dKind.length; i++) {
         const kind = sim.dKind[i];
-        if (kind === DEAD || (kind === TRAIL && sim.dAge[i] < TRAIL_GRACE)) continue;
+        if (kind === DEAD || (kind === TRAIL && sim.dAge[i] < TRAIL_GRACE)) {
+          continue;
+        }
         const px = sim.dx[i] - x0;
         const py = sim.dy[i] - y0;
         const t = Math.min(1, Math.max(0, (px * sx + py * sy) / (sx * sx + sy * sy)));
-        if (Math.hypot(px - t * sx, py - t * sy) < radius + sim.dr[i] * 0.5) expected.push(i);
-        else missedTotal++;
+        if (Math.hypot(px - t * sx, py - t * sy) < radius + sim.dr[i] * 0.5) {
+          expected.push(i);
+        } else {
+          missedTotal++;
+        }
       }
       const before = { x: sim.dx.slice(), y: sim.dy.slice(), kind: sim.dKind.slice() };
       buildGrid(sim);
@@ -207,7 +214,9 @@ describe("wipeCapsule", () => {
       const wiped: number[] = [];
       for (let i = 0; i < sim.dKind.length; i++) {
         const moved = sim.dx[i] !== before.x[i] || sim.dy[i] !== before.y[i];
-        if (moved || sim.dKind[i] !== before.kind[i]) wiped.push(i);
+        if (moved || sim.dKind[i] !== before.kind[i]) {
+          wiped.push(i);
+        }
       }
       expect(wiped).toEqual(expected);
       expect(sim.wiped).toBe(expected.length);
@@ -222,7 +231,9 @@ describe("wipeCapsule", () => {
 describe("trail ring", () => {
   it("emits up to capacity, then skips while the oldest is alive", () => {
     const sim = empty();
-    for (let i = 0; i < SMALL.maxTrails; i++) expect(emitTrail(sim, i, 0, 1)).toBe(true);
+    for (let i = 0; i < SMALL.maxTrails; i++) {
+      expect(emitTrail(sim, i, 0, 1)).toBe(true);
+    }
     expect(sim.trailCursor).toBe(0);
     expect(emitTrail(sim, 0, 0, 1)).toBe(false);
     expect(sim.trailsSkipped).toBe(1);
@@ -244,7 +255,9 @@ describe("trail ring", () => {
     emitTrail(sim, 100, 100, 1);
     stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
     expect(sim.dKind[SMALL.maxStatic]).toBe(TRAIL);
-    for (let t = 0; t < 60; t++) stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
+    for (let t = 0; t < 60; t++) {
+      stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
+    }
     expect(sim.dKind[SMALL.maxStatic]).toBe(DEAD);
   });
 });
@@ -259,7 +272,9 @@ describe("spawning", () => {
     stepRainSim(sim, 1 / 60, { rain: 1, speed: 1 });
     expect(sim.staticCount).toBe(200);
     expect(sim.runnerCount).toBe(8);
-    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 1 });
+    for (let t = 0; t < 10; t++) {
+      stepRainSim(sim, 0.1, { rain: 1, speed: 1 });
+    }
     expect(sim.staticFade[199]).toBe(1);
     // Less rain fades the extra slots out before they die.
     stepRainSim(sim, 0.1, { rain: 0.25, speed: 1 });
@@ -267,7 +282,9 @@ describe("spawning", () => {
     expect(sim.staticFade[49]).toBe(1);
     expect(sim.staticFade[50]).toBeCloseTo(1 - 0.1 / FADE_OUT, 5);
     expect(sim.runnerFade[2]).toBeCloseTo(1 - 0.1 / FADE_OUT, 5);
-    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: 0.25, speed: 1 });
+    for (let t = 0; t < 10; t++) {
+      stepRainSim(sim, 0.1, { rain: 0.25, speed: 1 });
+    }
     expect(sim.staticCount).toBe(50);
     expect(sim.runnerCount).toBe(2);
     expect(countKind(sim, STATIC)).toBe(50);
@@ -301,7 +318,9 @@ describe("spawning", () => {
     stepRainSim(sim, 1 / 60, { rain: 5, speed: 1 });
     expect(sim.staticCount).toBe(SMALL.maxStatic);
     expect(sim.runnerCount).toBe(SMALL.maxRunners);
-    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: -1, speed: 1 });
+    for (let t = 0; t < 10; t++) {
+      stepRainSim(sim, 0.1, { rain: -1, speed: 1 });
+    }
     expect(sim.staticCount).toBe(0);
     expect(sim.runnerCount).toBe(0);
     expect(countKind(sim, STATIC)).toBe(0);
@@ -318,7 +337,9 @@ describe("spawning", () => {
 
   it("keeps the mid-life first fill for when rain first rises from 0", () => {
     const sim = make();
-    for (let t = 0; t < 5; t++) stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
+    for (let t = 0; t < 5; t++) {
+      stepRainSim(sim, 0.1, { rain: 0, speed: 1 });
+    }
     expect(sim.primed).toBe(false);
     stepRainSim(sim, 0, { rain: 0.5, speed: 1 });
     const ages = Array.from(sim.dAge.subarray(0, 100));
@@ -342,19 +363,28 @@ describe("spawning", () => {
       // Trails are left just above a runner, which may hang off the bottom edge
       // by up to two radii before it respawns.
       for (let i = SMALL.maxStatic; i < sim.dKind.length; i++) {
-        if (sim.dKind[i] !== TRAIL) continue;
+        if (sim.dKind[i] !== TRAIL) {
+          continue;
+        }
         trails++;
         const { dx, dy } = sim;
-        if (dx[i] < -MAX_RUNNER_R || dx[i] > 1920 + MAX_RUNNER_R)
+        if (dx[i] < -MAX_RUNNER_R || dx[i] > 1920 + MAX_RUNNER_R) {
           out.push(`trail x ${String(dx[i])}`);
-        if (dy[i] < -MAX_RUNNER_R || dy[i] > 1080 + 3 * MAX_RUNNER_R)
+        }
+        if (dy[i] < -MAX_RUNNER_R || dy[i] > 1080 + 3 * MAX_RUNNER_R) {
           out.push(`trail y ${String(dy[i])}`);
+        }
       }
       for (let i = 0; i < sim.runnerCount; i++) {
-        if (sim.rState[i] === RUNNING) running++;
-        if (sim.rx[i] < 0 || sim.rx[i] > 1920) out.push(`runner x ${String(sim.rx[i])}`);
-        if (sim.ry[i] < 0 || sim.ry[i] > 1080 + 3 * MAX_RUNNER_R)
+        if (sim.rState[i] === RUNNING) {
+          running++;
+        }
+        if (sim.rx[i] < 0 || sim.rx[i] > 1920) {
+          out.push(`runner x ${String(sim.rx[i])}`);
+        }
+        if (sim.ry[i] < 0 || sim.ry[i] > 1080 + 3 * MAX_RUNNER_R) {
           out.push(`runner y ${String(sim.ry[i])}`);
+        }
       }
     }
     expect(out).toEqual([]);
@@ -414,7 +444,9 @@ describe("runners", () => {
   it("does not break loose at zero speed", () => {
     const { sim } = oneRunner(500, 100, 9, RESTING);
     sim.rBreak[0] = 9;
-    for (let t = 0; t < 50; t++) stepRainSim(sim, 0.1, { rain: 0.125, speed: 0 });
+    for (let t = 0; t < 50; t++) {
+      stepRainSim(sim, 0.1, { rain: 0.125, speed: 0 });
+    }
     expect(sim.rState[0]).toBe(RESTING);
     expect(sim.ry[0]).toBe(100);
   });
@@ -446,7 +478,9 @@ describe("runners", () => {
       sim.rr[0] = 40; // Keep it running: trail losses would otherwise stop it.
       // Lift it back up before it leaves the bottom (and respawns elsewhere), so
       // it falls several wavelengths.
-      if (sim.ry[0] > 800) sim.ry[0] -= 700;
+      if (sim.ry[0] > 800) {
+        sim.ry[0] -= 700;
+      }
       stepRainSim(sim, 0.02, { rain: 0.125, speed: 1 });
       expect(sim.rState[0]).toBe(RUNNING);
       fallen += sim.rStepY[0];
@@ -454,7 +488,9 @@ describe("runners", () => {
       if (step !== 0 && lastStep !== 0 && Math.sign(step) !== Math.sign(lastStep)) {
         reversals.push(fallen);
       }
-      if (step !== 0) lastStep = step;
+      if (step !== 0) {
+        lastStep = step;
+      }
       xMin = Math.min(xMin, sim.rx[0]);
       xMax = Math.max(xMax, sim.rx[0]);
     }
@@ -472,10 +508,16 @@ describe("runners", () => {
     sim.rx[0] = 500;
     sim.rPhase[0] = 0;
     // Droplets straight below; capacity 25 at rain 0.125, so place in active slots.
-    for (let i = 0; i < 10; i++) place(sim, i, 500, 130 + i * 6);
+    for (let i = 0; i < 10; i++) {
+      place(sim, i, 500, 130 + i * 6);
+    }
     sim.staticCount = 25;
-    for (let i = 10; i < 25; i++) place(sim, i, 1500, 900);
-    for (let t = 0; t < 40; t++) stepRainSim(sim, 0.05, { rain: 0.125, speed: 2 });
+    for (let i = 10; i < 25; i++) {
+      place(sim, i, 1500, 900);
+    }
+    for (let t = 0; t < 40; t++) {
+      stepRainSim(sim, 0.05, { rain: 0.125, speed: 2 });
+    }
     expect(sim.ry[0]).toBeGreaterThan(200);
     expect(sim.wiped).toBeGreaterThanOrEqual(10);
     // Far droplets untouched (still mid-life, as placed).
@@ -535,25 +577,33 @@ describe("runners", () => {
   it("respawns runners that leave the bottom", () => {
     const { sim } = oneRunner(500, 1075, 20, RUNNING);
     sim.rv[0] = 200;
-    for (let t = 0; t < 10; t++) stepRainSim(sim, 0.1, { rain: 0.125, speed: 3 });
+    for (let t = 0; t < 10; t++) {
+      stepRainSim(sim, 0.1, { rain: 0.125, speed: 3 });
+    }
     // Either respawned resting, or (if it broke loose again) well above the bottom edge.
     expect(sim.ry[0]).toBeLessThan(1080);
   });
 
   it("brings a running drop to a halt, and keeps it there, at speed 0", () => {
     const { sim, params } = oneRunner(500, 100, 14, RUNNING);
-    for (let t = 0; t < 30; t++) stepRainSim(sim, 1 / 60, params);
+    for (let t = 0; t < 30; t++) {
+      stepRainSim(sim, 1 / 60, params);
+    }
     const v = sim.rv[0];
     expect(v).toBeGreaterThan(10);
     params.speed = 0;
     const y0 = sim.ry[0];
-    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 60, params);
+    for (let t = 0; t < 60; t++) {
+      stepRainSim(sim, 1 / 60, params);
+    }
     // The fall eases out at a rate of 4/s, so it coasts at most v / 4 further...
     expect(sim.ry[0] - y0).toBeLessThanOrEqual(v / 4 + 1e-3);
     // ...and after that second has all but stopped, never to start again.
     const y1 = sim.ry[0];
     const x1 = sim.rx[0];
-    for (let t = 0; t < 600; t++) stepRainSim(sim, 1 / 60, params);
+    for (let t = 0; t < 600; t++) {
+      stepRainSim(sim, 1 / 60, params);
+    }
     expect(sim.ry[0] - y1).toBeLessThan(0.5);
     expect(Math.abs(sim.rx[0] - x1)).toBeLessThan(0.5);
     expect(sim.rv[0]).toBeLessThan(0.01);
@@ -563,7 +613,9 @@ describe("runners", () => {
     const { sim, params } = oneRunner(500, 100, 20, RESTING);
     sim.rBreak[0] = 12;
     params.speed = 0;
-    for (let t = 0; t < 100; t++) stepRainSim(sim, 0.1, params);
+    for (let t = 0; t < 100; t++) {
+      stepRainSim(sim, 0.1, params);
+    }
     expect(sim.rState[0]).toBe(RESTING);
     expect(sim.ry[0]).toBe(100);
   });
@@ -581,7 +633,9 @@ describe("runners", () => {
 describe("lowering the rain", () => {
   it("fades the runners it no longer wants out, then stops stepping and drawing them", () => {
     const sim = make();
-    for (let t = 0; t < 600; t++) stepRainSim(sim, 1 / 30, { rain: 1, speed: 1.5 });
+    for (let t = 0; t < 600; t++) {
+      stepRainSim(sim, 1 / 30, { rain: 1, speed: 1.5 });
+    }
     expect(sim.runnerCount).toBe(SMALL.maxRunners);
     const kept = Math.round(0.25 * SMALL.maxRunners);
     stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
@@ -595,7 +649,9 @@ describe("lowering the rain", () => {
     expect(sim.runnerCount).toBe(kept);
     // Frozen where they were: no longer stepped.
     const ry = sim.ry.slice(kept);
-    for (let t = 0; t < 30; t++) stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
+    for (let t = 0; t < 30; t++) {
+      stepRainSim(sim, 1 / 30, { rain: 0.25, speed: 1.5 });
+    }
     expect(sim.ry.slice(kept)).toEqual(ry);
     const out = new Float32Array(instanceCapacity(SMALL) * INSTANCE_STRIDE);
     writeDropInstances(sim, out, 1);
@@ -604,8 +660,12 @@ describe("lowering the rain", () => {
 
   it("fades out and drops the static droplets it no longer wants", () => {
     const sim = make();
-    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, { rain: 1, speed: 1 });
-    for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, { rain: 0.5, speed: 1 });
+    for (let t = 0; t < 60; t++) {
+      stepRainSim(sim, 1 / 30, { rain: 1, speed: 1 });
+    }
+    for (let t = 0; t < 60; t++) {
+      stepRainSim(sim, 1 / 30, { rain: 0.5, speed: 1 });
+    }
     expect(sim.staticCount).toBe(SMALL.maxStatic / 2);
     expect(countKind(sim, STATIC)).toBe(SMALL.maxStatic / 2);
   });
@@ -614,12 +674,18 @@ describe("lowering the rain", () => {
 describe("capacity", () => {
   it("never exceeds the trail ring under heavy rain", () => {
     const sim = make({ ...SMALL, maxRunners: 32, maxTrails: 50 });
-    for (let t = 0; t < 400; t++) stepRainSim(sim, 0.05, { rain: 1, speed: 3 });
+    for (let t = 0; t < 400; t++) {
+      stepRainSim(sim, 0.05, { rain: 1, speed: 3 });
+    }
     expect(countKind(sim, TRAIL)).toBeLessThanOrEqual(50);
     expect(sim.trailsSkipped).toBeGreaterThan(0);
     // Static slots never hold trails, and vice versa.
-    for (let i = 0; i < SMALL.maxStatic; i++) expect(sim.dKind[i]).not.toBe(TRAIL);
-    for (let i = SMALL.maxStatic; i < sim.dKind.length; i++) expect(sim.dKind[i]).not.toBe(STATIC);
+    for (let i = 0; i < SMALL.maxStatic; i++) {
+      expect(sim.dKind[i]).not.toBe(TRAIL);
+    }
+    for (let i = SMALL.maxStatic; i < sim.dKind.length; i++) {
+      expect(sim.dKind[i]).not.toBe(STATIC);
+    }
   });
 
   it("keeps runner radii within bounds", () => {
@@ -636,7 +702,9 @@ describe("capacity", () => {
   it("writes at most instanceCapacity instances, runners last", () => {
     const sim = make();
     const out = new Float32Array(instanceCapacity(SMALL) * INSTANCE_STRIDE);
-    for (let t = 0; t < 100; t++) stepRainSim(sim, 0.05, { rain: 1, speed: 2 });
+    for (let t = 0; t < 100; t++) {
+      stepRainSim(sim, 0.05, { rain: 1, speed: 2 });
+    }
     const n = writeDropInstances(sim, out, 2);
     expect(n).toBeLessThanOrEqual(instanceCapacity(SMALL));
     expect(sim.runnersWritten).toBe(SMALL.maxRunners);
@@ -711,7 +779,9 @@ describe("helpers", () => {
       [1, 1],
       [640, 360],
     ]) {
-      for (let t = 0; t < 60; t++) stepRainSim(sim, 1 / 30, params);
+      for (let t = 0; t < 60; t++) {
+        stepRainSim(sim, 1 / 30, params);
+      }
       resizeRainSim(sim, w, h);
       const W = Math.max(1, w);
       const H = Math.max(1, h);
@@ -734,8 +804,10 @@ describe("helpers", () => {
       // The grid still lists every live droplet once.
       buildGrid(sim);
       let listed = 0;
-      for (let c = 0; c < sim.head.length; c++) {
-        for (let i = sim.head[c]; i !== -1; i = sim.next[i]) listed++;
+      for (const first of sim.head) {
+        for (let i = first; i !== -1; i = sim.next[i]) {
+          listed++;
+        }
       }
       expect(listed).toBe(sim.dKind.length - countKind(sim, DEAD));
     }
@@ -798,7 +870,9 @@ describe("writeWipeStamps", () => {
       expect(out[o]).toBeCloseTo(1000, 3);
       expect(lastY - out[o + 1]).toBeCloseTo((60 / 9) * 2, 3);
       lastY = out[o + 1];
-      for (let c = 2; c < 5; c++) expect(out[o + c]).toBe(out[runner + c]);
+      for (let c = 2; c < 5; c++) {
+        expect(out[o + c]).toBe(out[runner + c]);
+      }
     }
     // The last stamp stops one interval short of where the runner was.
     expect(lastY).toBeCloseTo((300 - 60 + 60 / 9) * 2, 3);
@@ -830,7 +904,9 @@ describe("writeWipeStamps", () => {
     const sim = make();
     const cap = instanceCapacity(SMALL) + wipeStampCapacity(SMALL);
     const out = new Float32Array(cap * INSTANCE_STRIDE);
-    for (let t = 0; t < 40; t++) stepRainSim(sim, 0.1, { rain: 1, speed: 3 });
+    for (let t = 0; t < 40; t++) {
+      stepRainSim(sim, 0.1, { rain: 1, speed: 3 });
+    }
     const n = writeDropInstances(sim, out, 1);
     const k = writeWipeStamps(sim, out, 1, n, 0.5);
     expect(k).toBeGreaterThan(0);

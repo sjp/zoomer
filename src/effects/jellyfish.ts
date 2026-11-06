@@ -279,7 +279,9 @@ export const jellyfish = defineEffect(jellyfishMeta, {
           const newRefWidth = v.width / v.scale;
           const k = newRefWidth / refWidth;
           swarm.rescaleX(k);
-          for (let i = 0; i < MAX_SNOW; i++) snowX[i] *= k;
+          for (let i = 0; i < MAX_SNOW; i++) {
+            snowX[i] *= k;
+          }
           ({ width, height, scale } = v);
           refWidth = newRefWidth;
           layoutBeams(SHAFTS, -14, refWidth, shafts);
@@ -343,10 +345,14 @@ export const jellyfish = defineEffect(jellyfishMeta, {
             const y = wrap(my, -6, 1092);
             snowX[i] = x;
             snowY[i] = y;
-            if (x !== mx || y !== my) snowLife[i] = 0;
+            if (x !== mx || y !== my) {
+              snowLife[i] = 0;
+            }
             const l = stepLife(snowLife, i, target, inStep, outStep);
             const a = (0.25 + 0.45 * z) * l;
-            if (a <= 0.003) continue;
+            if (a <= 0.003) {
+              continue;
+            }
             const o = motes * snowBatch.stride;
             sd[o] = x * scale;
             sd[o + 1] = y * scale;

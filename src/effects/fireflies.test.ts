@@ -71,7 +71,9 @@ describe("beam profiles", () => {
     expect(beamAlong(1)).toBe(0);
     expect(beamAlong(-0.1)).toBe(0);
     expect(beamAlong(1.1)).toBe(0);
-    for (let v = 0; v < 1; v += 0.05) expect(beamAlong(v + 0.05)).toBeLessThanOrEqual(beamAlong(v));
+    for (let v = 0; v < 1; v += 0.05) {
+      expect(beamAlong(v + 0.05)).toBeLessThanOrEqual(beamAlong(v));
+    }
   });
 });
 
@@ -179,7 +181,9 @@ function gpuBeam(inst: Float32Array, px: number, py: number): number {
     const wa = ((B.y - C.y) * (px - C.x) + (C.x - B.x) * (py - C.y)) / det;
     const wb = ((C.y - A.y) * (px - C.x) + (A.x - C.x) * (py - C.y)) / det;
     const wc = 1 - wa - wb;
-    if (wa < -1e-9 || wb < -1e-9 || wc < -1e-9) continue;
+    if (wa < -1e-9 || wb < -1e-9 || wc < -1e-9) {
+      continue;
+    }
     const across = wa * A.beam[0] + wb * B.beam[0] + wc * C.beam[0];
     const along = wa * A.beam[1] + wb * B.beam[1] + wc * C.beam[1];
     // BEAM_FRAGMENT's profile, which beamAcross and beamAlong mirror.
@@ -206,7 +210,9 @@ describe("beam quad on the GPU", () => {
             const want = beamMembership(px / scale, py / scale, beams[b]);
             const got = gpuBeam(inst, px, py);
             expect(Math.abs(got - want)).toBeLessThan(1e-4);
-            if (want > 0) lit++;
+            if (want > 0) {
+              lit++;
+            }
           }
         }
       }

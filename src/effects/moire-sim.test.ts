@@ -38,7 +38,9 @@ describe("options", () => {
   it("match the sim's names", () => {
     expect(PATTERN_OPTIONS.map((o) => o.value)).toEqual([...PATTERNS]);
     expect(MOTION_OPTIONS.map((o) => o.value)).toEqual([...MOTIONS]);
-    expect(PALETTE_OPTIONS.map((o) => o.value).sort()).toEqual(Object.keys(PALETTES).sort());
+    expect(PALETTE_OPTIONS.map((o) => o.value).toSorted()).toEqual(
+      Object.keys(PALETTES).toSorted(),
+    );
     expect(LAYER_OPTIONS.map((o) => layerCount(o.value))).toEqual([2, 3]);
     expect(moireMeta.params.spacing.min).toBe(MIN_SPACING);
   });
@@ -59,8 +61,14 @@ describe("palettes", () => {
     const bad: string[] = [];
     for (const name of Object.keys(PALETTES)) {
       const d = paletteData(name);
-      if (d !== paletteData(name)) bad.push(`${name}: rebuilt`);
-      for (const t of d.tints) if (!(t >= 0 && t < 1)) bad.push(`${name}: ${String(t)}`);
+      if (d !== paletteData(name)) {
+        bad.push(`${name}: rebuilt`);
+      }
+      for (const t of d.tints) {
+        if (!(t >= 0 && t < 1)) {
+          bad.push(`${name}: ${String(t)}`);
+        }
+      }
     }
     expect(bad).toEqual([]);
   });
@@ -74,11 +82,15 @@ describe("minimum spacing", () => {
       for (const spacing of [-5, 0, 4, MIN_SPACING, 20, 80, Number.NaN]) {
         const s = spacingPx(spacing, scale);
         const line = s * LINE_FRACTION;
-        if (line < MIN_LINE_DEVICE_PX - 1e-9)
+        if (line < MIN_LINE_DEVICE_PX - 1e-9) {
           bad.push(`${String(height)}p ${String(spacing)}: ${String(line)} px`);
-        if (line < MIN_LINE_1080 * scale - 1e-9)
+        }
+        if (line < MIN_LINE_1080 * scale - 1e-9) {
           bad.push(`${String(height)}p ${String(spacing)}: ${String(line)} px`);
-        if (s * DOT_FRACTION < line) bad.push(`${String(height)}p ${String(spacing)}: dots`);
+        }
+        if (s * DOT_FRACTION < line) {
+          bad.push(`${String(height)}p ${String(spacing)}: dots`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -137,12 +149,15 @@ describe("layer poses", () => {
           a.scale = b.scale;
         }
         // Under a pixel (or a milliradian) per 1/2000 of the cycle, including the wrap.
-        if (maxStep > 1) bad.push(`motion ${String(m)} layer ${String(layer)}: ${String(maxStep)}`);
+        if (maxStep > 1) {
+          bad.push(`motion ${String(m)} layer ${String(layer)}: ${String(maxStep)}`);
+        }
         // Period 1: phase 0 and phase just under 1 agree.
         layerPose(layer, m, 0, a);
         layerPose(layer, m, 1 - 1e-12, b);
-        if (Math.abs(a.cx - b.cx) + Math.abs(a.cy - b.cy) + Math.abs(a.angle - b.angle) > 1e-6)
+        if (Math.abs(a.cx - b.cx) + Math.abs(a.cy - b.cy) + Math.abs(a.angle - b.angle) > 1e-6) {
           bad.push(`motion ${String(m)} layer ${String(layer)}: not periodic`);
+        }
       }
     }
     expect(bad).toEqual([]);
@@ -153,7 +168,9 @@ describe("layer poses", () => {
     let min = Infinity;
     for (let m = 0; m < MOTIONS.length; m++) {
       for (let layer = 0; layer < MAX_LAYERS; layer++) {
-        for (let k = 0; k < 500; k++) min = Math.min(min, layerPose(layer, m, k / 500, p).scale);
+        for (let k = 0; k < 500; k++) {
+          min = Math.min(min, layerPose(layer, m, k / 500, p).scale);
+        }
       }
     }
     expect(min).toBeGreaterThanOrEqual(1);

@@ -83,7 +83,9 @@ describe("chains", () => {
         30,
         0.97,
       );
-      for (const l of segLengths(pos, 1, n)) expect(l).toBeCloseTo(5, 3);
+      for (const l of segLengths(pos, 1, n)) {
+        expect(l).toBeCloseTo(5, 3);
+      }
     }
     // Chain 0 is untouched.
     expect(pos.subarray(0, n * 2).every((v) => v === 0)).toBe(true);
@@ -94,12 +96,18 @@ describe("chains", () => {
     const vel = new Float32Array(pos.length);
     resetChain(pos, vel, 0, n, 0, 0, 4);
     // Swing it about, then hold the anchor still.
-    for (let s = 0; s < 60; s++) stepChain(pos, vel, 0, n, s * 3, 0, 4, 1 / 60, 0, 50, 0.97);
-    for (let s = 0; s < 2000; s++) stepChain(pos, vel, 0, n, 180, 0, 4, 1 / 60, 0, 50, 0.97);
+    for (let s = 0; s < 60; s++) {
+      stepChain(pos, vel, 0, n, s * 3, 0, 4, 1 / 60, 0, 50, 0.97);
+    }
+    for (let s = 0; s < 2000; s++) {
+      stepChain(pos, vel, 0, n, 180, 0, 4, 1 / 60, 0, 50, 0.97);
+    }
     // At rest: another step moves nothing.
     const before = Float32Array.from(pos);
     stepChain(pos, vel, 0, n, 180, 0, 4, 1 / 60, 0, 50, 0.97);
-    for (let i = 0; i < pos.length; i++) expect(Math.abs(pos[i] - before[i])).toBeLessThan(1e-3);
+    for (let i = 0; i < pos.length; i++) {
+      expect(Math.abs(pos[i] - before[i])).toBeLessThan(1e-3);
+    }
     for (let k = 0; k < n; k++) {
       expect(pos[k * 2]).toBeCloseTo(180, 1);
       expect(pos[k * 2 + 1]).toBeCloseTo(4 * k, 1);
@@ -110,9 +118,11 @@ describe("chains", () => {
     const pos = new Float32Array(n * 2);
     const vel = new Float32Array(pos.length);
     stepChain(pos, vel, 0, n, 5, 5, 3, 0, 0, 10, 0.9);
-    expect(pos.every(Number.isFinite)).toBe(true);
+    expect(pos.every((v) => Number.isFinite(v))).toBe(true);
     expect(vel.every((v) => v === 0)).toBe(true);
-    for (const l of segLengths(pos, 0, n)) expect(l).toBeCloseTo(3, 4);
+    for (const l of segLengths(pos, 0, n)) {
+      expect(l).toBeCloseTo(3, 4);
+    }
   });
 
   it("shift without changing shape", () => {
@@ -122,7 +132,9 @@ describe("chains", () => {
     shiftChain(pos, 0, n, 100, -50);
     expect(pos[0]).toBe(101);
     expect(pos[1]).toBe(-48);
-    for (const l of segLengths(pos, 0, n)) expect(l).toBeCloseTo(3, 4);
+    for (const l of segLengths(pos, 0, n)) {
+      expect(l).toBeCloseTo(3, 4);
+    }
   });
 });
 
@@ -169,9 +181,9 @@ describe("writeStrip", () => {
     const pos = new Float32Array(n * 2).fill(7);
     const out = new Float32Array(STRIP_VERTS * STRIP_FLOATS);
     expect(writeStrip(out, 0, pos, 0, n, 1, style)).toBe(STRIP_VERTS);
-    expect(out.every(Number.isFinite)).toBe(true);
+    expect(out.every((v) => Number.isFinite(v))).toBe(true);
     expect(writeStrip(out, 0, pos, 0, n, 1, { ...style, frill: 0.4 })).toBe(STRIP_VERTS);
-    expect(out.every(Number.isFinite)).toBe(true);
+    expect(out.every((v) => Number.isFinite(v))).toBe(true);
   });
 });
 
@@ -214,24 +226,30 @@ describe("createSwarm", () => {
       expect(swarm.y[i]).toBeGreaterThan(-1000);
       expect(swarm.y[i]).toBeLessThan(2100);
     }
-    expect(strips.subarray(0, swarm.stripVerts * STRIP_FLOATS).every(Number.isFinite)).toBe(true);
-    expect(bells.every(Number.isFinite)).toBe(true);
+    expect(
+      strips.subarray(0, swarm.stripVerts * STRIP_FLOATS).every((v) => Number.isFinite(v)),
+    ).toBe(true);
+    expect(bells.every((v) => Number.isFinite(v))).toBe(true);
   }, 30_000);
 
   it("fades jellyfish out when the count drops, and writes nothing for zero-length tentacles", () => {
     const swarm = createSwarm(createRng(5), 1920);
     swarm.step(0, frame({ count: 6 }), bells, bellStride, BELL_FLOATS, strips);
-    for (let s = 0; s < 120; s++)
+    for (let s = 0; s < 120; s++) {
       swarm.step(1 / 60, frame({ count: 6 }), bells, bellStride, BELL_FLOATS, strips);
+    }
     expect(swarm.bells).toBe(6);
     swarm.step(1 / 60, frame({ count: 2 }), bells, bellStride, BELL_FLOATS, strips);
     expect(swarm.live).toBe(6);
-    for (let s = 0; s < 120; s++)
+    for (let s = 0; s < 120; s++) {
       swarm.step(1 / 60, frame({ count: 2 }), bells, bellStride, BELL_FLOATS, strips);
+    }
     expect(swarm.live).toBe(2);
     expect(swarm.bells).toBe(2);
     swarm.step(1 / 60, frame({ count: 2, tentacles: 0 }), bells, bellStride, BELL_FLOATS, strips);
-    expect(strips.subarray(0, swarm.stripVerts * STRIP_FLOATS).every(Number.isFinite)).toBe(true);
+    expect(
+      strips.subarray(0, swarm.stripVerts * STRIP_FLOATS).every((v) => Number.isFinite(v)),
+    ).toBe(true);
   });
 
   it("rescales x positions with the width", () => {

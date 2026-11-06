@@ -151,7 +151,9 @@ describe("easeTilt", () => {
     t = easeTilt(t, 20, 1);
     expect(t).toBeGreaterThan(0);
     expect(t).toBeLessThan(5);
-    for (let i = 0; i < 600; i++) t = easeTilt(t, 20, 0.1);
+    for (let i = 0; i < 600; i++) {
+      t = easeTilt(t, 20, 0.1);
+    }
     expect(t).toBe(20);
     expect(easeTilt(5, Number.NaN, 100)).toBe(0);
   });
@@ -166,7 +168,9 @@ describe("beamAngle", () => {
 
   it("turns once per period", () => {
     let phase = 0.25;
-    for (let i = 0; i < 120; i++) phase = advancePhase(phase, 0.1, 12);
+    for (let i = 0; i < 120; i++) {
+      phase = advancePhase(phase, 0.1, 12);
+    }
     expect(phase).toBeCloseTo(0.25);
     expect(advancePhase(0.5, 1, 0)).toBe(0.5);
   });
@@ -181,7 +185,9 @@ describe("flare", () => {
         const v = at(i);
         expect(v).toBeGreaterThanOrEqual(0);
         expect(v).toBeLessThanOrEqual(1);
-        if (v > 0.5 && v >= at(i - 1) && v > at(i + 1)) peaks++;
+        if (v > 0.5 && v >= at(i - 1) && v > at(i + 1)) {
+          peaks++;
+        }
       }
       expect(peaks).toBe(beams);
     }

@@ -33,9 +33,13 @@ const KINDS = KITE_OPTIONS.map((o) => o.value);
 
 describe("shapes", () => {
   it("has a shape and a palette for every option, with fallbacks", () => {
-    for (const k of KINDS) expect(shapeFor(k)).toBe(SHAPES[k]);
+    for (const k of KINDS) {
+      expect(shapeFor(k)).toBe(SHAPES[k]);
+    }
     expect(shapeFor("nope")).toBe(SHAPES.diamond);
-    for (const { value } of COLOUR_OPTIONS) expect(paletteFor(value)).toBe(PALETTES[value]);
+    for (const { value } of COLOUR_OPTIONS) {
+      expect(paletteFor(value)).toBe(PALETTES[value]);
+    }
     expect(paletteFor("nope")).toBe(PALETTES.rainbow);
   });
 
@@ -49,7 +53,9 @@ describe("shapes", () => {
       let bad = 0;
       for (let t = 0; t < tris; t++) {
         const [a, b, c] = [s.tris[t * 3], s.tris[t * 3 + 1], s.tris[t * 3 + 2]];
-        if (Math.max(a, b, c) >= n || s.face[t] >= s.faceCount || s.slot[t] > 3) bad++;
+        if (Math.max(a, b, c) >= n || s.face[t] >= s.faceCount || s.slot[t] > 3) {
+          bad++;
+        }
         // Twice the area of the triangle, from the cross product in 3D.
         const ux = s.points[b * 3] - s.points[a * 3];
         const uy = s.points[b * 3 + 1] - s.points[a * 3 + 1];
@@ -58,12 +64,20 @@ describe("shapes", () => {
         const vy = s.points[c * 3 + 1] - s.points[a * 3 + 1];
         const vz = s.points[c * 3 + 2] - s.points[a * 3 + 2];
         const area = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
-        if (area < 0.05) bad++;
+        if (area < 0.05) {
+          bad++;
+        }
       }
-      for (const i of s.spars) if (i >= n) bad++;
+      for (const i of s.spars) {
+        if (i >= n) {
+          bad++;
+        }
+      }
       for (let f = 0; f < s.faceCount; f++) {
         const o = f * 6;
-        if (Math.abs(Math.hypot(s.faces[o], s.faces[o + 1], s.faces[o + 2]) - 1) > 1e-9) bad++;
+        if (Math.abs(Math.hypot(s.faces[o], s.faces[o + 1], s.faces[o + 2]) - 1) > 1e-9) {
+          bad++;
+        }
       }
       expect(bad).toBe(0);
       expect(s.tailPoint).toBeLessThan(n);
@@ -111,10 +125,18 @@ describe("flight", () => {
               // Mirrored for the left corner, so both are checked as the right one.
               const x = corner === "right" ? s.world[i * 3] : ASPECT - s.world[i * 3];
               const y = s.world[i * 3 + 1];
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
+              if (x < minX) {
+                minX = x;
+              }
+              if (x > maxX) {
+                maxX = x;
+              }
+              if (y < minY) {
+                minY = y;
+              }
+              if (y > maxY) {
+                maxY = y;
+              }
             }
           }
           expect(minX).toBeGreaterThan((ASPECT * 2) / 3);
@@ -237,7 +259,11 @@ describe("flight", () => {
     expect(jump).toBeLessThan(0.002);
     // Gusts are occasional, not constant.
     let calm = 0;
-    for (let i = 0; i < 6000; i++) if (gustAt(i * 0.1) === 0) calm++;
+    for (let i = 0; i < 6000; i++) {
+      if (gustAt(i * 0.1) === 0) {
+        calm++;
+      }
+    }
     expect(calm / 6000).toBeGreaterThan(0.2);
     expect(calm / 6000).toBeLessThan(0.9);
   });
@@ -255,7 +281,9 @@ describe("catenary", () => {
       let above = 0;
       for (let i = 1; i < STRING_SEGMENTS; i++) {
         const u = i / STRING_SEGMENTS;
-        if (out[i * 2 + 1] > 0.75 + (-0.45 - 0.75) * u) above++;
+        if (out[i * 2 + 1] > 0.75 + (-0.45 - 0.75) * u) {
+          above++;
+        }
       }
       expect(above).toBe(0);
     }
@@ -285,7 +313,9 @@ describe("writers", () => {
     for (const k of KINDS) {
       const shape = SHAPES[k];
       const s = createKiteState();
-      for (let f = 0; f < 300; f++) stepKite(s, DT, shape, 0.5, "right", ASPECT);
+      for (let f = 0; f < 300; f++) {
+        stepKite(s, DT, shape, 0.5, "right", ASPECT);
+      }
       const palette = PALETTES.rainbow;
       const nt = writeTail(tris, 0, s, palette, 1080);
       expect(nt).toBe(TAIL_TRIS);
@@ -302,10 +332,22 @@ describe("writers", () => {
         const o = t * TRI_FLOATS;
         const a = tris[o + 11];
         // Premultiplied colour; the tail opaque, the fabric translucent.
-        if (!(a > 0 && a <= 1)) bad++;
-        if (t < nt && a !== 1) bad++;
-        for (let c = 8; c < 11; c++) if (!(tris[o + c] >= 0 && tris[o + c] <= a + 1e-6)) bad++;
-        for (let c = 0; c < 6; c++) if (!Number.isFinite(tris[o + c])) bad++;
+        if (!(a > 0 && a <= 1)) {
+          bad++;
+        }
+        if (t < nt && a !== 1) {
+          bad++;
+        }
+        for (let c = 8; c < 11; c++) {
+          if (!(tris[o + c] >= 0 && tris[o + c] <= a + 1e-6)) {
+            bad++;
+          }
+        }
+        for (let c = 0; c < 6; c++) {
+          if (!Number.isFinite(tris[o + c])) {
+            bad++;
+          }
+        }
       }
       expect(bad).toBe(0);
     }

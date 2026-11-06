@@ -43,7 +43,9 @@ describe("flowfield trail fade", () => {
   it("keeps an empty pixel empty and leaves the layer alone when paused", () => {
     for (const levels of [255, 1023]) {
       fadeTerms(1 / 60, 1, levels, terms);
-      for (let seed = 0; seed < 1000; seed++) expect(fadePixel(0, terms, levels, seed)).toBe(0);
+      for (let seed = 0; seed < 1000; seed++) {
+        expect(fadePixel(0, terms, levels, seed)).toBe(0);
+      }
       fadeTerms(0, 1, levels, terms);
       for (let level = 0; level <= levels; level += 31) {
         expect(fadePixel(level / levels, terms, levels, level)).toBeCloseTo(level / levels, 6);
@@ -61,13 +63,17 @@ describe("flowfield trail fade", () => {
     const pixels = 2000;
     for (let p = 0; p < pixels; p++) {
       let v = 0.5;
-      for (let frame = 0; frame < 60; frame++) v = fadePixel(v, terms, levels, p * 65537 + frame);
+      for (let frame = 0; frame < 60; frame++) {
+        v = fadePixel(v, terms, levels, p * 65537 + frame);
+      }
       sum += v;
     }
     let expected = 0.5;
     const keep = Math.exp(-dt / 3);
     const clean = dt * (20 / 255);
-    for (let frame = 0; frame < 60; frame++) expected = expected * keep - clean * (1 - expected);
+    for (let frame = 0; frame < 60; frame++) {
+      expected = expected * keep - clean * (1 - expected);
+    }
     expect(sum / pixels).toBeCloseTo(expected, 2);
   });
 });

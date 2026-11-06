@@ -50,7 +50,7 @@ describe("buildPolytope", () => {
         worstRadius = Math.max(worstRadius, Math.abs(r - 1));
       }
       const lengths: number[] = [];
-      const degrees = new Array<number>(poly.vertexCount).fill(0);
+      const degrees = Array.from({ length: poly.vertexCount }, () => 0);
       for (let e = 0; e < poly.edgeCount; e++) {
         const a = poly.edges[e * 2];
         const b = poly.edges[e * 2 + 1];
@@ -96,7 +96,9 @@ describe("rotationMatrix", () => {
       for (let r = 0; r < 4; r++) {
         for (let c = 0; c < 4; c++) {
           let dot = 0;
-          for (let i = 0; i < 4; i++) dot += m[r * 4 + i] * m[c * 4 + i];
+          for (let i = 0; i < 4; i++) {
+            dot += m[r * 4 + i] * m[c * 4 + i];
+          }
           worst = Math.max(worst, Math.abs(dot - (r === c ? 1 : 0)));
         }
       }
@@ -104,7 +106,9 @@ describe("rotationMatrix", () => {
         let n2 = 0;
         for (let r = 0; r < 4; r++) {
           let x = 0;
-          for (let c = 0; c < 4; c++) x += m[r * 4 + c] * v[i * 4 + c];
+          for (let c = 0; c < 4; c++) {
+            x += m[r * 4 + c] * v[i * 4 + c];
+          }
           n2 += x * x;
         }
         worst = Math.max(worst, Math.abs(n2 - 1));
@@ -132,8 +136,12 @@ describe("projectPolytope", () => {
         projectPolytope(poly, m, out);
         for (let i = 0; i < poly.vertexCount; i++) {
           const o = i * PROJECTED_FLOATS;
-          if (Math.hypot(out[o], out[o + 1]) > bound) bad++;
-          if (!(out[o + 2] >= 0 && out[o + 2] <= 1)) bad++;
+          if (Math.hypot(out[o], out[o + 1]) > bound) {
+            bad++;
+          }
+          if (!(out[o + 2] >= 0 && out[o + 2] <= 1)) {
+            bad++;
+          }
         }
       }
     }
@@ -177,7 +185,11 @@ describe("rainbow", () => {
     let outside = 0;
     for (let t = -0.5; t <= 1.5; t += 0.01) {
       rainbow(t, c);
-      for (const x of c) if (!(x >= 0 && x <= 1)) outside++;
+      for (const x of c) {
+        if (!(x >= 0 && x <= 1)) {
+          outside++;
+        }
+      }
     }
     expect(outside).toBe(0);
   });

@@ -146,10 +146,12 @@ export const tesseract = defineEffect(tesseractMeta, {
 
           // Shape swap: fade out, switch, fade back in.
           const wanted = toShape(p.shape);
-          if (shown === null) shown = wanted;
+          shown ??= wanted;
           if (wanted !== shown) {
             fade = Math.max(0, fade - dt / SWAP_TIME);
-            if (fade === 0) shown = wanted;
+            if (fade === 0) {
+              shown = wanted;
+            }
           } else {
             fade = Math.min(1, fade + dt / SWAP_TIME);
           }
@@ -207,11 +209,15 @@ export const tesseract = defineEffect(tesseractMeta, {
               let half = core;
               let k = light;
               if (layer === 0) {
-                if (halo2 <= 0) continue;
+                if (halo2 <= 0) {
+                  continue;
+                }
                 half = core + (8 + 10 * near) * lineK;
                 k *= halo2;
               } else if (layer === 1) {
-                if (halo1 <= 0) continue;
+                if (halo1 <= 0) {
+                  continue;
+                }
                 half = core + (3 + 4 * near) * lineK;
                 k *= halo1;
               }
@@ -247,7 +253,9 @@ export const tesseract = defineEffect(tesseractMeta, {
           }
 
           background.draw(BACKGROUND_TOP, BACKGROUND_BOTTOM);
-          if (fade <= 0) return;
+          if (fade <= 0) {
+            return;
+          }
 
           streaks.upload(n);
           streaks.draw(n, width, height);

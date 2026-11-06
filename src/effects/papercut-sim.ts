@@ -21,7 +21,8 @@
 import { hexToUnitRgb, type Rgb } from "./color";
 import { clamp, wrap } from "./math";
 import { createRng } from "./noise";
-import { SCENE_IDS, MIN_LAYERS, MAX_LAYERS, PALETTE_IDS } from "./papercut.meta";
+import type { PALETTE_IDS } from "./papercut.meta";
+import { SCENE_IDS, MIN_LAYERS, MAX_LAYERS } from "./papercut.meta";
 
 const TAU = Math.PI * 2;
 
@@ -93,8 +94,9 @@ export interface Scene {
   waveSlot: number;
 }
 
-export const sceneId = (v: string): SceneId =>
-  (SCENE_IDS as readonly string[]).includes(v) ? (v as SceneId) : "hills";
+const isSceneId = (v: string): v is SceneId => (SCENE_IDS as readonly string[]).includes(v);
+
+export const sceneId = (v: string): SceneId => (isSceneId(v) ? v : "hills");
 
 // ---------------------------------------------------------------------------
 // Table writing
@@ -114,7 +116,9 @@ function writeEdge(
   f: ((v: number) => number) | null,
   coord: (c: number) => number,
 ): void {
-  for (let c = 0; c < TABLE_COLUMNS; c++) out[index(row, c, ch)] = f ? f(coord(c)) : NONE;
+  for (let c = 0; c < TABLE_COLUMNS; c++) {
+    out[index(row, c, ch)] = f ? f(coord(c)) : NONE;
+  }
   for (let c = 0; c < TABLE_COLUMNS; c++) {
     if (!f) {
       out[index(row, c, ch + 1)] = 0;
@@ -209,8 +213,9 @@ function scallopFrame(rand: () => number, count: number, base: number): (x: numb
     let z = base;
     for (let i = 0; i < count; i++) {
       const dx = wrap(x - cx[i], -TABLE_PERIOD / 2, TABLE_PERIOD);
-      if (Math.abs(dx) < r[i])
+      if (Math.abs(dx) < r[i]) {
         z = Math.max(z, base + Math.sqrt(r[i] * r[i] - dx * dx) - 0.4 * r[i]);
+      }
     }
     return z;
   };
@@ -227,7 +232,9 @@ interface Pine {
 
 /** Half-width of a tiered pine at fraction `u` (0 base, 1 tip) of its height. */
 export function pineHalfWidth(u: number, w: number, tiers: number): number {
-  if (u < 0 || u > 1) return -Infinity;
+  if (u < 0 || u > 1) {
+    return -Infinity;
+  }
   const f = u * tiers - Math.floor(u * tiers);
   return w * (1 - u) * (1 - 0.45 * f);
 }
@@ -240,8 +247,11 @@ function pineWall(pines: readonly Pine[]): (y: number) => number {
   return (y) => {
     let d = NONE;
     for (const p of pines) {
-      if (y < p.base) d = Math.max(d, p.cx);
-      else d = Math.max(d, p.cx + pineHalfWidth((y - p.base) / p.h, p.w, p.tiers));
+      if (y < p.base) {
+        d = Math.max(d, p.cx);
+      } else {
+        d = Math.max(d, p.cx + pineHalfWidth((y - p.base) / p.h, p.w, p.tiers));
+      }
     }
     return d;
   };
@@ -480,10 +490,10 @@ export const SHARED_PALETTES: Record<Exclude<(typeof PALETTE_IDS)[number], "scen
   },
 };
 
+const isSharedPalette = (v: string): v is keyof typeof SHARED_PALETTES => v in SHARED_PALETTES;
+
 export function resolvePalette(scene: SceneId, id: string): Palette {
-  return id in SHARED_PALETTES
-    ? SHARED_PALETTES[id as keyof typeof SHARED_PALETTES]
-    : SCENE_PALETTES[scene];
+  return isSharedPalette(id) ? SHARED_PALETTES[id] : SCENE_PALETTES[scene];
 }
 
 /**

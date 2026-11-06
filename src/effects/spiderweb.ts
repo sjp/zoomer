@@ -26,9 +26,12 @@ import {
   writeDrops,
   writeThreads,
 } from "./spiderweb-sim";
-import { spiderwebMeta } from "./spiderweb.meta";
+import { CORNER_OPTIONS, spiderwebMeta } from "./spiderweb.meta";
 import { createStreakRenderer } from "./streaks";
 import { defineEffect } from "./types";
+
+const isWebLight = (v: string): v is WebLight => v in LIGHTS;
+const isWebCorner = (v: string): v is WebCorner => CORNER_OPTIONS.some((o) => o.value === v);
 
 /** Thread segments and drops the buffers hold; a size-1 web at full dew uses well under this. */
 const MAX_THREADS = 4096;
@@ -179,9 +182,9 @@ export const spiderweb = defineEffect(spiderwebMeta, {
       let refWidth = 1920;
       /** What the web and backdrop were built from; empty or NaN forces a rebuild. */
       let builtCorner = "";
-      let builtSize = NaN;
-      let builtSeed = NaN;
-      let builtWidth = NaN;
+      let builtSize = Number.NaN;
+      let builtSeed = Number.NaN;
+      let builtWidth = Number.NaN;
       let builtLight = "";
 
       return {
@@ -196,9 +199,10 @@ export const spiderweb = defineEffect(spiderwebMeta, {
           f.time += dt;
           f.sway = p.sway;
           f.dew = p.dew;
-          const lightId = (p.light in LIGHTS ? p.light : "dawn") as WebLight;
+          const lightId: WebLight = isWebLight(p.light) ? p.light : "dawn";
           f.light = LIGHTS[lightId];
-          const corner = p.corner as WebCorner;
+          // Corners only matter through `cornerFlips`, which reads anything else as top-left.
+          const corner: WebCorner = isWebCorner(p.corner) ? p.corner : "topLeft";
           const seed = Math.floor(p.seed);
           const layoutChanged =
             corner !== builtCorner || seed !== builtSeed || refWidth !== builtWidth;

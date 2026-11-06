@@ -345,7 +345,9 @@ export const city = defineEffect(cityMeta, {
             bu.rgb("uBuilding", p.buildings);
             bu.rgb("uHaze", p.skyHorizon);
             bu.f1("uWarmth", p.warmth);
-            if (windows.fading) gl.uniform4fv(bu.loc.uFade, windows.fade);
+            if (windows.fading) {
+              gl.uniform4fv(bu.loc.uFade, windows.fade);
+            }
             quads.draw(0, l.quadCount);
           }
 
@@ -371,8 +373,12 @@ export const city = defineEffect(cityMeta, {
             lu.f1("uScale", scale);
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.ONE, gl.ONE);
-            if (beaconCount > 0) lights.draw(0, beaconCount);
-            if (planeLights > 0) lights.draw(MAX_BEACONS, planeLights);
+            if (beaconCount > 0) {
+              lights.draw(0, beaconCount);
+            }
+            if (planeLights > 0) {
+              lights.draw(MAX_BEACONS, planeLights);
+            }
             gl.disable(gl.BLEND);
           }
         },

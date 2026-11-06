@@ -34,9 +34,13 @@ function staticImports(source: string): string[] {
   const out: string[] = [];
   const statement = /^\s*(import|export)\s+(type\s+)?([^;]*?)\s*from\s*["']([^"']+)["']/gm;
   for (const m of source.matchAll(statement)) {
-    if (!m[2]) out.push(m[4]);
+    if (m.at(2) === undefined) {
+      out.push(m[4]);
+    }
   }
-  for (const m of source.matchAll(/^\s*import\s*["']([^"']+)["']/gm)) out.push(m[1]);
+  for (const m of source.matchAll(/^\s*import\s*["']([^"']+)["']/gm)) {
+    out.push(m[1]);
+  }
   return out;
 }
 

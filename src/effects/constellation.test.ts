@@ -16,7 +16,9 @@ function bruteForce(xs: Float32Array, ys: Float32Array, n: number, maxDist: numb
     for (let j = i + 1; j < n; j++) {
       const dx = xs[j] - xs[i];
       const dy = ys[j] - ys[i];
-      if (dx * dx + dy * dy < maxDist * maxDist) out.add(`${String(i)},${String(j)}`);
+      if (dx * dx + dy * dy < maxDist * maxDist) {
+        out.add(`${String(i)},${String(j)}`);
+      }
     }
   }
   return out;
@@ -127,8 +129,12 @@ describe("driftPoint wrapping", () => {
       for (let step = 0; step < 5000; step++) {
         const x = xs[0] + dx;
         const y = ys[0] + dy;
-        if (x < minX || x >= minX + spanX || y < minY || y >= minY + spanY) crossings++;
-        if (driftPoint(xs, ys, 0, dx, dy, minX, minY, spanX, spanY)) flagged++;
+        if (x < minX || x >= minX + spanX || y < minY || y >= minY + spanY) {
+          crossings++;
+        }
+        if (driftPoint(xs, ys, 0, dx, dy, minX, minY, spanX, spanY)) {
+          flagged++;
+        }
         const inside = xs[0] >= loX && xs[0] <= hiX && ys[0] >= loY && ys[0] <= hiY;
         if (!inside && outside.length < 10) {
           outside.push(
@@ -227,7 +233,9 @@ describe("grid neighbour search", () => {
     const { count, pairs } = gridLinks(xs, ys, n, minX, minY, spanX, spanY, maxDist, cap);
     expect(count).toBe(cap);
     expect(new Set(pairs).size).toBe(cap);
-    for (const pair of pairs) expect(expected.has(pair)).toBe(true);
+    for (const pair of pairs) {
+      expect(expected.has(pair)).toBe(true);
+    }
   });
 
   it("reuses a grid across rebuilds of different sizes", () => {
@@ -266,9 +274,10 @@ describe("findLinks filter", () => {
     const t = new Float32Array(cap);
     const count = findLinks(grid, xs, ys, maxDist, a, b, t, cap, filter);
     const out: string[] = [];
-    for (let l = 0; l < count; l++)
+    for (let l = 0; l < count; l++) {
       out.push(`${String(Math.min(a[l], b[l]))},${String(Math.max(a[l], b[l]))}`);
-    return { pairs: out.sort(), t: t.slice(0, count) };
+    }
+    return { pairs: out.toSorted(), t: t.slice(0, count) };
   };
   const view = (over: Partial<LinkFilter> = {}): LinkFilter => ({
     minX: 0,
@@ -325,7 +334,7 @@ describe("findLinks filter", () => {
     ];
     const { pairs, t } = linksOf(pts, 20, view({ reach: 0.7 }));
     expect(pairs).toEqual(["0,1", "1,2"]);
-    const ts = [...t].sort((a, b) => a - b);
+    const ts = [...t].toSorted((a, b) => a - b);
     expect(ts[0]).toBeCloseTo(0.25, 6);
     expect(ts[1]).toBeCloseTo(0.65, 6);
     expect(linksOf(pts, 20, view({ reach: 0 })).pairs).toEqual([]);
@@ -334,7 +343,9 @@ describe("findLinks filter", () => {
   it("leaves the cap to visible links", () => {
     // Many pairs far off to the left, then one on screen: the cap still finds it.
     const pts: number[][] = [];
-    for (let i = 0; i < 10; i++) pts.push([-15 + i * 0.5, 50]);
+    for (let i = 0; i < 10; i++) {
+      pts.push([-15 + i * 0.5, 50]);
+    }
     pts.push([40, 50], [45, 50]);
     expect(linksOf(pts, 20, view(), 1).pairs).toEqual(["10,11"]);
   });

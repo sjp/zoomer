@@ -11,15 +11,26 @@ interface TimerQueryExt {
  */
 export interface GpuTimer {
   /** Starts timing a frame's GL commands. */
-  begin(): void;
+  begin: () => void;
   /** Stops timing. Safe to call without a matching `begin`. */
-  end(): void;
+  end: () => void;
   /**
    * Average GPU time per measured frame, in ms, since the last call; `undefined`
    * if no results have arrived since then.
    */
-  takeAverage(): number | undefined;
-  dispose(): void;
+  takeAverage: () => number | undefined;
+  dispose: () => void;
+}
+
+function isTimerQueryExt(ext: unknown): ext is TimerQueryExt {
+  return (
+    typeof ext === "object" &&
+    ext !== null &&
+    "TIME_ELAPSED_EXT" in ext &&
+    typeof ext.TIME_ELAPSED_EXT === "number" &&
+    "GPU_DISJOINT_EXT" in ext &&
+    typeof ext.GPU_DISJOINT_EXT === "number"
+  );
 }
 
 /** Queries in flight at once. Results usually land 1-3 frames later. */
@@ -30,14 +41,18 @@ const RING = 4;
  * not every browser exposes; returns `undefined` otherwise.
  */
 export function createGpuTimer(gl: WebGL2RenderingContext): GpuTimer | undefined {
-  const ext = gl.getExtension("EXT_disjoint_timer_query_webgl2") as TimerQueryExt | null;
-  if (!ext) return undefined;
+  const ext: unknown = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+  if (!isTimerQueryExt(ext)) {
+    return undefined;
+  }
   const queries: WebGLQuery[] = [];
   for (let i = 0; i < RING; i++) {
     // Null on a lost context, although the DOM typings omit it.
     const q = gl.createQuery() as WebGLQuery | null;
     if (!q) {
-      for (const made of queries) gl.deleteQuery(made);
+      for (const made of queries) {
+        gl.deleteQuery(made);
+      }
       return undefined;
     }
     queries.push(q);
@@ -55,10 +70,12 @@ export function createGpuTimer(gl: WebGL2RenderingContext): GpuTimer | undefined
   const collect = () => {
     while (pending > 0) {
       const q = queries[head];
-      if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) break;
+      if (gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE) !== true) {
+        break;
+      }
       // A disjoint event (e.g. a GPU clock change) makes in-flight results unreliable.
-      const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT) as boolean;
-      const ns = gl.getQueryParameter(q, gl.QUERY_RESULT) as number;
+      const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT) === true;
+      const ns = Number(gl.getQueryParameter(q, gl.QUERY_RESULT));
       if (!disjoint) {
         sumMs += ns / 1e6;
         samples++;
@@ -70,31 +87,43 @@ export function createGpuTimer(gl: WebGL2RenderingContext): GpuTimer | undefined
 
   return {
     begin() {
-      if (active) return;
+      if (active) {
+        return;
+      }
       collect();
-      if (pending === RING) return;
+      if (pending === RING) {
+        return;
+      }
       gl.beginQuery(ext.TIME_ELAPSED_EXT, queries[(head + pending) % RING]);
       active = true;
     },
     end() {
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       gl.endQuery(ext.TIME_ELAPSED_EXT);
       active = false;
       pending++;
     },
     takeAverage() {
       collect();
-      if (samples === 0) return undefined;
+      if (samples === 0) {
+        return undefined;
+      }
       const avg = sumMs / samples;
       sumMs = 0;
       samples = 0;
       return avg;
     },
     dispose() {
-      if (active) gl.endQuery(ext.TIME_ELAPSED_EXT);
+      if (active) {
+        gl.endQuery(ext.TIME_ELAPSED_EXT);
+      }
       active = false;
       pending = 0;
-      for (const q of queries) gl.deleteQuery(q);
+      for (const q of queries) {
+        gl.deleteQuery(q);
+      }
     },
   };
 }

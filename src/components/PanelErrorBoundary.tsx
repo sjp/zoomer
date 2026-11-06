@@ -25,7 +25,9 @@ export class PanelErrorBoundary extends Component<Props, State> {
   }
 
   override render() {
-    if (!this.state.crashed) return this.props.children;
+    if (!this.state.crashed) {
+      return this.props.children;
+    }
     return (
       <aside className="panel" role="alert">
         <p className="effect-error">The controls crashed. The background keeps running.</p>
