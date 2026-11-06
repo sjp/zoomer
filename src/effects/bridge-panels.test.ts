@@ -151,4 +151,51 @@ describe("bridge panels", () => {
       expect(t.replace(/[0-9]/g, "0")).toBe(n.replace(/[0-9]/g, "0"));
     }
   });
+  it("give the band one window per real readout, beside the speaker", () => {
+    const set = buildPanels(layout, 12);
+    expect(set.live.map((t) => t.key).toSorted()).toEqual([
+      "location",
+      "stardate",
+      "status",
+      "time",
+    ]);
+    const band = layout.panels.find((p) => p.kind === "band");
+    for (const t of set.live) {
+      expect(band && inside(t.bounds, band)).toBe(true);
+      // Clear of the middle third, which the speaker covers.
+      expect(Math.min(Math.abs(t.bounds.s0), Math.abs(t.bounds.s1))).toBeGreaterThan(1.2);
+      expect(set.blocks[t.block]?.busy).toBe(0);
+    }
+  });
+
+  it("show only steady information in the band", () => {
+    const band = layout.panels.find((p) => p.kind === "band");
+    if (!band) {
+      throw new Error("no band");
+    }
+    const set = buildPanels(layout, 12);
+    const inBand = set.shapes.filter((s) => inside(shapeBounds(s), band));
+    expect(inBand.length).toBeGreaterThan(0);
+    expect(inBand.filter((s) => set.blocks[s.block]?.busy !== 0)).toEqual([]);
+    // Its only text is the readouts' labels.
+    const labels = set.texts.filter((t) => t.y > band.y0 && t.y < band.y1).map((t) => t.text);
+    expect(labels.toSorted()).toEqual(["LOCAL TIME", "LOCATION", "STARDATE", "STATUS"]);
+  });
+
+  it("keep other blocks' shapes out of the readouts' windows", () => {
+    for (const seed of [0, 12, 77]) {
+      const set = buildPanels(layout, seed);
+      const intruders = set.live.flatMap((t) =>
+        set.shapes.filter((s) => {
+          const b = shapeBounds(s);
+          return (
+            s.block !== t.block &&
+            Math.min(b.s1, t.bounds.s1) > Math.max(b.s0, t.bounds.s0) &&
+            Math.min(b.y1, t.bounds.y1) > Math.max(b.y0, t.bounds.y0)
+          );
+        }),
+      );
+      expect(intruders).toEqual([]);
+    }
+  });
 });

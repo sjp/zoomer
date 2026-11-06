@@ -126,7 +126,7 @@ export function bridgeLayout(display: DisplaySide, showView: boolean): BridgeLay
     panel("schematic", 0.06, 1.0, 0.4),
     panel("graph", 1.1, 1.78, 1),
     viewSide === "right" ? panel("display", ...outerR, 0.5) : panel("bank", ...outerR, 1),
-    { kind: "band", s0: -BAND_S, s1: BAND_S, y0: BAND_Y0, y1: BAND_Y1, busy: 0.7 },
+    { kind: "band", s0: -BAND_S, s1: BAND_S, y0: BAND_Y0, y1: BAND_Y1, busy: 0 },
   ];
   const shown = panels.find((p) => p.kind === "display");
   if (!shown) {

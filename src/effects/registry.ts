@@ -8,6 +8,7 @@ import { blindsMeta } from "./blinds.meta";
 import { blobsMeta } from "./blobs.meta";
 import { blossomMeta } from "./blossom.meta";
 import { bokehMeta } from "./bokeh.meta";
+import { bridgeMeta } from "./bridge.meta";
 import { bubblesMeta } from "./bubbles.meta";
 import { candlelightMeta } from "./candlelight.meta";
 import { causticsMeta } from "./caustics.meta";
@@ -118,6 +119,7 @@ export const effects: readonly EffectEntry[] = [
   { ...auroraMeta, load: () => import("./aurora").then((m) => m.aurora) },
   { ...fireplaceMeta, load: () => import("./fireplace").then((m) => m.fireplace) },
   { ...synthwaveMeta, load: () => import("./synthwave").then((m) => m.synthwave) },
+  { ...bridgeMeta, load: () => import("./bridge").then((m) => m.bridge) },
   { ...cloudsMeta, load: () => import("./clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea").then((m) => m.sea) },
   { ...cloudseaMeta, load: () => import("./cloudsea").then((m) => m.cloudsea) },

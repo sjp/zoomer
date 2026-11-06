@@ -15,6 +15,7 @@ import {
   type PanelSpec,
   type WallRect,
 } from "./bridge-room";
+import type { LiveKey } from "./bridge-live";
 import { clamp } from "./math";
 import { createRng, hash32 } from "./noise";
 
@@ -140,6 +141,23 @@ export interface PanelSet {
   shapes: Shape[];
   texts: TextRun[];
   widgets: Widget[];
+  /** Real readouts, drawn whenever their value changes. */
+  live: LiveText[];
+}
+
+/**
+ * Where a real readout's value goes: like a text run, but its string comes from
+ * `bridge-live.ts` at draw time, and it may draw only inside `bounds` (which is
+ * cleared before each redraw), squeezed to fit if need be.
+ */
+export interface LiveText {
+  key: LiveKey;
+  x: number;
+  y: number;
+  size: number;
+  align: TextAlign;
+  block: number;
+  bounds: WallRect;
 }
 
 /** Most widgets the composite shader handles. */
@@ -657,49 +675,109 @@ function displayHeader(b: Builder, g: WallRect, viewport: WallRect): void {
  * The long strip above the stations: rounded caps at both ends and, between
  * them, full-height blocks, stacked pairs and black windows with numbers.
  */
+/**
+ * Where the band's real readouts sit, as offsets (m) from the band's end on
+ * their side, with their width and value size. All are clear of the middle
+ * third of the frame, which the speaker covers.
+ */
+const LIVE_WINDOWS: readonly {
+  key: LiveKey;
+  label: string;
+  from: "left" | "right";
+  at: number;
+  w: number;
+  size: number;
+}[] = [
+  { key: "stardate", label: "STARDATE", from: "left", at: 0.26, w: 0.66, size: 0.1 },
+  { key: "time", label: "LOCAL TIME", from: "left", at: 0.98, w: 0.4, size: 0.1 },
+  { key: "location", label: "LOCATION", from: "right", at: 0.26, w: 0.62, size: 0.075 },
+  { key: "status", label: "STATUS", from: "right", at: 0.94, w: 0.5, size: 0.075 },
+];
+
+/** Thickness of the thin bars that frame the band's windows and join them up. */
+const BAND_BAR = 0.012;
+
+/** A block that never dims, swaps or flashes. */
+function steady(b: Builder, kind: BlockKind, colour: number): number {
+  const id = b.block(kind, colour);
+  b.set.blocks[id].busy = 0;
+  return id;
+}
+
+/**
+ * A window for one real readout: thin bars above and below, a short end cap,
+ * a small label at the top left and the value at the bottom right. The value is
+ * drawn later, whenever it changes, so it is a live run rather than a text run.
+ */
+function liveWindow(
+  b: Builder,
+  r: WallRect,
+  w: (typeof LIVE_WINDOWS)[number],
+  x0: number,
+  x1: number,
+): void {
+  const frameId = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
+  box(b, x0, r.y1 - BAND_BAR, x1, r.y1, frameId);
+  box(b, x0, r.y0, x1, r.y0 + BAND_BAR, frameId);
+  box(b, x0, r.y0, x0 + 0.014, r.y1, frameId);
+  const labelId = steady(b, "text", LILAC);
+  const labelSize = 0.026;
+  text(
+    b,
+    w.label,
+    x0 + 0.03,
+    r.y1 - BAND_BAR - 0.012 - labelSize,
+    labelSize,
+    "left",
+    false,
+    labelId,
+  );
+  const valueId = steady(b, "text", PALE_ORANGE);
+  const y = r.y0 + BAND_BAR + 0.014;
+  b.set.live.push({
+    key: w.key,
+    x: x1 - 0.008,
+    y,
+    size: w.size,
+    align: "right",
+    block: valueId,
+    bounds: { s0: x0 + 0.02, s1: x1 - 0.004, y0: r.y0 + BAND_BAR + 0.002, y1: y + w.size * 1.12 },
+  });
+}
+
+/** Thin bars along the top and bottom of the band from x0 to x1, joining its windows. */
+function bandRails(b: Builder, r: WallRect, x0: number, x1: number): void {
+  if (x1 - x0 < 0.01) {
+    return;
+  }
+  const id = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
+  box(b, x0, r.y1 - BAND_BAR, x1, r.y1, id);
+  box(b, x0, r.y0, x1, r.y0 + BAND_BAR, id);
+}
+
+/**
+ * The long strip above the stations: rounded caps at both ends and windows with
+ * the real stardate, local time, ship status and location, joined by thin bars
+ * into one long frame. Nothing in it flickers: it only shows information.
+ */
 function band(b: Builder, r: WallRect): void {
   const h = r.y1 - r.y0;
   const capW = h * 0.9;
-  const cl = b.block("frame", pick(b.rng, FRAME_COLOURS));
+  const cl = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
   box(b, r.s0, r.y0, r.s0 + capW, r.y1, cl, [h / 2, 0, 0, h / 2]);
-  const cr = b.block("frame", pick(b.rng, FRAME_COLOURS));
+  const cr = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
   box(b, r.s1 - capW, r.y0, r.s1, r.y1, cr, [0, h / 2, h / 2, 0]);
+  const windows = LIVE_WINDOWS.map((w) => {
+    const x0 = w.from === "left" ? r.s0 + w.at : r.s1 - w.at - w.w;
+    return { w, x0, x1: x0 + w.w };
+  }).toSorted((a, c) => a.x0 - c.x0);
   let x = r.s0 + capW + GAP;
-  const end = r.s1 - capW - GAP;
-  const group = b.group();
-  let order = 0;
-  while (x < end - 0.05) {
-    const w = Math.min(end - x, 0.06 + b.rng() * 0.22);
-    const r0 = b.rng();
-    if (r0 < 0.45) {
-      const id = b.block("button", pick(b.rng, BUTTON_COLOURS), group, order++);
-      button(b, x, r.y0, x + w - GAP, r.y1, id);
-    } else if (r0 < 0.75) {
-      const mid = r.y0 + h * (0.35 + 0.3 * b.rng());
-      const a = b.block("button", pick(b.rng, BUTTON_COLOURS), group, order++);
-      button(b, x, mid + GAP / 2, x + w - GAP, r.y1, a);
-      const c = b.block("button", pick(b.rng, BUTTON_COLOURS));
-      button(b, x, r.y0, x + w - GAP, mid - GAP / 2, c);
-    } else {
-      // A black window with a lit number, framed by thin bars above and below.
-      const id = b.block("frame", pick(b.rng, FRAME_COLOURS));
-      box(b, x, r.y1 - 0.012, x + w - GAP, r.y1, id);
-      box(b, x, r.y0, x + w - GAP, r.y0 + 0.012, id);
-      const t = b.block("readout", pick(b.rng, TEXT_COLOURS));
-      text(
-        b,
-        panelNumber(b.rng),
-        x + w - GAP - 0.006,
-        r.y0 + h * 0.32,
-        h * 0.32,
-        "right",
-        false,
-        t,
-        true,
-      );
-    }
-    x += w;
+  for (const { w, x0, x1 } of windows) {
+    bandRails(b, r, x, x0 - GAP);
+    liveWindow(b, r, w, x0, x1);
+    x = x1 + GAP;
   }
+  bandRails(b, r, x, r.s1 - capW - GAP);
 }
 
 function buildPanel(b: Builder, p: PanelSpec, layout: BridgeLayout): void {
@@ -743,6 +821,7 @@ export function buildPanels(layout: BridgeLayout, seed: number): PanelSet {
     shapes: [],
     texts: [],
     widgets: [],
+    live: [],
   };
   let groups = 0;
   layout.panels.forEach((p, i) => {
@@ -948,17 +1027,17 @@ export function rasterisePanels(set: PanelSet, atlas: AtlasImage): void {
       }
     }
   }
-  for (const t of set.texts) {
-    if (t.dark) {
-      continue;
-    }
-    const r = textBounds(t);
+  const runs = [
+    ...set.texts.filter((t) => !t.dark).map((t) => ({ r: textBounds(t), block: t.block })),
+    ...set.live.map((t) => ({ r: t.bounds, block: t.block })),
+  ];
+  for (const { r, block } of runs) {
     const c0 = Math.max(0, Math.floor(toCol(r.s0)));
     const c1 = Math.min(width - 1, Math.ceil(toCol(r.s1)));
     const r0 = Math.max(0, Math.floor(toRow(r.y0)));
     const r1 = Math.min(height - 1, Math.ceil(toRow(r.y1)));
     for (let j = r0; j <= r1; j++) {
-      index.fill(t.block, j * width + c0, j * width + c1 + 1);
+      index.fill(block, j * width + c0, j * width + c1 + 1);
     }
   }
 }
