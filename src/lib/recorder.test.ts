@@ -179,7 +179,7 @@ describe("recordCanvas", () => {
       vi.stubGlobal(
         "MediaRecorder",
         class extends FakeRecorder {
-          static isTypeSupported = () => true;
+          static override isTypeSupported = () => true;
         },
       );
       const result = recordCanvas(canvas, 5, 30, frames);

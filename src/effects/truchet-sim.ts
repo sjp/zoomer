@@ -206,7 +206,7 @@ export interface TruchetOptions {
   rows: number;
   seed: number;
   /** A previous grid whose committed orientations carry over, matched by position from the centre. */
-  from?: TruchetSim;
+  from?: TruchetSim | undefined;
 }
 
 export interface TruchetSim {

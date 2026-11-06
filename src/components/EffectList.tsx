@@ -118,7 +118,7 @@ export function EffectList(props: EffectListProps) {
 
   // Consecutive effects with the same heading form a group. Below the favourites, the
   // rest get a heading too when the sort has no groups of its own.
-  const groups: { heading?: string; items: ListableEffect[] }[] = [];
+  const groups: { heading: string | undefined; items: ListableEffect[] }[] = [];
   for (const effect of effects) {
     const heading =
       effectGroup(effect, options) ??

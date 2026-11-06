@@ -28,7 +28,7 @@ export type ListableEffect = Pick<
 export interface ListOptions {
   sort: EffectSort;
   /** Search text. Every word must match the name, description, tags or category. */
-  query?: string;
+  query?: string | undefined;
   /**
    * Ids of starred effects. They come first, in their own group, in the
    * current sort; the rest follow. Ids of effects not in the list are ignored.

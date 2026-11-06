@@ -449,7 +449,7 @@ export interface DataTextureOptions {
   type: GLenum;
   data: ArrayBufferView;
   /** Defaults to `gl.CLAMP_TO_EDGE`. */
-  wrap?: GLenum;
+  wrap?: GLenum | undefined;
   /** Defaults to `gl.LINEAR`. No mipmaps are generated. */
   filter?: GLenum;
 }

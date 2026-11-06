@@ -14,17 +14,17 @@ interface State {
  * boundary and keeps running.
  */
 export class PanelErrorBoundary extends Component<Props, State> {
-  state: State = { crashed: false };
+  override state: State = { crashed: false };
 
   static getDerivedStateFromError(): State {
     return { crashed: true };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
+  override componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error("The control panel crashed:", error, info.componentStack);
   }
 
-  render() {
+  override render() {
     if (!this.state.crashed) return this.props.children;
     return (
       <aside className="panel" role="alert">

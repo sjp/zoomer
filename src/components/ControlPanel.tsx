@@ -19,7 +19,7 @@ interface Props {
   effect: EffectMeta;
   values: AnyParamValues;
   /** Why the current effect failed to load or start, or stopped, if it did. */
-  error?: string;
+  error?: string | undefined;
   /** Whether the selected effect's code is still loading. */
   loading: boolean;
   /** False while the canvas isn't running the selected effect yet. */
@@ -37,7 +37,7 @@ interface Props {
   onFullscreen: () => void;
   onHide: () => void;
   /** Shown with the error when the effect's code failed to load, e.g. after a redeploy. */
-  onReload?: () => void;
+  onReload?: (() => void) | undefined;
 }
 
 const DURATIONS = [10, 20, 30, 60];
