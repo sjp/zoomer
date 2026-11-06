@@ -99,7 +99,8 @@ export type ContextKind = keyof ContextMap;
 
 /**
  * The categories the effect list groups by, in display order. Add one only when
- * several effects need it.
+ * several effects need it. "Scenes" is for recreations of well-known kinds of set
+ * or place, such as a starship bridge.
  */
 export const EFFECT_CATEGORIES = [
   "Space",
@@ -110,6 +111,7 @@ export const EFFECT_CATEGORIES = [
   "Abstract",
   "Science",
   "Retro",
+  "Scenes",
 ] as const;
 export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 
