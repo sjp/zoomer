@@ -69,8 +69,9 @@ to bring a hidden panel back.
 
 Start from an existing effect of a similar shape: `tunnel.ts` or `lavalamp.ts` for full-screen
 shaders, `bokeh.ts` or `snow.ts` for sprites, `warp.ts` for streaks and `flowfield.ts` for
-framebuffers. The full conventions (WebGL state, resource cleanup, per-frame allocation,
-resolution scaling and dithering) are under "Shared conventions" in `issues/README.md`.
+framebuffers. `src/effects/lifecycle.test.ts` checks the WebGL rules every effect must follow:
+uniforms written only to the bound program, every object deleted on dispose, and the default
+framebuffer and `FUNC_ADD` left at the end of each frame.
 
 ## Deploying
 

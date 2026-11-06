@@ -1,7 +1,7 @@
 /**
  * Pure JS side of the shared star field (`starfield.ts`): the hashed
  * ring-and-sector star layout, the slow sky rotation and the Milky Way band
- * geometry. Star Trails (036) draws its trails from this layout; other night
+ * geometry. Star Trails draws its trails from this layout; other night
  * skies draw the same stars as points. Nothing here touches GL.
  *
  * Coordinates: reference pixels of a 1080-tall frame, y up. Around the pole a

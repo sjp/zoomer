@@ -74,7 +74,7 @@ const HALF = norm([LDIR[0], LDIR[1], LDIR[2] + 1]);
 
 /**
  * The room at low resolution: a warm wall with a soft light pool on the outer
- * side, or a bright blurred window there, or 068's bookcases at both edges;
+ * side, or a bright blurred window there, or the Library Window bookcases at both edges;
  * then the table, its far edge behind the mug, and a vignette. Static, so it
  * only re-renders when the room, position or size changes.
  */

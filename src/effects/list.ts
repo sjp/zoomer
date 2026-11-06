@@ -30,7 +30,7 @@ export interface ListOptions {
   /** Search text. Every word must match the name, description, tags or category. */
   query?: string;
   /**
-   * Ids of starred effects (issue 121). They come first, in their own group, in the
+   * Ids of starred effects. They come first, in their own group, in the
    * current sort; the rest follow. Ids of effects not in the list are ignored.
    */
   favourites?: ReadonlySet<string>;

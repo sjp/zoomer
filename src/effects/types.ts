@@ -108,8 +108,7 @@ export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 
 /**
  * Rough GPU cost at 4K with default params, lightest first, for the "Lightest first"
- * sort. Taken from the "Est. cost at 4K" column of the issue tables ("low–medium"
- * counts as medium) or, for effects without an estimate, judged from the code.
+ * sort, judged from the effect's per-pixel work.
  */
 export const EFFECT_COSTS = ["very low", "low", "medium"] as const;
 export type EffectCost = (typeof EFFECT_COSTS)[number];

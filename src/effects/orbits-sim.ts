@@ -1,5 +1,5 @@
 /**
- * Pure JS side of Orbiting Bodies (076): seeded planetary systems on Kepler
+ * Pure JS side of Orbiting Bodies: seeded planetary systems on Kepler
  * orbits, their positions at any time, and the per-frame instance data for the
  * bodies and star glows. Nothing here touches GL.
  *

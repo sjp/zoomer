@@ -106,9 +106,8 @@ void main() {
  * plus analytic glow, the upscaled flames over it (premultiplied), and the hearth
  * silhouette from a 1D column-height table with a fire-lit rim.
  *
- * Deviation from the spec (issue 008), which asked for additive flames: the ramp
- * carries alpha, so the flames use premultiplied "over" (`bg * (1 - a) + rgb`).
- * The deep-red outer flame then partly replaces the glow behind it instead of
+ * The flames aren't additive: the ramp carries alpha, so they use premultiplied
+ * "over" (`bg * (1 - a) + rgb`). The deep-red outer flame then partly replaces the glow behind it instead of
  * stacking on it, which gives the flames defined edges, and the cores can't
  * clip past the ramp colour where they overlap the glow or a light background.
  */

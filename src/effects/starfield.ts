@@ -1,5 +1,5 @@
 /**
- * Shared night-sky pieces for Star Trails (036) and the effects that reuse its
+ * Shared night-sky pieces for Star Trails and the effects that reuse its
  * sky: the star colours, the Milky Way haze (GLSL plus its noise texture), the
  * sky rotation in GLSL, and `createStarSprites`, which draws the same stars as
  * crisp, slowly twinkling points. The pure layout, rotation and band geometry

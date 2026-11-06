@@ -1,5 +1,5 @@
 /**
- * Starred effects (issue 121), remembered per browser in `localStorage` as a JSON list
+ * Starred effects, remembered per browser in `localStorage` as a JSON list
  * of effect ids. They're personal, so they stay out of the URL hash.
  *
  * Ids of effects that no longer exist stay stored, so an effect that is removed for a

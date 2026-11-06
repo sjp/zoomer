@@ -1,7 +1,7 @@
 /**
  * Runs every registered effect through `create`, `resize`, a few `frame`s and
  * `dispose` on the recording fake context, checking the WebGL rules every effect
- * must follow (see issues/README.md): uniforms written only to the bound program,
+ * must follow: uniforms written only to the bound program,
  * every object deleted on dispose, the default framebuffer and FUNC_ADD left at
  * the end of each frame, and nothing leaked when `create` throws part-way.
  */

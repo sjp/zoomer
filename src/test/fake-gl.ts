@@ -6,7 +6,7 @@
  * - every object created and deleted, so a test can check `dispose` frees them all
  *   (and that nothing is deleted twice or used after deletion);
  * - the current program and the program each uniform location belongs to, so a
- *   uniform write while another program is bound is reported (issue 010);
+ *   uniform write while another program is bound is reported;
  * - framebuffer, vertex array, buffer and texture bindings, blend equation,
  *   enabled caps, viewport, clear colour and colour mask, readable through
  *   `getParameter` / `isEnabled` like a real context.

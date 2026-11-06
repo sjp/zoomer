@@ -250,7 +250,7 @@ describe("rakePhase", () => {
   });
 
   /**
-   * The issue's test: the groove pattern is continuous across the stone blend, and
+   * The groove pattern is continuous across the stone blend, and
    * the line spacing stays the straight lines' spacing (|∇θ| = |∇φ|) except in
    * the flat pockets and the thin rim where the rings stop. Plain checks over a dense
    * sample grid: the cost is rakePhase itself, hence the explicit timeout.

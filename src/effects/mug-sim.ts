@@ -217,7 +217,7 @@ export function roomFor(id: string): RoomLook {
   return Object.hasOwn(ROOMS, id) ? ROOMS[id as RoomId] : ROOMS.wall;
 }
 
-/** The "Shelves" room's bookcases (068's bookshelf texture), with a fixed layout seed. */
+/** The "Shelves" room's bookcases (the Library Window bookshelf texture), with a fixed layout seed. */
 export const SHELF_PALETTE: ShelfPalette = {
   wood: "#6e4c32",
   back: "#2e2018",
