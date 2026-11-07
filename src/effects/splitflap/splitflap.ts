@@ -5,7 +5,6 @@ import {
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  resetUnpackState,
   TO_CLIP_GLSL,
   withScope,
 } from "../gl";
@@ -17,8 +16,6 @@ import {
   createLayout,
   createMinuteClock,
   flapAngle,
-  GLYPH_COUNT,
-  GLYPHS,
   nextGlyph,
   resetCells,
   setTargets,
@@ -26,23 +23,11 @@ import {
   textPages,
   tickClock,
 } from "./splitflap-sim";
+import { drawGlyphAtlas, GLYPH_AT_GLSL } from "./splitflap-atlas";
 import { BOARD_COLS, MAX_ROWS, splitflapMeta, type SplitflapStyle } from "./splitflap.meta";
 import { createSpriteBatch } from "../sprites";
 import { defineEffect } from "../types";
 
-/** Glyph tiles per row of the atlas. */
-const ATLAS_COLS = 8;
-/** Blank texels around each atlas tile, so linear filtering never reads a neighbour. */
-const ATLAS_PAD = 2;
-/** A system font stack for the glyphs: a bold grotesque, as on real boards. */
-const FONT_FAMILY = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
-/** Cap height as a fraction of the cell height, and the widest a glyph may be. */
-const CAP_FRACTION = 0.56;
-const MAX_GLYPH_WIDTH = 0.82;
-
-/** A text metric, or `fallback` when it's missing, zero or NaN. */
-const metricOr = (value: number | undefined, fallback: number) =>
-  value === undefined || value === 0 || Number.isNaN(value) ? fallback : value;
 /** Housing corner radius, in cell heights. */
 const HOUSING_RADIUS = 0.14;
 /** Card corner radius and split gap half-width, in reference (1080p) px. */
@@ -168,21 +153,13 @@ const CELL_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vLocal;
 flat in vec3 vGlyph;
-uniform sampler2D uAtlas;
-/** Tile pitch, pad and glyph area as fractions of the atlas. */
-uniform vec2 uTile;
-uniform vec2 uPad;
-uniform vec2 uGlyphSize;
 /** Cell size (px), card corner radius (px) and the split's half-width (px). */
 uniform vec2 uCellPx;
 uniform vec2 uCard;
 uniform vec3 uInk;
 uniform vec3 uCardCol;
 out vec4 outColor;
-float glyphAt(float g, vec2 uv) {
-  vec2 tile = vec2(mod(g, ${String(ATLAS_COLS)}.0), floor(g / ${String(ATLAS_COLS)}.0));
-  return texture(uAtlas, tile * uTile + uPad + vec2(uv.x, 1.0 - uv.y) * uGlyphSize).r;
-}
+${GLYPH_AT_GLSL}
 void main() {
   vec2 uv = vLocal;
   float th = vGlyph.z;
@@ -303,62 +280,13 @@ export const splitflap = defineEffect(splitflapMeta, {
       let uploadNeeded = true;
       let wasMoving = false;
 
-      /** Draws each glyph white on black into its own padded tile (red = coverage). */
+      /** Draws the glyph atlas for `cw` x `ch` cells and points the cell shader at it. */
       const buildAtlas = (cw: number, ch: number) => {
-        const tileW = cw + 2 * ATLAS_PAD;
-        const tileH = ch + 2 * ATLAS_PAD;
-        const canvas = new OffscreenCanvas(
-          ATLAS_COLS * tileW,
-          Math.ceil(GLYPH_COUNT / ATLAS_COLS) * tileH,
-        );
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          throw new Error("Split-Flap Board: no 2D context for the glyph atlas");
-        }
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "alphabetic";
-        // Size the font so its capitals are CAP_FRACTION of the cell tall.
-        let size = ch * 0.78;
-        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
-        // Typed loosely: the tests' fake 2D context returns undefined from every method.
-        const capMetrics = ctx.measureText("H") as TextMetrics | undefined;
-        const capRatio = metricOr(capMetrics?.actualBoundingBoxAscent, 0.72 * size) / size;
-        size = (CAP_FRACTION * ch) / Math.max(0.5, capRatio);
-        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
-        const cap = capRatio * size;
-        Array.from(GLYPHS).forEach((g, i) => {
-          if (g === " ") {
-            return;
-          }
-          const x = (i % ATLAS_COLS) * tileW + ATLAS_PAD;
-          const y = Math.floor(i / ATLAS_COLS) * tileH + ATLAS_PAD;
-          const metrics = ctx.measureText(g) as TextMetrics | undefined;
-          const w = metricOr(metrics?.width, 0);
-          const squeeze = w > MAX_GLYPH_WIDTH * cw ? (MAX_GLYPH_WIDTH * cw) / w : 1;
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(x, y, cw, ch);
-          ctx.clip();
-          ctx.translate(x + cw / 2, y + ch / 2 + cap / 2);
-          ctx.scale(squeeze, 1);
-          ctx.fillText(g, 0, 0);
-          ctx.restore();
-        });
-        gl.bindTexture(gl.TEXTURE_2D, atlas);
-        resetUnpackState(gl);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, canvas);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.bindTexture(gl.TEXTURE_2D, null);
+        const m = drawGlyphAtlas(gl, atlas, cw, ch);
         gl.useProgram(cellProgram);
-        cu.f2("uTile", tileW / canvas.width, tileH / canvas.height);
-        cu.f2("uPad", ATLAS_PAD / canvas.width, ATLAS_PAD / canvas.height);
-        cu.f2("uGlyphSize", cw / canvas.width, ch / canvas.height);
+        cu.f2("uTile", m.tile[0], m.tile[1]);
+        cu.f2("uPad", m.pad[0], m.pad[1]);
+        cu.f2("uGlyphSize", m.glyph[0], m.glyph[1]);
       };
 
       /** Rebuilds the pages of glyph rows from the text, for `rows` rows. */
