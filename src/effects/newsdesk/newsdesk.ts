@@ -1172,7 +1172,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
           const nameShown = revealShown(nameLevel);
           const tickerShown = revealShown(tickerLevel);
           const liveShown = revealShown(liveLevel);
-          tickerPos = stepTicker(tickerPos, step, tickerSpeed(scale), tickerPeriod);
+          tickerPos = stepTicker(tickerPos, step, tickerSpeed(scale, p.tickerSpeed), tickerPeriod);
 
           // The ticker strip, sliding up from below.
           const rowH = Math.max(4, Math.round(gfx.tickerH * height));

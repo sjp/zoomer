@@ -82,7 +82,7 @@ describe("lower third", () => {
       expect(g.left).toBeGreaterThan(-aspect / 2);
       expect(g.left + g.maxWidth).toBeLessThanOrEqual(aspect / 2);
       expect(g.bottom).toBeGreaterThan(-0.5 + g.tickerH);
-      expect(g.bottom + g.nameH + g.titleH).toBeLessThan(-0.25);
+      expect(g.bottom + g.nameH + g.titleH).toBeLessThan(-0.2);
     }
     const wide = graphicsLayout(DESIGN_ASPECT);
     expect(wide.left + wide.maxWidth).toBeLessThan(-0.2);
@@ -126,6 +126,17 @@ describe("ticker", () => {
     expect(tickerSpeed(0.25)).toBe(60);
     for (const scale of [0.5, 0.667, 1, 1.333, 2, 3]) {
       expect(Number.isInteger(tickerSpeed(scale) / 60)).toBe(true);
+    }
+  });
+
+  it("scales with the speed setting, and stops at 0", () => {
+    expect(tickerSpeed(1, 3)).toBe(180);
+    expect(tickerSpeed(2, 5)).toBe(600);
+    expect(tickerSpeed(0.5, 1)).toBe(60);
+    expect(tickerSpeed(1, 0)).toBe(0);
+    expect(tickerSpeed(1, Number.NaN)).toBe(60);
+    for (const speed of [1, 2, 3, 4, 5]) {
+      expect(Number.isInteger(tickerSpeed(1.333, speed) / 60)).toBe(true);
     }
   });
 

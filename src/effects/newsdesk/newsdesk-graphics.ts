@@ -99,8 +99,8 @@ export function drawLowerThird(
   const nameEm = emWidth(probe[1], name, 700);
   const titleEm = emWidth(probe[1], title, 600);
   const maxText = Math.max(1, g.maxWidth * frameH - 2 * pad - block - slant);
-  const nameSize = fitTextSize(nameEm, (0.4 * nh) / CAP_RATIO, maxText);
-  const titleSize = fitTextSize(titleEm, (0.36 * Math.max(th, 1)) / CAP_RATIO, maxText);
+  const nameSize = fitTextSize(nameEm, (0.44 * nh) / CAP_RATIO, maxText);
+  const titleSize = fitTextSize(titleEm, (0.4 * Math.max(th, 1)) / CAP_RATIO, maxText);
   const textW = Math.max(nameEm * nameSize, title === "" ? 0 : titleEm * titleSize);
   const bw = Math.min(
     MAX_GRAPHIC_TEXELS,
@@ -181,7 +181,7 @@ export function drawTicker(text: string, g: GraphicsLayout, frameH: number): Tic
   }
   const strip = line + TICKER_JOIN;
   const em = emWidth(probe[1], strip, 600);
-  let size = (0.34 * rowH) / CAP_RATIO;
+  let size = (0.38 * rowH) / CAP_RATIO;
   // Shrink rather than run out of rows.
   const maxRows = Math.max(1, Math.floor(MAX_TICKER_TEXELS / rowH));
   size = Math.min(size, (maxRows * TICKER_ROW - 1) / Math.max(em, 0.01));

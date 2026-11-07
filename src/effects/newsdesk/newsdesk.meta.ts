@@ -42,6 +42,7 @@ export const newsdeskMeta = defineEffectMeta({
       maxLength: TICKER_MAX_LENGTH,
       maxLines: 1,
     },
+    tickerSpeed: { kind: "number", label: "Ticker speed", min: 0, max: 5, step: 1, default: 1 },
     accent: { kind: "color", label: "Lower third colour", default: "#b4142c" },
     live: { kind: "boolean", label: "LIVE tag and clock", default: true },
     skyline: { kind: "select", label: "Skyline", options: SKYLINE_OPTIONS, default: "cycle" },

@@ -131,13 +131,13 @@ export function graphicsLayout(aspect: number): GraphicsLayout {
   const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DESIGN_ASPECT;
   const half = a / 2;
   const margin = Math.min(0.05, 0.06 * half);
-  const tickerH = 0.046;
+  const tickerH = 0.082;
   return {
     left: -half + margin,
     maxWidth: clamp(half - margin - 0.26, 0.3, 0.7),
     minWidth: 0.22,
-    nameH: 0.064,
-    titleH: 0.04,
+    nameH: 0.116,
+    titleH: 0.072,
     pad: 0.02,
     tickerH,
     bottom: -0.5 + tickerH + 0.018,
@@ -183,12 +183,17 @@ export const TICKER_ROW = 2048;
 export const TICKER_SPEED = 60;
 
 /**
- * The ticker's speed in device pixels a second: about `TICKER_SPEED` at 1080p,
- * rounded so a 60 Hz frame moves it a whole number of pixels (at least one).
+ * The ticker's speed in device pixels a second: about `TICKER_SPEED` times
+ * `speed` at 1080p, rounded so a 60 Hz frame moves it a whole number of pixels
+ * (at least one). A `speed` of 0 or less stops it.
  */
-export function tickerSpeed(scale: number): number {
+export function tickerSpeed(scale: number, speed = 1): number {
   const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
-  return Math.max(1, Math.round((TICKER_SPEED * s) / 60)) * 60;
+  const k = Number.isFinite(speed) ? speed : 1;
+  if (k <= 0) {
+    return 0;
+  }
+  return Math.max(1, Math.round((TICKER_SPEED * s * k) / 60)) * 60;
 }
 
 /**
