@@ -1,6 +1,7 @@
 /**
  * Pure logic for the Retro Starship Bridge (retrobridge.ts): the round room's
- * geometry and the camera looking into it, the ring of wall segments (a calm
+ * geometry (the lower well, the deck and its railing, the chairs, the consoles
+ * and the wall) and the camera looking into it, the ring of wall segments (a calm
  * stretch of wall behind the speaker, the stations and the lift door), the
  * slow blinking of the lamps, and the red alert's eased wash, pulse and
  * turning beacons. Nothing here touches GL, so it is all unit tested.
@@ -22,18 +23,25 @@ const DEG = Math.PI / 180;
 // Room and camera
 // ---------------------------------------------------------------------------
 
-/** Radii (m): the step down to the lower floor, the railing, the consoles' fronts and backs, the wall. */
+/** Radii (m): the step down to the lower floor, the railing, the chairs, the consoles' fronts and backs, the wall. */
 export const R_DECK = 3.25;
 export const R_RAIL = 3.32;
+export const R_CHAIR = 3.68;
 export const R_CONSOLE = 3.95;
 export const R_CONSOLE_BACK = 4.45;
 export const R_WALL = 4.6;
-/** Heights (m): the upper deck, the consoles' front edge and back edge, the railing, the ceiling. */
+/**
+ * Heights (m): the upper deck, the desks' front edge and back edge, the top of
+ * the railing and its padded face's depth, the top of the black lamp face over
+ * the desks, and the ceiling.
+ */
 export const DECK_H = 0.45;
-export const CONSOLE_H = 1.0;
-export const CONSOLE_BACK_H = 1.25;
+export const CONSOLE_H = 0.9;
+export const CONSOLE_BACK_H = 1.32;
 export const RAIL_H = 1.24;
-export const CEILING_H = 3.0;
+export const RAIL_T = 0.12;
+export const FACE_TOP = 1.86;
+export const CEILING_H = 3.2;
 /** The camera: eye height and z (m), and the tangent of half the vertical field of view. */
 export const EYE_H = 1.5;
 export const CAMERA_Z = -2.5;
@@ -66,7 +74,7 @@ export function wallPoint(theta: number, y: number, out: Float64Array): Float64A
 
 /** Plain wall and the backs of consoles, behind the speaker: only slow lamps. */
 export const CALM = 0;
-/** A station: a console, a lamp panel above it and a black recess of screens. */
+/** A station: a console with a desk of jewel buttons, a black face of lamp tiles above it, wall screens over that. */
 export const STATION = 1;
 /** The lift door, with a red call panel beside it and no console. */
 export const DOOR = 2;
@@ -110,7 +118,7 @@ export function ringSegments(): Segment[] {
 export const MAX_SEGMENTS = 12;
 
 /** Height (m) of the alert beacons' centres, on the band below the ceiling. */
-export const BEACON_Y = 2.74;
+export const BEACON_Y = 2.86;
 /** Radius (m) of a beacon's dome. */
 export const BEACON_R = 0.1;
 

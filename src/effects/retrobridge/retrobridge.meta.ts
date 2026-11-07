@@ -24,7 +24,7 @@ export const retrobridgeMeta = defineEffectMeta({
   id: "retrobridge",
   name: "Retro Starship Bridge",
   description:
-    "In the command chair of a 1960s TV starship: a ring of stations round the back wall behind a red railing, rows of coloured lamps blinking slowly, little screens of colour bars and wavy traces, a red lift door, and flat, colourful stage lighting.",
+    "In the command chair of a 1960s TV starship: a ring of black consoles with framed blocks of coloured lamp tiles and jewel buttons, wall screens of drifting stars, a thick red padded railing, a red slatted door, swivel chairs, and bright, flat studio lighting.",
   params: {
     alert: { kind: "select", label: "Alert", options: ALERT_OPTIONS, default: "normal" },
     activity: { kind: "number", label: "Activity", min: 0, max: 1, step: 0.05, default: 0.5 },

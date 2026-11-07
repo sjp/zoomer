@@ -30,16 +30,19 @@ import {
   DECK_H,
   DOOR,
   EYE_H,
+  FACE_TOP,
   LAMP_GROUP,
   LAMP_SLOTS,
   type LampBank,
   MAX_SEGMENTS,
   R_CONSOLE,
   R_CONSOLE_BACK,
+  R_CHAIR,
   R_DECK,
   R_RAIL,
   R_WALL,
   RAIL_H,
+  RAIL_T,
   ringSegments,
   SCREEN_PERIOD,
   screenTime,
@@ -57,21 +60,26 @@ const CODE_LAMP = 64;
 const CODE_SCREEN = 128;
 const CODE_BEACON = 192;
 
-/** The three coloured washes on the walls (left, middle, right), per lighting choice. */
+/**
+ * The stage lighting per choice: a base tint for the flat, even key light,
+ * then three faint coloured pools (left, middle and right) on top of it.
+ */
 const WASHES: Record<Lighting, Float32Array> = {
-  classic: new Float32Array([0.78, 0.22, 0.62, 0.18, 0.4, 0.5, 0.9, 0.45, 0.12]),
-  cool: new Float32Array([0.12, 0.62, 0.62, 0.22, 0.32, 0.6, 0.5, 0.28, 0.85]),
-  warm: new Float32Array([0.92, 0.46, 0.14, 0.5, 0.38, 0.22, 0.88, 0.22, 0.3]),
+  classic: new Float32Array([0.93, 0.95, 1.0, 0.03, 0.04, 0.1, 0.0, 0.02, 0.05, 0.05, 0.03, 0.08]),
+  cool: new Float32Array([0.84, 0.92, 1.04, 0.0, 0.08, 0.16, 0.0, 0.04, 0.1, 0.02, 0.06, 0.18]),
+  warm: new Float32Array([1.02, 0.95, 0.88, 0.14, 0.06, 0.0, 0.06, 0.04, 0.0, 0.12, 0.03, 0.06]),
 };
 
 /**
  * The bridge, ray-cast once per resize, variation, lighting or door side, with
  * four samples per pixel. The camera stands before the command chair looking
- * at the back of the round room: the lower floor and the step up, the red
- * railing and its posts, the ring of consoles, and the wall behind them with
- * its lamp panels, black recesses of screens, pillars, a band of light under
- * the ceiling and, at one side, the red lift door. The chair's back and arms
- * sit in front of everything, behind the speaker.
+ * at the back of the round room: the carpeted lower well and the step up, the
+ * red padded railing on its black posts, swivel chairs at some stations, the
+ * ring of black consoles (a red-trimmed desk of jewel buttons over pale,
+ * blue-lit knee panels), and the wall behind them: a black face of framed lamp
+ * tiles, then pale panels with a band of framed screens, and at one side a red
+ * slatted door in an alcove. The command chair's back and arms sit in front of
+ * everything, behind the speaker.
  *
  * Pass 0 writes the colour, with the lamps at their lit colour and the screens
  * dark, and in alpha how much a surface takes the red alert's wash. Pass 1
@@ -90,7 +98,7 @@ uniform vec4 uSegs[${String(MAX_SEGMENTS)}];
 uniform int uSegCount;
 uniform vec2 uDoor;
 uniform vec2 uBeaconA;
-uniform vec3 uWash[3];
+uniform vec3 uWash[4];
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
@@ -99,6 +107,7 @@ const float EYE_H = ${g(EYE_H)};
 const float CAMERA_Z = ${g(CAMERA_Z)};
 const float R_DECK = ${g(R_DECK)};
 const float R_RAIL = ${g(R_RAIL)};
+const float R_CHAIR = ${g(R_CHAIR)};
 const float R_CONSOLE = ${g(R_CONSOLE)};
 const float R_BACK = ${g(R_CONSOLE_BACK)};
 const float R_WALL = ${g(R_WALL)};
@@ -106,6 +115,8 @@ const float DECK_H = ${g(DECK_H)};
 const float CONSOLE_H = ${g(CONSOLE_H)};
 const float BACK_H = ${g(CONSOLE_BACK_H)};
 const float RAIL_H = ${g(RAIL_H)};
+const float RAIL_T = ${g(RAIL_T)};
+const float FACE_TOP = ${g(FACE_TOP)};
 const float CEILING_H = ${g(CEILING_H)};
 const float BEACON_Y = ${g(BEACON_Y)};
 const float BEACON_R = ${g(BEACON_R)};
@@ -117,17 +128,20 @@ const int STATION = 1;
 const float CALM_SLOT0 = ${g(CALM_SLOT0)};
 const float BUSY_GROUPS = ${g(CALM_SLOT0 / LAMP_GROUP)};
 const float GROUP = ${g(LAMP_GROUP)};
+/** Where the screens' band sits, and the soffit above it. */
+const float SCREEN_Y = 2.3;
+const float SOFFIT_Y = 2.72;
 
-const vec3 WALL = vec3(0.5, 0.54, 0.6);
-const vec3 SOFFIT = vec3(0.3, 0.32, 0.38);
-const vec3 PILLAR = vec3(0.62, 0.64, 0.68);
-const vec3 PANEL = vec3(0.6, 0.6, 0.62);
-const vec3 RECESS = vec3(0.022, 0.024, 0.028);
-const vec3 CONSOLE = vec3(0.36, 0.37, 0.41);
-const vec3 LIP = vec3(0.58, 0.59, 0.62);
-const vec3 METAL = vec3(0.78, 0.79, 0.82);
-const vec3 RAIL_RED = vec3(0.78, 0.07, 0.05);
-const vec3 DOOR_RED = vec3(0.74, 0.15, 0.09);
+const vec3 WALL = vec3(0.75, 0.78, 0.83);
+const vec3 SOFFIT = vec3(0.66, 0.68, 0.73);
+const vec3 PILLAR = vec3(0.56, 0.58, 0.63);
+const vec3 FRAME = vec3(0.8, 0.81, 0.83);
+const vec3 BLACK = vec3(0.03, 0.03, 0.035);
+const vec3 KNEE = vec3(0.7, 0.73, 0.78);
+const vec3 SHELL = vec3(0.8, 0.86, 0.93);
+const vec3 RAIL_RED = vec3(0.9, 0.07, 0.05);
+const vec3 DOOR_RED = vec3(0.86, 0.12, 0.1);
+const vec3 CARPET = vec3(0.3, 0.3, 0.315);
 
 float px;
 vec3 gLight;
@@ -143,11 +157,6 @@ float sdBox(vec2 p, vec2 b, float r) {
   vec2 d = abs(p) - b + r;
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
 }
-float sdSeg(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
-  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
-}
 /** The far crossing of a ray from inside a circle of radius R round the y axis. */
 float farRoot(vec2 o, vec2 d, float R) {
   float a = dot(d, d);
@@ -159,13 +168,13 @@ vec3 lit(vec3 c) {
   return c * gLight;
 }
 
-/** Stage lighting at azimuth th and height y: a cool fill, brighter high up, and three coloured pools. */
+/** Flat, even studio light at azimuth th and height y: a tinted key light and three faint coloured pools. */
 vec3 wallLight(float th, float y) {
-  vec3 L = vec3(0.6) + 0.22 * smoothstep(0.6, 2.7, y);
-  float v = exp(-pow((y - 1.9) / 0.95, 2.0));
-  L += uWash[0] * exp(-pow((th + 0.72) / 0.26, 2.0)) * v;
-  L += uWash[1] * 0.45 * exp(-pow(th / 0.3, 2.0)) * v;
-  L += uWash[2] * exp(-pow((th - 0.68) / 0.26, 2.0)) * v;
+  vec3 L = uWash[0] * (0.92 + 0.08 * smoothstep(0.6, 2.7, y));
+  float v = exp(-pow((y - 1.9) / 1.2, 2.0));
+  L += uWash[1] * exp(-pow((th + 0.72) / 0.3, 2.0)) * v;
+  L += uWash[2] * exp(-pow(th / 0.35, 2.0)) * v;
+  L += uWash[3] * exp(-pow((th - 0.68) / 0.3, 2.0)) * v;
   return L;
 }
 
@@ -194,21 +203,27 @@ void setLive(int code, vec2 uv, float c) {
   }
 }
 
+/** Indicator colours: mostly red, yellow, green, blue and white. */
 vec3 lampColour(uint h) {
   uint k = (h >> 3) % 8u;
-  if (k == 0u) return vec3(1.0, 0.14, 0.08);
-  if (k == 1u) return vec3(1.0, 0.45, 0.06);
-  if (k == 2u) return vec3(1.0, 0.85, 0.18);
-  if (k == 3u) return vec3(0.25, 0.95, 0.3);
-  if (k == 4u) return vec3(0.22, 0.5, 1.0);
-  if (k == 5u) return vec3(1.0, 0.95, 0.85);
-  if (k == 6u) return vec3(0.15, 0.9, 0.85);
-  return vec3(1.0, 0.3, 0.6);
+  if (k == 0u) return vec3(1.0, 0.12, 0.08);
+  if (k == 1u) return vec3(1.0, 0.82, 0.15);
+  if (k == 2u) return vec3(0.25, 0.95, 0.3);
+  if (k == 3u) return vec3(0.25, 0.5, 1.0);
+  if (k == 4u) return vec3(1.0, 0.97, 0.9);
+  if (k == 5u) return vec3(1.0, 0.5, 0.1);
+  if (k == 6u) return vec3(0.75, 0.9, 1.0);
+  return vec3(1.0, 0.2, 0.12);
 }
 
-/** A lamp's lens (signed distance d) in a dark bezel, at its lit colour; the composite dims it by its slot. */
+/** Which slot a lamp shows: one group per busy row (so it can chase), or a calm slot. */
+float lampSlot(uint rh, uint lh, float i, bool calm) {
+  return calm ? CALM_SLOT0 + float(lh % 32u) : float(rh % uint(BUSY_GROUPS)) * GROUP + mod(i, GROUP);
+}
+
+/** A square backlit tile (signed distance d) in a thin dark bezel, at its lit colour; the composite dims it by its slot. */
 vec3 lens(vec3 col, float d, vec3 glow, float slot) {
-  col = mix(col, vec3(0.03), cover(d - 0.006));
+  col = mix(col, vec3(0.02), cover(d - 0.005));
   float c = cover(d);
   col = mix(col, glow, c);
   setLive(${String(CODE_LAMP)}, vec2(slot / 255.0, 0.0), c);
@@ -216,155 +231,183 @@ vec3 lens(vec3 col, float d, vec3 glow, float slot) {
 }
 
 /**
- * A row of lamps at height y0 across -w..w (q in metres), pitch apart, each hs
- * in half size. Colours are one per row (mixed = false) or one per lamp; busy
- * rows map onto one slot group so they can chase, calm rows onto calm slots.
+ * A row of square tiles at height y0 across -w..w (q in metres), pitch apart,
+ * each hs in half size, one colour per tile (mixed) or per row.
  */
 vec3 lampRow(vec3 col, vec2 q, float y0, float w, float pitch, vec2 hs, uint rh, bool calm, bool mixed) {
   float n = max(floor(2.0 * w / pitch), 1.0);
   float x0 = -0.5 * n * pitch;
   float i = clamp(floor((q.x - x0) / pitch), 0.0, n - 1.0);
   vec2 c = vec2(x0 + (i + 0.5) * pitch, y0);
-  float d = sdBox(q - c, hs, min(hs.x, hs.y) * 0.3);
+  float d = sdBox(q - c, hs, min(hs.x, hs.y) * 0.15);
   if (d > 0.012) {
     return col;
   }
   uint lh = hash32(rh ^ (uint(i) * 0x9e3779b9u));
-  vec3 glow = lampColour(mixed ? lh : rh);
-  float slot = calm ? CALM_SLOT0 + float(lh % 32u)
-    : float(rh % uint(BUSY_GROUPS)) * GROUP + mod(i, GROUP);
-  return lens(col, d, glow, slot);
+  // A few tiles in a row are blank.
+  if ((lh & 7u) == 0u) {
+    return mix(col, vec3(0.02), cover(d));
+  }
+  return lens(col, d, lampColour(mixed ? lh : rh), lampSlot(rh, lh, i, calm));
 }
 
-/** A row of chunky toggle switches on chrome plates, levers up or down, with coloured knobs. */
-vec3 toggleRow(vec3 col, vec2 q, float y0, float w, float pitch, uint rh) {
+/** A row of round jewel buttons: domed, with a highlight, in a dark collar. */
+vec3 jewelRow(vec3 col, vec2 q, float y0, float w, float pitch, float r, uint rh, bool calm) {
   float n = max(floor(2.0 * w / pitch), 1.0);
   float x0 = -0.5 * n * pitch;
   float i = clamp(floor((q.x - x0) / pitch), 0.0, n - 1.0);
   vec2 o = q - vec2(x0 + (i + 0.5) * pitch, y0);
-  if (abs(o.x) > 0.5 * pitch || abs(o.y) > 0.06) {
+  float d = length(o) - r;
+  if (d > 0.012) {
     return col;
   }
-  uint th = hash32(rh ^ (uint(i) * 0x85ebca6bu));
-  float db = sdBox(o, vec2(0.019, 0.027), 0.006);
-  col *= 1.0 - 0.35 * cover(sdBox(o - vec2(0.004, -0.005), vec2(0.019, 0.027), 0.008));
-  col = mix(col, lit(METAL * (0.85 + 0.15 * o.y / 0.027)), cover(db));
-  float dir = (th & 3u) == 0u ? -1.0 : 1.0;
-  vec2 tip = vec2(0.0, dir * 0.034);
-  col *= 1.0 - 0.4 * cover(sdSeg(o - vec2(0.006, -0.008), vec2(0.0), tip) - 0.008);
-  float dl = sdSeg(o, vec2(0.0), tip) - 0.0055;
-  col = mix(col, lit(METAL * (1.0 - 0.35 * clamp(o.x / 0.0055, -1.0, 1.0))), cover(dl));
-  uint kc = (th >> 4) % 3u;
-  vec3 knob = kc == 0u ? vec3(0.04) : kc == 1u ? vec3(0.75, 0.08, 0.05) : vec3(0.85);
-  vec2 kq = (o - tip) / 0.011;
-  col = mix(col, lit(knob * (0.8 + 0.35 * clamp(kq.y - 0.4 * kq.x, -1.0, 1.0))), cover(length(o - tip) - 0.011));
+  uint lh = hash32(rh ^ (uint(i) * 0x85ebca6bu));
+  col = mix(col, vec3(0.12, 0.12, 0.13), cover(d - 0.005));
+  vec2 nn = o / r;
+  vec3 glow = lampColour(lh) * (0.72 + 0.3 * clamp(nn.y, -1.0, 1.0));
+  glow += vec3(0.55) * exp(-dot(nn - vec2(-0.3, 0.4), nn - vec2(-0.3, 0.4)) * 9.0);
+  float c = cover(d);
+  col = mix(col, glow, c);
+  setLive(${String(CODE_LAMP)}, vec2(lampSlot(rh, lh, i, calm) / 255.0, 0.0), c);
   return col;
 }
 
-/** A small screen in a grey bezel: dark glass here, its picture drawn live. */
-vec3 screen(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int idx) {
-  float d = sdBox(q - c, hs, 0.014);
-  if (d > 0.03) {
+/** A framed block of tiles on the black face: a light grey frame round rows of square lamps. */
+vec3 tileBlock(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int rows, bool calm) {
+  float d = sdBox(q - c, hs, 0.006);
+  if (d > 0.02) {
     return col;
   }
-  col = mix(col, lit(vec3(0.42, 0.43, 0.46)), cover(d - 0.02));
-  col = mix(col, vec3(0.08), cover(d - 0.007));
+  col = mix(col, lit(FRAME), cover(d));
+  col = mix(col, vec3(0.025), cover(d + 0.016));
+  if (d < -0.016) {
+    float pitch = calm ? 0.12 : 0.046;
+    float rp = (2.0 * hs.y - 0.026) / float(rows);
+    for (int k = 0; k < 3; k++) {
+      if (k >= rows) {
+        break;
+      }
+      uint rk = hash32(h + uint(k) * 31u);
+      float y = c.y + hs.y - 0.015 - (float(k) + 0.5) * rp;
+      col = lampRow(col, q - vec2(c.x, 0.0), y, hs.x - 0.018, pitch, vec2(0.0175, 0.0155), rk, calm, (rk & 3u) != 0u);
+    }
+  }
+  return col;
+}
+
+/** A screen recessed in a light grey frame: dark glass here, its picture drawn live. */
+vec3 screen(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int idx) {
+  float d = sdBox(q - c, hs, 0.01);
+  if (d > 0.05) {
+    return col;
+  }
+  col *= 1.0 - 0.25 * cover(d - 0.045) * (1.0 - cover(d - 0.035));
+  col = mix(col, lit(FRAME * 1.04), cover(d - 0.035));
+  // The frame's inner reveal, shaded as a recess lit from above.
+  float rev = cover(d - 0.012);
+  vec3 reveal = lit(vec3(0.42, 0.44, 0.48)) * (q.y > c.y + hs.y - 0.002 ? 0.6 : 1.0);
+  col = mix(col, reveal, rev);
   float glass = cover(d);
-  col = mix(col, vec3(0.012, 0.018, 0.02), glass);
+  col = mix(col, vec3(0.01, 0.012, 0.02), glass);
   vec2 uv = clamp((q - c + hs) / (2.0 * hs), 0.0, 1.0);
-  int type = int(h % 4u);
+  // Mostly speckled star fields and plots, now and then a trace or a bar graph.
+  uint t = h % 8u;
+  int type = t < 4u ? 0 : t < 6u ? 1 : t == 6u ? 2 : 3;
   setLive(${String(CODE_SCREEN)} + type * 16 + (idx & 15), uv, glass);
   return col;
 }
 
-/** A station's wall: a lamp panel over its console, and above it a black recess of screens and lamps. */
-vec3 stationWall(vec3 col, vec2 q, float hw, uint h, int idx) {
-  float pw = hw - 0.06;
-  float dp = sdBox(q - vec2(0.0, 1.43), vec2(pw, 0.165), 0.015);
-  if (dp < 0.02) {
-    col *= 1.0 - 0.3 * cover(dp - 0.012);
-    col = mix(col, lit(PANEL), cover(dp));
-    if (dp < 0.0) {
-      uint r0 = hash32(h + 1u);
-      uint r1 = hash32(h + 2u);
-      uint r2 = hash32(h + 3u);
-      col = lampRow(col, q, 1.53, pw - 0.03, 0.078, vec2(0.028, 0.016), r0, false, (r0 & 1u) == 0u);
-      col = lampRow(col, q, 1.45, pw - 0.03, 0.078, vec2(0.028, 0.016), r1, false, (r1 & 1u) == 0u);
-      if (((h >> 7) & 1u) == 0u) {
-        col = toggleRow(col, q, 1.335, pw - 0.03, 0.07, r2);
-      } else {
-        col = lampRow(col, q, 1.335, pw - 0.03, 0.062, vec2(0.021, 0.021), r2, false, true);
-      }
-    }
-  }
-  float rw = hw - 0.08;
-  float dr = sdBox(q - vec2(0.0, 2.08), vec2(rw, 0.36), 0.035);
-  if (dr < 0.03) {
-    // A lit lip round the recess, brighter along its top.
-    col = mix(col, col * (q.y > 2.08 ? 1.25 : 0.7), cover(dr - 0.018) - cover(dr - 0.006));
-    col = mix(col, RECESS, cover(dr));
-    if (dr < 0.0) {
-      int type = int((h >> 9) % 3u);
-      if (type == 0) {
-        col = screen(col, q, vec2(-0.5 * rw + 0.01, 2.17), vec2(0.42 * rw, 0.165), hash32(h + 5u), idx * 2);
-        col = screen(col, q, vec2(0.5 * rw - 0.01, 2.17), vec2(0.42 * rw, 0.165), hash32(h + 6u), idx * 2 + 1);
-        col = lampRow(col, q, 1.85, rw - 0.05, 0.062, vec2(0.019, 0.019), hash32(h + 7u), false, true);
-      } else if (type == 1) {
-        col = screen(col, q, vec2(-0.14 * rw, 2.15), vec2(0.72 * rw, 0.2), hash32(h + 5u), idx * 2);
-        vec2 qc = vec2(q.y - 2.15, q.x);
-        col = lampRow(col, qc, 0.87 * rw, 0.2, 0.08, vec2(0.02, 0.026), hash32(h + 8u), false, false);
-        col = lampRow(col, q, 1.85, rw - 0.05, 0.078, vec2(0.028, 0.015), hash32(h + 7u), false, false);
-      } else {
-        vec2 ql = vec2(q.x + 0.32 * rw, q.y);
-        for (int k = 0; k < 4; k++) {
-          uint rk = hash32(h + 20u + uint(k));
-          col = lampRow(col, ql, 2.3 - float(k) * 0.12, 0.6 * rw, 0.07, vec2(0.024, 0.018), rk, false, (rk & 3u) == 0u);
-        }
-        col = screen(col, q, vec2(0.64 * rw, 2.14), vec2(0.3 * rw, 0.17), hash32(h + 5u), idx * 2 + 1);
-      }
-    }
+/** Flat wall panels: faint seams every pitch metres. */
+vec3 panels(vec3 col, float s, float pitch) {
+  float seam = abs(fract(s / pitch + 0.5) - 0.5) * pitch;
+  return col * (1.0 - 0.12 * cover(seam - 0.003));
+}
+
+/** The black face over a station's desk: framed blocks of tiles, and rows of loose ones and slim readouts under them. */
+vec3 stationFace(vec3 col, vec2 q, float hw, uint h) {
+  float aw = hw - 0.04;
+  int nb = 2 + int((h >> 5) & 1u);
+  float bw = 2.0 * aw / float(nb);
+  float i = clamp(floor((q.x + aw) / bw), 0.0, float(nb - 1));
+  uint bh = hash32(h ^ (uint(i) + 1u) * 0x9e3779b9u);
+  float cx = -aw + (i + 0.5) * bw;
+  int rows = 2 + int((bh >> 4) & 1u);
+  float top = FACE_TOP - 0.05;
+  float bh2 = rows == 3 ? 0.11 : 0.08;
+  col = tileBlock(col, q, vec2(cx, top - bh2), vec2(0.5 * bw - 0.02, bh2), bh, rows, false);
+  // Loose tiles and slim readouts lower down.
+  float y1 = top - 2.0 * bh2 - 0.075;
+  col = lampRow(col, q, y1, aw - 0.03, 0.062, vec2(0.022, 0.013), hash32(h + 3u), false, true);
+  if (rows == 2) {
+    col = lampRow(col, q, y1 - 0.065, aw - 0.1, 0.11, vec2(0.04, 0.011), hash32(h + 4u), false, true);
   }
   return col;
 }
 
-/** The calm wall behind the speaker: plain panels, an empty inset, and one strip of slow lamps. */
+/** The wall over a station: pale panels with a band of framed screens. */
+vec3 stationScreens(vec3 col, vec2 q, float hw, uint h, int idx) {
+  if (((h >> 9) & 1u) == 0u) {
+    float sw = 0.5 * hw - 0.07;
+    col = screen(col, q, vec2(-0.5 * hw + 0.015, SCREEN_Y), vec2(sw, 0.19), hash32(h + 5u), idx * 2);
+    col = screen(col, q, vec2(0.5 * hw - 0.015, SCREEN_Y), vec2(sw, 0.19), hash32(h + 6u), idx * 2 + 1);
+  } else {
+    col = screen(col, q, vec2(-0.26 * hw, SCREEN_Y), vec2(0.62 * hw, 0.2), hash32(h + 5u), idx * 2);
+    col = screen(col, q, vec2(0.68 * hw, SCREEN_Y + 0.04), vec2(0.18 * hw, 0.13), hash32(h + 6u), idx * 2 + 1);
+  }
+  return col;
+}
+
+/** The calm wall behind the speaker: plain panels, an empty framed inset, and one block of slow tiles. */
 vec3 calmWall(vec3 col, vec2 q, float hw, uint h) {
-  float seam = abs(fract(q.x / 0.64 + 0.5) - 0.5) * 0.64;
-  col *= 1.0 - 0.18 * cover(seam - 0.004) * step(1.68, q.y) * step(q.y, 2.48);
-  float dr = sdBox(q - vec2(0.0, 2.08), vec2(hw - 0.08, 0.36), 0.035);
-  col = mix(col, col * (q.y > 2.08 ? 1.15 : 0.8), cover(dr) - cover(dr + 0.012));
-  col = mix(col, col * 0.9, cover(dr + 0.012));
-  float ds = sdBox(q - vec2(0.0, 1.44), vec2(hw - 0.12, 0.034), 0.012);
-  col = mix(col, vec3(0.05), cover(ds));
-  if (ds < 0.0) {
-    col = lampRow(col, q, 1.44, hw - 0.16, 0.17, vec2(0.024, 0.014), hash32(h + 9u), true, true);
+  if (q.y < FACE_TOP) {
+    col = tileBlock(col, q, vec2(0.0, FACE_TOP - 0.13), vec2(hw - 0.14, 0.06), hash32(h + 9u), 1, true);
+  } else {
+    float di = sdBox(q - vec2(0.0, SCREEN_Y), vec2(hw - 0.25, 0.2), 0.01);
+    col = mix(col, lit(FRAME), cover(di - 0.03));
+    col = mix(col, lit(WALL * 0.9), cover(di));
+    col *= 1.0 - 0.18 * cover(abs(di) - 0.003) * step(SCREEN_Y + 0.17, q.y);
   }
   return col;
 }
 
-/** The lift door's bay: red double doors in a dark frame, a red call panel beside them, a lamp above. */
-vec3 doorWall(vec3 col, vec2 q, uint h) {
-  vec2 dc = vec2(0.08, 0.5 * (DECK_H + 2.3));
-  vec2 dh = vec2(0.4, 0.5 * (2.3 - DECK_H));
-  float d = sdBox(q - dc, dh, 0.0);
-  col = mix(col, lit(vec3(0.7, 0.71, 0.73)), cover(d - 0.07));
-  col = mix(col, vec3(0.04), cover(d - 0.03));
-  float shade = 0.82 + 0.18 * (q.y - DECK_H) / (2.3 - DECK_H);
-  vec3 leaf = lit(DOOR_RED * shade);
-  float seam = abs(q.x - dc.x);
-  leaf *= 1.0 - 0.7 * cover(seam - 0.005);
-  leaf *= 1.0 + 0.25 * cover(abs(q.x - dc.x - 0.014) - 0.003);
-  col = mix(col, leaf, cover(d));
-  // The call panel.
-  float dp = sdBox(q - vec2(-0.49, 1.52), vec2(0.055, 0.3), 0.012);
-  col = mix(col, vec3(0.05), cover(dp - 0.01));
-  col = mix(col, lit(vec3(0.7, 0.08, 0.06)), cover(dp));
+/** The door's bay: a red slatted door in a recessed alcove between grey pillars, a call panel and a lamp. */
+vec3 doorWall(vec3 col, vec2 q, float hw, uint h) {
+  float pw = 0.13;
+  float ax = hw - pw;
+  float top = 2.42;
+  // Pillars either side, full height.
+  float pil = step(ax, abs(q.x));
+  float side = clamp((abs(q.x) - ax) / pw, 0.0, 1.0);
+  vec3 pc = lit(PILLAR * (1.05 - 0.2 * side));
+  // The alcove: a darker reveal round the door.
+  float dc = sdBox(q - vec2(0.0, 0.5 * (DECK_H + top)), vec2(ax, 0.5 * (top - DECK_H)), 0.0);
+  vec3 alc = lit(vec3(0.42, 0.44, 0.48)) * (0.8 + 0.2 * smoothstep(DECK_H, top, q.y));
+  col = mix(col, alc, cover(dc));
+  // A header over the alcove, flush with the pillars.
+  col = mix(col, lit(PILLAR * 1.1), step(top, q.y) * (1.0 - pil) * step(q.y, SOFFIT_Y));
+  col = mix(col, pc, pil * step(q.y, SOFFIT_Y));
+  col *= 1.0 - 0.3 * cover(abs(abs(q.x) - ax) - 0.004);
+  // The door: fine vertical slats.
+  vec2 dh = vec2(ax - 0.05, 0.5 * (top - 0.06 - DECK_H));
+  float dd = sdBox(q - vec2(0.0, DECK_H + dh.y), dh, 0.0);
+  float pitch = 0.032;
+  float fade = clamp(1.6 - 2.0 * px / pitch, 0.0, 1.0);
+  float slat = 0.5 + 0.5 * cos(6.2831853 * q.x / pitch);
+  vec3 leaf = DOOR_RED * (0.95 - 0.28 * slat * fade - 0.12 * (1.0 - fade));
+  leaf *= 0.88 + 0.12 * smoothstep(DECK_H, top, q.y);
+  col = mix(col, vec3(0.06), cover(dd - 0.012));
+  col = mix(col, lit(leaf), cover(dd));
+  // A small red call panel on one pillar, with lamps.
+  vec2 pq = q - vec2(-(ax + 0.5 * pw), 1.55);
+  float dp = sdBox(pq, vec2(0.04, 0.1), 0.006);
+  col = mix(col, vec3(0.05), cover(dp - 0.008));
+  col = mix(col, lit(vec3(0.75, 0.08, 0.06)), cover(dp));
   if (dp < 0.0) {
-    col = lampRow(col, vec2(q.y - 1.52, q.x), -0.49, 0.22, 0.11, vec2(0.022, 0.022), hash32(h + 11u), true, true);
+    col = lampRow(col, vec2(pq.y, pq.x), 0.0, 0.08, 0.075, vec2(0.016, 0.016), hash32(h + 11u), true, true);
   }
   // A lamp over the door.
-  float dl = sdBox(q - vec2(dc.x, 2.42), vec2(0.11, 0.022), 0.008);
-  col = lens(col, dl, vec3(1.0, 0.9, 0.6), CALM_SLOT0 + float(hash32(h + 12u) % 32u));
+  float dl = sdBox(q - vec2(0.0, top + 0.08), vec2(0.1, 0.02), 0.006);
+  col = lens(col, dl, vec3(1.0, 0.92, 0.7), CALM_SLOT0 + float(hash32(h + 12u) % 32u));
   return col;
 }
 
@@ -383,46 +426,48 @@ vec3 wall(vec3 p) {
   float hw = 0.5 * (s1 - s0);
   vec2 q = vec2(s - 0.5 * (s0 + s1), y);
   uint h = hash32(uint(idx) * 0x632be5abu ^ uSalt);
-  vec3 col = lit(WALL);
-  if (y < BACK_H + 0.04 && kind != DOOR) {
-    col = lit(CONSOLE * 0.6);
+  vec3 col = panels(lit(WALL), s, 0.56);
+  if (kind == DOOR) {
+    col = doorWall(col, q, hw, h);
+  } else if (y < FACE_TOP) {
+    // The black face over the desks, leaning back a little: lighter at the top.
+    col = lit(BLACK) * (0.8 + 0.5 * smoothstep(BACK_H, FACE_TOP, y));
+    if (kind == STATION) {
+      col = stationFace(col, q, hw, h);
+    } else {
+      col = calmWall(col, q, hw, h);
+    }
+    col *= 1.0 - 0.6 * cover(min(s - s0, s1 - s) - 0.004);
+  } else {
+    // A light grey ledge along the face's top.
+    col = mix(col, lit(FRAME * 1.05), cover(abs(y - FACE_TOP - 0.03) - 0.03));
+    col *= 1.0 - 0.3 * cover(abs(y - FACE_TOP - 0.065) - 0.004);
+    if (kind == STATION) {
+      col = stationScreens(col, q, hw, h, idx);
+    } else if (kind == CALM) {
+      col = calmWall(col, q, hw, h);
+    }
+    // Slim pillars between segments.
+    float e = min(s - s0, s1 - s);
+    col = mix(col, lit(PILLAR * (0.9 + 0.15 * clamp(e / 0.03, 0.0, 1.0))), cover(e - 0.03));
   }
-  // Trim: a ledge over the lamp panels, and one under the band of light.
-  col = mix(col, lit(PILLAR), cover(abs(y - 1.65) - 0.025));
-  col *= 1.0 - 0.25 * cover(abs(y - 1.622) - 0.004);
-  if (y > 2.48) {
+  if (y > SOFFIT_Y) {
     col = lit(SOFFIT);
-    col = mix(col, lit(vec3(0.4, 0.41, 0.45)), cover(abs(y - 2.52) - 0.04));
-    col *= 1.0 - 0.3 * cover(abs(y - 2.565) - 0.004);
+    col *= 1.0 - 0.3 * cover(abs(y - SOFFIT_Y - 0.006) - 0.006);
     // The band of light under the ceiling.
-    vec3 band = vec3(0.95, 0.9, 0.8) * 0.85 + 0.25 * gLight * 0.3;
-    col = mix(col, band, cover(abs(y - 2.63) - 0.022));
-    col *= 1.0 - 0.35 * smoothstep(2.75, 3.0, y);
-  }
-  if (kind == STATION) {
-    col = stationWall(col, q, hw, h, idx);
-  } else if (kind == CALM) {
-    col = calmWall(col, q, hw, h);
-  } else if (kind == DOOR) {
-    col = doorWall(col, q, h);
-  }
-  // Pillars between segments.
-  float dpil = min(s - s0, s1 - s) - 0.036;
-  if (dpil < px) {
-    float e = clamp(min(s - s0, s1 - s) / 0.036, 0.0, 1.0);
-    vec3 pil = lit(PILLAR * (0.75 + 0.25 * e));
-    col = mix(col, pil, cover(dpil) * step(DECK_H, y));
+    col = mix(col, vec3(1.0, 0.98, 0.94), cover(abs(y - (CEILING_H - 0.1)) - 0.025));
+    col *= 1.0 - 0.15 * smoothstep(CEILING_H - 0.06, CEILING_H, y);
   }
   // The alert beacons: dark red domes on little plates.
   for (int b = 0; b < 2; b++) {
     float bs = (b == 0 ? uBeaconA.x : uBeaconA.y) * R_WALL;
     vec2 bq = vec2(s - bs, y - BEACON_Y);
     if (abs(bq.x) < 0.2 && abs(bq.y) < 0.2) {
-      col = mix(col, lit(vec3(0.25)), cover(sdBox(bq + vec2(0.0, 0.07), vec2(0.13, 0.025), 0.008)));
+      col = mix(col, lit(vec3(0.35)), cover(sdBox(bq + vec2(0.0, 0.07), vec2(0.13, 0.025), 0.008)));
       float dd = length(bq) - BEACON_R;
       vec2 n = bq / BEACON_R;
-      vec3 dome = vec3(0.32, 0.03, 0.025) * (0.7 + 0.5 * clamp(n.y - 0.4 * n.x, -1.0, 1.0));
-      dome += vec3(0.25) * exp(-dot(n - vec2(-0.35, 0.45), n - vec2(-0.35, 0.45)) * 18.0);
+      vec3 dome = vec3(0.4, 0.04, 0.03) * (0.7 + 0.5 * clamp(n.y - 0.4 * n.x, -1.0, 1.0));
+      dome += vec3(0.3) * exp(-dot(n - vec2(-0.35, 0.45), n - vec2(-0.35, 0.45)) * 18.0);
       float c = cover(dd);
       col = mix(col, dome, c);
       setLive(${String(CODE_BEACON)} + b, bq / (2.0 * BEACON_R) + 0.5, c);
@@ -431,26 +476,34 @@ vec3 wall(vec3 p) {
   return col;
 }
 
-/** The face of a console turned to the captain: dark, with a light lip and a dark kick plate. */
+/** A console's front: a red trim along the desk's edge, a dark lip, and pale knee panels lit soft blue. */
 vec3 consoleFront(vec3 p, vec4 seg, int kind, uint h) {
   float th = atan(p.x, p.z);
-  gLight = wallLight(th, p.y) * 0.9;
+  gLight = wallLight(th, p.y);
   gWash = 0.6;
-  vec3 col = lit(CONSOLE);
-  if (kind == STATION) {
-    col = mix(col, lit(lampColour(h) * 0.45), cover(abs(p.y - 0.84) - 0.012));
-  }
-  col = mix(col, lit(LIP), cover(abs(p.y - (CONSOLE_H - 0.025)) - 0.025));
-  col = mix(col, vec3(0.05), cover(p.y - (DECK_H + 0.07)));
   float s = th * R_CONSOLE;
+  float sc = 0.5 * (seg.x + seg.y) * R_CONSOLE;
+  float y = p.y;
+  vec3 col = panels(lit(KNEE), s - sc, 0.28);
+  // Shadow under the desk, and a soft blue or teal glow spilling down the panels.
+  col *= 0.55 + 0.45 * smoothstep(CONSOLE_H - 0.03, CONSOLE_H - 0.3, y);
+  vec3 glow = ((h >> 3) & 1u) == 0u ? vec3(0.25, 0.55, 1.0) : vec3(0.2, 0.85, 0.8);
+  float gx = kind == STATION ? 1.0 : 0.45;
+  float g = exp(-pow((s - sc) / 0.32, 2.0)) * exp(-pow((y - (CONSOLE_H - 0.17)) / 0.14, 2.0));
+  col += glow * 0.55 * g * gx;
+  col = mix(col, lit(BLACK), cover(abs(y - (CONSOLE_H - 0.07)) - 0.022));
+  // The red trim along the desk's front edge.
+  float n = clamp((y - (CONSOLE_H - 0.025)) / 0.025, -1.0, 1.0);
+  vec3 trim = RAIL_RED * (0.8 + 0.25 * n) + vec3(0.25, 0.15, 0.15) * exp(-pow((n - 0.6) / 0.25, 2.0));
+  col = mix(col, lit(trim), cover(abs(y - (CONSOLE_H - 0.025)) - 0.025));
+  // A dark kick plate.
+  col = mix(col, vec3(0.04), cover(y - (DECK_H + 0.05)));
   float e = min(s - seg.x * R_CONSOLE, seg.y * R_CONSOLE - s);
-  col *= 1.0 - 0.5 * cover(e - 0.006);
-  // Shade towards the floor, as the stage light falls off.
-  col *= 0.7 + 0.3 * smoothstep(DECK_H, CONSOLE_H, p.y);
+  col *= 1.0 - 0.6 * cover(e - 0.005);
   return col;
 }
 
-/** The sloping top of a console: black, with rows of square buttons at stations, a few slow ones elsewhere. */
+/** The slanted black desk: clusters of round jewel buttons at stations, a few slow ones elsewhere. */
 vec3 consoleTop(vec3 p, vec4 seg, int kind, uint h) {
   float th = atan(p.x, p.z);
   float r = length(p.xz);
@@ -458,43 +511,65 @@ vec3 consoleTop(vec3 p, vec4 seg, int kind, uint h) {
   float rm = 0.5 * (R_CONSOLE + R_BACK);
   vec2 q = vec2((th - 0.5 * (seg.x + seg.y)) * rm, v);
   float hw = 0.5 * (seg.y - seg.x) * rm;
-  gLight = wallLight(th, p.y) * 0.7;
+  gLight = wallLight(th, p.y);
   gWash = 0.6;
-  vec3 col = lit(vec3(0.07, 0.07, 0.08));
-  col = mix(col, lit(LIP * 0.9), cover(v - 0.03));
+  // Black, with a soft sheen of the key light towards the back.
+  vec3 col = lit(BLACK) * (1.0 + 1.2 * smoothstep(0.1, SLOPE_LEN, v));
   if (kind == STATION) {
     for (int k = 0; k < 3; k++) {
-      uint rk = hash32(h + 40u + uint(k));
-      col = lampRow(col, q, 0.14 + float(k) * 0.13, hw - 0.08, 0.072, vec2(0.025, 0.025), rk, false, true);
+      uint ck = hash32(h + 40u + uint(k));
+      float cx = (float(k) - 1.0) * 0.66 * hw + (float(ck % 9u) - 4.0) * 0.01;
+      float cw = 0.11 + 0.04 * float((ck >> 4) % 3u);
+      int rows = 2 + int((ck >> 8) & 1u);
+      for (int j = 0; j < 3; j++) {
+        if (j >= rows) {
+          break;
+        }
+        uint rk = hash32(ck + uint(j) * 17u);
+        col = jewelRow(col, q - vec2(cx, 0.0), 0.15 + float(j) * 0.085, cw, 0.05, 0.017, rk, false);
+      }
+      // A small pale plate beside some clusters.
+      if (((ck >> 12) & 1u) == 0u) {
+        float dp = sdBox(q - vec2(cx + cw + 0.06, 0.24), vec2(0.035, 0.05), 0.004);
+        col = mix(col, lit(KNEE * 0.8), cover(dp));
+      }
     }
   } else if (seg.z > -0.5) {
-    col = lampRow(col, q, 0.27, hw - 0.2, 0.26, vec2(0.025, 0.025), hash32(h + 41u), true, true);
+    col = jewelRow(col, q, 0.27, hw - 0.2, 0.26, 0.017, hash32(h + 41u), true);
   }
   float e = min(q.x + hw, hw - q.x);
   col *= 1.0 - 0.5 * cover(e - 0.006);
   return col;
 }
 
-/** The ceiling: dark, with a ring of cove light near the wall and radial ribs. */
+/** The ceiling: mid grey, with a ring of cove light near the wall and radial ribs. */
 vec3 ceiling(vec3 p) {
   float r = length(p.xz);
   float th = atan(p.x, p.z);
   gLight = vec3(1.0);
   gWash = 0.6;
-  vec3 col = vec3(0.075, 0.075, 0.09);
-  col += vec3(0.75, 0.72, 0.66) * smoothstep(3.95, 4.05, r) * (1.0 - smoothstep(4.3, 4.4, r));
-  col += vec3(0.06) * (1.0 - smoothstep(2.6, 2.7, r));
+  vec3 col = vec3(0.4, 0.41, 0.44) * uWash[0] * (0.85 + 0.15 * smoothstep(2.0, 4.0, r));
+  col += vec3(0.5, 0.5, 0.48) * smoothstep(3.95, 4.05, r) * (1.0 - smoothstep(4.3, 4.4, r));
   float rib = abs(fract(th / 0.3927 + 0.5) - 0.5) * 0.3927 * r;
-  col *= 1.0 - 0.25 * cover(rib - 0.015);
+  col *= 1.0 - 0.12 * cover(rib - 0.012);
   return col;
+}
+
+/** Charcoal carpet: a fine, faint texture that fades out where it would alias. */
+vec3 carpet(vec3 p, float shade) {
+  vec2 c = floor(p.xz / 0.012);
+  float n = float(hash32(uint(int(c.x) + 4096) * 0x9e3779b9u ^ uint(int(c.y) + 4096)) & 255u) / 255.0;
+  float k = clamp(1.0 - px / 0.02, 0.0, 1.0);
+  return CARPET * uWash[0] * shade * (1.0 + 0.12 * (n - 0.5) * k);
 }
 
 vec3 deckFloor(vec3 p) {
   float r = length(p.xz);
-  gLight = wallLight(atan(p.x, p.z), 0.8) * 0.6;
+  gLight = vec3(1.0);
   gWash = 0.5;
-  vec3 col = lit(vec3(0.24, 0.22, 0.25));
-  col *= 1.0 - 0.45 * smoothstep(R_CONSOLE - 0.12, R_CONSOLE, r);
+  vec3 col = carpet(p, 0.9);
+  // Shadow under the desks.
+  col *= 1.0 - 0.45 * smoothstep(R_CONSOLE - 0.15, R_CONSOLE, r);
   return col;
 }
 
@@ -502,16 +577,15 @@ vec3 lowerFloor(vec3 p) {
   float r = length(p.xz);
   gLight = vec3(1.0);
   gWash = 0.5;
-  return vec3(0.16, 0.15, 0.17) * (0.8 + 0.35 * exp(-r * r / 5.0));
+  return carpet(p, 0.95 + 0.25 * exp(-r * r / 4.0));
 }
 
-/** The step up to the deck: dark, with a light trim along its edge and a faint light strip low down. */
+/** The step up to the deck: charcoal, darker towards the floor. */
 vec3 riser(vec3 p) {
   gLight = vec3(1.0);
   gWash = 0.5;
-  vec3 col = vec3(0.1, 0.1, 0.115);
-  col = mix(col, vec3(0.5, 0.5, 0.53), cover(abs(p.y - (DECK_H - 0.02)) - 0.02));
-  col = mix(col, vec3(0.55, 0.5, 0.42), cover(abs(p.y - 0.07) - 0.008));
+  vec3 col = CARPET * uWash[0] * (0.45 + 0.25 * smoothstep(0.0, DECK_H, p.y));
+  col = mix(col, CARPET * 1.4, cover(abs(p.y - (DECK_H - 0.008)) - 0.008));
   return col;
 }
 
@@ -569,8 +643,63 @@ vec3 back(vec3 ro, vec3 rd, float k) {
   return ceiling(ro + rd * t);
 }
 
-/** The red railing and its posts at p (on the railing's cylinder), over col. Open in front of the door. */
-vec3 railing(vec3 p, vec3 col) {
+/**
+ * A swivel chair seen from behind, w in metres from the foot of its pedestal:
+ * a single black pedestal on a low foot, a pale blue-white shell seat and a
+ * black back.
+ */
+vec3 swivelChair(vec2 w, vec3 col, vec3 L) {
+  float dFoot = sdBox(w - vec2(0.0, 0.02), vec2(0.2, 0.018), 0.018);
+  float dPost = sdBox(w - vec2(0.0, 0.22), vec2(0.028, 0.2), 0.008);
+  vec2 sq = (w - vec2(0.0, 0.5)) / vec2(0.26, 0.12);
+  float dShell = (length(vec2(sq.x, max(sq.y, 0.0) * 0.35 + min(sq.y, 0.0))) - 1.0) * 0.12;
+  float dBack = sdBox(w - vec2(0.0, 0.84), vec2(0.18, 0.27), 0.08);
+  float c = max(max(cover(dFoot), cover(dPost)), max(cover(dShell), cover(dBack)));
+  if (c <= 0.0) {
+    return col;
+  }
+  col = mix(col, vec3(0.03) * L, max(cover(dFoot), cover(dPost)));
+  vec3 shell = SHELL * L * (0.7 + 0.35 * smoothstep(0.38, 0.6, w.y)) * (1.0 - 0.25 * sq.x * sq.x);
+  col = mix(col, shell, cover(dShell));
+  vec3 pad = BLACK * L * (1.0 + 2.5 * smoothstep(0.9, 1.1, w.y));
+  col = mix(col, vec3(0.01), cover(dBack - 0.006));
+  col = mix(col, pad, cover(dBack));
+  gWash = mix(gWash, 0.4, c);
+  gCov *= 1.0 - c;
+  return col;
+}
+
+/** Swivel chairs at most stations, between the railing and the desks. */
+vec3 chairs(vec2 f, vec3 col, float k) {
+  for (int i = 0; i < ${String(MAX_SEGMENTS)}; i++) {
+    if (i >= uSegCount) {
+      break;
+    }
+    vec4 s = uSegs[i];
+    if (int(s.z + 0.5) != STATION) {
+      continue;
+    }
+    uint h = hash32(uint(i) * 0x632be5abu ^ uSalt);
+    if (((h >> 13) & 3u) == 0u) {
+      continue;
+    }
+    float a = 0.5 * (s.x + s.y) + (float((h >> 16) % 7u) - 3.0) * 0.015;
+    vec3 c = vec3(R_CHAIR * sin(a), DECK_H, R_CHAIR * cos(a));
+    float d = c.z - CAMERA_Z;
+    vec2 w = vec2(f.x * 2.0 * TAN_HALF * d - c.x, EYE_H + f.y * 2.0 * TAN_HALF * d - DECK_H);
+    if (abs(w.x) < 0.32 && w.y > -0.02 && w.y < 1.14) {
+      px = d * k;
+      col = swivelChair(w, col, wallLight(a, 1.0));
+    }
+  }
+  return col;
+}
+
+/** The thick, flat-topped red padded railing on black posts, over col. Open in front of the door. */
+vec3 railing(vec3 ro, vec3 rd, float k, vec3 col) {
+  float tR = farRoot(ro.xz, rd.xz, R_RAIL);
+  vec3 p = ro + rd * tR;
+  px = tR * k;
   float th = atan(p.x, p.z);
   float s = th * R_RAIL;
   float g0 = (uDoor.x + 0.01) * R_RAIL;
@@ -578,32 +707,39 @@ vec3 railing(vec3 p, vec3 col) {
   // Positive outside the gap, negative inside it.
   float dg = max(g0 - s, s - g1);
   float outside = cover(-dg);
-  float dy = p.y - RAIL_H;
-  float tube = cover(abs(dy) - 0.035) * outside;
-  float pitch = 0.105 * R_RAIL;
-  float sp = abs(s - pitch * floor(s / pitch + 0.5));
-  sp = min(sp, min(abs(s - g0), abs(s - g1)));
-  float post = cover(sp - 0.016) * step(DECK_H, p.y) * step(p.y, RAIL_H) * cover(-dg - 0.02);
-  float n = clamp(dy / 0.035, -1.0, 1.0);
-  vec3 rail = RAIL_RED * (0.55 + 0.4 * n) + vec3(0.45, 0.3, 0.3) * exp(-pow((n - 0.55) / 0.18, 2.0));
-  vec3 pole = METAL * 0.55 * (0.7 + 0.3 * (1.0 - sp / 0.016));
+  float dy = p.y - (RAIL_H - 0.5 * RAIL_T);
+  float pad = cover(abs(dy) - 0.5 * RAIL_T) * outside;
+  float pitch = 0.3 * R_RAIL;
+  float sp = abs(s - pitch * (floor(s / pitch) + 0.5));
+  sp = min(sp, min(abs(s - g0 + 0.08), abs(s - g1 - 0.08)));
+  float post = cover(sp - 0.03) * step(DECK_H, p.y) * step(p.y, RAIL_H) * cover(-dg - 0.02);
+  // The padding: a rounded upper edge catching the light, a flat face, a soft underside.
+  float n = clamp(dy / (0.5 * RAIL_T), -1.0, 1.0);
+  vec3 L = wallLight(th, RAIL_H);
+  vec3 rail = RAIL_RED * L * (0.82 + 0.18 * smoothstep(-1.0, 0.2, n) - 0.3 * smoothstep(0.75, 1.0, n));
+  rail += vec3(0.35, 0.2, 0.2) * exp(-pow((n - 0.62) / 0.14, 2.0));
+  rail *= 1.0 - 0.35 * smoothstep(-0.7, -1.0, n);
+  vec3 pole = vec3(0.025) + vec3(0.05) * exp(-pow(sp / 0.012, 2.0));
+  // The posts and the railing's shadow on what lies behind.
+  col *= 1.0 - 0.25 * cover(abs(dy + 0.5 * RAIL_T + 0.02) - 0.02) * outside;
   col = mix(col, pole, post);
-  col = mix(col, rail, tube);
-  float c = max(tube, post);
+  col = mix(col, rail, pad);
+  float c = max(pad, post);
   gCov *= 1.0 - c;
   gWash = mix(gWash, 0.4, c);
   return col;
 }
 
-/** The command chair's back and arm ends, in front of everything, behind the speaker. */
+/** The command chair's back (black upholstery in a pale shell) and arm ends, in front of everything. */
 vec3 chair(vec2 f, vec3 col) {
-  float ds = sdBox(f - vec2(0.0, -0.385), vec2(0.165, 0.165), 0.05);
+  vec3 L = uWash[0];
+  float ds = sdBox(f - vec2(0.0, -0.385), vec2(0.17, 0.165), 0.05);
   if (ds < 0.01) {
     col = mix(col, col * 0.5, cover(ds - 0.008));
-    vec3 shell = vec3(0.3, 0.31, 0.34) * (0.8 + 0.3 * clamp((f.y + 0.3) / 0.1, -1.0, 1.0));
+    vec3 shell = vec3(0.68, 0.7, 0.74) * L * (0.8 + 0.25 * clamp((f.y + 0.3) / 0.1, -1.0, 1.0));
     col = mix(col, shell, cover(ds));
     float dp = sdBox(f - vec2(0.0, -0.39), vec2(0.14, 0.14), 0.04);
-    col = mix(col, vec3(0.05, 0.05, 0.06) * (1.0 + 0.4 * smoothstep(-0.28, -0.25, f.y)), cover(dp));
+    col = mix(col, vec3(0.04, 0.04, 0.045) * (1.0 + 0.6 * smoothstep(-0.28, -0.25, f.y)), cover(dp));
     col *= 1.0 - 0.35 * cover(abs(f.x) - 0.003) * cover(dp + 0.02);
     gWash = mix(gWash, 0.2, cover(ds));
     gCov *= 1.0 - cover(ds);
@@ -613,7 +749,7 @@ vec3 chair(vec2 f, vec3 col) {
     float da = sdBox(a, vec2(0.065, 0.04), 0.012);
     if (da < 0.01) {
       col = mix(col, vec3(0.03), cover(da - 0.006));
-      col = mix(col, vec3(0.24, 0.25, 0.28) * (0.85 + 0.2 * a.y / 0.04), cover(da));
+      col = mix(col, vec3(0.62, 0.64, 0.68) * L * (0.85 + 0.2 * a.y / 0.04), cover(da));
       gWash = mix(gWash, 0.2, cover(da));
       gCov *= 1.0 - cover(da);
       float x = a.x * float(sgn);
@@ -654,16 +790,15 @@ vec3 scene(vec2 f) {
       col = riser(pD);
     } else {
       col = back(ro, rd, k);
-      float tR = farRoot(ro.xz, rd.xz, R_RAIL);
-      px = tR * k;
-      col = railing(ro + rd * tR, col);
+      col = chairs(f, col, k);
+      col = railing(ro, rd, k, col);
     }
   }
   px = 1.0 / uRes.y;
   col = chair(vec2(f.x * uMirror, f.y), col);
-  // A soft stage vignette.
+  // A faint stage vignette.
   vec2 v = f / vec2(0.5 * uRes.x / uRes.y + 0.15, 0.62);
-  col *= 1.0 - 0.3 * smoothstep(0.45, 1.05, dot(v, v));
+  col *= 1.0 - 0.15 * smoothstep(0.5, 1.1, dot(v, v));
   return col;
 }
 
@@ -700,9 +835,9 @@ void main() {
 
 /**
  * Per frame: the cached room, its lamps dimmed and brightened by their slots,
- * the screens' pictures (colour bars, an oscilloscope trace, a turning pattern
- * or a bar graph), and under red alert the pulsing red wash and the beacons'
- * turning glow.
+ * the screens' pictures (a drifting star field, a plot of speckles round a
+ * circling cluster, an oscilloscope trace or a bar graph), and under red alert
+ * the pulsing red wash and the beacons' turning glow.
  */
 const COMPOSITE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -736,14 +871,61 @@ vec3 pal(float i) {
   return vec3(0.9, 0.25, 0.8);
 }
 
-/** Colour bars that step round one place every ten seconds, cross-fading over a second and a half. */
-vec3 bars(vec2 uv, float idx) {
-  float i = floor(uv.x * 6.0);
-  float ph = uTime / 10.0 + idx;
-  float k = floor(ph);
-  float fr = smoothstep(0.85, 1.0, ph - k);
-  vec3 c = mix(pal(i + k), pal(i + k + 1.0), fr);
-  return c * (uv.y > 0.2 ? 0.8 : 0.35);
+/**
+ * Speckles: a field of small coloured points, one chance per cell, panning
+ * across by shift (whole screens) and twinkling slowly. Focus gathers
+ * more of them round a point, with spread its reach (0 for an even field).
+ */
+vec3 speckle(vec2 uv, float idx, float shift, float dens, vec2 focus, float spread) {
+  const vec2 G = vec2(38.0, 24.0);
+  vec2 gq = vec2((uv.x + shift) * G.x, uv.y * G.y);
+  vec2 cell = floor(gq);
+  vec2 local = gq - cell;
+  cell.x = mod(cell.x, G.x);
+  uint h = hash32(uint(cell.x) + uint(cell.y) * 64u + uint(idx) * 4096u + 0x51ed27u);
+  float p = dens;
+  if (spread > 0.0) {
+    vec2 c = vec2(fract((cell.x + 0.5) / G.x - shift), (cell.y + 0.5) / G.y);
+    vec2 o = (c - focus) * vec2(1.4, 1.0);
+    p += 0.7 * exp(-dot(o, o) / (spread * spread));
+  }
+  if (float(h & 1023u) / 1024.0 > p) {
+    return vec3(0.0);
+  }
+  vec2 j = 0.2 + 0.6 * vec2(float((h >> 10) & 255u), float((h >> 18) & 255u)) / 255.0;
+  vec2 o = local - j;
+  float s = exp(-dot(o, o) / 0.035);
+  uint k = (h >> 26) & 7u;
+  vec3 c = k < 3u ? vec3(1.0, 0.97, 0.92) : pal(float(k));
+  float tw = 0.75 + 0.25 * sin(TAU * cyc(40.0 + float((h >> 3) & 15u) * 5.0) + float(h & 255u));
+  return c * s * tw;
+}
+
+/** A dark star field with a coloured haze, drifting slowly sideways. */
+vec3 stars(vec2 uv, float idx) {
+  float shift = cyc(2.0 + mod(idx, 3.0));
+  vec3 col = vec3(0.01, 0.012, 0.03);
+  vec2 hc = vec2(fract(0.25 + 0.37 * idx - shift), 0.35 + 0.3 * fract(0.61 * idx));
+  vec2 ho = (uv - hc) * vec2(1.4, 1.0);
+  vec2 ho2 = (uv - hc + vec2(1.0, 0.0)) * vec2(1.4, 1.0);
+  float haze = exp(-dot(ho, ho) / 0.03) + exp(-dot(ho2, ho2) / 0.03);
+  vec3 hue = mod(idx, 2.0) < 0.5 ? vec3(0.55, 0.06, 0.3) : vec3(0.1, 0.25, 0.5);
+  col += hue * 0.45 * haze;
+  col += speckle(uv, idx, shift, 0.32, hc, 0.0) * (0.75 + 0.6 * haze);
+  return col;
+}
+
+/** A plot: speckles gathered round a slowly circling cluster, over a faint grid with a crosshair on it. */
+vec3 plot(vec2 uv, float idx) {
+  vec2 gq = abs(fract(uv * vec2(6.0, 4.0)) - 0.5);
+  vec3 col = vec3(0.01, 0.015, 0.035) + vec3(0.02, 0.04, 0.07) * step(0.46, max(gq.x, gq.y));
+  float a = TAU * (cyc(6.0 + mod(idx, 4.0)) + 0.13 * idx);
+  vec2 c = vec2(0.5 + 0.22 * cos(a), 0.5 + 0.2 * sin(a));
+  col += speckle(uv, idx + 16.0, 0.0, 0.12, c, 0.16);
+  vec2 o = abs(uv - c) * vec2(1.4, 1.0);
+  float cross = step(min(o.x, o.y), 0.006) * step(max(o.x, o.y), 0.07) * step(0.02, max(o.x, o.y));
+  col += vec3(0.9, 0.3, 0.6) * 0.7 * cross;
+  return col;
 }
 
 /** A green oscilloscope trace, drifting and slowly changing height, over a faint grid. */
@@ -759,20 +941,6 @@ vec3 scope(vec2 uv, float idx) {
   float tr = 1.0 - smoothstep(0.012, 0.03, d);
   col += vec3(0.35, 1.0, 0.55) * tr + vec3(0.05, 0.2, 0.1) * exp(-d * 20.0);
   return col;
-}
-
-/** A coloured pinwheel turning about once every twelve seconds. */
-vec3 pinwheel(vec2 uv, float idx) {
-  vec2 p = (uv - 0.5) * vec2(1.35, 1.0);
-  float r = length(p);
-  float dir = mod(idx, 2.0) < 0.5 ? 1.0 : -1.0;
-  float a = atan(p.y, p.x) / TAU + dir * cyc(50.0);
-  float s = fract(a * 4.0 + r * 2.5);
-  float k = floor(fract(a * 4.0 + r * 2.5 + 0.5 * floor(idx / 2.0)) * 4.0);
-  vec3 c = pal(k + idx);
-  c *= 0.55 + 0.45 * smoothstep(0.0, 0.08, s) * smoothstep(1.0, 0.92, s);
-  c *= 1.0 - smoothstep(0.4, 0.46, r);
-  return c * 0.85 + vec3(0.02, 0.02, 0.05);
 }
 
 /** A bar graph whose bars rise and fall over ten to thirty seconds. */
@@ -791,9 +959,9 @@ vec3 graph(vec2 uv, float idx) {
 vec3 screenColour(vec2 uv, int sub) {
   int type = sub >> 4;
   float idx = float(sub & 15);
-  if (type == 0) return bars(uv, idx);
-  if (type == 1) return scope(uv, idx);
-  if (type == 2) return pinwheel(uv, idx);
+  if (type == 0) return stars(uv, idx);
+  if (type == 1) return plot(uv, idx);
+  if (type == 2) return scope(uv, idx);
   return graph(uv, idx);
 }
 
@@ -808,7 +976,7 @@ void main() {
     int kind = code >> 6;
     if (kind == 1) {
       float b = texelFetch(uLamps, ivec2(int(live.r * 255.0 + 0.5), 0), 0).r;
-      col = mix(col, room.rgb * mix(0.2, 1.15, b), live.a);
+      col = mix(col, room.rgb * mix(0.3, 1.12, b), live.a);
     } else if (kind == 2) {
       col = mix(col, screenColour(live.rg, code & 63), live.a);
     } else if (level > 0.0) {
@@ -841,12 +1009,14 @@ void main() {
 `;
 
 /**
- * Standing before the command chair of a 1960s TV starship's round bridge:
- * the ring of stations round the back wall behind a red railing, rows of
- * coloured lamps blinking slowly, small screens of colour bars, traces and
- * turning patterns, a red lift door at one side, and flat, coloured stage
- * lighting. The wall behind the speaker stays plain, with only slow lamps.
- * Under red alert the walls wash red in a slow pulse and two beacons turn.
+ * Standing before the command chair of a 1960s TV starship's round bridge,
+ * under bright, flat studio light: a ring of black consoles round the pale
+ * grey walls, each with framed blocks of coloured lamp tiles over a slanted,
+ * red-trimmed desk of jewel buttons, a band of framed wall screens above, a
+ * thick red padded railing on black posts, swivel chairs, and a red slatted
+ * door in an alcove at one side. The wall behind the speaker stays plain, with
+ * only slow lamps. Under red alert the walls wash red in a slow pulse and two
+ * beacons turn.
  */
 export const retrobridge = defineEffect(retrobridgeMeta, {
   create(gl) {

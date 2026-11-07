@@ -12,8 +12,13 @@ import {
   CALM_MAX_RATE,
   CALM_RAMP,
   CALM_SLOT0,
+  CEILING_H,
+  CONSOLE_BACK_H,
+  CONSOLE_H,
   createLampBank,
+  DECK_H,
   DOOR,
+  FACE_TOP,
   isCalmSlot,
   LAMP_GROUP,
   LAMP_RAMP,
@@ -23,6 +28,14 @@ import {
   MIN_RATE,
   PULSE_PERIOD,
   project,
+  R_CHAIR,
+  R_CONSOLE,
+  R_CONSOLE_BACK,
+  R_DECK,
+  R_RAIL,
+  R_WALL,
+  RAIL_H,
+  RAIL_T,
   ringSegments,
   SCREEN_PERIOD,
   screenTime,
@@ -77,8 +90,35 @@ describe("the ring", () => {
   });
 
   it("puts the wall's top and the deck inside the frame", () => {
-    expect(wallPoint(0, 3, out)[1]).toBeLessThan(0.45);
+    expect(wallPoint(0, CEILING_H, out)[1]).toBeLessThan(0.45);
     expect(wallPoint(0, 0.45, out)[1]).toBeGreaterThan(-0.4);
+  });
+
+  it("rings the well with the railing, the chairs, the consoles and the wall, in that order", () => {
+    const radii = [R_DECK, R_RAIL, R_CHAIR, R_CONSOLE, R_CONSOLE_BACK, R_WALL];
+    for (let i = 1; i < radii.length; i++) {
+      expect(radii[i]).toBeGreaterThan(radii[i - 1]);
+    }
+    const heights = [
+      DECK_H,
+      CONSOLE_H,
+      RAIL_H - RAIL_T,
+      RAIL_H,
+      CONSOLE_BACK_H,
+      FACE_TOP,
+      BEACON_Y,
+    ];
+    for (let i = 1; i < heights.length; i++) {
+      expect(heights[i]).toBeGreaterThan(heights[i - 1]);
+    }
+    expect(CEILING_H).toBeGreaterThan(BEACON_Y);
+  });
+
+  it("shows the desk's red front edge below the railing and its back above it", () => {
+    const railLow = project(0, RAIL_H - RAIL_T, R_RAIL, new Float64Array(2))[1];
+    const railTop = project(0, RAIL_H, R_RAIL, new Float64Array(2))[1];
+    expect(project(0, CONSOLE_H, R_CONSOLE, out)[1]).toBeLessThan(railLow - 0.02);
+    expect(project(0, CONSOLE_BACK_H, R_CONSOLE_BACK, out)[1]).toBeGreaterThan(railTop);
   });
 
   it("puts the beacons outside the calm stretch and in frame", () => {
