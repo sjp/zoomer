@@ -17,6 +17,7 @@ import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { timemachineMeta } from "./timemachine/timemachine.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
+import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
@@ -163,6 +164,7 @@ export const effects: readonly EffectEntry[] = [
     ...radiostudioMeta,
     load: () => import("./radiostudio/radiostudio").then((m) => m.radiostudio),
   },
+  { ...newsdeskMeta, load: () => import("./newsdesk/newsdesk").then((m) => m.newsdesk) },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
   { ...diningcarMeta, load: () => import("./diningcar/diningcar").then((m) => m.diningcar) },
