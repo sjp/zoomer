@@ -14,7 +14,6 @@ import {
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { approach } from "../math";
-import { HASH32_GLSL } from "../noise";
 import { createStreakRenderer } from "../streaks";
 import { createSwell, swayAt } from "../sway";
 import { defineEffect } from "../types";
@@ -27,6 +26,7 @@ import {
   cockpitLayout,
   LIP,
   MAX_LIGHTS,
+  NOISE_GLSL,
   MAX_PANELS,
   MAX_SCREENS,
   PANEL_FLOATS,
@@ -88,32 +88,6 @@ const RIM_WIDTH = 0.045;
 /** Strut angles (degrees): those reaching in to the first ring, and those stopping at the second. */
 const INNER_STRUTS = [90, 270, -9, 191];
 const OUTER_STRUTS = [26, 151, 57, 122, -38, 217];
-
-/** Value noise and fbm, hashed with lowbias32 so every GPU agrees. */
-const NOISE_GLSL = /* glsl */ `
-${HASH32_GLSL}
-float hash2(vec2 c, float s) {
-  uvec2 u = uvec2(ivec2(floor(c)) + 65536);
-  return float(hash32(u.x ^ hash32(u.y ^ hash32(uint(s) + 0x9e3779b9u)))) / 4294967296.0;
-}
-float vnoise(vec2 p, float s) {
-  vec2 i = floor(p);
-  vec2 t = fract(p);
-  t = t * t * (3.0 - 2.0 * t);
-  return mix(mix(hash2(i, s), hash2(i + vec2(1.0, 0.0), s), t.x),
-             mix(hash2(i + vec2(0.0, 1.0), s), hash2(i + vec2(1.0, 1.0), s), t.x), t.y);
-}
-float fbm(vec2 p, float s) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 4; i++) {
-    v += a * vnoise(p, s);
-    p = p * 2.03 + 17.1;
-    a *= 0.5;
-  }
-  return v / 0.9375;
-}
-`;
 
 const strutDirs = (angles: readonly number[]) =>
   angles
