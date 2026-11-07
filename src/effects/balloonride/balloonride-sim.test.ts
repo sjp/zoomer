@@ -46,12 +46,15 @@ function run(seed: number, gap: (t: number) => number, seconds: number, dt: numb
   const burns: { start: number; end: number; peak: number }[] = [];
   let last = burnerGlow(b);
   let maxStep = 0;
+  let lo = last;
+  let hi = last;
   let burning = false;
   for (let t = 0; t < seconds; t += dt) {
     stepBurner(b, dt, gap(t));
     const g = burnerGlow(b);
-    expect(g).toBeGreaterThanOrEqual(0);
-    expect(g).toBeLessThanOrEqual(1);
+    // Checked once at the end: an `expect` per step dominates the run time.
+    lo = Math.min(lo, g);
+    hi = Math.max(hi, g);
     maxStep = Math.max(maxStep, Math.abs(g - last));
     last = g;
     if (b.age >= 0 && !burning) {
@@ -66,6 +69,8 @@ function run(seed: number, gap: (t: number) => number, seconds: number, dt: numb
       cur.peak = Math.max(cur.peak, g);
     }
   }
+  expect(lo).toBeGreaterThanOrEqual(0);
+  expect(hi).toBeLessThanOrEqual(1);
   return { burns, maxStep };
 }
 

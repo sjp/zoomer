@@ -259,10 +259,10 @@ describe("clocks", () => {
 
 describe("console activity", () => {
   const layout = consoleLayout(7);
-  const run = (activity: number, seconds: number) => {
+  const run = (activity: number, seconds: number, step = 0.25) => {
     const scratch = createConsoleScratch(BLOCK_COUNT, layout.groups);
     const out = new Uint8Array(BLOCK_COUNT * 4);
-    for (let t = 0; t <= seconds; t += 0.25) {
+    for (let t = 0; t <= seconds; t += step) {
       consoleStates(layout.blocks, 7, activity, t, scratch, out);
     }
     let scrolled = 0;
@@ -275,9 +275,13 @@ describe("console activity", () => {
   };
 
   it("scrolls the CRTs more as activity rises, and not at all at 0", () => {
-    const quiet = run(0, 300);
-    const some = run(0.4, 300);
-    const busy = run(1, 300);
+    // Scroll counts depend only on the slots passed, so a step that ends on the
+    // same time and is shorter than the shortest slot (18 s) counts the same ticks.
+    const step = 10;
+    expect(run(0.4, 120, step).scrolled).toBe(run(0.4, 120).scrolled);
+    const quiet = run(0, 300, step);
+    const some = run(0.4, 300, step);
+    const busy = run(1, 300, step);
     expect(quiet.scrolled).toBe(0);
     expect(some.scrolled).toBeGreaterThan(0);
     expect(busy.scrolled).toBeGreaterThan(some.scrolled);

@@ -37,9 +37,12 @@ describe("bank", () => {
   it("stays within the steepest bank, scaled by the amount", () => {
     for (const seed of SEEDS) {
       for (const amount of [0, 0.5, 1]) {
+        // One `expect` per run, not per sample: they dominate the run time.
+        let most = 0;
         for (let t = 0; t < 3000; t += 0.13) {
-          expect(Math.abs(bankAt(t, seed, amount))).toBeLessThanOrEqual(MAX_BANK * amount + 1e-12);
+          most = Math.max(most, Math.abs(bankAt(t, seed, amount)));
         }
+        expect(most).toBeLessThanOrEqual(MAX_BANK * amount + 1e-12);
       }
     }
   });
@@ -51,15 +54,20 @@ describe("bank", () => {
     for (const seed of SEEDS) {
       let last = bankAt(0, seed, 1);
       let lastRate = 0;
+      let fastest = 0;
+      let sharpest = 0;
       for (let t = dt; t < 2000; t += dt) {
         const a = bankAt(t, seed, 1);
         const rate = (a - last) / dt;
-        expect(Math.abs(rate)).toBeLessThanOrEqual(maxRate * 1.01);
-        // No kinks: the roll rate itself changes gradually.
-        expect(Math.abs(rate - lastRate)).toBeLessThan(0.002);
+        fastest = Math.max(fastest, Math.abs(rate));
+        sharpest = Math.max(sharpest, Math.abs(rate - lastRate));
         last = a;
         lastRate = rate;
       }
+      expect(fastest).toBeLessThanOrEqual(maxRate * 1.01);
+      expect(fastest).toBeGreaterThan(0);
+      // No kinks: the roll rate itself changes gradually.
+      expect(sharpest).toBeLessThan(0.002);
     }
   });
 

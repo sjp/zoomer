@@ -155,12 +155,13 @@ describe("searchlight", () => {
     let sweepsIntoRoom = 0;
     let wasLit = false;
     let idleLight = 0;
+    let step = 0;
+    let roomOverBeam = -Infinity;
     for (let t = 0; t < 1200; t += dt) {
       searchAt(t, 11, s);
-      // At most a full change per second: every ramp takes at least a second.
-      expect(Math.abs(s.beam - beam)).toBeLessThanOrEqual(dt * 0.75);
-      expect(Math.abs(s.room - room)).toBeLessThanOrEqual(dt * 0.75);
-      expect(s.room).toBeLessThanOrEqual(s.beam + 1e-12);
+      // Checked once at the end: an `expect` per step dominates the run time.
+      step = Math.max(step, Math.abs(s.beam - beam), Math.abs(s.room - room));
+      roomOverBeam = Math.max(roomOverBeam, s.room - s.beam);
       idleLight += s.active ? 0 : s.beam + s.room;
       const lit = s.room > 0.5;
       if (lit && !wasLit) {
@@ -171,6 +172,9 @@ describe("searchlight", () => {
       beam = s.beam;
       room = s.room;
     }
+    // At most a full change per second: every ramp takes at least a second.
+    expect(step).toBeLessThanOrEqual(dt * 0.75);
+    expect(roomOverBeam).toBeLessThanOrEqual(1e-12);
     expect(idleLight).toBe(0);
     expect(peak).toBeGreaterThan(0.9);
     expect(sweepsIntoRoom).toBeGreaterThan(3);
