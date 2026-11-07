@@ -30,19 +30,14 @@ import { HASH32_GLSL } from "../noise";
 import { createSpriteBatch } from "../sprites";
 import { daymapMeta } from "./daymap.meta";
 import { has } from "../lookup";
+import {
+  LAND_MASK_BIAS,
+  LAND_MASK_GAIN,
+  LAND_MASK_WIDTH,
+  loadLandMask,
+  uploadLandMask,
+} from "../land-mask";
 import { defineEffect } from "../types";
-
-/**
- * The land mask: a 1024x512 equirectangular signed distance field built from
- * Natural Earth's 1:50m land polygons (public domain, naturalearthdata.com) by
- * scripts/build-land-mask.mjs. Texel value 128 + 8 * d, where d is the distance to
- * the coast in texels (positive on land), clamped to +-4.
- */
-const MASK_URL = `${import.meta.env.BASE_URL}land-mask.png`;
-const MASK_WIDTH = 1024;
-/** Decodes a mask sample to texels from the coast: (r * 255 - 128) / 8. */
-const MASK_GAIN = 255 / 8;
-const MASK_BIAS = 128 / 8;
 
 /** City-light grid cell, in degrees. Each cell holds at most one light. */
 const CITY_CELL = 2;
@@ -200,8 +195,8 @@ out vec4 outColor;
 const float PI = 3.141592653589793;
 const float DEG = PI / 180.0;
 const vec4 WEIGHTS = vec4(${TWILIGHT_WEIGHTS.map((v) => glslFloat(v)).join(", ")});
-const float MASK_GAIN = ${glslFloat(MASK_GAIN)};
-const float MASK_BIAS = ${glslFloat(MASK_BIAS)};
+const float LAND_MASK_GAIN = ${glslFloat(LAND_MASK_GAIN)};
+const float LAND_MASK_BIAS = ${glslFloat(LAND_MASK_BIAS)};
 const float CITY_CELL = ${glslFloat(CITY_CELL)};
 const float CITY_K = ${glslFloat(1 / (CITY_RADIUS * CITY_RADIUS))};
 const float GRID_STEP = ${glslFloat(GRID_STEP)};
@@ -224,7 +219,7 @@ void main() {
 
   // Land mask: a distance field in texels from the coast, positive on land.
   vec2 uv = vec2(lon * (0.5 / PI) + 0.5, 0.5 - lat / PI);
-  float d = texture(uMask, uv).r * MASK_GAIN - MASK_BIAS;
+  float d = texture(uMask, uv).r * LAND_MASK_GAIN - LAND_MASK_BIAS;
   float land = smoothstep(-uAa, uAa, d);
   float latDeg = lat / DEG;
   float absLat = abs(latDeg);
@@ -396,25 +391,7 @@ export const daymap = defineEffect(daymapMeta, {
       pu.i1("uAtlas", 0);
 
       // Load the mask in the background; the next frame uploads it.
-      let pendingMask: HTMLImageElement | undefined;
-      if (typeof Image !== "undefined") {
-        const img = new Image();
-        img.decoding = "async";
-        const onLoad = () => {
-          pendingMask = img;
-        };
-        const onError = () => {
-          console.warn(`Daylight World Map: couldn't load ${MASK_URL}`);
-        };
-        img.addEventListener("load", onLoad);
-        img.addEventListener("error", onError);
-        img.src = MASK_URL;
-        scope.defer(() => {
-          img.removeEventListener("load", onLoad);
-          img.removeEventListener("error", onError);
-          pendingMask = undefined;
-        });
-      }
+      const maskImage = loadLandMask(scope, "Daylight World Map");
 
       const clock = createMapClock();
       const sun = createLatLon();
@@ -511,15 +488,11 @@ export const daymap = defineEffect(daymapMeta, {
           const k = radiansPerPixel(width, height);
 
           gl.activeTexture(gl.TEXTURE0);
-          if (pendingMask) {
+          const image = maskImage.take();
+          if (image) {
             gl.bindTexture(gl.TEXTURE_2D, mask);
-            resetUnpackState(gl);
-            // The mask is data, not a colour image: no colour-space conversion.
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, pendingMask);
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+            uploadLandMask(gl, image);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-            pendingMask = undefined;
           }
 
           gl.useProgram(program);
@@ -529,7 +502,7 @@ export const daymap = defineEffect(daymapMeta, {
           u.f1("uCentre", (centre * Math.PI) / 180);
           u.f1("uScale", scale);
           // Smooth coastlines over about one and a half pixels.
-          u.f1("uAa", Math.max(0.05, (0.75 * k * MASK_WIDTH) / (2 * Math.PI)));
+          u.f1("uAa", Math.max(0.05, (0.75 * k * LAND_MASK_WIDTH) / (2 * Math.PI)));
           u.v3("uSun", latLonToVector(subsolarPoint(ms, sun), sunVec));
           if (p.twilight !== lastTwilight) {
             lastTwilight = p.twilight;

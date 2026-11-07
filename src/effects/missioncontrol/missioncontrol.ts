@@ -95,23 +95,19 @@ import {
   FULLSCREEN_VERTEX,
   glslFloat,
   type RenderTarget,
-  resetUnpackState,
   updateDataTexture,
   withScope,
 } from "../gl";
 import { wrap } from "../math";
 import { HASH32_GLSL } from "../noise";
+import {
+  LAND_MASK_BIAS,
+  LAND_MASK_GAIN,
+  LAND_MASK_WIDTH,
+  loadLandMask,
+  uploadLandMask,
+} from "../land-mask";
 import { defineEffect } from "../types";
-
-/**
- * The land mask the Daylight World Map uses: a 1024x512 equirectangular signed
- * distance field, texel value 128 + 8 * d, where d is the distance to the coast
- * in texels (positive on land).
- */
-const MASK_URL = `${import.meta.env.BASE_URL}land-mask.png`;
-const MASK_WIDTH = 1024;
-const MASK_GAIN = 255 / 8;
-const MASK_BIAS = 128 / 8;
 
 /** Seconds the shaders' clock repeats over; every periodic motion in them divides it. */
 const SHADER_PERIOD = 1000;
@@ -507,8 +503,8 @@ const vec4 COUNTDOWN = ${rect(S.countdown)};
 const vec4 GRAPHS = ${rect(S.graphs)};
 const int SEG_MASK[${String(GLYPH_COUNT)}] = int[${String(GLYPH_COUNT)}](${sevenSegmentMasks().join(", ")});
 const float BINS = ${g(TRACK_BINS)};
-const float MASK_GAIN = ${g(MASK_GAIN)};
-const float MASK_BIAS = ${g(MASK_BIAS)};
+const float LAND_MASK_GAIN = ${g(LAND_MASK_GAIN)};
+const float LAND_MASK_BIAS = ${g(LAND_MASK_BIAS)};
 const vec3 WALL_TEXT = vec3(1.0, 0.86, 0.58);
 const vec3 TRACK_A = vec3(1.0, 0.92, 0.6);
 const vec3 TRACK_B = vec3(1.0, 0.55, 0.25);
@@ -731,8 +727,8 @@ vec3 mapScreen(vec2 uv, float mpp) {
   vec2 size = MAP.zw - MAP.xy;
   vec2 pm = uv * size;
   float lon = uv.x * 360.0 - 180.0;
-  float d = texture(uMask, vec2(uv.x, 1.0 - uv.y)).r * MASK_GAIN - MASK_BIAS;
-  float aa = max(0.6, mpp * ${g(MASK_WIDTH)} / size.x);
+  float d = texture(uMask, vec2(uv.x, 1.0 - uv.y)).r * LAND_MASK_GAIN - LAND_MASK_BIAS;
+  float aa = max(0.6, mpp * ${g(LAND_MASK_WIDTH)} / size.x);
   float land = smoothstep(-aa, aa, d);
   vec3 col = mix(vec3(0.02, 0.055, 0.17), vec3(0.36, 0.43, 0.42), land);
   col += vec3(0.25, 0.32, 0.34) * 0.35 * (1.0 - smoothstep(0.0, 1.5 * aa, abs(d)));
@@ -1075,25 +1071,7 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
       );
 
       // Load the land mask in the background; the next frame uploads it.
-      let pendingMask: HTMLImageElement | undefined;
-      if (typeof Image !== "undefined") {
-        const img = new Image();
-        img.decoding = "async";
-        const onLoad = () => {
-          pendingMask = img;
-        };
-        const onError = () => {
-          console.warn(`Mission Control: couldn't load ${MASK_URL}`);
-        };
-        img.addEventListener("load", onLoad);
-        img.addEventListener("error", onError);
-        img.src = MASK_URL;
-        scope.defer(() => {
-          img.removeEventListener("load", onLoad);
-          img.removeEventListener("error", onError);
-          pendingMask = undefined;
-        });
-      }
+      const maskImage = loadLandMask(scope, "Mission Control");
 
       let room: RenderTarget | null = null;
       scope.defer(() => {
@@ -1322,14 +1300,10 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
 
           gl.activeTexture(gl.TEXTURE7);
           gl.bindTexture(gl.TEXTURE_2D, maskTex);
-          if (pendingMask) {
-            resetUnpackState(gl);
-            // The mask is data, not a colour image: no colour-space conversion.
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, pendingMask);
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+          const image = maskImage.take();
+          if (image) {
+            uploadLandMask(gl, image);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-            pendingMask = undefined;
           }
 
           // 6. Composite to the canvas.

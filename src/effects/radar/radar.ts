@@ -49,12 +49,9 @@ import {
 } from "./radar-sim";
 import { radarMeta } from "./radar.meta";
 import { has } from "../lookup";
+import { LAND_MASK_BIAS, LAND_MASK_GAIN, loadLandMask, uploadLandMask } from "../land-mask";
 import { defineEffect } from "../types";
 
-/** The Daylight World Map's land mask (see daymap.ts): a 1024x512 equirectangular distance field. */
-const MASK_URL = `${import.meta.env.BASE_URL}land-mask.png`;
-const MASK_GAIN = 255 / 8;
-const MASK_BIAS = 128 / 8;
 /** "World map" crop: centre longitude and latitude, and degrees of latitude per canvas height. */
 const WORLD_LON = 22;
 const WORLD_LAT = 50;
@@ -117,8 +114,8 @@ uniform vec3 uRing;
 out vec4 outColor;
 
 const float DEG = 0.017453292519943295;
-const float MASK_GAIN = ${glslFloat(MASK_GAIN)};
-const float MASK_BIAS = ${glslFloat(MASK_BIAS)};
+const float LAND_MASK_GAIN = ${glslFloat(LAND_MASK_GAIN)};
+const float LAND_MASK_BIAS = ${glslFloat(LAND_MASK_BIAS)};
 const float WORLD_LON = ${glslFloat(WORLD_LON)};
 const float WORLD_LAT = ${glslFloat(WORLD_LAT)};
 const float WORLD_SPAN = ${glslFloat(WORLD_SPAN)};
@@ -159,7 +156,7 @@ void main() {
   if (uWorld == 1) {
     float lon = WORLD_LON + (q.x - 0.5 * uSize.x / uSize.y) * WORLD_SPAN / cos(WORLD_LAT * DEG);
     float lat = WORLD_LAT - (q.y - 0.5) * WORLD_SPAN;
-    d = texture(uMask, vec2(lon / 360.0 + 0.5, 0.5 - lat / 180.0)).r * MASK_GAIN - MASK_BIAS;
+    d = texture(uMask, vec2(lon / 360.0 + 0.5, 0.5 - lat / 180.0)).r * LAND_MASK_GAIN - LAND_MASK_BIAS;
   } else {
     d = texture(uTerrain, vec2(q.x / TERRAIN_SPAN, q.y)).r;
     d += DETAIL * (vnoise(q * 48.0) - 0.5) + 0.5 * DETAIL * (vnoise(q * 130.0) - 0.5);
@@ -418,26 +415,8 @@ export const radar = defineEffect(radarMeta, {
       cu.i1("uStamp", 3);
 
       // Load the land mask in the background; the next frame uploads it and re-bakes.
-      let pendingMask: HTMLImageElement | undefined;
+      const maskImage = loadLandMask(scope, "Weather Radar");
       let maskLoaded = 0;
-      if (typeof Image !== "undefined") {
-        const img = new Image();
-        img.decoding = "async";
-        const onLoad = () => {
-          pendingMask = img;
-        };
-        const onError = () => {
-          console.warn(`Weather Radar: couldn't load ${MASK_URL}`);
-        };
-        img.addEventListener("load", onLoad);
-        img.addEventListener("error", onError);
-        img.src = MASK_URL;
-        scope.defer(() => {
-          img.removeEventListener("load", onLoad);
-          img.removeEventListener("error", onError);
-          pendingMask = undefined;
-        });
-      }
 
       const terrainKey = createChangeKey(2);
       const mapKey = createChangeKey(6);
@@ -593,15 +572,11 @@ export const radar = defineEffect(radarMeta, {
           advanceOffsets(offsets, travel);
           sweepAngle = advanceSweep(sweepAngle, step);
 
-          if (pendingMask) {
+          const image = maskImage.take();
+          if (image) {
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, mask);
-            resetUnpackState(gl);
-            // The mask is data, not a colour image: no colour-space conversion.
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, pendingMask);
-            gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
-            pendingMask = undefined;
+            uploadLandMask(gl, image);
             maskLoaded = 1;
           }
 
