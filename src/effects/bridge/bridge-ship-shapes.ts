@@ -19,7 +19,8 @@ export const SHIP_RADIUS = 0.75;
 /** Tilt (radians) towards the eye, so it looks down on each ship a little. */
 export const SHIP_TILT = 0.28;
 
-export const SHIP_GLSL = /* glsl */ `
+/** Signed-distance primitives and small helpers for building ship shapes. */
+export const SDF_GLSL = /* glsl */ `
 float sBox(vec3 p, vec3 b) {
   vec3 q = abs(p) - b;
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
@@ -47,6 +48,94 @@ mat2 rot2(float a) {
   return mat2(c, s, -s, c);
 }
 
+`;
+
+/** How `shipMarchGlsl` builds a ray-marcher for one family of ship shapes. */
+export interface ShipMarch {
+  /** The GLSL function's name. */
+  name: string;
+  /** Extra leading parameters, such as "int kind", or "". */
+  args: string;
+  /** The ship's distance and material (a vec2) at ship-space point `p`. */
+  map: (p: string) => string;
+  /** The hull colour (a vec3); may use the extra parameters. */
+  albedo: string;
+  /** A glowing material's colour (a vec3), given its id in `h.y`. */
+  glow: string;
+  /** How much a glowing material replaces the lit hull (a float), given `h.y`. */
+  glowMix: string;
+  /** Radius of the sphere the ship (at scale 1) fits inside. */
+  radius: number;
+  /** Tilt (radians) towards the eye, so it looks down on the ship a little. */
+  tilt: number;
+}
+
+/**
+ * GLSL for a function \`vec4 name(args, vec3 d, vec3 c, float s, float yaw,
+ * vec3 light, float px)\` that ray-marches a ship inside its bounding sphere and
+ * shades it. Needs `SDF_GLSL` and the shape's own functions before it.
+ */
+export function shipMarchGlsl(o: ShipMarch): string {
+  const args = o.args === "" ? "" : `${o.args}, `;
+  return /* glsl */ `
+// Ray-marches the ship from the eye at the origin along d (unit), with the
+// ship at centre c, scale s and turn yaw. Returns colour and coverage; px is
+// the angular size of a pixel, for soft edges.
+vec4 ${o.name}(${args}vec3 d, vec3 c, float s, float yaw, vec3 light, float px) {
+  float rad = ${g(o.radius)} * s;
+  float b = dot(d, c);
+  float disc = b * b - dot(c, c) + rad * rad;
+  if (disc <= 0.0) {
+    return vec4(0.0);
+  }
+  float t = max(0.0, b - sqrt(disc));
+  float tEnd = b + sqrt(disc);
+  // Bow points along f; at yaw 0 it faces the eye.
+  vec3 f = vec3(sin(yaw), 0.0, -cos(yaw));
+  vec3 r = vec3(-cos(yaw), 0.0, -sin(yaw));
+  float near = 1e9;
+  for (int i = 0; i < 72; i++) {
+    vec3 w = (d * t - c) / s;
+    // Seen from a little above, which shows the flat ships' shapes.
+    w.yz = rot2(${g(o.tilt)}) * w.yz;
+    vec3 p = vec3(dot(w, r), w.y, dot(w, f));
+    vec2 h = ${o.map("p")};
+    float dist = h.x * s;
+    near = min(near, dist / t);
+    if (dist < 0.0005 * t) {
+      // Normal, by central differences in ship space.
+      vec2 e = vec2(0.002, 0.0);
+      vec3 n = normalize(vec3(
+        ${o.map("p + e.xyy")}.x - ${o.map("p - e.xyy")}.x,
+        ${o.map("p + e.yxy")}.x - ${o.map("p - e.yxy")}.x,
+        ${o.map("p + e.yyx")}.x - ${o.map("p - e.yyx")}.x));
+      // Back to view space.
+      vec3 nv = normalize(n.x * r + vec3(0.0, n.y, 0.0) + n.z * f);
+      nv.yz = rot2(${g(-o.tilt)}) * nv.yz;
+      vec3 albedo = ${o.albedo} * (0.9 + 0.1 * fract(sin(dot(floor(p * 24.0), vec3(12.9, 78.2, 37.7))) * 43758.5));
+      float diff = max(0.0, dot(nv, light));
+      float rim = pow(1.0 - max(0.0, dot(nv, -d)), 3.0);
+      float spec = pow(max(0.0, dot(reflect(d, nv), light)), 24.0);
+      vec3 col = albedo * (0.06 + 0.95 * diff) + 0.18 * spec + albedo * rim * 0.15;
+      if (h.y > 0.5) {
+        col = mix(col, ${o.glow}, ${o.glowMix});
+      }
+      return vec4(col, 1.0);
+    }
+    t += max(dist, 0.0005 * t);
+    if (t > tEnd) {
+      break;
+    }
+  }
+  // Missed: soften the silhouette by how close the ray came.
+  float cov = 1.0 - smoothstep(0.0, px * 1.5, near);
+  return vec4(${o.albedo} * 0.05 * cov, cov);
+}
+`;
+}
+
+export const SHIP_GLSL = /* glsl */ `
+${SDF_GLSL}
 vec2 borgCube(vec3 p) {
   // Plates at different depths over the faces, and dim green light leaking from
   // some of the seams between them.
@@ -216,57 +305,14 @@ vec3 shipGlow(float mat) {
   return vec3(0.35, 0.65, 1.0);
 }
 
-// Ray-marches ship kind from the eye at the origin along d (unit), with the
-// ship at centre c, scale s and turn yaw. Returns colour and coverage; px is
-// the angular size of a pixel, for soft edges.
-vec4 shipHit(int kind, vec3 d, vec3 c, float s, float yaw, vec3 light, float px) {
-  float rad = ${g(SHIP_RADIUS)} * s;
-  float b = dot(d, c);
-  float disc = b * b - dot(c, c) + rad * rad;
-  if (disc <= 0.0) {
-    return vec4(0.0);
-  }
-  float t = max(0.0, b - sqrt(disc));
-  float tEnd = b + sqrt(disc);
-  // Bow points along f; at yaw 0 it faces the eye.
-  vec3 f = vec3(sin(yaw), 0.0, -cos(yaw));
-  vec3 r = vec3(-cos(yaw), 0.0, -sin(yaw));
-  float near = 1e9;
-  for (int i = 0; i < 72; i++) {
-    vec3 w = (d * t - c) / s;
-    // Seen from a little above, which shows the flat ships' shapes.
-    w.yz = rot2(${g(SHIP_TILT)}) * w.yz;
-    vec3 p = vec3(dot(w, r), w.y, dot(w, f));
-    vec2 h = shipMap(kind, p);
-    float dist = h.x * s;
-    near = min(near, dist / t);
-    if (dist < 0.0005 * t) {
-      // Normal, by central differences in ship space.
-      vec2 e = vec2(0.002, 0.0);
-      vec3 n = normalize(vec3(
-        shipMap(kind, p + e.xyy).x - shipMap(kind, p - e.xyy).x,
-        shipMap(kind, p + e.yxy).x - shipMap(kind, p - e.yxy).x,
-        shipMap(kind, p + e.yyx).x - shipMap(kind, p - e.yyx).x));
-      // Back to view space.
-      vec3 nv = normalize(n.x * r + vec3(0.0, n.y, 0.0) + n.z * f);
-      nv.yz = rot2(${g(-SHIP_TILT)}) * nv.yz;
-      vec3 albedo = shipAlbedo(kind) * (0.9 + 0.1 * fract(sin(dot(floor(p * 24.0), vec3(12.9, 78.2, 37.7))) * 43758.5));
-      float diff = max(0.0, dot(nv, light));
-      float rim = pow(1.0 - max(0.0, dot(nv, -d)), 3.0);
-      float spec = pow(max(0.0, dot(reflect(d, nv), light)), 24.0);
-      vec3 col = albedo * (0.06 + 0.95 * diff) + 0.18 * spec + albedo * rim * 0.15;
-      if (h.y > 0.5) {
-        col = mix(col, shipGlow(h.y), h.y > 2.5 && kind == 0 ? 0.55 : 0.9);
-      }
-      return vec4(col, 1.0);
-    }
-    t += max(dist, 0.0005 * t);
-    if (t > tEnd) {
-      break;
-    }
-  }
-  // Missed: soften the silhouette by how close the ray came.
-  float cov = 1.0 - smoothstep(0.0, px * 1.5, near);
-  return vec4(shipAlbedo(kind) * 0.05 * cov, cov);
-}
+${shipMarchGlsl({
+  name: "shipHit",
+  args: "int kind",
+  map: (p) => `shipMap(kind, ${p})`,
+  albedo: "shipAlbedo(kind)",
+  glow: "shipGlow(h.y)",
+  glowMix: "h.y > 2.5 && kind == 0 ? 0.55 : 0.9",
+  radius: SHIP_RADIUS,
+  tilt: SHIP_TILT,
+})}
 `;
