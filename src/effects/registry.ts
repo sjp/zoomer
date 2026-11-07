@@ -11,7 +11,6 @@ import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
-import { starfighterMeta } from "./starfighter/starfighter.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
@@ -141,10 +140,6 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./missioncontrol/missioncontrol").then((m) => m.missioncontrol),
   },
   { ...cockpitMeta, load: () => import("./cockpit/cockpit").then((m) => m.cockpit) },
-  {
-    ...starfighterMeta,
-    load: () => import("./starfighter/starfighter").then((m) => m.starfighter),
-  },
   {
     ...balloonrideMeta,
     load: () => import("./balloonride/balloonride").then((m) => m.balloonride),
