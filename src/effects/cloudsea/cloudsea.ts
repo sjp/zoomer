@@ -1,6 +1,5 @@
 import { createChangeKey } from "../change-key";
 import {
-  BILLOW_CELLS,
   buildBillowTexture,
   buildLedge,
   CAM_HEIGHT,
@@ -20,6 +19,7 @@ import {
   sunDirection,
 } from "./cloudsea-sim";
 import { cloudseaMeta } from "./cloudsea.meta";
+import { CLOUD_TOPS_GLSL, driftTops } from "./cloudsea-tops";
 import {
   beginFrame,
   createColumnTable,
@@ -42,18 +42,6 @@ const DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
 /** Billow texture side. */
 const BILLOW_SIZE = 128;
 
-/**
- * The three octaves of the cloud tops: tiles per world unit, rotation (radians,
- * to hide the shared lattice) and weight. Billows about 2 world units across at
- * the first octave.
- */
-const OCTAVES = [
-  { scale: 0.12, angle: 0, weight: 1 },
-  { scale: 0.31, angle: 0.6, weight: 0.45 },
-  { scale: 0.83, angle: -0.9, weight: 0.2 },
-] as const;
-/** World height of the cloud tops per unit of the summed noise, for the normals. */
-const RELIEF = 0.18;
 /** Distance haze per world unit: half the far cloud sea is haze by about 28 units. */
 const HAZE_K = 0.025;
 /** Drift toward the viewer and across, world units per second at `drift` 1. */
@@ -67,15 +55,6 @@ const CIRRUS_DRIFT = 0.0015;
 const MIST_HEIGHT = 0.05;
 /** Phase speed of the mist's slow undulation, radians per second at drift 1. */
 const MIST_SPEED = 0.05;
-
-/** Octave k's matrix rows, world (x, z) to tile uv, as GLSL `mat2` columns. */
-const octaveMatrix = (k: number) => {
-  const { scale, angle } = OCTAVES[k];
-  const c = Math.cos(angle) * scale;
-  const s = Math.sin(angle) * scale;
-  // uv = M w with M = scale * R(angle); GLSL mat2 is column-major.
-  return `mat2(${f(c)}, ${f(s)}, ${f(-s)}, ${f(c)})`;
-};
 
 /**
  * Low-res pass: the dawn sky with its sun, glow and cirrus; the distant peaks
@@ -115,27 +94,11 @@ out vec4 outColor;
 
 const float FOCAL = ${f(FOCAL)};
 const float CAM_HEIGHT = ${f(CAM_HEIGHT)};
-const float RELIEF = ${f(RELIEF)};
 const float HAZE_K = ${f(HAZE_K)};
 const float CIRRUS_NX = ${f(CIRRUS_NX)};
 const float CIRRUS_NY = ${f(CIRRUS_NY)};
 const float MIST_HEIGHT = ${f(MIST_HEIGHT)};
-/** Finest lattice cells per tile, for the footprint fade. */
-const float FINE_CELLS = ${f(BILLOW_CELLS * 4)};
-const mat2 M0 = ${octaveMatrix(0)};
-const mat2 M1 = ${octaveMatrix(1)};
-const mat2 M2 = ${octaveMatrix(2)};
-const float S0 = ${f(OCTAVES[0].scale)};
-const float S1 = ${f(OCTAVES[1].scale)};
-const float S2 = ${f(OCTAVES[2].scale)};
-const float A0 = ${f(OCTAVES[0].weight)};
-const float A1 = ${f(OCTAVES[1].weight)};
-const float A2 = ${f(OCTAVES[2].weight)};
-
-/** Weight of an octave with \`s\` tiles per world unit at a footprint of \`w\` world units per pixel. */
-float octaveFade(float w, float s) {
-  return 1.0 - smoothstep(0.35, 1.0, w * s * FINE_CELLS * 0.5);
-}
+${CLOUD_TOPS_GLSL}
 
 vec3 sky(vec2 p) {
   float t = clamp((p.y - uFrame.w) / (1.0 - uFrame.w), 0.0, 1.0);
@@ -158,28 +121,14 @@ vec4 peakAt(float x) {
   return textureLod(uPeaks, vec2(x * uFrame.z, 0.5), 0.0);
 }
 
-/** One octave: adds its height to h and its world gradient to g. */
-void octave(vec2 w, mat2 M, vec2 off, float a, inout float h, inout vec2 g) {
-  vec3 t = textureLod(uBillow, M * w + off, 0.0).rgb * 2.0 - 1.0;
-  h += a * t.r;
-  // uv = M w + off, so d/dw = transpose(M) d/duv.
-  g += a * (transpose(M) * t.gb) * uMisc.x;
-}
-
 vec3 clouds(vec2 p, float aspect) {
   float below = uFrame.w - p.y;
   float z = FOCAL * CAM_HEIGHT / below;
   vec2 w = vec2((p.x - 0.5 * aspect) * CAM_HEIGHT / below, z);
   // World units per low-res pixel along the view: the worst axis.
   float foot = z * z * uFrame.y / (FOCAL * CAM_HEIGHT);
-  float h = 0.0;
-  vec2 g = vec2(0.0);
-  float a0 = A0 * octaveFade(foot, S0);
-  float a1 = A1 * octaveFade(foot, S1);
-  float a2 = A2 * octaveFade(foot, S2);
-  if (a0 > 0.0) octave(w, M0, uOffA.xy, a0, h, g);
-  if (a1 > 0.0) octave(w, M1, uOffA.zw, a1, h, g);
-  if (a2 > 0.0) octave(w, M2, uOffB.xy, a2, h, g);
+  vec2 g;
+  float h = cloudTops(w, foot, uOffA, uOffB.xy, uMisc.x, g);
   vec3 n = normalize(vec3(-RELIEF * g.x, 1.0, -RELIEF * g.y));
   float diffuse = clamp(dot(n, uLight) * 0.6 + 0.45, 0.0, 1.0);
   float top = smoothstep(-0.6, 0.7, h);
@@ -393,13 +342,7 @@ export const cloudsea = defineEffect(cloudseaMeta, {
           if (drift > 0 && dt > 0) {
             const vx = DRIFT_X * drift * dt;
             const vz = DRIFT_Z * drift * dt;
-            for (let k = 0; k < OCTAVES.length; k++) {
-              const { scale: s, angle } = OCTAVES[k];
-              const c = Math.cos(angle) * s;
-              const sn = Math.sin(angle) * s;
-              offsets[2 * k] = wrap(offsets[2 * k] + c * vx - sn * vz, 0, 1);
-              offsets[2 * k + 1] = wrap(offsets[2 * k + 1] + sn * vx + c * vz, 0, 1);
-            }
+            driftTops(offsets, vx, vz);
             offsets[6] = wrap(offsets[6] + CIRRUS_DRIFT * drift * dt, 0, 1);
             mistPhase = wrap(mistPhase + MIST_SPEED * drift * dt, 0, Math.PI * 2);
           }
