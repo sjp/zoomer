@@ -8,6 +8,7 @@ import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
+import { copyText } from "./lib/clipboard";
 import { describeError } from "./lib/errors";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
 import { FRAME_RATES, type FrameRate } from "./lib/frameRate";
@@ -297,19 +298,20 @@ export function App() {
   }, [showToast]);
 
   // A link that spells out every param and opens with the panel hidden, so it works as
-  // is in an OBS browser source and keeps its look if a default changes later. The
-  // clipboard API is missing outside secure contexts, which the catch also covers.
+  // is in an OBS browser source and keeps its look if a default changes later. Off
+  // localhost over plain http the clipboard API is missing, so `copyText` falls back to
+  // the old way.
   const copyLink = useCallback(() => {
     const url = new URL(window.location.href);
     url.hash = encodeHash(effect, values, { canonical: true, panelHidden: true });
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(url.href);
+    void copyText(url.href).then((copied) => {
+      if (copied) {
         showToast("Copied a link with every setting, opening with controls hidden");
-      } catch {
-        showToast("Couldn't copy the link");
+      } else {
+        showToast("Couldn't copy the link: try opening the page on localhost or https");
       }
-    })();
+      return copied;
+    });
   }, [effect, values, showToast]);
 
   // For `S`, which works with the panel hidden, so it confirms with a toast.
