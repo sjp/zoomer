@@ -5,7 +5,8 @@
  * ship inside its bounding sphere and shades it, so the cost is paid only on
  * the pixels near it, and only while one is in view.
  *
- * Material ids: 0 hull, 1 blue glow, 2 red-orange glow, 3 green glow.
+ * Material ids: 0 hull, 1 blue glow, 2 red-orange glow, 3 green glow,
+ * 4 yellow-green glow.
  */
 import { glslFloat as g } from "./gl";
 
@@ -60,18 +61,20 @@ vec2 borgCube(vec3 p) {
 vec2 birdOfPrey(vec3 p) {
   vec2 r = vec2(sEll(p - vec3(0.0, 0.0, -0.1), vec3(0.16, 0.07, 0.2)), 0.0);
   r = sMin(r, vec2(sCap(p, vec3(0.0, 0.0, 0.05), vec3(0.0, -0.02, 0.32), 0.035), 0.0));
-  r = sMin(r, vec2(sEll(p - vec3(0.0, -0.03, 0.4), vec3(0.08, 0.055, 0.09)), p.z > 0.47 ? 2.0 : 0.0));
+  r = sMin(r, vec2(sEll(p - vec3(0.0, -0.03, 0.4), vec3(0.08, 0.055, 0.09)), p.z > 0.47 ? 4.0 : 0.0));
   // Wings swept down from the body, tapering towards the tips.
   vec3 w = vec3(abs(p.x), p.y, p.z) - vec3(0.1, 0.0, -0.14);
   w.xy = rot2(0.25) * w.xy;
-  float along = clamp(w.x / 0.52, 0.0, 1.0);
-  w.x -= 0.26;
+  float along = clamp(w.x / 0.44, 0.0, 1.0);
+  w.x -= 0.22;
   w.z += 0.03 * along;
-  float wing = sRound(w, vec3(0.26, 0.022, 0.15 - 0.07 * along), 0.01);
+  float wing = sRound(w, vec3(0.22, 0.022, 0.15 - 0.07 * along), 0.01);
   r = sMin(r, vec2(wing * 0.8, 0.0));
-  // Cannons at the wingtips.
+  // At each tip the wing folds straight down, with a cannon at its foot.
   vec3 t = vec3(abs(p.x), p.y, p.z);
-  r = sMin(r, vec2(sCap(t, vec3(0.6, -0.13, -0.12), vec3(0.6, -0.13, 0.08), 0.02), t.z > 0.06 ? 2.0 : 0.0));
+  float down = clamp((-0.11 - t.y) / 0.12, 0.0, 1.0);
+  r = sMin(r, vec2(sRound(t - vec3(0.535, -0.165, -0.12 + 0.02 * down), vec3(0.02, 0.065, 0.085 - 0.02 * down), 0.008), 0.0));
+  r = sMin(r, vec2(sCap(t, vec3(0.535, -0.235, -0.14), vec3(0.535, -0.235, 0.06), 0.02), t.z > 0.04 ? 4.0 : 0.0));
   return r;
 }
 
@@ -90,21 +93,33 @@ vec2 federation(vec3 p) {
 }
 
 vec2 warbird(vec3 p) {
-  vec2 r = vec2(sEll(p - vec3(0.0, 0.0, 0.56), vec3(0.07, 0.05, 0.1)), 0.0);
-  r = sMin(r, vec2(sCap(p, vec3(0.0, 0.0, 0.16), vec3(0.0, 0.0, 0.5), 0.032), 0.0));
-  // Two arched hulls, above and below, joined fore and aft: a loop seen from the side.
-  vec2 q = vec2(p.y, p.z + 0.06);
-  vec2 rr = vec2(0.26, 0.4);
-  float k0 = length(q / rr);
-  float k1 = length(q / (rr * rr));
-  float loop = abs(k0 * (k0 - 1.0) / max(k1, 1e-6)) - 0.022;
-  // Seen from above, an ellipse: widest amidships, narrowing where the hulls meet.
-  vec2 u = vec2(p.x, p.z + 0.06);
-  vec2 ur = vec2(0.48, 0.44);
-  float j0 = length(u / ur);
-  float j1 = length(u / (ur * ur));
-  float plan = j0 * (j0 - 1.0) / max(j1, 1e-6);
-  r = sMin(r, vec2(max(loop, plan) * 0.9, p.z < -0.4 ? 3.0 : 0.0));
+  // A big, deep head drooping forward from the top hull on a short, thick neck.
+  vec2 r = vec2(sEll(p - vec3(0.0, -0.025, 0.47), vec3(0.15, 0.09, 0.12)), 0.0);
+  r = sMin(r, vec2(sEll(p - vec3(0.0, -0.08, 0.565), vec3(0.075, 0.05, 0.06)), p.z > 0.605 ? 3.0 : 0.0));
+  r = sMin(r, vec2(sCap(vec3(p.x * 0.6, p.yz), vec3(0.0, 0.08, 0.16), vec3(0.0, 0.01, 0.42), 0.065) * 0.6, 0.0));
+  // Two thick, wing-shaped hulls arched apart above and below, meeting at the
+  // wingtips, the trailing edge and the bow: an oval from the side, open in the
+  // middle. From above they sweep back to points, with a tail at the middle.
+  const float zf = 0.3;
+  const float zb = -0.5;
+  const float wMax = 0.47;
+  float ax = abs(p.x);
+  float e = clamp(ax / wMax, 0.0, 1.0);
+  float zt = zb + 0.15 * pow(max(0.0, sin(3.14159265 * e)), 1.5);
+  float s = clamp((p.z - zt) / (zf - zt), 0.0, 1.0);
+  float sl = clamp((p.z - zb) / (zf - zb), 0.0, 1.0);
+  float width = wMax * pow(max(0.0, 1.0 - pow(sl, 2.4)), 0.6);
+  float plan = max(ax - width, max(zt - p.z, p.z - zf));
+  float span = sqrt(max(0.0, 1.0 - e * e));
+  float bulge = max(0.0, sin(3.14159265 * s));
+  float arch = pow(bulge, 0.45) * span;
+  float th = (0.014 + 0.03 * sqrt(bulge)) * (0.4 + 0.6 * span);
+  float upper = abs(p.y - 0.19 * arch) - th;
+  float lower = abs(p.y + 0.15 * arch) - th;
+  r = sMin(r, vec2(max(min(upper, lower) * 0.45, plan * 0.7), 0.0));
+  // The glowing core in the gap between the hulls, and lights at the wingtips.
+  r = sMin(r, vec2(sCap(p, vec3(0.0, 0.01, -0.28), vec3(0.0, 0.01, 0.08), 0.04), 3.0));
+  r = sMin(r, vec2(sEll(vec3(ax, p.yz) - vec3(0.44, 0.0, -0.48), vec3(0.03, 0.025, 0.035)), 3.0));
   return r;
 }
 
@@ -120,14 +135,21 @@ vec2 marauder(vec3 p) {
 }
 
 vec2 galor(vec3 p) {
-  // A long spine with a wide crescent bow and small fins aft.
-  vec2 r = vec2(sEll(p - vec3(0.0, 0.0, -0.12), vec3(0.07, 0.06, 0.46)), 0.0);
-  float bow = max(sEll(p - vec3(0.0, 0.0, 0.28), vec3(0.4, 0.04, 0.2)),
-    -sEll(p - vec3(0.0, 0.0, 0.46), vec3(0.26, 0.1, 0.18)));
-  r = sMin(r, vec2(bow, 0.0));
-  r = sMin(r, vec2(sEll(p - vec3(0.0, 0.0, 0.32), vec3(0.04, 0.035, 0.05)), 2.0));
+  // A broad, flat, rounded head at the bow, narrowing aft into the spine, with
+  // a raised ridge and the main disruptor at its tip.
   vec3 q = vec3(abs(p.x), p.y, p.z);
-  r = sMin(r, vec2(sRound(q - vec3(0.12, 0.0, -0.48), vec3(0.08, 0.008, 0.05), 0.005), 0.0));
+  float headW = 0.24 * clamp(1.0 - max(0.0, 0.25 - p.z) / 0.25, 0.2, 1.0);
+  vec2 r = vec2(max(sEll(p - vec3(0.0, 0.0, 0.3), vec3(0.24, 0.035, 0.24)), q.x - headW) * 0.9, 0.0);
+  r = sMin(r, vec2(sEll(p - vec3(0.0, 0.02, 0.3), vec3(0.05, 0.035, 0.22)), 0.0));
+  r = sMin(r, vec2(sEll(p - vec3(0.0, 0.0, 0.52), vec3(0.035, 0.025, 0.04)), 2.0));
+  // A long, narrow spine with a dorsal ridge.
+  r = sMin(r, vec2(sEll(p - vec3(0.0, 0.0, -0.15), vec3(0.06, 0.045, 0.4)), 0.0));
+  r = sMin(r, vec2(sRound(p - vec3(0.0, 0.045, -0.12), vec3(0.012, 0.025, 0.3), 0.008), 0.0));
+  // Swept wings aft, and the engine.
+  vec3 w = q - vec3(0.14, -0.005, -0.42);
+  w.xz = rot2(-0.5) * w.xz;
+  r = sMin(r, vec2(sRound(w, vec3(0.12, 0.01, 0.045), 0.006), 0.0));
+  r = sMin(r, vec2(sEll(p - vec3(0.0, 0.0, -0.52), vec3(0.07, 0.04, 0.06)), p.z < -0.56 ? 2.0 : 0.0));
   return r;
 }
 
@@ -167,10 +189,10 @@ vec3 shipAlbedo(int kind) {
     return vec3(0.16, 0.17, 0.16);
   }
   if (kind == 1) {
-    return vec3(0.36, 0.4, 0.31);
+    return vec3(0.27, 0.4, 0.24);
   }
   if (kind == 3) {
-    return vec3(0.28, 0.42, 0.3);
+    return vec3(0.34, 0.47, 0.42);
   }
   if (kind == 4) {
     return vec3(0.58, 0.38, 0.22);
@@ -182,6 +204,9 @@ vec3 shipAlbedo(int kind) {
 }
 
 vec3 shipGlow(float mat) {
+  if (mat > 3.5) {
+    return vec3(0.75, 1.0, 0.15);
+  }
   if (mat > 2.5) {
     return vec3(0.25, 1.0, 0.35);
   }
