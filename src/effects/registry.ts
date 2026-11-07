@@ -16,6 +16,7 @@ import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
 import { lamproomMeta } from "./lamproom/lamproom.meta";
 import { submarineMeta } from "./submarine/submarine.meta";
+import { observatoryMeta } from "./observatory/observatory.meta";
 import { bubblesMeta } from "./bubbles/bubbles.meta";
 import { candlelightMeta } from "./candlelight/candlelight.meta";
 import { causticsMeta } from "./caustics/caustics.meta";
@@ -137,6 +138,10 @@ export const effects: readonly EffectEntry[] = [
   { ...diningcarMeta, load: () => import("./diningcar/diningcar").then((m) => m.diningcar) },
   { ...lamproomMeta, load: () => import("./lamproom/lamproom").then((m) => m.lamproom) },
   { ...submarineMeta, load: () => import("./submarine/submarine").then((m) => m.submarine) },
+  {
+    ...observatoryMeta,
+    load: () => import("./observatory/observatory").then((m) => m.observatory),
+  },
   { ...cloudsMeta, load: () => import("./clouds/clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea/sea").then((m) => m.sea) },
   { ...cloudseaMeta, load: () => import("./cloudsea/cloudsea").then((m) => m.cloudsea) },
