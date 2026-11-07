@@ -17,6 +17,7 @@ import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
 import { ringMeta } from "./ring/ring.meta";
+import { stationopsMeta } from "./stationops/stationops.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
 import { lamproomMeta } from "./lamproom/lamproom.meta";
@@ -159,6 +160,10 @@ export const effects: readonly EffectEntry[] = [
   },
   { ...newsdeskMeta, load: () => import("./newsdesk/newsdesk").then((m) => m.newsdesk) },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
+  {
+    ...stationopsMeta,
+    load: () => import("./stationops/stationops").then((m) => m.stationops),
+  },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
   { ...diningcarMeta, load: () => import("./diningcar/diningcar").then((m) => m.diningcar) },
   { ...lamproomMeta, load: () => import("./lamproom/lamproom").then((m) => m.lamproom) },
