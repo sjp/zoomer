@@ -13,7 +13,7 @@ import {
   typedParameters,
   withScope,
 } from "./gl";
-import { PAD_MARGIN } from "./snow-sim";
+import { PAD_MARGIN } from "./snow/snow-sim";
 import { createSpriteBatch } from "./sprites";
 
 /**

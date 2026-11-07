@@ -1,6 +1,6 @@
 /**
  * Builds public/land-mask.png, the land mask for the Daylight World Map effect
- * (src/effects/daymap.ts), from Natural Earth's 1:50m land polygons.
+ * (src/effects/daymap/daymap.ts), from Natural Earth's 1:50m land polygons.
  *
  * Source: Natural Earth, ne_50m_land (https://www.naturalearthdata.com/), public
  * domain. The GeoJSON copy used is

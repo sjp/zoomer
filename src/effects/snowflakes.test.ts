@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { glslFloat, TO_CLIP_GLSL } from "./gl";
-import { PAD_MARGIN } from "./snow-sim";
+import { PAD_MARGIN } from "./snow/snow-sim";
 import { flakeVertex } from "./snowflakes";
 
 /** The flake vertex shader as it was before the fade mask, which Snow and Snowy Window keep. */

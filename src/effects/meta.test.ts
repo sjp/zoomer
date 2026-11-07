@@ -12,7 +12,7 @@ const sources = (files: Record<string, string>) =>
   Object.entries(files).map(([path, text]) => [path.replace(/^\.\//, ""), text] as const);
 
 const metaFiles = sources(
-  import.meta.glob<string>("./*.meta.ts", { query: "?raw", import: "default", eager: true }),
+  import.meta.glob<string>("./*/*.meta.ts", { query: "?raw", import: "default", eager: true }),
 );
 const leafFiles = sources(
   import.meta.glob<string>(["./types.ts", "./param-options.ts"], {
@@ -51,8 +51,14 @@ function dynamicImports(source: string): string[] {
 
 const runtimeImports = (source: string) => [...staticImports(source), ...dynamicImports(source)];
 
-/** What a `.meta.ts` file may import at runtime: types, shared options and other metadata. */
-const META_IMPORT = /^\.\/(types|param-options|[\w-]+\.meta)$/;
+/**
+ * What a `.meta.ts` file (in its effect's folder) may import at runtime: the shared
+ * types and options, and other metadata.
+ */
+const META_IMPORT = /^(\.\.\/(types|param-options)|(\.|\.\.\/[\w-]+)\/[\w-]+\.meta)$/;
+
+/** What the registry imports up front: each effect's metadata from its folder. */
+const REGISTRY_IMPORT = /^\.\/[\w-]+\/[\w-]+\.meta$/;
 
 describe("runtimeImports", () => {
   it("finds runtime imports and skips type-only ones", () => {
@@ -88,7 +94,7 @@ describe("effect metadata modules", () => {
 
 describe("registry", () => {
   it("imports only metadata up front", () => {
-    const allowed = (s: string) => META_IMPORT.test(s) || s === "./loader";
+    const allowed = (s: string) => REGISTRY_IMPORT.test(s) || s === "./loader";
     expect(staticImports(registrySource).filter((s) => !allowed(s))).toEqual([]);
   });
 

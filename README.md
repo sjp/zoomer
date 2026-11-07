@@ -64,16 +64,18 @@ to bring a hidden panel back.
 
 ## Adding an effect
 
-1. Create `src/effects/<id>.ts` and export the effect with `defineEffect` from
-   `src/effects/types.ts`: an `id`, `name`, `description`, a `params` schema and
-   `create(gl)`, which returns `{ resize, frame, dispose }`.
+1. Create a folder `src/effects/<id>/` holding everything that belongs to the effect:
+   `<id>.meta.ts` (its `id`, `name`, `description` and `params` schema, via
+   `defineEffectMeta`), `<id>.ts` (the effect, via `defineEffect` from
+   `src/effects/types.ts`, whose `create(gl)` returns `{ resize, frame, dispose }`), and any
+   `<id>-sim.ts` simulation code with its tests.
 2. Add it to the list in `src/effects/registry.ts`. The control panel builds its controls from
    the params schema, and the URL hash picks them up too.
-3. Reuse the shared helpers in `src/effects/` (`gl.ts`, `sprites.ts`, `streaks.ts`,
+3. Reuse the shared helpers that sit directly in `src/effects/` (`gl.ts`, `sprites.ts`, `streaks.ts`,
    `noise.ts`, `math.ts`, `color.ts`), and add unit tests for any pure logic.
 
-Start from an existing effect of a similar shape: `tunnel.ts` or `lavalamp.ts` for full-screen
-shaders, `bokeh.ts` or `snow.ts` for sprites, `warp.ts` for streaks and `flowfield.ts` for
+Start from an existing effect of a similar shape: `tunnel/` or `lavalamp/` for full-screen
+shaders, `bokeh/` or `snow/` for sprites, `warp/` for streaks and `flowfield/` for
 framebuffers. `src/effects/lifecycle.test.ts` checks the WebGL rules every effect must follow:
 uniforms written only to the bound program, every object deleted on dispose, and the default
 framebuffer and `FUNC_ADD` left at the end of each frame.
