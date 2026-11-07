@@ -11,6 +11,7 @@ import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
+import { starfighterMeta } from "./starfighter/starfighter.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
@@ -133,6 +134,10 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./missioncontrol/missioncontrol").then((m) => m.missioncontrol),
   },
   { ...cockpitMeta, load: () => import("./cockpit/cockpit").then((m) => m.cockpit) },
+  {
+    ...starfighterMeta,
+    load: () => import("./starfighter/starfighter").then((m) => m.starfighter),
+  },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
   { ...diningcarMeta, load: () => import("./diningcar/diningcar").then((m) => m.diningcar) },
