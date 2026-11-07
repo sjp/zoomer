@@ -144,7 +144,7 @@ export function graphicsLayout(aspect: number): GraphicsLayout {
     bottomNoTicker: -0.5 + 0.04,
     liveX: -half + margin,
     liveY: 0.5 - margin,
-    liveH: 0.04,
+    liveH: 0.08,
   };
 }
 
