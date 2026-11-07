@@ -426,6 +426,12 @@ textarea {
   resize: vertical;
   white-space: pre;
   overflow-x: auto;
+  /* A one-row field has no room for a scrollbar, which would cover its text; it still scrolls with the caret. */
+  scrollbar-width: none;
+}
+
+textarea::-webkit-scrollbar {
+  display: none;
 }
 
 select,
