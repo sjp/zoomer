@@ -12,6 +12,7 @@ import { bridgeMeta } from "./bridge/bridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { starfighterMeta } from "./starfighter/starfighter.meta";
+import { jetcockpitMeta } from "./jetcockpit/jetcockpit.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
@@ -137,6 +138,10 @@ export const effects: readonly EffectEntry[] = [
   {
     ...starfighterMeta,
     load: () => import("./starfighter/starfighter").then((m) => m.starfighter),
+  },
+  {
+    ...jetcockpitMeta,
+    load: () => import("./jetcockpit/jetcockpit").then((m) => m.jetcockpit),
   },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
