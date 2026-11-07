@@ -1,8 +1,9 @@
 /**
  * Starship Bridge visiting ships: now and then, while the outside view shows
- * stars, a ship cruises in from one side, comes to a stop and turns to face the
- * viewer, holds there, then turns and cruises off the other side. A few minutes
- * pass before the next. Pure, and a function of time alone, so it can be
+ * stars or a planet, a ship cruises in from one side, comes to a stop and turns
+ * to face the viewer, holds there, then turns and cruises off the other side.
+ * After a gap the next comes. It can instead be one chosen ship, and it can
+ * stay once it has arrived. Pure, and a function of time alone, so it can be
  * tested without stepping.
  */
 import { clamp, smoothstep } from "./math";
@@ -25,11 +26,11 @@ export const CRUISE = 14;
 export const TURN = 5;
 export const HOLD = 30;
 export const VISIT = CRUISE + TURN + HOLD + TURN + CRUISE;
-/** Seconds per slot; each slot has one visit, starting between `FIRST` and `FIRST + SPREAD` in. */
-export const SHIP_SLOT = 300;
-export const FIRST = 60;
-export const SPREAD = 60;
-/** Slots to step through `SHIP_KINDS` each time: coprime with its length, so every ship comes. */
+/** Seconds from the start (or a change of ship settings) to the first arrival. */
+export const ARRIVE = 5;
+/** Default seconds between one ship leaving and the next arriving. */
+export const GAP = 240;
+/** Visits to step through `SHIP_KINDS` each time: coprime with its length, so every ship comes. */
 const KIND_STEP = 3;
 
 /** Size of each ship relative to the others (1 is about a ship length of 1). */
@@ -65,43 +66,59 @@ function rand(a: number, b: number, c: number): number {
   return hash32(a ^ hash32(Math.imul(b, 0x9e3779b1) ^ hash32(c + 0x632be5ab))) / 4294967296;
 }
 
-/** Start (s) of the visit in slot `slot`. */
-export function visitStart(slot: number, seed: number): number {
-  return slot * SHIP_SLOT + FIRST + rand(slot, seed, 1) * SPREAD;
+/** Start (s) of visit `visit` (0 is the first), with `gap` seconds between visits. */
+export function visitStart(visit: number, gap: number): number {
+  return ARRIVE + visit * (VISIT + Math.max(0, gap));
 }
 
-/** Which ship visits in slot `slot`, as an index into `SHIP_KINDS`. */
-export function visitKind(slot: number, seed: number): number {
+/** Which ship comes on visit `visit` when cycling, as an index into `SHIP_KINDS`. */
+export function visitKind(visit: number, seed: number): number {
   const n = SHIP_KINDS.length;
   const start = hash32(Math.floor(seed) + 0x51ed) % n;
-  return (((start + slot * KIND_STEP) % n) + n) % n;
+  return (((start + visit * KIND_STEP) % n) + n) % n;
 }
 
-/** +1 if the ship in slot `slot` travels left to right, -1 for right to left. */
-export function visitDirection(slot: number, seed: number): number {
-  return rand(slot, seed, 2) < 0.5 ? 1 : -1;
+/** +1 if the ship on visit `visit` travels left to right, -1 for right to left. */
+export function visitDirection(visit: number, seed: number): number {
+  return rand(visit, seed, 2) < 0.5 ? 1 : -1;
+}
+
+/** Which ships come and how. */
+export interface ShipPlan {
+  /** An index into `SHIP_KINDS` for that ship alone, or -1 to cycle through them all. */
+  kind: number;
+  /** Whether the first ship stays, facing the viewer, once it has arrived. */
+  stay: boolean;
+  /** Seconds between one ship leaving and the next arriving. */
+  gap: number;
+}
+
+function clear(out: ShipPose): ShipPose {
+  out.kind = -1;
+  out.across = 0;
+  out.bob = 0;
+  out.yaw = 0;
+  return out;
 }
 
 /**
- * The visiting ship's pose at time `t` (s), written into `out`. Allocates
- * nothing.
+ * The visiting ship's pose `t` seconds after the start (or after the plan last
+ * changed), written into `out`. Allocates nothing.
  */
-export function shipAt(t: number, seed: number, out: ShipPose): ShipPose {
-  const slot = Math.floor(t / SHIP_SLOT);
-  const local = t - visitStart(slot, seed);
-  if (!(local >= 0 && local < VISIT)) {
-    out.kind = -1;
-    out.across = 0;
-    out.bob = 0;
-    out.yaw = 0;
-    return out;
+export function shipAt(t: number, seed: number, plan: ShipPlan, out: ShipPose): ShipPose {
+  const gap = Math.max(0, plan.gap);
+  const visit = plan.stay ? 0 : Math.max(0, Math.floor((t - ARRIVE) / (VISIT + gap)));
+  const local = t - visitStart(visit, gap);
+  if (!(local >= 0 && (plan.stay || local < VISIT))) {
+    return clear(out);
   }
-  const dir = visitDirection(slot, seed);
-  out.kind = visitKind(slot, seed);
+  const dir = visitDirection(visit, seed);
+  out.kind = plan.kind >= 0 && plan.kind < SHIP_KINDS.length ? plan.kind : visitKind(visit, seed);
   const side = (dir * Math.PI) / 2;
   const turnIn = CRUISE;
   const hold = turnIn + TURN;
-  const turnOut = hold + HOLD;
+  // Staying, the hold never ends.
+  const turnOut = plan.stay ? Number.POSITIVE_INFINITY : hold + HOLD;
   const cruiseOut = turnOut + TURN;
   if (local < turnIn) {
     // In from off-screen, slowing to a stop in the middle.
@@ -124,7 +141,8 @@ export function shipAt(t: number, seed: number, out: ShipPose): ShipPose {
     out.yaw = side;
   }
   // A gentle bob that fades in and out with the hold.
-  const still = smoothstep(turnIn, hold, local) * (1 - smoothstep(turnOut, cruiseOut, local));
+  const leaving = plan.stay ? 0 : smoothstep(turnOut, cruiseOut, local);
+  const still = smoothstep(turnIn, hold, local) * (1 - leaving);
   out.bob = 0.02 * Math.sin(((local - turnIn) * 2 * Math.PI) / 9) * clamp(still, 0, 1);
   return out;
 }

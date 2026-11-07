@@ -18,6 +18,30 @@ export const EXTERIOR_OPTIONS = [
   { value: "off", label: "Off" },
 ] as const satisfies readonly { value: ExteriorId; label: string }[];
 
+export type ShipId =
+  | "cycle"
+  | "none"
+  | "borg"
+  | "bird-of-prey"
+  | "federation"
+  | "warbird"
+  | "marauder"
+  | "galor"
+  | "shuttle";
+
+/** The ships after "cycle" and "none" are in `SHIP_KINDS` order. */
+export const SHIP_OPTIONS = [
+  { value: "cycle", label: "Cycle through all" },
+  { value: "none", label: "None" },
+  { value: "borg", label: "Borg cube" },
+  { value: "bird-of-prey", label: "Bird-of-Prey" },
+  { value: "federation", label: "Federation starship" },
+  { value: "warbird", label: "Warbird" },
+  { value: "marauder", label: "Marauder" },
+  { value: "galor", label: "Galor" },
+  { value: "shuttle", label: "Shuttlecraft" },
+] as const satisfies readonly { value: ShipId; label: string }[];
+
 export const SHIFT_OPTIONS = [
   { value: "day", label: "Day shift" },
   { value: "night", label: "Night shift" },
@@ -41,6 +65,16 @@ export const bridgeMeta = defineEffectMeta({
       label: "Outside view",
       options: EXTERIOR_OPTIONS,
       default: "stars",
+    },
+    ship: { kind: "select", label: "Visiting ship", options: SHIP_OPTIONS, default: "cycle" },
+    shipStay: { kind: "boolean", label: "Ship stays once arrived", default: false },
+    shipGap: {
+      kind: "number",
+      label: "Seconds between ships",
+      min: 10,
+      max: 600,
+      step: 10,
+      default: 240,
     },
     lighting: { kind: "select", label: "Lighting", options: SHIFT_OPTIONS, default: "day" },
     display: { kind: "select", label: "Display side", options: DISPLAY_OPTIONS, default: "left" },

@@ -1,4 +1,4 @@
-import { bridgeMeta } from "./bridge.meta";
+import { bridgeMeta, SHIP_OPTIONS } from "./bridge.meta";
 import {
   type AtlasImage,
   buildPanels,
@@ -69,7 +69,7 @@ import {
 } from "./gl";
 import { approach } from "./math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "./bridge-ship-shapes";
-import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt } from "./bridge-ships";
+import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt, type ShipPlan } from "./bridge-ships";
 import { planetStyle } from "./bridge-planets";
 import {
   clockText,
@@ -1013,6 +1013,10 @@ export const bridge = defineEffect(bridgeMeta, {
       const shift = [1, 1, 1];
       let first = true;
       const ship = createShipPose();
+      const shipPlan: ShipPlan = { kind: -1, stay: false, gap: 0 };
+      /** When the ship settings last changed, so a newly chosen ship arrives soon. */
+      let shipEpoch = 0;
+      let shipChoice = "";
       let planetVisit = Number.NaN;
       let planetSeed = Number.NaN;
       /** The CPU copy of the atlas, kept for redrawing the live readouts. */
@@ -1289,7 +1293,19 @@ export const bridge = defineEffect(bridgeMeta, {
               const edge = Math.min(now - visit * hold, (visit + 1) * hold - now);
               eu.f1("uFade", planet ? Math.min(1, edge / PLANET_FADE_MS) : 1);
               // A visiting ship, now and then.
-              shipAt(time, seed, ship);
+              if (p.ship !== shipChoice || p.shipStay !== shipPlan.stay) {
+                shipChoice = p.ship;
+                shipEpoch = time;
+                // Options after "cycle" and "none" are in `SHIP_KINDS` order; cycling is -1.
+                shipPlan.kind = Math.max(-1, SHIP_OPTIONS.findIndex((o) => o.value === p.ship) - 2);
+              }
+              shipPlan.stay = p.shipStay;
+              shipPlan.gap = p.shipGap;
+              if (p.ship === "none") {
+                ship.kind = -1;
+              } else {
+                shipAt(time - shipEpoch, seed, shipPlan, ship);
+              }
               if (ship.kind >= 0) {
                 const kind = SHIP_KINDS[ship.kind] ?? "shuttlecraft";
                 const scale = SHIP_SCALE[kind];
