@@ -13,6 +13,7 @@ import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { starfighterMeta } from "./starfighter/starfighter.meta";
 import { jetcockpitMeta } from "./jetcockpit/jetcockpit.meta";
+import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
@@ -142,6 +143,10 @@ export const effects: readonly EffectEntry[] = [
   {
     ...jetcockpitMeta,
     load: () => import("./jetcockpit/jetcockpit").then((m) => m.jetcockpit),
+  },
+  {
+    ...balloonrideMeta,
+    load: () => import("./balloonride/balloonride").then((m) => m.balloonride),
   },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
