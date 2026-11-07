@@ -30,6 +30,13 @@ import {
 import { wrap } from "../math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import { unitRgbMemo } from "../color";
+import {
+  DROP_CLEAR,
+  DROP_DIR_GLSL,
+  DROP_FRAGMENT,
+  DROP_VERTEX,
+  OFFSET_RANGE,
+} from "./windowrain-drops";
 
 /** Background divisors: the background is heavily defocused, so it can be very low-res. */
 const BG_DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
@@ -37,17 +44,6 @@ const BG_DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
 const BG_RATE = 10;
 /** Light drift in reference px/s. */
 const DRIFT_PX = 2.5;
-/**
- * Drop lens: a drop shows the background around its centre, inverted and
- * minified by this factor (a ball lens's wide, flipped view), so the defocused
- * lights read smaller and crisper through the drop.
- */
-const LENS = 2;
-/** Refraction offsets are stored in the drop map as +-OFFSET_RANGE reference px. */
-const OFFSET_RANGE = 128;
-/** 8-bit value meaning "no offset", and the scale from [-1, 1] to stored units. */
-const ENC_MID = 128 / 255;
-const ENC_SCALE = 127 / 255;
 /** Fog mask texel size in reference px. */
 const FOG_TEXEL = 4;
 /** Seconds for wiped glass to fog over completely. */
@@ -97,62 +93,6 @@ void main() {
   float d = length(vLocal);
   float a = 1.0 - smoothstep(1.0 - uEdge, 1.0, d);
   outColor = vec4(mix(uColor1, uColor2, vMix) * (a * vAlpha), 0.0);
-}
-`;
-
-/**
- * Drop sprites, shared by the drop-map and fog-wipe passes. Each drop is an
- * octagon around an ellipse (stretched vertically while running).
- */
-const DROP_VERTEX = /* glsl */ `#version 300 es
-layout(location = 0) in vec2 aCorner;
-/** Centre x, centre y, radius (device px, y down) and vertical stretch. */
-layout(location = 1) in vec4 aDrop;
-layout(location = 2) in float aFade;
-uniform vec2 uResolution;
-uniform float uInvScale;
-uniform float uGrow;
-uniform float uMargin;
-/** Unit-ellipse coordinates, y up. */
-out vec2 vLocal;
-/** Offset from the centre in reference px, y up. */
-out vec2 vRel;
-flat out float vFade;
-${TO_CLIP_GLSL}
-void main() {
-  float s = aDrop.w;
-  vec2 radii = aDrop.z * uGrow * vec2(inversesqrt(s), s);
-  // Grow by the target's texel size, so the anti-aliased edge is never clipped.
-  vec2 ext = radii + uMargin;
-  vec2 offset = aCorner * ext;
-  vec2 px = aDrop.xy + offset;
-  vLocal = offset / radii * vec2(1.0, -1.0);
-  vRel = offset * uInvScale * vec2(1.0, -1.0);
-  vFade = aFade;
-  gl_Position = pxToClip(px, uResolution);
-}
-`;
-
-/**
- * Drop map: RG = refraction offset (encoded), B = dome height, A = coverage.
- * Drawn without blending in priority order (runners last), so each pixel holds
- * exactly one drop's surface and overlaps are well defined.
- */
-const DROP_FRAGMENT = /* glsl */ `#version 300 es
-precision highp float;
-in vec2 vLocal;
-in vec2 vRel;
-flat in float vFade;
-out vec4 outColor;
-void main() {
-  float d = length(vLocal);
-  float cov = clamp((1.0 - d) / max(fwidth(d), 1e-4) + 0.5, 0.0, 1.0);
-  if (cov <= 0.0) discard;
-  float h = sqrt(max(1.0 - d * d, 0.0));
-  // Sample the background at centre - LENS * rel: inverted and minified.
-  vec2 off = vRel * (${glslFloat(-(1 + LENS) / OFFSET_RANGE)} * vFade);
-  vec2 enc = clamp(${glslFloat(ENC_MID)} + off * ${glslFloat(ENC_SCALE)}, ${glslFloat(1 / 255)}, 1.0);
-  outColor = vec4(enc, h, cov * vFade);
 }
 `;
 
@@ -207,6 +147,7 @@ const LIGHT_DIR = [-0.45 / LIGHT_LEN, 0.55 / LIGHT_LEN, 0.7 / LIGHT_LEN] as cons
  * background fetch at the refracted position, plus one fog fetch when enabled.
  */
 const COMPOSITE = /* glsl */ `
+${DROP_DIR_GLSL}
 uniform sampler2D uDrops;
 uniform sampler2D uFog;
 /** Decoded offset [-1, 1] to uv. */
@@ -217,7 +158,7 @@ uniform vec3 uFogTint;
 const vec3 LIGHT_DIR = vec3(${glslFloat(LIGHT_DIR[0])}, ${glslFloat(LIGHT_DIR[1])}, ${glslFloat(LIGHT_DIR[2])});
 vec4 composite(vec2 uv) {
   vec4 d = texture(uDrops, uv);
-  vec2 dir = (d.xy - ${glslFloat(ENC_MID)}) * ${glslFloat(1 / ENC_SCALE)};
+  vec2 dir = dropDir(d);
   float cov = d.a;
   vec3 col = texture(uLowRes, uv + dir * uOffsetScale).rgb;
   // Through the drop, the view is a little brighter and clearer.
@@ -339,7 +280,6 @@ export const windowRain = defineEffect(windowRainMeta, {
       let fogW = 0;
       let fogH = 0;
       const FOG_CLEAR = new Float32Array([1, 0, 0, 1]);
-      const DROP_CLEAR = new Float32Array([ENC_MID, ENC_MID, 0, 0]);
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
 
       let width = 1;
