@@ -9,6 +9,7 @@ import { blobsMeta } from "./blobs/blobs.meta";
 import { blossomMeta } from "./blossom/blossom.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
+import { retrobridgeMeta } from "./retrobridge/retrobridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
@@ -135,6 +136,10 @@ export const effects: readonly EffectEntry[] = [
   { ...fireplaceMeta, load: () => import("./fireplace/fireplace").then((m) => m.fireplace) },
   { ...synthwaveMeta, load: () => import("./synthwave/synthwave").then((m) => m.synthwave) },
   { ...bridgeMeta, load: () => import("./bridge/bridge").then((m) => m.bridge) },
+  {
+    ...retrobridgeMeta,
+    load: () => import("./retrobridge/retrobridge").then((m) => m.retrobridge),
+  },
   {
     ...missioncontrolMeta,
     load: () => import("./missioncontrol/missioncontrol").then((m) => m.missioncontrol),
