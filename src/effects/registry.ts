@@ -14,7 +14,6 @@ import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { starfighterMeta } from "./starfighter/starfighter.meta";
 import { jetcockpitMeta } from "./jetcockpit/jetcockpit.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
-import { timemachineMeta } from "./timemachine/timemachine.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
@@ -154,10 +153,6 @@ export const effects: readonly EffectEntry[] = [
   {
     ...balloonrideMeta,
     load: () => import("./balloonride/balloonride").then((m) => m.balloonride),
-  },
-  {
-    ...timemachineMeta,
-    load: () => import("./timemachine/timemachine").then((m) => m.timemachine),
   },
   {
     ...lunarlanderMeta,
