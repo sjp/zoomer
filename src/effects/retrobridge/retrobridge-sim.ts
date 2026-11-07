@@ -2,7 +2,8 @@
  * Pure logic for the Retro Starship Bridge (retrobridge.ts): the round room's
  * geometry (the lower well, the deck and its railing, the chairs, the consoles
  * and the wall) and the camera looking into it, the ring of wall segments (a calm
- * stretch of wall behind the speaker, the stations and the lift door), the
+ * stretch of wall behind the speaker, three stations, the lift door and plain
+ * wall), the chairs and viewscreens over the stations, the
  * slow blinking of the lamps, and the red alert's eased wash, pulse and
  * turning beacons. Nothing here touches GL, so it is all unit tested.
  *
@@ -74,10 +75,12 @@ export function wallPoint(theta: number, y: number, out: Float64Array): Float64A
 
 /** Plain wall and the backs of consoles, behind the speaker: only slow lamps. */
 export const CALM = 0;
-/** A station: a console with a desk of jewel buttons, a black face of lamp tiles above it, wall screens over that. */
+/** A station: a console and chair, a black face of lamp tiles over its desk, and a large viewscreen above. */
 export const STATION = 1;
 /** The lift door, with a red call panel beside it and no console. */
 export const DOOR = 2;
+/** Plain wall past the stations: a bare black console stretch and pale panels, no lamps or screens. */
+export const PLAIN = 3;
 
 export interface Segment {
   /** Azimuths (radians) of the segment's edges, a0 < a1. */
@@ -89,33 +92,95 @@ export interface Segment {
 /** Half the calm stretch's width (radians): at 16:9 it covers the middle third of the frame. */
 export const CALM_HALF = 18 * DEG;
 /** Width (radians) of a station, and of the lift door's bay. */
-export const STATION_W = 14 * DEG;
-export const DOOR_W = 15 * DEG;
-/** Stations either side; together they reach round past the edges of a 21:9 frame. */
-const STATIONS_PER_SIDE = 5;
+export const STATION_W = 15 * DEG;
+export const DOOR_W = 14 * DEG;
+/** Stations on the side away from the door, and on the door's side. */
+export const STATIONS_FAR = 2;
+export const STATIONS_NEAR = 1;
+/** Where the plain wall past the stations ends, either side: well past the edges of a 32:9 frame. */
+const PLAIN_END = 90 * DEG;
 
 /**
- * The ring with the lift door on the right, from left to right. The door's bay
- * sits right beside the calm stretch, so it is in view even in narrow frames;
- * stations fill the rest. A door on the left mirrors the whole ring.
+ * The ring with the lift door on the right, from left to right: plain wall,
+ * two stations, the calm stretch, the door's bay right beside it (so it is in
+ * view even in narrow frames), one station, and plain wall again. A door on
+ * the left mirrors the whole ring.
  */
 export function ringSegments(): Segment[] {
   const out: Segment[] = [];
-  for (let i = STATIONS_PER_SIDE - 1; i >= 0; i--) {
-    const a1 = -CALM_HALF - i * STATION_W;
-    out.push({ a0: a1 - STATION_W, a1, kind: STATION });
+  const left = -CALM_HALF - STATIONS_FAR * STATION_W;
+  out.push({ a0: -PLAIN_END, a1: left, kind: PLAIN });
+  for (let i = 0; i < STATIONS_FAR; i++) {
+    const a0 = left + i * STATION_W;
+    out.push({ a0, a1: a0 + STATION_W, kind: STATION });
   }
   out.push({ a0: -CALM_HALF, a1: CALM_HALF, kind: CALM });
   out.push({ a0: CALM_HALF, a1: CALM_HALF + DOOR_W, kind: DOOR });
-  for (let i = 0; i < STATIONS_PER_SIDE - 1; i++) {
-    const a0 = CALM_HALF + DOOR_W + i * STATION_W;
-    out.push({ a0, a1: a0 + STATION_W, kind: STATION });
+  let a = CALM_HALF + DOOR_W;
+  for (let i = 0; i < STATIONS_NEAR; i++) {
+    out.push({ a0: a, a1: a + STATION_W, kind: STATION });
+    a += STATION_W;
   }
+  out.push({ a0: a, a1: PLAIN_END, kind: PLAIN });
   return out;
 }
 
+/** Azimuths of the swivel chairs: one centred at each station, with the door on the right. */
+export function chairAzimuths(): number[] {
+  return ringSegments()
+    .filter((s) => s.kind === STATION)
+    .map((s) => 0.5 * (s.a0 + s.a1));
+}
+
+/** Screen pictures (the composite's types): a star field, a plot of speckles, a planet against stars. */
+export const STARS = 0;
+export const PLOT = 1;
+export const PLANET = 2;
+
+/** A station's viewscreen: its centre's azimuth and height, half sizes (m), picture type and variant. */
+export interface Viewscreen {
+  theta: number;
+  y: number;
+  halfW: number;
+  halfH: number;
+  type: number;
+  variant: number;
+}
+
+/** The viewscreens' centre height and half sizes (m), on the pale wall between the ledge and the soffit. */
+export const SCREEN_Y = 2.32;
+export const SCREEN_HW = 0.42;
+export const SCREEN_HH = 0.25;
+/** The soffit under the ceiling, where the pale wall ends. */
+export const SOFFIT_Y = 2.72;
+
+/**
+ * One large framed viewscreen centred over each station's chair, for
+ * variation `seed`. The three show different pictures: a star field, a plot
+ * and a planet, in an order set by the seed.
+ */
+export function viewscreens(seed: number): Viewscreen[] {
+  const s = Math.floor(Number.isFinite(seed) ? seed : 0);
+  const h = hash32(s * 0x27d4eb2d + 0x165667b1);
+  const types = [STARS, PLOT, PLANET];
+  // Rotate by the seed, and swap the first two now and then, for all six orders.
+  const r = (h >>> 1) % 3;
+  const order = [types[r], types[(r + 1) % 3], types[(r + 2) % 3]];
+  if (((h >>> 3) & 1) === 1) {
+    [order[0], order[1]] = [order[1], order[0]];
+  }
+  return chairAzimuths().map((theta, i) => ({
+    theta,
+    y: SCREEN_Y,
+    halfW: SCREEN_HW,
+    halfH: SCREEN_HH,
+    type: order[i % 3],
+    variant: (hash32(h + i * 0x9e3779b1) >>> 4) % 16,
+  }));
+}
+
 /** Most segments the room shader takes. */
-export const MAX_SEGMENTS = 12;
+export const MAX_SEGMENTS = 8;
 
 /** Height (m) of the alert beacons' centres, on the band below the ceiling. */
 export const BEACON_Y = 2.86;
@@ -124,7 +189,7 @@ export const BEACON_R = 0.1;
 
 /**
  * Azimuths of the two alert beacons with the door on the right: one over the
- * door, one over the first station on the other side, both clear of the calm
+ * door, one over the nearer station on the other side, both clear of the calm
  * stretch.
  */
 export function beaconAzimuths(): [number, number] {

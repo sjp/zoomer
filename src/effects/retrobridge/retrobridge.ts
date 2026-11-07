@@ -22,6 +22,7 @@ import {
   beaconAngle,
   beaconAzimuths,
   CALM_SLOT0,
+  chairAzimuths,
   CAMERA_Z,
   CEILING_H,
   CONSOLE_BACK_H,
@@ -35,6 +36,7 @@ import {
   LAMP_SLOTS,
   type LampBank,
   MAX_SEGMENTS,
+  PLAIN,
   R_CONSOLE,
   R_CONSOLE_BACK,
   R_CHAIR,
@@ -44,11 +46,16 @@ import {
   RAIL_H,
   RAIL_T,
   ringSegments,
+  SCREEN_HH,
+  SCREEN_HW,
   SCREEN_PERIOD,
+  SCREEN_Y,
   screenTime,
+  SOFFIT_Y,
   stepAlert,
   stepLamps,
   TAN_HALF_FOV,
+  viewscreens,
   wallPoint,
 } from "./retrobridge-sim";
 import { type Lighting, retrobridgeMeta } from "./retrobridge.meta";
@@ -74,11 +81,11 @@ const WASHES: Record<Lighting, Float32Array> = {
  * The bridge, ray-cast once per resize, variation, lighting or door side, with
  * four samples per pixel. The camera stands before the command chair looking
  * at the back of the round room: the carpeted lower well and the step up, the
- * red padded railing on its black posts, swivel chairs at some stations, the
- * ring of black consoles (a red-trimmed desk of jewel buttons over pale,
- * blue-lit knee panels), and the wall behind them: a black face of framed lamp
- * tiles, then pale panels with a band of framed screens, and at one side a red
- * slatted door in an alcove. The command chair's back and arms sit in front of
+ * red padded railing on its black posts, a swivel chair at each of the three
+ * stations, the ring of black consoles (a red-trimmed desk of jewel buttons
+ * over pale, blue-lit knee panels), and the wall behind them: a black face of
+ * framed lamp tiles, then pale panels with one large framed viewscreen over
+ * each station, and at one side a flat red door in an alcove. The command chair's back and arms sit in front of
  * everything, behind the speaker.
  *
  * Pass 0 writes the colour, with the lamps at their lit colour and the screens
@@ -99,6 +106,10 @@ uniform int uSegCount;
 uniform vec2 uDoor;
 uniform vec2 uBeaconA;
 uniform vec3 uWash[4];
+/** The chairs' azimuths, and the viewscreens: centre azimuth, height and half sizes, with each one's picture code. */
+uniform float uChairA[3];
+uniform vec4 uScreens[3];
+uniform float uScreenSub[3];
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
@@ -125,12 +136,13 @@ const float SLOPE_LEN = ${g(Math.hypot(CONSOLE_BACK_H - CONSOLE_H, R_CONSOLE_BAC
 const int DOOR = ${String(DOOR)};
 const int CALM = 0;
 const int STATION = 1;
+const int PLAIN = ${String(PLAIN)};
 const float CALM_SLOT0 = ${g(CALM_SLOT0)};
 const float BUSY_GROUPS = ${g(CALM_SLOT0 / LAMP_GROUP)};
 const float GROUP = ${g(LAMP_GROUP)};
-/** Where the screens' band sits, and the soffit above it. */
-const float SCREEN_Y = 2.3;
-const float SOFFIT_Y = 2.72;
+/** Where the calm inset sits, and the soffit above it. */
+const float SCREEN_Y = ${g(SCREEN_Y)};
+const float SOFFIT_Y = ${g(SOFFIT_Y)};
 
 const vec3 WALL = vec3(0.75, 0.78, 0.83);
 const vec3 SOFFIT = vec3(0.66, 0.68, 0.73);
@@ -296,7 +308,7 @@ vec3 tileBlock(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int rows, bool calm) {
 }
 
 /** A screen recessed in a light grey frame: dark glass here, its picture drawn live. */
-vec3 screen(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int idx) {
+vec3 screen(vec3 col, vec2 q, vec2 c, vec2 hs, int sub) {
   float d = sdBox(q - c, hs, 0.01);
   if (d > 0.05) {
     return col;
@@ -310,10 +322,7 @@ vec3 screen(vec3 col, vec2 q, vec2 c, vec2 hs, uint h, int idx) {
   float glass = cover(d);
   col = mix(col, vec3(0.01, 0.012, 0.02), glass);
   vec2 uv = clamp((q - c + hs) / (2.0 * hs), 0.0, 1.0);
-  // Mostly speckled star fields and plots, now and then a trace or a bar graph.
-  uint t = h % 8u;
-  int type = t < 4u ? 0 : t < 6u ? 1 : t == 6u ? 2 : 3;
-  setLive(${String(CODE_SCREEN)} + type * 16 + (idx & 15), uv, glass);
+  setLive(${String(CODE_SCREEN)} + sub, uv, glass);
   return col;
 }
 
@@ -323,37 +332,21 @@ vec3 panels(vec3 col, float s, float pitch) {
   return col * (1.0 - 0.12 * cover(seam - 0.003));
 }
 
-/** The black face over a station's desk: framed blocks of tiles, and rows of loose ones and slim readouts under them. */
+/**
+ * The black face over a station's desk: two framed blocks of tiles either side
+ * of the chair's back, and one short row of loose tiles under each.
+ */
 vec3 stationFace(vec3 col, vec2 q, float hw, uint h) {
-  float aw = hw - 0.04;
-  int nb = 2 + int((h >> 5) & 1u);
-  float bw = 2.0 * aw / float(nb);
-  float i = clamp(floor((q.x + aw) / bw), 0.0, float(nb - 1));
-  uint bh = hash32(h ^ (uint(i) + 1u) * 0x9e3779b9u);
-  float cx = -aw + (i + 0.5) * bw;
+  float sgn = q.x < 0.0 ? -1.0 : 1.0;
+  uint bh = hash32(h ^ (sgn < 0.0 ? 0x9e3779b9u : 0x3c6ef372u));
+  float bw = 0.5 * hw - 0.07;
+  float cx = sgn * (0.5 * hw + 0.02);
   int rows = 2 + int((bh >> 4) & 1u);
   float top = FACE_TOP - 0.05;
   float bh2 = rows == 3 ? 0.11 : 0.08;
-  col = tileBlock(col, q, vec2(cx, top - bh2), vec2(0.5 * bw - 0.02, bh2), bh, rows, false);
-  // Loose tiles and slim readouts lower down.
+  col = tileBlock(col, q, vec2(cx, top - bh2), vec2(bw, bh2), bh, rows, false);
   float y1 = top - 2.0 * bh2 - 0.075;
-  col = lampRow(col, q, y1, aw - 0.03, 0.062, vec2(0.022, 0.013), hash32(h + 3u), false, true);
-  if (rows == 2) {
-    col = lampRow(col, q, y1 - 0.065, aw - 0.1, 0.11, vec2(0.04, 0.011), hash32(h + 4u), false, true);
-  }
-  return col;
-}
-
-/** The wall over a station: pale panels with a band of framed screens. */
-vec3 stationScreens(vec3 col, vec2 q, float hw, uint h, int idx) {
-  if (((h >> 9) & 1u) == 0u) {
-    float sw = 0.5 * hw - 0.07;
-    col = screen(col, q, vec2(-0.5 * hw + 0.015, SCREEN_Y), vec2(sw, 0.19), hash32(h + 5u), idx * 2);
-    col = screen(col, q, vec2(0.5 * hw - 0.015, SCREEN_Y), vec2(sw, 0.19), hash32(h + 6u), idx * 2 + 1);
-  } else {
-    col = screen(col, q, vec2(-0.26 * hw, SCREEN_Y), vec2(0.62 * hw, 0.2), hash32(h + 5u), idx * 2);
-    col = screen(col, q, vec2(0.68 * hw, SCREEN_Y + 0.04), vec2(0.18 * hw, 0.13), hash32(h + 6u), idx * 2 + 1);
-  }
+  col = lampRow(col, q - vec2(cx, 0.0), y1, bw - 0.08, 0.075, vec2(0.022, 0.013), hash32(bh + 3u), false, true);
   return col;
 }
 
@@ -387,14 +380,12 @@ vec3 doorWall(vec3 col, vec2 q, float hw, uint h) {
   col = mix(col, lit(PILLAR * 1.1), step(top, q.y) * (1.0 - pil) * step(q.y, SOFFIT_Y));
   col = mix(col, pc, pil * step(q.y, SOFFIT_Y));
   col *= 1.0 - 0.3 * cover(abs(abs(q.x) - ax) - 0.004);
-  // The door: fine vertical slats.
+  // The door: flat red, with a thin dark slit down the middle where its halves part.
   vec2 dh = vec2(ax - 0.05, 0.5 * (top - 0.06 - DECK_H));
   float dd = sdBox(q - vec2(0.0, DECK_H + dh.y), dh, 0.0);
-  float pitch = 0.032;
-  float fade = clamp(1.6 - 2.0 * px / pitch, 0.0, 1.0);
-  float slat = 0.5 + 0.5 * cos(6.2831853 * q.x / pitch);
-  vec3 leaf = DOOR_RED * (0.95 - 0.28 * slat * fade - 0.12 * (1.0 - fade));
-  leaf *= 0.88 + 0.12 * smoothstep(DECK_H, top, q.y);
+  vec3 leaf = DOOR_RED * (0.88 + 0.12 * smoothstep(DECK_H, top, q.y));
+  leaf *= 1.0 - 0.06 * smoothstep(0.0, ax, abs(q.x));
+  leaf = mix(leaf, vec3(0.05, 0.01, 0.01), cover(abs(q.x) - 0.004));
   col = mix(col, vec3(0.06), cover(dd - 0.012));
   col = mix(col, lit(leaf), cover(dd));
   // A small red call panel on one pillar, with lamps.
@@ -434,7 +425,7 @@ vec3 wall(vec3 p) {
     col = lit(BLACK) * (0.8 + 0.5 * smoothstep(BACK_H, FACE_TOP, y));
     if (kind == STATION) {
       col = stationFace(col, q, hw, h);
-    } else {
+    } else if (kind == CALM) {
       col = calmWall(col, q, hw, h);
     }
     col *= 1.0 - 0.6 * cover(min(s - s0, s1 - s) - 0.004);
@@ -442,14 +433,17 @@ vec3 wall(vec3 p) {
     // A light grey ledge along the face's top.
     col = mix(col, lit(FRAME * 1.05), cover(abs(y - FACE_TOP - 0.03) - 0.03));
     col *= 1.0 - 0.3 * cover(abs(y - FACE_TOP - 0.065) - 0.004);
-    if (kind == STATION) {
-      col = stationScreens(col, q, hw, h, idx);
-    } else if (kind == CALM) {
+    if (kind == CALM) {
       col = calmWall(col, q, hw, h);
     }
     // Slim pillars between segments.
     float e = min(s - s0, s1 - s);
     col = mix(col, lit(PILLAR * (0.9 + 0.15 * clamp(e / 0.03, 0.0, 1.0))), cover(e - 0.03));
+    // One large viewscreen over each station's chair.
+    for (int i = 0; i < 3; i++) {
+      vec4 sc = uScreens[i];
+      col = screen(col, vec2(s - sc.x * R_WALL, y), vec2(0.0, sc.y), sc.zw, int(uScreenSub[i] + 0.5));
+    }
   }
   if (y > SOFFIT_Y) {
     col = lit(SOFFIT);
@@ -488,7 +482,7 @@ vec3 consoleFront(vec3 p, vec4 seg, int kind, uint h) {
   // Shadow under the desk, and a soft blue or teal glow spilling down the panels.
   col *= 0.55 + 0.45 * smoothstep(CONSOLE_H - 0.03, CONSOLE_H - 0.3, y);
   vec3 glow = ((h >> 3) & 1u) == 0u ? vec3(0.25, 0.55, 1.0) : vec3(0.2, 0.85, 0.8);
-  float gx = kind == STATION ? 1.0 : 0.45;
+  float gx = kind == STATION ? 1.0 : kind == PLAIN ? 0.3 : 0.45;
   float g = exp(-pow((s - sc) / 0.32, 2.0)) * exp(-pow((y - (CONSOLE_H - 0.17)) / 0.14, 2.0));
   col += glow * 0.55 * g * gx;
   col = mix(col, lit(BLACK), cover(abs(y - (CONSOLE_H - 0.07)) - 0.022));
@@ -516,9 +510,9 @@ vec3 consoleTop(vec3 p, vec4 seg, int kind, uint h) {
   // Black, with a soft sheen of the key light towards the back.
   vec3 col = lit(BLACK) * (1.0 + 1.2 * smoothstep(0.1, SLOPE_LEN, v));
   if (kind == STATION) {
-    for (int k = 0; k < 3; k++) {
+    for (int k = 0; k < 2; k++) {
       uint ck = hash32(h + 40u + uint(k));
-      float cx = (float(k) - 1.0) * 0.66 * hw + (float(ck % 9u) - 4.0) * 0.01;
+      float cx = (float(k) - 0.5) * 1.1 * hw + (float(ck % 9u) - 4.0) * 0.01;
       float cw = 0.11 + 0.04 * float((ck >> 4) % 3u);
       int rows = 2 + int((ck >> 8) & 1u);
       for (int j = 0; j < 3; j++) {
@@ -534,7 +528,7 @@ vec3 consoleTop(vec3 p, vec4 seg, int kind, uint h) {
         col = mix(col, lit(KNEE * 0.8), cover(dp));
       }
     }
-  } else if (seg.z > -0.5) {
+  } else if (kind == CALM) {
     col = jewelRow(col, q, 0.27, hw - 0.2, 0.26, 0.017, hash32(h + 41u), true);
   }
   float e = min(q.x + hw, hw - q.x);
@@ -669,21 +663,10 @@ vec3 swivelChair(vec2 w, vec3 col, vec3 L) {
   return col;
 }
 
-/** Swivel chairs at most stations, between the railing and the desks. */
+/** A swivel chair centred at each station, between the railing and the desks. */
 vec3 chairs(vec2 f, vec3 col, float k) {
-  for (int i = 0; i < ${String(MAX_SEGMENTS)}; i++) {
-    if (i >= uSegCount) {
-      break;
-    }
-    vec4 s = uSegs[i];
-    if (int(s.z + 0.5) != STATION) {
-      continue;
-    }
-    uint h = hash32(uint(i) * 0x632be5abu ^ uSalt);
-    if (((h >> 13) & 3u) == 0u) {
-      continue;
-    }
-    float a = 0.5 * (s.x + s.y) + (float((h >> 16) % 7u) - 3.0) * 0.015;
+  for (int i = 0; i < 3; i++) {
+    float a = uChairA[i];
     vec3 c = vec3(R_CHAIR * sin(a), DECK_H, R_CHAIR * cos(a));
     float d = c.z - CAMERA_Z;
     vec2 w = vec2(f.x * 2.0 * TAN_HALF * d - c.x, EYE_H + f.y * 2.0 * TAN_HALF * d - DECK_H);
@@ -836,7 +819,7 @@ void main() {
 /**
  * Per frame: the cached room, its lamps dimmed and brightened by their slots,
  * the screens' pictures (a drifting star field, a plot of speckles round a
- * circling cluster, an oscilloscope trace or a bar graph), and under red alert
+ * circling cluster, or a slowly turning planet against stars), and under red alert
  * the pulsing red wash and the beacons' turning glow.
  */
 const COMPOSITE_FRAGMENT = /* glsl */ `#version 300 es
@@ -855,6 +838,8 @@ out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
 const float TAU = 6.28318530718;
+/** The viewscreens' width over their height. */
+const float ASPECT = ${g(SCREEN_HW / SCREEN_HH)};
 
 /** A cycle of n whole turns per screen period: continuous as the clock wraps. */
 float cyc(float n) {
@@ -928,32 +913,33 @@ vec3 plot(vec2 uv, float idx) {
   return col;
 }
 
-/** A green oscilloscope trace, drifting and slowly changing height, over a faint grid. */
-vec3 scope(vec2 uv, float idx) {
-  vec2 gq = abs(fract(uv * vec2(5.0, 4.0)) - 0.5);
-  vec3 col = vec3(0.02, 0.06, 0.045) + vec3(0.03, 0.08, 0.06) * step(0.47, max(gq.x, gq.y));
-  float fq = 1.5 + mod(idx, 3.0);
-  float amp = 0.28 * (0.7 + 0.3 * sin(TAU * cyc(13.0 + idx)));
-  float a = TAU * (fq * uv.x - cyc(150.0 + 10.0 * idx));
-  float y = 0.5 + amp * (sin(a) + 0.25 * sin(3.0 * a + TAU * cyc(7.0)));
-  float dy = amp * TAU * fq * (cos(a) + 0.75 * cos(3.0 * a + TAU * cyc(7.0)));
-  float d = abs(uv.y - y) / sqrt(1.0 + dy * dy * 0.6);
-  float tr = 1.0 - smoothstep(0.012, 0.03, d);
-  col += vec3(0.35, 1.0, 0.55) * tr + vec3(0.05, 0.2, 0.1) * exp(-d * 20.0);
+/**
+ * A planet against the stars: a lit disc of soft bands that turns once every
+ * 200 s, a thin haze of atmosphere at its rim, and a sparse field of speckles
+ * drifting slowly behind it.
+ */
+vec3 planet(vec2 uv, float idx) {
+  vec3 col = vec3(0.008, 0.01, 0.025) + speckle(uv, idx + 32.0, cyc(1.0), 0.18, vec2(0.0), 0.0) * 0.8;
+  vec2 c = vec2(0.3 + 0.4 * fract(0.37 * idx + 0.2), 0.42 + 0.16 * fract(0.53 * idx));
+  float R = 0.3;
+  vec2 p = (uv - c) * vec2(ASPECT, 1.0) / R;
+  float d = length(p);
+  // Atmosphere: a faint glow round the rim.
+  vec3 tint = mod(idx, 3.0) < 1.0 ? vec3(0.85, 0.5, 0.3) : mod(idx, 3.0) < 2.0 ? vec3(0.3, 0.6, 0.9) : vec3(0.65, 0.4, 0.8);
+  col += tint * 0.25 * exp(-max(d - 1.0, 0.0) * 18.0);
+  float disc = 1.0 - smoothstep(0.97, 1.01, d);
+  if (disc > 0.0) {
+    vec3 n = vec3(p, sqrt(max(1.0 - d * d, 0.0)));
+    float lon = atan(n.x, n.z) + TAU * cyc(3.0) + idx;
+    float lat = n.y;
+    float band = 0.5 + 0.5 * sin(lat * 9.0 + 1.2 * sin(lon * 2.0 + lat * 5.0) + idx);
+    vec3 surf = mix(tint * 0.45, mix(tint, vec3(1.0, 0.95, 0.88), 0.35), band);
+    float lamb = max(dot(n, normalize(vec3(-0.65, 0.45, 0.6))), 0.0);
+    surf *= 0.08 + 0.95 * lamb;
+    surf += tint * 0.2 * pow(1.0 - n.z, 3.0);
+    col = mix(col, surf, disc);
+  }
   return col;
-}
-
-/** A bar graph whose bars rise and fall over ten to thirty seconds. */
-vec3 graph(vec2 uv, float idx) {
-  float i = floor(uv.x * 8.0);
-  float x = fract(uv.x * 8.0);
-  uint h = hash32(uint(i + 8.0 * idx) * 0x9e3779b9u);
-  float n = 20.0 + float(h % 41u);
-  float hgt = 0.15 + 0.7 * (0.5 + 0.5 * sin(TAU * cyc(n) + float(h >> 8) * 0.001));
-  vec3 bg = vec3(0.02, 0.03, 0.08);
-  float on = step(0.15, x) * step(x, 0.85) * step(uv.y, hgt);
-  vec3 bar = mix(vec3(1.0, 0.55, 0.1), vec3(1.0, 0.9, 0.3), uv.y);
-  return mix(bg, bar * 0.85, on);
 }
 
 vec3 screenColour(vec2 uv, int sub) {
@@ -961,8 +947,7 @@ vec3 screenColour(vec2 uv, int sub) {
   float idx = float(sub & 15);
   if (type == 0) return stars(uv, idx);
   if (type == 1) return plot(uv, idx);
-  if (type == 2) return scope(uv, idx);
-  return graph(uv, idx);
+  return planet(uv, idx);
 }
 
 void main() {
@@ -1010,11 +995,11 @@ void main() {
 
 /**
  * Standing before the command chair of a 1960s TV starship's round bridge,
- * under bright, flat studio light: a ring of black consoles round the pale
- * grey walls, each with framed blocks of coloured lamp tiles over a slanted,
- * red-trimmed desk of jewel buttons, a band of framed wall screens above, a
- * thick red padded railing on black posts, swivel chairs, and a red slatted
- * door in an alcove at one side. The wall behind the speaker stays plain, with
+ * under bright, flat studio light: three stations round the pale grey walls,
+ * each with framed blocks of coloured lamp tiles over a slanted, red-trimmed
+ * desk of jewel buttons, a swivel chair and one large framed viewscreen above,
+ * plain wall and bare console beyond them, a thick red padded railing on black
+ * posts, and a flat red door in an alcove at one side. The wall behind the speaker stays plain, with
  * only slow lamps. Under red alert the walls wash red in a slow pulse and two
  * beacons turn.
  */
@@ -1038,6 +1023,9 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
         "uDoor",
         "uBeaconA",
         "uWash",
+        "uChairA",
+        "uScreens",
+        "uScreenSub",
       ]);
       const cu = createUniforms(gl, compProgram, [
         "uRoom",
@@ -1077,6 +1065,9 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
       });
       const door = segments.find((s) => s.kind === DOOR) ?? { a0: 0, a1: 0 };
       const [beaconA, beaconB] = beaconAzimuths();
+      const chairData = new Float32Array(chairAzimuths().slice(0, 3));
+      const screenData = new Float32Array(12);
+      const screenSub = new Float32Array(3);
       const beacons = new Float64Array(4);
       const point = new Float64Array(2);
 
@@ -1130,6 +1121,15 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
             ru.f2("uDoor", door.a0, door.a1);
             ru.f2("uBeaconA", beaconA, beaconB);
             gl.uniform3fv(ru.loc.uWash, WASHES[lighting]);
+            gl.uniform1fv(ru.loc.uChairA, chairData);
+            viewscreens(seed)
+              .slice(0, 3)
+              .forEach((v, i) => {
+                screenData.set([v.theta, v.y, v.halfW, v.halfH], i * 4);
+                screenSub[i] = v.type * 16 + v.variant;
+              });
+            gl.uniform4fv(ru.loc.uScreens, screenData);
+            gl.uniform1fv(ru.loc.uScreenSub, screenSub);
             for (const [pass, target] of [
               [0, room],
               [1, live],

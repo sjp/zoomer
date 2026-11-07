@@ -13,6 +13,7 @@ import {
   CALM_RAMP,
   CALM_SLOT0,
   CEILING_H,
+  chairAzimuths,
   CONSOLE_BACK_H,
   CONSOLE_H,
   createLampBank,
@@ -26,6 +27,9 @@ import {
   MAX_RATE,
   MAX_SEGMENTS,
   MIN_RATE,
+  PLAIN,
+  PLANET,
+  PLOT,
   PULSE_PERIOD,
   project,
   R_CHAIR,
@@ -39,10 +43,14 @@ import {
   ringSegments,
   SCREEN_PERIOD,
   screenTime,
+  SOFFIT_Y,
   slotRate,
+  STARS,
   STATION,
+  STATION_W,
   stepAlert,
   stepLamps,
+  viewscreens,
   wallPoint,
 } from "./retrobridge-sim";
 
@@ -78,15 +86,30 @@ describe("the ring", () => {
     }
   });
 
-  it("shows stations past both edges of a 16:9 frame, and the door inside it", () => {
+  it("has three stations, two away from the door and one beside it, then plain wall", () => {
+    const stations = segs.filter((s) => s.kind === STATION);
+    expect(stations).toHaveLength(3);
+    expect(stations.filter((s) => s.a1 <= -CALM_HALF + 1e-12)).toHaveLength(2);
+    expect(stations.filter((s) => s.a0 >= CALM_HALF - 1e-12)).toHaveLength(1);
+    const door = segs.find((s) => s.kind === DOOR);
+    expect(stations[2].a0).toBeCloseTo(door?.a1 ?? Number.NaN, 12);
+    for (const s of stations) {
+      expect(s.a1 - s.a0).toBeCloseTo(STATION_W, 12);
+    }
+    expect(segs[0].kind).toBe(PLAIN);
+    expect(segs[segs.length - 1].kind).toBe(PLAIN);
+  });
+
+  it("covers past both edges of a 21:9 frame, with every station's centre and the door inside 16:9", () => {
+    const wide = 21 / 9 / 2;
+    expect(wallPoint(segs[0].a0, 2, out)[0]).toBeLessThan(-wide);
+    expect(wallPoint(segs[segs.length - 1].a1, 2, out)[0]).toBeGreaterThan(wide);
     const edge = 16 / 9 / 2;
-    const first = segs[0];
-    const last = segs[segs.length - 1];
-    expect(wallPoint(first.a0, 2, out)[0]).toBeLessThan(-edge);
-    expect(wallPoint(last.a1, 2, out)[0]).toBeGreaterThan(edge);
     const doorEnd = segs.find((s) => s.kind === DOOR)?.a1 ?? Number.NaN;
     expect(wallPoint(doorEnd, 2, out)[0]).toBeLessThan(edge);
-    expect(segs.filter((s) => s.kind === STATION).length).toBeGreaterThanOrEqual(6);
+    for (const a of chairAzimuths()) {
+      expect(Math.abs(wallPoint(a, 2, out)[0])).toBeLessThan(edge - 0.05);
+    }
   });
 
   it("puts the wall's top and the deck inside the frame", () => {
@@ -119,6 +142,51 @@ describe("the ring", () => {
     const railTop = project(0, RAIL_H, R_RAIL, new Float64Array(2))[1];
     expect(project(0, CONSOLE_H, R_CONSOLE, out)[1]).toBeLessThan(railLow - 0.02);
     expect(project(0, CONSOLE_BACK_H, R_CONSOLE_BACK, out)[1]).toBeGreaterThan(railTop);
+  });
+
+  it("puts one chair at the centre of each station, clear of the calm stretch", () => {
+    const chairs = chairAzimuths();
+    const stations = segs.filter((s) => s.kind === STATION);
+    expect(chairs).toHaveLength(stations.length);
+    stations.forEach((s, i) => {
+      expect(chairs[i]).toBeCloseTo(0.5 * (s.a0 + s.a1), 12);
+      expect(Math.abs(chairs[i])).toBeGreaterThan(CALM_HALF);
+    });
+  });
+
+  it("hangs one large viewscreen over each chair, within its station and above the face", () => {
+    const chairs = chairAzimuths();
+    for (const seed of [0, 7, 42, 999]) {
+      const screens = viewscreens(seed);
+      expect(screens).toHaveLength(3);
+      screens.forEach((v, i) => {
+        expect(v.theta).toBeCloseTo(chairs[i], 12);
+        expect(v.halfW).toBeGreaterThan(0.38);
+        // Inside its station, clear of the slim pillars and the calm stretch.
+        expect(v.halfW + 0.05).toBeLessThan((STATION_W * R_WALL) / 2 - 0.06);
+        expect(v.y - v.halfH - 0.05).toBeGreaterThan(FACE_TOP + 0.07);
+        expect(v.y + v.halfH + 0.05).toBeLessThan(SOFFIT_Y);
+        // Whole, frame and all, inside a 16:9 frame.
+        const reach = (v.halfW + 0.04) / R_WALL;
+        expect(Math.abs(wallPoint(Math.abs(v.theta) + reach, v.y, out)[0])).toBeLessThan(
+          16 / 9 / 2,
+        );
+      });
+    }
+  });
+
+  it("gives the three viewscreens different pictures: a star field, a plot and a planet", () => {
+    const orders = new Set<string>();
+    for (let seed = 0; seed < 200; seed++) {
+      const types = viewscreens(seed).map((v) => v.type);
+      expect(new Set(types).size).toBe(3);
+      expect(types).toContain(STARS);
+      expect(types).toContain(PLOT);
+      expect(types).toContain(PLANET);
+      orders.add(types.join(","));
+      expect(viewscreens(seed)).toEqual(viewscreens(seed));
+    }
+    expect(orders.size).toBe(6);
   });
 
   it("puts the beacons outside the calm stretch and in frame", () => {
