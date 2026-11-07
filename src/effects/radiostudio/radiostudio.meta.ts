@@ -31,7 +31,7 @@ export const radiostudioMeta = defineEffectMeta({
       maxLength: SIGN_MAX_LENGTH,
       maxLines: 1,
     },
-    foam: { kind: "color", label: "Foam colour", default: "#2a3344" },
+    foam: { kind: "color", label: "Foam colour", default: "#56647e" },
     mic: { kind: "select", label: "Microphone", options: MIC_OPTIONS, default: "left" },
     clock: { kind: "boolean", label: "Studio clock (local time)", default: true },
   },
