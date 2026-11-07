@@ -10,6 +10,7 @@ import {
   type Shape,
   shapeBounds,
   shapeDistance,
+  textBounds,
   tickedNumber,
 } from "./bridge-panels";
 import { ATLAS_S0, ATLAS_Y0, bridgeLayout, type WallRect } from "./bridge-room";
@@ -140,6 +141,23 @@ describe("bridge panels", () => {
     expect(atlas.index[wall]).toBe(0);
   });
 
+  it("give lit titles their block across their full width, wide letters included", () => {
+    const set = buildPanels(layout, 12);
+    const tpm = 300;
+    const atlas = createAtlasImage(Math.ceil(5.52 * tpm), Math.ceil(1.5 * tpm), tpm);
+    rasterisePanels(set, atlas);
+    const power = set.texts.find((t) => t.text === "POWER");
+    if (!power) {
+      throw new Error("no POWER title");
+    }
+    // Arial at weight 600, squeezed so digits are half their height wide, sets
+    // POWER about 3.4 capital heights wide: more than five narrow digits.
+    const left = power.x - 3.6 * power.size;
+    const i = Math.floor((left - ATLAS_S0) * tpm);
+    const j = Math.floor((power.y + power.size / 2 - ATLAS_Y0) * tpm);
+    expect(atlas.index[j * atlas.width + i]).toBe(power.block);
+  });
+
   it("make numbers that tick to a new reading of the same shape", () => {
     const rng = createRng(3);
     for (let i = 0; i < 200; i++) {
@@ -154,6 +172,7 @@ describe("bridge panels", () => {
   it("give the band one window per real readout, beside the speaker", () => {
     const set = buildPanels(layout, 12);
     expect(set.live.map((t) => t.key).toSorted()).toEqual([
+      "date",
       "location",
       "stardate",
       "status",
@@ -162,10 +181,60 @@ describe("bridge panels", () => {
     const band = layout.panels.find((p) => p.kind === "band");
     for (const t of set.live) {
       expect(band && inside(t.bounds, band)).toBe(true);
-      // Clear of the middle third, which the speaker covers.
-      expect(Math.min(Math.abs(t.bounds.s0), Math.abs(t.bounds.s1))).toBeGreaterThan(1.2);
+      // Each reaches out into a side third, away from the speaker, except the
+      // date, which sits inside the middle third beside the time.
+      const outer = Math.max(Math.abs(t.bounds.s0), Math.abs(t.bounds.s1));
+      expect(outer).toBeGreaterThan(t.key === "date" ? 0.9 : 1.6);
       expect(set.blocks[t.block]?.busy).toBe(0);
     }
+    const spans = set.live.map((t) => t.bounds).toSorted((a, c) => a.s0 - c.s0);
+    for (let i = 1; i < spans.length; i++) {
+      expect(spans[i].s0).toBeGreaterThan(spans[i - 1].s1);
+    }
+  });
+
+  it("title every panel by what it shows, never twice", () => {
+    const expected = {
+      "left,true": ["EXTERIOR", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "NAVIGATION"],
+      "right,true": ["NAVIGATION", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "EXTERIOR"],
+      "left,false": ["COMMS", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "NAVIGATION"],
+    };
+    for (const [key, titles] of Object.entries(expected)) {
+      const [side, view] = key.split(",");
+      const l = bridgeLayout(side === "right" ? "right" : "left", view === "true");
+      for (const seed of [0, 12, 500]) {
+        const set = buildPanels(l, seed);
+        const found = l.panels
+          .filter((p) => p.kind !== "band")
+          .map((p) => {
+            const words = set.texts.filter(
+              (t) => /^[A-Z]{4,}$/.test(t.text) && inside(textBounds(t), p, 0.05),
+            );
+            return words.map((t) => t.text).join(" ");
+          });
+        expect(found).toEqual(titles);
+      }
+    }
+  });
+
+  it("leave hidden readouts out of the band, closing up the rest", () => {
+    const all = buildPanels(layout, 12);
+    const noTime = buildPanels(layout, 12, new Set(["time"]));
+    const neither = buildPanels(layout, 12, new Set(["time", "date"]));
+    expect(noTime.live.map((t) => t.key).toSorted()).toEqual([
+      "date",
+      "location",
+      "stardate",
+      "status",
+    ]);
+    expect(neither.live.map((t) => t.key).toSorted()).toEqual(["location", "stardate", "status"]);
+    for (const set of [noTime, neither]) {
+      expect(set.texts.map((t) => t.text)).not.toContain("LOCAL TIME");
+    }
+    expect(neither.texts.map((t) => t.text)).not.toContain("LOCAL DATE");
+    // The date moves out to where the time was.
+    const at = (set: typeof all, key: string) => set.live.find((t) => t.key === key)?.bounds.s0;
+    expect(at(noTime, "date")).toBeCloseTo(at(all, "time") ?? 0, 6);
   });
 
   it("show only steady information in the band", () => {
@@ -179,22 +248,43 @@ describe("bridge panels", () => {
     expect(inBand.filter((s) => set.blocks[s.block]?.busy !== 0)).toEqual([]);
     // Its only text is the readouts' labels.
     const labels = set.texts.filter((t) => t.y > band.y0 && t.y < band.y1).map((t) => t.text);
-    expect(labels.toSorted()).toEqual(["LOCAL TIME", "LOCATION", "STARDATE", "STATUS"]);
+    expect(labels.toSorted()).toEqual([
+      "LOCAL DATE",
+      "LOCAL TIME",
+      "LOCATION",
+      "STARDATE",
+      "STATUS",
+    ]);
   });
 
   it("keep other blocks' shapes out of the readouts' windows", () => {
     for (const seed of [0, 12, 77]) {
       const set = buildPanels(layout, seed);
-      const intruders = set.live.flatMap((t) =>
-        set.shapes.filter((s) => {
-          const b = shapeBounds(s);
-          return (
-            s.block !== t.block &&
-            Math.min(b.s1, t.bounds.s1) > Math.max(b.s0, t.bounds.s0) &&
-            Math.min(b.y1, t.bounds.y1) > Math.max(b.y0, t.bounds.y0)
-          );
-        }),
-      );
+      const intruders: string[] = [];
+      for (const t of set.live) {
+        const r = t.bounds;
+        for (const shape of set.shapes) {
+          const sb = shapeBounds(shape);
+          if (
+            shape.block === t.block ||
+            sb.s1 < r.s0 ||
+            sb.s0 > r.s1 ||
+            sb.y1 < r.y0 ||
+            sb.y0 > r.y1
+          ) {
+            continue;
+          }
+          for (let s = r.s0; s <= r.s1; s += 0.002) {
+            for (let y = r.y0; y <= r.y1; y += 0.002) {
+              if (shapeDistance(shape, s, y) < 0) {
+                intruders.push(`${t.key}: ${shape.kind} ${String(shape.block)}`);
+                s = r.s1 + 1;
+                break;
+              }
+            }
+          }
+        }
+      }
       expect(intruders).toEqual([]);
     }
   });

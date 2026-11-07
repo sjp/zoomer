@@ -17,8 +17,12 @@ import type { Resolution } from "./lib/resolution";
 import { createStore } from "./lib/store";
 
 function initialState() {
-  const { effect, values } = stateFromHash(window.location.hash, effects, defaultEffect);
-  return { effectId: effect.id, values: { [effect.id]: values } };
+  const { effect, values, panelHidden } = stateFromHash(
+    window.location.hash,
+    effects,
+    defaultEffect,
+  );
+  return { effectId: effect.id, values: { [effect.id]: values }, panelHidden };
 }
 
 /** How long the URL waits for params to settle before updating, in ms. */
@@ -45,7 +49,7 @@ export function App() {
   const [frameRate, setFrameRate] = useState<FrameRate>("display");
   // Stats arrive a few times a second; a store re-renders only the meter, not the app.
   const [statsStore] = useState(() => createStore<FrameStats | undefined>(undefined));
-  const [panelHidden, setPanelHidden] = useState(false);
+  const [panelHidden, setPanelHidden] = useState(initial.panelHidden);
   const [hoveringPanel, setHoveringPanel] = useState(false);
   const [recordingLeft, setRecordingLeft] = useState<number>();
   // A recording captures one canvas at one size, so switching effect (which can replace
@@ -75,7 +79,9 @@ export function App() {
     },
     [frameListeners],
   );
-  const idle = useIdle(3000);
+  // A page opened with the panel hidden (e.g. an OBS browser source) starts idle, so
+  // neither the cursor nor the show-controls button appears until there's input.
+  const idle = useIdle(3000, initial.panelHidden);
   // The effect list: its sort and favourites are remembered, its search isn't. The
   // search stays while the list is closed, because ← / → follow the filtered list.
   const [listOpen, setListOpen] = useState(false);
@@ -172,32 +178,35 @@ export function App() {
   // replaceState is an IPC round-trip that browsers throttle when called rapidly.
   useEffect(() => {
     const timer = setTimeout(() => {
-      window.history.replaceState(null, "", encodeHash(effect, values));
+      window.history.replaceState(null, "", encodeHash(effect, values, { panelHidden }));
     }, HASH_DEBOUNCE);
     return () => {
       clearTimeout(timer);
     };
-  }, [effect, values]);
+  }, [effect, values, panelHidden]);
 
   // Follow hand edits and pasted links. The app's own replaceState writes don't fire
   // hashchange, and a hash that already matches the current state is skipped.
-  const current = useRef({ effect, values, recording });
+  const current = useRef({ effect, values, recording, panelHidden });
   useEffect(() => {
-    current.current = { effect, values, recording };
+    current.current = { effect, values, recording, panelHidden };
   });
   useEffect(() => {
     const onHashChange = () => {
       const now = current.current;
       const hash = window.location.hash;
-      if (hash === encodeHash(now.effect, now.values)) {
+      const nowHash = encodeHash(now.effect, now.values, { panelHidden: now.panelHidden });
+      if (hash === nowHash) {
         return;
       }
       const next = stateFromHash(hash, effects, defaultEffect);
       if (now.recording && next.effect.id !== now.effect.id) {
         // Switching effect would break the recording; put the current state back.
-        window.history.replaceState(null, "", encodeHash(now.effect, now.values));
+        window.history.replaceState(null, "", nowHash);
         return;
       }
+      setPanelHidden(next.panelHidden);
+      setHoveringPanel(false);
       setValuesById((prev) => ({ ...prev, [next.effect.id]: next.values }));
       selectEffect(next.effect.id);
     };
@@ -218,6 +227,10 @@ export function App() {
       clearTimeout(timer);
     };
   }, [toast]);
+
+  const showToast = useCallback((message: string) => {
+    setToast((t) => ({ message, id: (t?.id ?? 0) + 1 }));
+  }, []);
 
   const setParam = useCallback(
     (key: string, value: ParamValue) => {
@@ -271,7 +284,7 @@ export function App() {
   // which lacks the API); say so briefly rather than failing silently.
   const toggleFullscreen = useCallback(() => {
     const fail = () => {
-      setToast((t) => ({ message: "Fullscreen unavailable", id: (t?.id ?? 0) + 1 }));
+      showToast("Fullscreen unavailable");
     };
     try {
       const change = document.fullscreenElement
@@ -281,7 +294,25 @@ export function App() {
     } catch {
       fail();
     }
-  }, []);
+  }, [showToast]);
+
+  // A link that spells out every param and opens with the panel hidden, so it works as
+  // is in an OBS browser source and keeps its look if a default changes later. The
+  // clipboard API is missing outside secure contexts, hence the try.
+  const copyLink = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.hash = encodeHash(effect, values, { canonical: true, panelHidden: true });
+    const fail = () => {
+      showToast("Couldn't copy the link");
+    };
+    try {
+      navigator.clipboard.writeText(url.href).then(() => {
+        showToast("Copied a link with every setting, opening with controls hidden");
+      }, fail);
+    } catch {
+      fail();
+    }
+  }, [effect, values, showToast]);
 
   // For `S`, which works with the panel hidden, so it confirms with a toast.
   const toggleCurrentFavourite = useCallback(() => {
@@ -290,8 +321,8 @@ export function App() {
     const message = starred
       ? `Removed ${effect.name} from favourites`
       : `Added ${effect.name} to favourites`;
-    setToast((t) => ({ message, id: (t?.id ?? 0) + 1 }));
-  }, [favouritesStore, effect]);
+    showToast(message);
+  }, [favouritesStore, effect, showToast]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -414,6 +445,7 @@ export function App() {
             onFrameRateChange={setFrameRate}
             onRecord={(s) => void record(s)}
             onFullscreen={toggleFullscreen}
+            onCopyLink={copyLink}
             onHide={hidePanel}
           />
         </PanelErrorBoundary>

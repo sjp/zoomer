@@ -39,6 +39,8 @@ interface Props {
   onFrameRateChange: (frameRate: FrameRate) => void;
   onRecord: (seconds: number) => void;
   onFullscreen: () => void;
+  /** Copies a link with every setting spelled out that opens with the panel hidden. */
+  onCopyLink: () => void;
   onHide: () => void;
   /** Shown with the error when the effect's code failed to load, e.g. after a redeploy. */
   onReload?: (() => void) | undefined;
@@ -230,6 +232,13 @@ export function ControlPanel(props: Props) {
         </button>
         <button type="button" onClick={props.onFullscreen} title="Fullscreen (F)">
           Fullscreen
+        </button>
+        <button
+          type="button"
+          onClick={props.onCopyLink}
+          title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
+        >
+          Copy link
         </button>
       </footer>
       <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>

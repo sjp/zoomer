@@ -12,6 +12,7 @@ import {
   ATLAS_S0,
   ATLAS_Y0,
   type BridgeLayout,
+  type PanelKind,
   type PanelSpec,
   type WallRect,
 } from "./bridge-room";
@@ -165,12 +166,28 @@ export const MAX_WIDGETS = 4;
 /** Most blocks, so indices fit the state texture's width. */
 export const MAX_BLOCKS = 2048;
 
-/** Gap between neighbouring blocks. */
+/**
+ * Gap between neighbouring blocks. Frame bars and columns are cut into only a
+ * few segments (none to two gaps each), so the frames read as mostly solid.
+ */
 const GAP = 0.008;
+/** Panel titles and the band's labels, relative to the numbers beside them. */
+const TITLE_SCALE = 1.5;
 /** Inset of the graphics from the edge of their glass. */
 const MARGIN = 0.025;
 
-const LABELS = ["SENSORS", "POWER", "ENVIRONMENT", "NAVIGATION", "COMMS", "SYSTEMS"];
+/**
+ * Each panel's title, fixed by what it shows, so no two panels share one. Button
+ * banks take NAVIGATION, and COMMS for a second bank (when the outside view is
+ * off, both outer panels are banks). The display's title is in `displayHeader`.
+ */
+const TITLES: Readonly<Record<Exclude<PanelKind, "bank" | "band" | "display">, string>> = {
+  readout: "ENVIRONMENT",
+  sweep: "SENSORS",
+  schematic: "SYSTEMS",
+  graph: "POWER",
+};
+const BANK_TITLES = ["NAVIGATION", "COMMS"] as const;
 
 interface Builder {
   rng: () => number;
@@ -379,8 +396,8 @@ function frame(b: Builder, g: WallRect, split: number): Frame {
     ri,
     block: ue,
   });
-  vcolumn(b, x0, x0 + barW, uy0 + elbowH + GAP, y1, 1 + Math.floor(b.rng() * 2));
-  hbar(b, x0 + elbowW + GAP, x1, uy0, uy0 + barH, 2 + Math.floor(b.rng() * 3));
+  vcolumn(b, x0, x0 + barW, uy0 + elbowH + GAP, y1, b.rng() < 0.25 ? 2 : 1);
+  hbar(b, x0 + elbowW + GAP, x1, uy0, uy0 + barH, 1 + Math.floor(b.rng() * 3));
 
   // Lower elbow: corner at the top left, column going down.
   const le = b.block("frame", pick(b.rng, FRAME_COLOURS));
@@ -398,10 +415,10 @@ function frame(b: Builder, g: WallRect, split: number): Frame {
     ri,
     block: le,
   });
-  hbar(b, x0 + elbowW + GAP, x1, ly1 - barH, ly1, 2 + Math.floor(b.rng() * 3));
+  hbar(b, x0 + elbowW + GAP, x1, ly1 - barH, ly1, 1 + Math.floor(b.rng() * 3));
   const closed = b.rng() < 0.5;
   const colBottom = closed ? y0 + elbowH + GAP : y0;
-  vcolumn(b, x0, x0 + barW, colBottom, ly1 - elbowH - GAP, 3 + Math.floor(b.rng() * 3));
+  vcolumn(b, x0, x0 + barW, colBottom, ly1 - elbowH - GAP, 2 + Math.floor(b.rng() * 2));
   if (closed) {
     // A bottom elbow closes the frame.
     const be = b.block("frame", pick(b.rng, FRAME_COLOURS));
@@ -418,7 +435,7 @@ function frame(b: Builder, g: WallRect, split: number): Frame {
       ri,
       block: be,
     });
-    hbar(b, x0 + elbowW + GAP, x1, y0, y0 + barH, 2 + Math.floor(b.rng() * 2));
+    hbar(b, x0 + elbowW + GAP, x1, y0, y0 + barH, b.rng() < 0.75 ? 2 : 1);
   }
 
   const cx0 = x0 + barW + 0.025;
@@ -429,15 +446,18 @@ function frame(b: Builder, g: WallRect, split: number): Frame {
 }
 
 /** Header content: a title and a line of small numbers, right-aligned. */
-function header(b: Builder, r: WallRect): void {
+function header(b: Builder, r: WallRect, label: string): void {
   const h = r.y1 - r.y0;
   if (h < 0.03) {
     return;
   }
-  const size = clamp(h * 0.28, 0.014, 0.034);
+  const numbers = clamp(h * 0.28, 0.014, 0.034);
+  const size = numbers * TITLE_SCALE;
   const title = b.block("text", pick(b.rng, TEXT_COLOURS));
-  text(b, pick(b.rng, LABELS), r.s1, r.y1 - size * 1.15, size, "right", false, title);
-  const small = size * 0.55;
+  // Draw as the old random title did, so the rest of each seed's layout is unchanged.
+  b.rng();
+  text(b, label, r.s1, r.y1 - size * 1.15, size, "right", false, title);
+  const small = numbers * 0.55;
   let y = r.y1 - size * 1.15 - small * 2;
   while (y > r.y0 + small * 0.2) {
     const id = b.block("readout", pick(b.rng, TEXT_COLOURS));
@@ -663,38 +683,49 @@ function displayHeader(b: Builder, g: WallRect, viewport: WallRect): void {
     ri: barH,
     block: e,
   });
-  hbar(b, x0 + ew + GAP, x1, y0, y0 + barH, 3);
+  hbar(b, x0 + ew + GAP, x1, y0, y0 + barH, 2);
   const title = b.block("text", PALE_ORANGE);
-  const size = clamp((y1 - y0 - barH) * 0.42, 0.014, 0.03);
+  const numbers = clamp((y1 - y0 - barH) * 0.42, 0.014, 0.03);
+  const size = numbers * TITLE_SCALE;
   text(b, "EXTERIOR", x1, y1 - size * 1.1, size, "right", false, title);
   const id = b.block("readout", PALE_BLUE);
-  text(b, panelNumber(b.rng), x0 + ew + 0.02, y1 - size * 1.1, size * 0.7, "left", false, id, true);
+  text(
+    b,
+    panelNumber(b.rng),
+    x0 + ew + 0.02,
+    y1 - size * 1.1,
+    numbers * 0.7,
+    "left",
+    false,
+    id,
+    true,
+  );
 }
 
 /**
- * The long strip above the stations: rounded caps at both ends and, between
- * them, full-height blocks, stacked pairs and black windows with numbers.
- */
-/**
- * Where the band's real readouts sit, as offsets (m) from the band's end on
- * their side, with their width and value size. All are clear of the middle
- * third of the frame, which the speaker covers.
+ * The band's real readouts, in order out from each end of the band, with their
+ * width (m) and value size. They are packed against the band's ends, towards
+ * the sides of the frame, away from the speaker; a hidden one leaves no gap.
+ * With all of them shown, the status reaches a little way into the middle
+ * third and the date sits inside it, beside the time.
  */
 const LIVE_WINDOWS: readonly {
   key: LiveKey;
   label: string;
   from: "left" | "right";
-  at: number;
   w: number;
   size: number;
 }[] = [
-  { key: "stardate", label: "STARDATE", from: "left", at: 0.26, w: 0.66, size: 0.1 },
-  { key: "time", label: "LOCAL TIME", from: "left", at: 0.98, w: 0.4, size: 0.1 },
-  { key: "location", label: "LOCATION", from: "right", at: 0.26, w: 0.62, size: 0.075 },
-  { key: "status", label: "STATUS", from: "right", at: 0.94, w: 0.5, size: 0.075 },
+  { key: "stardate", label: "STARDATE", from: "left", w: 0.72, size: 0.1 },
+  { key: "time", label: "LOCAL TIME", from: "left", w: 0.69, size: 0.1 },
+  { key: "date", label: "LOCAL DATE", from: "left", w: 0.69, size: 0.075 },
+  { key: "location", label: "LOCATION", from: "right", w: 0.91, size: 0.075 },
+  { key: "status", label: "STATUS", from: "right", w: 0.93, size: 0.075 },
 ];
+/** Space (m) between the band's end and its outermost readout, and between readouts. */
+const LIVE_SPACING = 0.04;
 
-/** Thickness of the thin bars that frame the band's windows and join them up. */
+/** Thickness of the thin bars in the band's window frames. */
 const BAND_BAR = 0.012;
 
 /** A block that never dims, swaps or flashes. */
@@ -704,10 +735,56 @@ function steady(b: Builder, kind: BlockKind, colour: number): number {
   return id;
 }
 
+/** Inset of the readout windows' frames from the band's glass edges. */
+const BAND_INSET = 0.01;
+/** Width of the thick left bracket and the narrow right one round each readout. */
+const BRACKET_LEFT = 0.05;
+const BRACKET_RIGHT = 0.022;
+
+/** One steady elbow of a readout's bracket. */
+function bracketElbow(
+  b: Builder,
+  corner: Corner,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  barW: number,
+  colour: number,
+): void {
+  const h = y1 - y0;
+  b.set.shapes.push({
+    kind: "elbow",
+    x0,
+    y0,
+    x1,
+    y1,
+    corner,
+    barW,
+    barH: BAND_BAR,
+    ro: Math.min(barW * 0.95, h),
+    ri: BAND_BAR * 1.2,
+    block: steady(b, "frame", colour),
+  });
+}
+
+/** A horizontal run of steady segments from x0 to x1, with gaps between them. */
+function bracketRail(b: Builder, x0: number, x1: number, y0: number, y1: number, n: number): void {
+  if (x1 - x0 < 0.02) {
+    return;
+  }
+  const c = cuts(b.rng, x0, x1, n);
+  for (let i = 0; i < n; i++) {
+    box(b, c[i], y0, c[i + 1] - GAP, y1, steady(b, "frame", pick(b.rng, FRAME_COLOURS)));
+  }
+}
+
 /**
- * A window for one real readout: thin bars above and below, a short end cap,
- * a small label at the top left and the value at the bottom right. The value is
- * drawn later, whenever it changes, so it is a live run rather than a text run.
+ * A window for one real readout, framed in the panels' style: a thick bracket on
+ * the left, its two elbows turning into thin segmented bars along the top and
+ * bottom, closed by a narrow bracket on the right. A small label sits at the top
+ * left and the value at the bottom right. The value is drawn later, whenever it
+ * changes, so it is a live run rather than a text run.
  */
 function liveWindow(
   b: Builder,
@@ -716,73 +793,68 @@ function liveWindow(
   x0: number,
   x1: number,
 ): void {
-  const frameId = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
-  box(b, x0, r.y1 - BAND_BAR, x1, r.y1, frameId);
-  box(b, x0, r.y0, x1, r.y0 + BAND_BAR, frameId);
-  box(b, x0, r.y0, x0 + 0.014, r.y1, frameId);
+  const y0 = r.y0 + BAND_INSET;
+  const y1 = r.y1 - BAND_INSET;
+  const mid = (y0 + y1) / 2;
+  const left = pick(b.rng, FRAME_COLOURS);
+  const right = pick(b.rng, FRAME_COLOURS);
+  const lw = BRACKET_LEFT + BAND_BAR * 1.2 + 0.03;
+  const rw = BRACKET_RIGHT + BAND_BAR * 1.2 + 0.02;
+  bracketElbow(b, "tl", x0, mid + GAP / 2, x0 + lw, y1, BRACKET_LEFT, left);
+  bracketElbow(b, "bl", x0, y0, x0 + lw, mid - GAP / 2, BRACKET_LEFT, left);
+  bracketElbow(b, "tr", x1 - rw, mid + GAP / 2, x1, y1, BRACKET_RIGHT, right);
+  bracketElbow(b, "br", x1 - rw, y0, x1, mid - GAP / 2, BRACKET_RIGHT, right);
+  bracketRail(b, x0 + lw + GAP, x1 - rw - GAP, y1 - BAND_BAR, y1, b.rng() < 0.5 ? 2 : 1);
+  bracketRail(b, x0 + lw + GAP, x1 - rw - GAP, y0, y0 + BAND_BAR, b.rng() < 0.25 ? 2 : 1);
+  const c0 = x0 + BRACKET_LEFT + 0.022;
+  const c1 = x1 - BRACKET_RIGHT - 0.014;
   const labelId = steady(b, "text", LILAC);
-  const labelSize = 0.026;
-  text(
-    b,
-    w.label,
-    x0 + 0.03,
-    r.y1 - BAND_BAR - 0.012 - labelSize,
-    labelSize,
-    "left",
-    false,
-    labelId,
-  );
+  const labelSize = 0.034 * TITLE_SCALE;
+  text(b, w.label, c0, y1 - BAND_BAR - 0.01 - labelSize, labelSize, "left", false, labelId);
   const valueId = steady(b, "text", PALE_ORANGE);
-  const y = r.y0 + BAND_BAR + 0.014;
+  const y = y0 + BAND_BAR + 0.014;
   b.set.live.push({
     key: w.key,
-    x: x1 - 0.008,
+    x: c1,
     y,
     size: w.size,
     align: "right",
     block: valueId,
-    bounds: { s0: x0 + 0.02, s1: x1 - 0.004, y0: r.y0 + BAND_BAR + 0.002, y1: y + w.size * 1.12 },
+    bounds: { s0: c0, s1: c1, y0: y0 + BAND_BAR + 0.003, y1: y + w.size * 1.12 },
   });
 }
 
-/** Thin bars along the top and bottom of the band from x0 to x1, joining its windows. */
-function bandRails(b: Builder, r: WallRect, x0: number, x1: number): void {
-  if (x1 - x0 < 0.01) {
-    return;
-  }
-  const id = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
-  box(b, x0, r.y1 - BAND_BAR, x1, r.y1, id);
-  box(b, x0, r.y0, x1, r.y0 + BAND_BAR, id);
-}
-
 /**
- * The long strip above the stations: rounded caps at both ends and windows with
- * the real stardate, local time, ship status and location, joined by thin bars
- * into one long frame. Nothing in it flickers: it only shows information.
+ * The long strip above the stations: bordered windows with the real stardate,
+ * local time, ship status and location, on plain black glass. Nothing in it
+ * flickers: it only shows information.
  */
-function band(b: Builder, r: WallRect): void {
-  const h = r.y1 - r.y0;
-  const capW = h * 0.9;
-  const cl = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
-  box(b, r.s0, r.y0, r.s0 + capW, r.y1, cl, [h / 2, 0, 0, h / 2]);
-  const cr = steady(b, "frame", pick(b.rng, FRAME_COLOURS));
-  box(b, r.s1 - capW, r.y0, r.s1, r.y1, cr, [0, h / 2, h / 2, 0]);
-  const windows = LIVE_WINDOWS.map((w) => {
-    const x0 = w.from === "left" ? r.s0 + w.at : r.s1 - w.at - w.w;
-    return { w, x0, x1: x0 + w.w };
-  }).toSorted((a, c) => a.x0 - c.x0);
-  let x = r.s0 + capW + GAP;
-  for (const { w, x0, x1 } of windows) {
-    bandRails(b, r, x, x0 - GAP);
-    liveWindow(b, r, w, x0, x1);
-    x = x1 + GAP;
+function band(b: Builder, r: WallRect, hidden: ReadonlySet<LiveKey>): void {
+  let left = r.s0 + LIVE_SPACING;
+  let right = r.s1 - LIVE_SPACING;
+  for (const w of LIVE_WINDOWS) {
+    if (hidden.has(w.key)) {
+      continue;
+    }
+    if (w.from === "left") {
+      liveWindow(b, r, w, left, left + w.w);
+      left += w.w + LIVE_SPACING;
+    } else {
+      liveWindow(b, r, w, right - w.w, right);
+      right -= w.w + LIVE_SPACING;
+    }
   }
-  bandRails(b, r, x, r.s1 - capW - GAP);
 }
 
-function buildPanel(b: Builder, p: PanelSpec, layout: BridgeLayout): void {
+function buildPanel(
+  b: Builder,
+  p: PanelSpec,
+  layout: BridgeLayout,
+  title: string,
+  hidden: ReadonlySet<LiveKey>,
+): void {
   if (p.kind === "band") {
-    band(b, p);
+    band(b, p, hidden);
     return;
   }
   if (p.kind === "display") {
@@ -793,7 +865,7 @@ function buildPanel(b: Builder, p: PanelSpec, layout: BridgeLayout): void {
   }
   const split = p.kind === "schematic" || p.kind === "sweep" ? 0.82 : 0.74;
   const f = frame(b, p, split);
-  header(b, f.upper);
+  header(b, f.upper, title);
   const content = f.lower;
   switch (p.kind) {
     case "bank":
@@ -814,8 +886,15 @@ function buildPanel(b: Builder, p: PanelSpec, layout: BridgeLayout): void {
   }
 }
 
-/** Every panel's shapes, text, widgets and blocks, deterministic per seed. */
-export function buildPanels(layout: BridgeLayout, seed: number): PanelSet {
+/**
+ * Every panel's shapes, text, widgets and blocks, deterministic per seed. The
+ * band leaves out the `hidden` readouts.
+ */
+export function buildPanels(
+  layout: BridgeLayout,
+  seed: number,
+  hidden: ReadonlySet<LiveKey> = new Set(),
+): PanelSet {
   const set: PanelSet = {
     blocks: [{ kind: "frame", colour: 0, alt: 0, level: 0, busy: 0, group: -1, order: 0 }],
     shapes: [],
@@ -824,6 +903,16 @@ export function buildPanels(layout: BridgeLayout, seed: number): PanelSet {
     live: [],
   };
   let groups = 0;
+  // Banks are titled right to left, so a lone bank is always NAVIGATION.
+  const titles = layout.panels.map((p) =>
+    p.kind === "bank" || p.kind === "band" || p.kind === "display" ? "" : TITLES[p.kind],
+  );
+  let banks = 0;
+  for (let i = layout.panels.length - 1; i >= 0; i--) {
+    if (layout.panels[i]?.kind === "bank") {
+      titles[i] = BANK_TITLES[Math.min(banks++, BANK_TITLES.length - 1)];
+    }
+  }
   layout.panels.forEach((p, i) => {
     const rng = createRng(hash32((Math.floor(seed) * 31 + i) >>> 0));
     const b: Builder = {
@@ -848,7 +937,7 @@ export function buildPanels(layout: BridgeLayout, seed: number): PanelSet {
       },
       group: () => groups++,
     };
-    buildPanel(b, p, layout);
+    buildPanel(b, p, layout, titles[i] ?? "", hidden);
   });
   if (set.blocks.length > MAX_BLOCKS) {
     throw new Error(
@@ -952,14 +1041,35 @@ export function shapeBounds(s: Shape): WallRect {
   };
 }
 
-/** Rough extent of a text run, for its block index: capitals about 0.55 em wide. */
+/**
+ * Generous advance of one character, in capital heights, for a text run's
+ * bounds. Digits are squeezed to about half their height, but letters keep
+ * their proportions, and W and M are nearly twice as wide.
+ */
+function advance(ch: string): number {
+  if (ch === "W" || ch === "M") {
+    return 1.05;
+  }
+  if (ch >= "A" && ch <= "Z") {
+    return 0.82;
+  }
+  return ch === " " ? 0.4 : 0.62;
+}
+
+/** A text run's extent, erring wide, for its block index. */
 export function textBounds(t: TextRun): WallRect {
-  const len = Math.max(t.text.length, t.alt.length);
-  const w = len * t.size * 0.62;
+  let w = 0;
+  for (const value of [t.text, t.alt]) {
+    let len = 0;
+    for (const ch of value) {
+      len += advance(ch);
+    }
+    w = Math.max(w, len * t.size);
+  }
   const x0 = t.align === "right" ? t.x - w : t.align === "center" ? t.x - w / 2 : t.x;
   return {
-    s0: x0 - t.size * 0.1,
-    s1: x0 + w + t.size * 0.1,
+    s0: x0 - t.size * 0.15,
+    s1: x0 + w + t.size * 0.15,
     y0: t.y - t.size * 0.15,
     y1: t.y + t.size * 1.15,
   };
@@ -993,8 +1103,8 @@ export function createAtlasImage(width: number, height: number, tpm: number): At
 /**
  * Draws every shape's antialiased coverage into the atlas's red channel and its
  * block into the index wherever the shape reaches within half a texel; later
- * shapes win. Text runs get their block over their rough bounds (text on a button
- * keeps the button's block, which is the same). Clears the atlas first.
+ * shapes win. Lit text runs get their block over their generous bounds, on
+ * empty glass only (text on a button keeps the button's block). Clears the atlas first.
  */
 export function rasterisePanels(set: PanelSet, atlas: AtlasImage): void {
   const { width, height, tpm, rgba, index } = atlas;
@@ -1036,8 +1146,14 @@ export function rasterisePanels(set: PanelSet, atlas: AtlasImage): void {
     const c1 = Math.min(width - 1, Math.ceil(toCol(r.s1)));
     const r0 = Math.max(0, Math.floor(toRow(r.y0)));
     const r1 = Math.min(height - 1, Math.ceil(toRow(r.y1)));
+    // Only on empty glass, so wide bounds can't take texels from a neighbouring shape.
     for (let j = r0; j <= r1; j++) {
-      index.fill(block, j * width + c0, j * width + c1 + 1);
+      for (let i = c0; i <= c1; i++) {
+        const k = j * width + i;
+        if (rgba[k * 4] === 0) {
+          index[k] = block;
+        }
+      }
     }
   }
 }

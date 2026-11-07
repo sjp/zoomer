@@ -44,6 +44,8 @@ export const bridgeMeta = defineEffectMeta({
     },
     lighting: { kind: "select", label: "Lighting", options: SHIFT_OPTIONS, default: "day" },
     display: { kind: "select", label: "Display side", options: DISPLAY_OPTIONS, default: "left" },
+    showTime: { kind: "boolean", label: "Show local time", default: true },
+    showDate: { kind: "boolean", label: "Show local date", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 12 },
   },
   category: "Scenes",

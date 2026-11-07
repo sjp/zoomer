@@ -6,7 +6,7 @@
 import { hash32 } from "./noise";
 
 /** The readouts the band shows, in the order they're laid out. */
-export type LiveKey = "stardate" | "time" | "status" | "location";
+export type LiveKey = "stardate" | "time" | "date" | "status" | "location";
 
 /** Year the stardate convention counts from: 1000 units a year, 0 at its start. */
 export const STARDATE_EPOCH_YEAR = 2323;
@@ -33,6 +33,14 @@ export function clockText(date: Date): string {
   const h = String(date.getHours()).padStart(2, "0");
   const m = String(date.getMinutes()).padStart(2, "0");
   return `${h}:${m}`;
+}
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/** Local date as "06 NOV 2026": the same order whatever the locale, in capitals. */
+export function dateText(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${d} ${MONTHS[date.getMonth()] ?? ""} ${String(date.getFullYear())}`;
 }
 
 /** Places the ship can be, from the show's worlds. */
@@ -64,10 +72,19 @@ const LOCATION_STEP = 5;
  * A pure function of the time, so it's the same on every load.
  */
 export function locationAt(ms: number, seed: number): string {
-  const slot = Math.floor(ms / 1000 / LOCATION_HOLD);
+  return LOCATIONS[locationIndex(locationVisit(ms), seed)];
+}
+
+/** Which of the 15-minute location holds `ms` falls in. */
+export function locationVisit(ms: number): number {
+  return Math.floor(ms / 1000 / LOCATION_HOLD);
+}
+
+/** The location (an index into `LOCATIONS`) for hold `visit`. */
+export function locationIndex(visit: number, seed: number): number {
   const n = LOCATIONS.length;
   const start = hash32(Math.floor(seed)) % n;
-  return LOCATIONS[(((start + slot * LOCATION_STEP) % n) + n) % n];
+  return (((start + visit * LOCATION_STEP) % n) + n) % n;
 }
 
 /**

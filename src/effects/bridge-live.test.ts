@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clockText,
+  dateText,
   formatStardate,
   LOCATION_HOLD,
   LOCATIONS,
@@ -32,6 +33,11 @@ describe("bridge live readouts", () => {
     expect(formatStardate(41153.79)).toBe("41153.7");
     expect(formatStardate(-296151.65)).toBe("-296151.7");
     expect(formatStardate(0)).toBe("0.0");
+  });
+
+  it("shows the local date as day, month and year", () => {
+    expect(dateText(new Date(2026, 10, 6, 23, 59))).toBe("06 NOV 2026");
+    expect(dateText(new Date(2027, 0, 1, 0, 0))).toBe("01 JAN 2027");
   });
 
   it("shows the local time as 24-hour HH:MM", () => {

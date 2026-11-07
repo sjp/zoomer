@@ -68,10 +68,17 @@ import {
   withScope,
 } from "./gl";
 import { approach } from "./math";
+import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "./bridge-ship-shapes";
+import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt } from "./bridge-ships";
+import { planetStyle } from "./bridge-planets";
 import {
   clockText,
+  dateText,
   formatStardate,
+  LOCATION_HOLD,
   locationAt,
+  locationIndex,
+  locationVisit,
   type LiveKey,
   shipStatus,
   stardate,
@@ -96,6 +103,10 @@ const SPACE: Rgb = [0.004, 0.006, 0.018];
 const WARP_STARS = 700;
 /** Smallest size scale for the warp streaks (1 is Warp Speed at 1080p). */
 const WARP_MIN_SCALE = 0.7;
+/** Height of a visiting ship's centre above the view's middle, in display heights. */
+const SHIP_Y = 0.06;
+/** Milliseconds the outside view takes to fade out, or back in, as the planet changes. */
+const PLANET_FADE_MS = 750;
 const WARP_ABERRATION = 0.15 * 0.03;
 /**
  * The graph line's half width (m) and the soft glow around it. At 1080p the
@@ -111,9 +122,15 @@ const WIDGET_PERIOD = 20;
 const EXTERIOR_PERIOD = 1000;
 /** Seconds for a lighting change (day to night) to fade. */
 const LIGHTING_FADE = 1.5;
-/** Condensed system fonts for the panel text, widest last. No font is bundled. */
-const FONT_FAMILY =
-  '"Antonio", "Arial Narrow", "Roboto Condensed", "Liberation Sans Narrow", "Helvetica Neue", Arial, sans-serif';
+/**
+ * The panel font: Antonio (SIL Open Font License, public/fonts/antonio-OFL.txt),
+ * a tall condensed face close to the show's LCARS lettering, loaded in the
+ * background under its own family name. Condensed system fonts stand in until
+ * it arrives, and if it can't load.
+ */
+const FONT_URL = `${import.meta.env.BASE_URL}fonts/antonio-600.woff2`;
+const FONT_FACE = "Bridge LCARS";
+const FONT_FAMILY = `"${FONT_FACE}", "Arial Narrow", "Roboto Condensed", "Liberation Sans Narrow", "Helvetica Neue", Arial, sans-serif`;
 /** Width of a digit as a fraction of the capital height: tall and narrow. */
 const DIGIT_WIDTH = 0.5;
 
@@ -417,9 +434,9 @@ void main() {
 `;
 
 /**
- * The outside view's stars and planet, in their own small target. Every motion
- * repeats over the wrapped time, so nothing jumps. Warp is drawn separately,
- * with Warp Speed's starfield.
+ * The outside view's stars and planet, in their own small target, with a ship
+ * now and then. Every motion of the stars and planet repeats over the wrapped
+ * time, so nothing jumps. Warp is drawn separately, with Warp Speed's starfield.
  */
 const EXTERIOR_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -427,8 +444,27 @@ in vec2 vUv;
 uniform int uKind;
 uniform float uTime;
 uniform float uAspect;
+uniform float uFade;
+// Planet: centre x (display widths), top y and radius (display heights).
+uniform vec3 uPlanetPos;
+// Planet: sea level, cloud level, ice latitude and banding.
+uniform vec4 uPlanetK;
+uniform vec3 uOcean;
+uniform vec3 uLandLow;
+uniform vec3 uLandHigh;
+uniform vec3 uCloud;
+uniform vec3 uAtmosphere;
+uniform float uHaze;
+// Towards the sun, with z towards the viewer.
+uniform vec3 uLight;
+uniform int uShipKind;
+// Ship centre (view space, eye at the origin looking along +z) and turn.
+uniform vec4 uShip;
+uniform float uShipScale;
+uniform float uShipPx;
 out vec4 outColor;
 ${COMMON_GLSL}
+${SHIP_GLSL}
 const float PERIOD = ${g(EXTERIOR_PERIOD)};
 const float TAU = 6.28318530718;
 
@@ -450,34 +486,43 @@ vec3 stars(vec2 xy, float scale, float cellsPerPeriod, float layer) {
 void main() {
   vec2 xy = vec2((vUv.x - 0.5) * uAspect, vUv.y - 0.5);
   vec3 col = vec3(0.004, 0.006, 0.018);
-  {
-    col += stars(xy, 30.0, 120.0, 0.0) + stars(xy, 55.0, 140.0, 1.0);
-    if (uKind == 1) {
-      // A planet below, turning once per period, its clouds twice.
-      vec2 dp = xy - vec2(0.15 * uAspect, -1.25);
-      float r = length(dp);
-      if (r < 1.0) {
-        float z = sqrt(1.0 - r * r);
-        float lon = atan(dp.x, z) / TAU + uTime / PERIOD;
-        float lat = asin(clamp(dp.y, -1.0, 1.0));
-        float land = vnoise(vec2(lon * 24.0, lat * 5.0), 24.0) * 0.6
-          + vnoise(vec2(lon * 64.0, lat * 13.0), 64.0) * 0.4;
-        float cl = lon + uTime / PERIOD;
-        float cloud = smoothstep(0.55, 0.8, vnoise(vec2(cl * 48.0, lat * 16.0), 48.0) * 0.7
-          + vnoise(vec2(cl * 128.0, lat * 30.0), 128.0) * 0.3);
-        vec3 c = land > 0.55
-          ? mix(vec3(0.25, 0.32, 0.18), vec3(0.45, 0.4, 0.3), smoothstep(0.55, 0.8, land))
-          : vec3(0.06, 0.16, 0.34);
-        c = mix(c, vec3(0.9, 0.92, 0.95), cloud * 0.85);
-        vec3 L = normalize(vec3(-0.6, 0.5, 0.6));
-        float diff = max(0.0, dot(vec3(dp, z), L));
-        col = c * (0.03 + 0.97 * diff) + vec3(0.3, 0.5, 1.0) * pow(1.0 - z, 3.0) * 0.6 * (0.3 + diff);
-      } else {
-        col += vec3(0.25, 0.45, 1.0) * exp(-(r - 1.0) * 40.0) * 0.5;
-      }
+  col += stars(xy, 30.0, 120.0, 0.0) + stars(xy, 55.0, 140.0, 1.0);
+  if (uKind == 1) {
+    // A planet below, turning once per period, its clouds twice, coloured for
+    // where the ship is.
+    vec2 dp = (xy - vec2(uPlanetPos.x * uAspect, uPlanetPos.y - uPlanetPos.z)) / uPlanetPos.z;
+    float r = length(dp);
+    if (r < 1.0) {
+      float z = sqrt(1.0 - r * r);
+      float lon = atan(dp.x, z) / TAU + uTime / PERIOD;
+      float lat = asin(clamp(dp.y, -1.0, 1.0));
+      float land = vnoise(vec2(lon * 24.0, lat * 5.0), 24.0) * 0.6
+        + vnoise(vec2(lon * 64.0, lat * 13.0), 64.0) * 0.4;
+      float cl = lon + uTime / PERIOD;
+      float cloud = smoothstep(uPlanetK.y, uPlanetK.y + 0.25,
+        vnoise(vec2(cl * 48.0, lat * 16.0), 48.0) * 0.7 + vnoise(vec2(cl * 128.0, lat * 30.0), 128.0) * 0.3);
+      vec3 c = land > uPlanetK.x
+        ? mix(uLandLow, uLandHigh, smoothstep(uPlanetK.x, uPlanetK.x + 0.25, land))
+        : uOcean;
+      // A gas giant's bands, stirred by the same noise.
+      float band = 0.5 + 0.5 * sin(lat * 18.0 + land * 5.0);
+      c = mix(c, mix(uLandLow, uLandHigh, band), uPlanetK.w);
+      float ice = smoothstep(uPlanetK.z, uPlanetK.z + 0.08, abs(lat) + 0.1 * (land - 0.5));
+      c = mix(c, vec3(0.92, 0.95, 0.98), ice);
+      c = mix(c, uCloud, cloud * 0.85);
+      float diff = max(0.0, dot(vec3(dp, z), uLight));
+      col = c * (0.03 + 0.97 * diff) + uAtmosphere * uHaze * pow(1.0 - z, 3.0) * 0.6 * (0.3 + diff);
+    } else {
+      col += uAtmosphere * uHaze * exp(-(r - 1.0) * 40.0 * uPlanetPos.z) * 0.5;
     }
   }
-  outColor = vec4(col, 1.0);
+  if (uShipKind >= 0) {
+    // A visiting ship, in front of everything else.
+    vec3 d = normalize(vec3(xy, ${g(SHIP_FOCAL)}));
+    vec4 ship = shipHit(uShipKind, d, uShip.xyz, uShipScale, uShip.w, vec3(uLight.xy, -uLight.z), uShipPx);
+    col = col * (1.0 - ship.a) + ship.rgb;
+  }
+  outColor = vec4(col * uFade, 1.0);
 }
 `;
 
@@ -811,7 +856,7 @@ function drawLive(
  * atlas in wall coordinates. Each frame updates one small texture of block
  * states, re-renders the glow (at 1/8 of the atlas) and the outside view, then
  * composites everything in one full-screen pass. The band's real readouts
- * (stardate, local time, location) redraw into the atlas only when they change.
+ * (stardate, local time and date, ship status, location) redraw into the atlas only when they change.
  */
 export const bridge = defineEffect(bridgeMeta, {
   create(gl) {
@@ -824,7 +869,25 @@ export const bridge = defineEffect(bridgeMeta, {
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uResolution", "uGlassCount"]);
       const exteriorProgram = program(FULLSCREEN_VERTEX, EXTERIOR_FRAGMENT);
-      const eu = createUniforms(gl, exteriorProgram, ["uKind", "uTime", "uAspect"]);
+      const eu = createUniforms(gl, exteriorProgram, [
+        "uKind",
+        "uTime",
+        "uAspect",
+        "uFade",
+        "uPlanetPos",
+        "uPlanetK",
+        "uOcean",
+        "uLandLow",
+        "uLandHigh",
+        "uCloud",
+        "uAtmosphere",
+        "uHaze",
+        "uLight",
+        "uShipKind",
+        "uShip",
+        "uShipScale",
+        "uShipPx",
+      ]);
       const glowProgram = program(FULLSCREEN_VERTEX, GLOW_FRAGMENT);
       const gu = createUniforms(gl, glowProgram, ["uTexel", "uAtlas", "uIndex", "uState"]);
       const compositeProgram = program(FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
@@ -917,6 +980,26 @@ export const bridge = defineEffect(bridgeMeta, {
       let layoutKey = "";
       let atlasKey = "";
       let roomDrawn = false;
+      let disposed = false;
+      scope.defer(() => {
+        disposed = true;
+      });
+      // Load the panel font in the background; once it's in, redraw the atlas with it.
+      if (typeof FontFace !== "undefined" && typeof document !== "undefined") {
+        const face = new FontFace(FONT_FACE, `url(${FONT_URL})`, { weight: "600" });
+        face
+          .load()
+          .then((loaded) => {
+            document.fonts.add(loaded);
+            if (!disposed) {
+              atlasKey = "";
+            }
+            return loaded;
+          })
+          .catch(() => {
+            console.warn(`Starship Bridge: couldn't load ${FONT_URL}`);
+          });
+      }
       let layout: BridgeLayout = bridgeLayout("left", true);
       let set: PanelSet = buildPanels(layout, 0);
       let seed = 0;
@@ -929,11 +1012,15 @@ export const bridge = defineEffect(bridgeMeta, {
       const light = [1, 1, 1];
       const shift = [1, 1, 1];
       let first = true;
+      const ship = createShipPose();
+      let planetVisit = Number.NaN;
+      let planetSeed = Number.NaN;
       /** The CPU copy of the atlas, kept for redrawing the live readouts. */
       let atlasImage: AtlasImage | null = null;
       const liveValues: Record<LiveKey, string> = {
         stardate: "",
         time: "",
+        date: "",
         status: "",
         location: "",
       };
@@ -951,11 +1038,14 @@ export const bridge = defineEffect(bridgeMeta, {
         }
         liveSecond = second;
         const sd = formatStardate(stardate(now));
-        const clock = clockText(new Date(now));
+        const local = new Date(now);
+        const clock = clockText(local);
+        const day = dateText(local);
         const location = locationAt(now, seed);
         if (
           sd === liveValues.stardate &&
           clock === liveValues.time &&
+          day === liveValues.date &&
           location === liveValues.location &&
           status === liveValues.status
         ) {
@@ -963,6 +1053,7 @@ export const bridge = defineEffect(bridgeMeta, {
         }
         liveValues.stardate = sd;
         liveValues.time = clock;
+        liveValues.date = day;
         liveValues.location = location;
         liveValues.status = status;
         const [r0, rows] = drawLive(set, atlasImage, liveValues);
@@ -986,10 +1077,15 @@ export const bridge = defineEffect(bridgeMeta, {
       };
 
       /** Rebuilds the panels for a new layout or seed (CPU only). */
-      const rebuildLayout = (display: "left" | "right", showView: boolean, newSeed: number) => {
+      const rebuildLayout = (
+        display: "left" | "right",
+        showView: boolean,
+        newSeed: number,
+        hidden: ReadonlySet<LiveKey>,
+      ) => {
         layout = bridgeLayout(display, showView);
         seed = newSeed;
-        set = buildPanels(layout, seed);
+        set = buildPanels(layout, seed, hidden);
         state = new Uint8Array(set.blocks.length * 4);
         scratch = createStateScratch(groupCount(set));
         if (stateTex) {
@@ -1032,7 +1128,8 @@ export const bridge = defineEffect(bridgeMeta, {
         drawText(set, image);
         atlasImage = image;
         // Redraw the live readouts into the new atlas on the next frame.
-        liveValues.stardate = liveValues.time = liveValues.status = liveValues.location = "";
+        liveValues.stardate = liveValues.time = liveValues.date = "";
+        liveValues.status = liveValues.location = "";
         liveSecond = Number.NaN;
         atlasTex = createDataTexture(gl, {
           width: atlasW,
@@ -1086,10 +1183,17 @@ export const bridge = defineEffect(bridgeMeta, {
           time += step;
           const showView = p.exterior !== "off";
           const display = p.display === "right" ? "right" : "left";
-          const key = `${display}|${String(showView)}|${String(Math.floor(p.seed))}`;
+          const key = `${display}|${String(showView)}|${String(Math.floor(p.seed))}|${String(p.showTime)}|${String(p.showDate)}`;
           if (key !== layoutKey) {
             layoutKey = key;
-            rebuildLayout(display, showView, Math.floor(p.seed));
+            const hidden = new Set<LiveKey>();
+            if (!p.showTime) {
+              hidden.add("time");
+            }
+            if (!p.showDate) {
+              hidden.add("date");
+            }
+            rebuildLayout(display, showView, Math.floor(p.seed), hidden);
           }
           const aKey = `${key}|${String(height)}`;
           if (aKey !== atlasKey) {
@@ -1156,10 +1260,45 @@ export const bridge = defineEffect(bridgeMeta, {
               streaks.draw(count, exterior.width, exterior.height, warpZoom);
               gl.disable(gl.BLEND);
             } else {
+              const aspect = (vp.s1 - vp.s0) / (vp.y1 - vp.y0);
+              const planet = p.exterior === "planet";
               gl.useProgram(exteriorProgram);
-              eu.i1("uKind", p.exterior === "planet" ? 1 : 0);
+              eu.i1("uKind", planet ? 1 : 0);
               eu.f1("uTime", time % EXTERIOR_PERIOD);
-              eu.f1("uAspect", (vp.s1 - vp.s0) / (vp.y1 - vp.y0));
+              eu.f1("uAspect", aspect);
+              // The planet matches the location readout, changing with it behind a quick fade.
+              const now = Date.now();
+              const visit = locationVisit(now);
+              if (visit !== planetVisit || seed !== planetSeed) {
+                planetVisit = visit;
+                planetSeed = seed;
+                const st = planetStyle(locationIndex(visit, seed), visit, seed);
+                eu.f3("uPlanetPos", st.x, st.top, st.radius);
+                eu.f4("uPlanetK", st.sea, st.clouds, st.ice, st.bands);
+                eu.v3("uOcean", st.ocean);
+                eu.v3("uLandLow", st.landLow);
+                eu.v3("uLandHigh", st.landHigh);
+                eu.v3("uCloud", st.cloud);
+                eu.v3("uAtmosphere", st.atmosphere);
+                eu.f1("uHaze", st.haze);
+                const lz = 0.9;
+                const ll = Math.hypot(1, lz);
+                eu.f3("uLight", -Math.cos(st.light) / ll, Math.sin(st.light) / ll, lz / ll);
+              }
+              const hold = LOCATION_HOLD * 1000;
+              const edge = Math.min(now - visit * hold, (visit + 1) * hold - now);
+              eu.f1("uFade", planet ? Math.min(1, edge / PLANET_FADE_MS) : 1);
+              // A visiting ship, now and then.
+              shipAt(time, seed, ship);
+              if (ship.kind >= 0) {
+                const kind = SHIP_KINDS[ship.kind] ?? "shuttlecraft";
+                const scale = SHIP_SCALE[kind];
+                const reach = (aspect * 0.5 * SHIP_DISTANCE) / SHIP_FOCAL + SHIP_RADIUS * scale;
+                eu.f4("uShip", ship.across * reach, SHIP_Y + ship.bob, SHIP_DISTANCE, ship.yaw);
+                eu.f1("uShipScale", scale);
+                eu.f1("uShipPx", 1 / (exterior.height * SHIP_FOCAL));
+              }
+              eu.i1("uShipKind", ship.kind);
               triangle.draw();
             }
           }
