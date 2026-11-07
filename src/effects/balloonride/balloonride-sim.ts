@@ -359,6 +359,9 @@ const CELLS = 28;
 const VILLAGES = 3;
 const VILLAGE_R = 64;
 
+/** `x` clamped to 0..1 (never NaN here): `clamp(x, 0, 1)`, but cheaper in the map's inner loop. */
+const unit = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+
 /** Signed wrapped difference on a ring of `n`. */
 const wrapDiff = (d: number, n: number) => d - n * Math.round(d / n);
 
@@ -413,51 +416,81 @@ export function buildLandscape(seed: number, size = MAP_SIZE): Uint8Array {
     rgb[1] = c[1] * k;
     rgb[2] = c[2] * k;
   };
+  const nc = new Int32Array(9);
+  const nx = new Float64Array(9);
+  const ny = new Float64Array(9);
+  const nd = new Float64Array(9);
+  // Each field point's offset down to the current row, and across to each
+  // column from the points in the cell columns either side of it and its own.
+  const rowDy = new Float64Array(n);
+  const villageDy = new Float64Array(VILLAGES);
+  const colDx = new Float64Array(size * 3 * CELLS);
+  for (let x = 0; x < size; x++) {
+    const ci = Math.floor(x / cell);
+    for (let di = -1; di <= 1; di++) {
+      const ii = (ci + di + CELLS) % CELLS;
+      for (let jj = 0; jj < CELLS; jj++) {
+        colDx[(x * 3 + di + 1) * CELLS + jj] = wrapDiff(px[jj * CELLS + ii] - x, size);
+      }
+    }
+  }
   for (let y = 0; y < size; y++) {
     const v = y / size;
     const river = riverCentre(v, phases) * size;
+    for (let c = 0; c < n; c++) {
+      rowDy[c] = wrapDiff(py[c] - y, size);
+    }
+    let villagesNear = false;
+    for (let vk = 0; vk < VILLAGES; vk++) {
+      villageDy[vk] = wrapDiff(y - vy[vk], size);
+      villagesNear ||= Math.abs(villageDy[vk]) < VILLAGE_R;
+    }
     for (let x = 0; x < size; x++) {
-      // The nearest field point, and the distance to the nearest boundary.
+      // The nearest field point, and the distance to the nearest boundary. Each
+      // of the 3x3 neighbouring points' offsets is worked out once, for both.
       const ci = Math.floor(x / cell);
       const cj = Math.floor(y / cell);
       let best = -1;
+      let bn = 0;
       let bd = Infinity;
-      let bx = 0;
-      let by = 0;
-      for (let dj = -1; dj <= 1; dj++) {
-        for (let di = -1; di <= 1; di++) {
+      for (let dj = -1, m = 0; dj <= 1; dj++) {
+        for (let di = -1; di <= 1; di++, m++) {
           const ii = (ci + di + CELLS) % CELLS;
           const jj = (cj + dj + CELLS) % CELLS;
           const c = jj * CELLS + ii;
-          const dx = wrapDiff(px[c] - x, size);
-          const dy = wrapDiff(py[c] - y, size);
+          const dx = colDx[(x * 3 + di + 1) * CELLS + jj];
+          const dy = rowDy[c];
           const d = dx * dx + dy * dy;
+          nc[m] = c;
+          nx[m] = dx;
+          ny[m] = dy;
+          nd[m] = d;
           if (d < bd) {
             bd = d;
             best = c;
-            bx = dx;
-            by = dy;
+            bn = m;
           }
         }
       }
+      const bx = nx[bn];
+      const by = ny[bn];
+      // Only an edge nearer than 4 texels is used (for hedges and trees), so a
+      // boundary that is surely farther, as `len` is at most `reach`, is skipped.
       let edge = Infinity;
-      for (let dj = -1; dj <= 1; dj++) {
-        for (let di = -1; di <= 1; di++) {
-          const ii = (ci + di + CELLS) % CELLS;
-          const jj = (cj + dj + CELLS) % CELLS;
-          const c = jj * CELLS + ii;
-          if (c === best) {
-            continue;
-          }
-          const dx = wrapDiff(px[c] - x, size);
-          const dy = wrapDiff(py[c] - y, size);
-          // Distance to the perpendicular bisector between the two points.
-          const ex = dx - bx;
-          const ey = dy - by;
-          const len = Math.hypot(ex, ey);
-          const e = (dx * dx + dy * dy - bd) / (2 * Math.max(len, 1e-6));
-          edge = Math.min(edge, e);
+      for (let m = 0; m < 9; m++) {
+        if (nc[m] === best) {
+          continue;
         }
+        // Distance to the perpendicular bisector between the two points.
+        const ex = nx[m] - bx;
+        const ey = ny[m] - by;
+        const reach = Math.abs(ex) + Math.abs(ey) + 1e-6;
+        if (nd[m] - bd >= 8.001 * reach) {
+          continue;
+        }
+        const len = Math.hypot(ex, ey);
+        const e = (nd[m] - bd) / (2 * Math.max(len, 1e-6));
+        edge = Math.min(edge, e);
       }
 
       const k = kind[best];
@@ -507,41 +540,47 @@ export function buildLandscape(seed: number, size = MAP_SIZE): Uint8Array {
       }
 
       // Villages: lanes, gardens and roofs.
-      for (let vk = 0; vk < VILLAGES; vk++) {
-        const dx = wrapDiff(x - vx[vk], size);
-        const dy = wrapDiff(y - vy[vk], size);
-        const r = Math.hypot(dx, dy) / VILLAGE_R;
-        if (r >= 1 || rd < RIVER_WIDTH) {
-          continue;
-        }
-        const lx = Math.floor((dx + 1204) / 7);
-        const ly = Math.floor((dy + 1204) / 7);
-        const lot = (((lx * 73856093) ^ (ly * 19349663) ^ (s * 83492791) ^ vk) >>> 0) % 1000;
-        if (Math.abs(dx) < 0.8 || Math.abs(dy) < 0.8) {
-          set(LANE, 1);
-          height = 0;
-        } else if (lot / 1000 < 0.85 * (1 - r) ** 0.3) {
-          const fx = (dx + 1204) % 7;
-          const fy = (dy + 1204) % 7;
-          if (fx >= 1 && fx < 6 && fy >= 1.5 && fy < 5.5) {
-            // A pitched roof, one slope a little lighter than the other.
-            set(ROOFS[lot % ROOFS.length], fx < 3.5 ? 1.1 : 0.82);
-            height = 0.45;
-          } else if (r < 0.8) {
-            set(GARDEN, 1);
-            height = Math.min(height, 0.05);
+      if (villagesNear && rd >= RIVER_WIDTH) {
+        for (let vk = 0; vk < VILLAGES; vk++) {
+          const dy = villageDy[vk];
+          const dx = wrapDiff(x - vx[vk], size);
+          // Outside the village's square is outside the village.
+          if (Math.abs(dx) >= VILLAGE_R || Math.abs(dy) >= VILLAGE_R) {
+            continue;
           }
-        } else if (r < 0.75) {
-          set(GARDEN, 0.95 + 0.1 * blot);
-          height = 0;
+          const r = Math.hypot(dx, dy) / VILLAGE_R;
+          if (r >= 1) {
+            continue;
+          }
+          const lx = Math.floor((dx + 1204) / 7);
+          const ly = Math.floor((dy + 1204) / 7);
+          const lot = (((lx * 73856093) ^ (ly * 19349663) ^ (s * 83492791) ^ vk) >>> 0) % 1000;
+          if (Math.abs(dx) < 0.8 || Math.abs(dy) < 0.8) {
+            set(LANE, 1);
+            height = 0;
+          } else if (lot / 1000 < 0.85 * (1 - r) ** 0.3) {
+            const fx = (dx + 1204) % 7;
+            const fy = (dy + 1204) % 7;
+            if (fx >= 1 && fx < 6 && fy >= 1.5 && fy < 5.5) {
+              // A pitched roof, one slope a little lighter than the other.
+              set(ROOFS[lot % ROOFS.length], fx < 3.5 ? 1.1 : 0.82);
+              height = 0.45;
+            } else if (r < 0.8) {
+              set(GARDEN, 1);
+              height = Math.min(height, 0.05);
+            }
+          } else if (r < 0.75) {
+            set(GARDEN, 0.95 + 0.1 * blot);
+            height = 0;
+          }
         }
       }
 
       const o = (y * size + x) * 4;
-      out[o] = Math.round(clamp(rgb[0], 0, 1) * 255);
-      out[o + 1] = Math.round(clamp(rgb[1], 0, 1) * 255);
-      out[o + 2] = Math.round(clamp(rgb[2], 0, 1) * 255);
-      out[o + 3] = Math.round(clamp(height, 0, 1) * 255);
+      out[o] = Math.round(unit(rgb[0]) * 255);
+      out[o + 1] = Math.round(unit(rgb[1]) * 255);
+      out[o + 2] = Math.round(unit(rgb[2]) * 255);
+      out[o + 3] = Math.round(unit(height) * 255);
     }
   }
   return out;

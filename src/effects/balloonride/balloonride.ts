@@ -64,6 +64,31 @@ import {
 const f = glslFloat;
 const TAU = Math.PI * 2;
 
+/**
+ * The last few landscape maps built, by seed, most recent last: each takes a
+ * good fraction of a second to build, and stepping back and forth between
+ * variations (or opening the scene again) needn't build them again.
+ */
+const landscapes = new Map<number, Uint8Array>();
+const KEEP_LANDSCAPES = 3;
+
+function landscapeFor(seed: number): Uint8Array {
+  let map = landscapes.get(seed);
+  if (map) {
+    landscapes.delete(seed);
+  } else {
+    map = buildLandscape(seed);
+    for (const oldest of landscapes.keys()) {
+      if (landscapes.size < KEEP_LANDSCAPES) {
+        break;
+      }
+      landscapes.delete(oldest);
+    }
+  }
+  landscapes.set(seed, map);
+  return map;
+}
+
 /** The landscape is soft and hazy, so it renders every frame at 1/3 size. */
 const OUTSIDE_DIVISOR = 3;
 /** The longest shadow, metres, so a low sun's shadows stay sampled. */
@@ -788,7 +813,7 @@ export const balloonride = defineEffect(balloonrideMeta, {
               internalFormat: gl.RGBA8,
               format: gl.RGBA,
               type: gl.UNSIGNED_BYTE,
-              data: buildLandscape(seed),
+              data: landscapeFor(seed),
               wrap: gl.REPEAT,
             });
             gl.bindTexture(gl.TEXTURE_2D, mapTexture);
