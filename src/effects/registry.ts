@@ -10,6 +10,7 @@ import { blossomMeta } from "./blossom/blossom.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
+import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { bubblesMeta } from "./bubbles/bubbles.meta";
 import { candlelightMeta } from "./candlelight/candlelight.meta";
 import { causticsMeta } from "./caustics/caustics.meta";
@@ -125,6 +126,7 @@ export const effects: readonly EffectEntry[] = [
     ...missioncontrolMeta,
     load: () => import("./missioncontrol/missioncontrol").then((m) => m.missioncontrol),
   },
+  { ...cockpitMeta, load: () => import("./cockpit/cockpit").then((m) => m.cockpit) },
   { ...cloudsMeta, load: () => import("./clouds/clouds").then((m) => m.clouds) },
   { ...seaMeta, load: () => import("./sea/sea").then((m) => m.sea) },
   { ...cloudseaMeta, load: () => import("./cloudsea/cloudsea").then((m) => m.cloudsea) },
