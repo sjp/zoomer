@@ -40,10 +40,15 @@ without input. It has:
   MediaRecorder where it supports MP4, otherwise through WebCodecs (e.g. Firefox), and as
   WebM only if neither can encode H.264. Keep the tab visible while recording; the effect and
   resolution are locked until it finishes;
-- **Fullscreen** and **Hide**.
+- **Fullscreen**, **Copy link** and **Hide**.
 
 The current effect and its parameters are kept in the URL hash, so a link reopens the same
-setup. Editing or pasting a hash applies it without a reload.
+setup. Editing or pasting a hash applies it without a reload. Hiding the panel adds
+`panel=hidden`, and a page opened with it starts with the panel and cursor hidden.
+
+**Copy link** copies a link that spells out every parameter, defaults included, plus
+`panel=hidden`. Paste it into an OBS (or similar) browser source and it shows the effect
+straight away, with no controls, and keeps its look even if a default changes later.
 
 ### Keyboard shortcuts
 

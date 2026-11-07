@@ -137,42 +137,73 @@ function serialize(def: ParamDef, value: ParamValue): string {
   return String(value);
 }
 
-export function decodeHash(hash: string): { effectId?: string; raw: Record<string, string> } {
+/**
+ * Hash keys the app owns, so no effect may name a param after one: `effect` picks the
+ * effect, and `panel=hidden` starts with the control panel hidden.
+ */
+export const RESERVED_KEYS: readonly string[] = ["effect", "panel"];
+
+/** State the hash carries besides the effect's params. */
+export interface HashOptions {
+  /** Whether the control panel is hidden. */
+  panelHidden?: boolean;
+  /**
+   * Spell out every param, defaults included, so the link keeps its look even if a
+   * default changes later. Used for the copied link, e.g. for an OBS browser source.
+   */
+  canonical?: boolean;
+}
+
+export function decodeHash(hash: string): {
+  effectId?: string;
+  panelHidden: boolean;
+  raw: Record<string, string>;
+} {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const raw: Record<string, string> = {};
   for (const [key, value] of params) {
     raw[key] = value;
   }
-  const { effect: effectId, ...rest } = raw;
-  return { effectId, raw: rest };
+  const { effect: effectId, panel, ...rest } = raw;
+  return { effectId, panelHidden: panel === "hidden", raw: rest };
 }
 
-/** Encodes the effect and its non-default values, e.g. `#effect=warp&speed=5`. */
-export function encodeHash(effect: EffectMeta, values: AnyParamValues): string {
+/**
+ * Encodes the effect and its non-default values, e.g. `#effect=warp&speed=5`, or all
+ * of them with `canonical`. A hidden panel adds `panel=hidden` at the end.
+ */
+export function encodeHash(
+  effect: EffectMeta,
+  values: AnyParamValues,
+  options: HashOptions = {},
+): string {
   const params = new URLSearchParams({ effect: effect.id });
   for (const [key, def] of Object.entries(effect.params)) {
-    const value = (values as Partial<AnyParamValues>)[key];
-    if (value !== undefined && value !== def.default) {
+    const value = (values as Partial<AnyParamValues>)[key] ?? def.default;
+    if (options.canonical === true || value !== def.default) {
       params.set(key, serialize(def, value));
     }
+  }
+  if (options.panelHidden === true) {
+    params.set("panel", "hidden");
   }
   return `#${params.toString()}`;
 }
 
 /**
- * The effect and values a hash describes. An unknown or missing effect id falls back
- * to `fallback` (the default effect) with its defaults, since the hash's params were
- * meant for a different schema.
+ * The effect, values and panel state a hash describes. An unknown or missing effect id
+ * falls back to `fallback` (the default effect) with its defaults, since the hash's
+ * params were meant for a different schema.
  */
 export function stateFromHash<E extends EffectMeta>(
   hash: string,
   effects: readonly E[],
   fallback: E,
-): { effect: E; values: AnyParamValues } {
-  const { effectId, raw } = decodeHash(hash);
+): { effect: E; values: AnyParamValues; panelHidden: boolean } {
+  const { effectId, panelHidden, raw } = decodeHash(hash);
   const effect = effects.find((e) => e.id === effectId);
   if (!effect) {
-    return { effect: fallback, values: defaults(fallback.params) };
+    return { effect: fallback, values: defaults(fallback.params), panelHidden };
   }
-  return { effect, values: parseValues(effect.params, raw) };
+  return { effect, values: parseValues(effect.params, raw), panelHidden };
 }

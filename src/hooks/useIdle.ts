@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 
-/** True once there has been no pointer or keyboard activity for `ms`. */
-export function useIdle(ms: number): boolean {
-  const [idle, setIdle] = useState(false);
+/**
+ * True once there has been no pointer or keyboard activity for `ms`. With `startIdle`,
+ * it's true from the start until the first activity.
+ */
+export function useIdle(ms: number, startIdle = false): boolean {
+  const [idle, setIdle] = useState(startIdle);
 
   useEffect(() => {
     let timer = setTimeout(() => {

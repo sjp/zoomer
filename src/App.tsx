@@ -298,20 +298,18 @@ export function App() {
 
   // A link that spells out every param and opens with the panel hidden, so it works as
   // is in an OBS browser source and keeps its look if a default changes later. The
-  // clipboard API is missing outside secure contexts, hence the try.
+  // clipboard API is missing outside secure contexts, which the catch also covers.
   const copyLink = useCallback(() => {
     const url = new URL(window.location.href);
     url.hash = encodeHash(effect, values, { canonical: true, panelHidden: true });
-    const fail = () => {
-      showToast("Couldn't copy the link");
-    };
-    try {
-      navigator.clipboard.writeText(url.href).then(() => {
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(url.href);
         showToast("Copied a link with every setting, opening with controls hidden");
-      }, fail);
-    } catch {
-      fail();
-    }
+      } catch {
+        showToast("Couldn't copy the link");
+      }
+    })();
   }, [effect, values, showToast]);
 
   // For `S`, which works with the panel hidden, so it confirms with a toast.

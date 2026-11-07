@@ -5,6 +5,7 @@ import {
   defaults,
   encodeHash,
   parseValues,
+  RESERVED_KEYS,
   sanitizeText,
   snap,
   stateFromHash,
@@ -142,6 +143,29 @@ describe("hash round trip", () => {
     const { raw } = decodeHash(encodeHash(effect, values));
     expect(parseValues(textSchema, raw)).toEqual(values);
   });
+
+  it("spells out every value, defaults included, when canonical", () => {
+    const effect = { ...effects[0], params: schema };
+    const hash = encodeHash(effect, { speed: 5 }, { canonical: true });
+    expect(hash).toBe(`#effect=${effect.id}&speed=5&color=ffffff&on=1&mode=a`);
+    expect(parseValues(schema, decodeHash(hash).raw)).toEqual({ ...defaults(schema), speed: 5 });
+  });
+
+  it("carries a hidden panel as panel=hidden, kept apart from the params", () => {
+    const effect = { ...effects[0], params: schema };
+    const hash = encodeHash(effect, defaults(schema), { panelHidden: true });
+    expect(hash).toBe(`#effect=${effect.id}&panel=hidden`);
+    expect(decodeHash(hash)).toEqual({ effectId: effect.id, panelHidden: true, raw: {} });
+    expect(encodeHash(effect, defaults(schema), { panelHidden: false })).toBe(
+      `#effect=${effect.id}`,
+    );
+  });
+
+  it("only hides the panel for panel=hidden", () => {
+    expect(decodeHash("#effect=warp&panel=shown").panelHidden).toBe(false);
+    expect(decodeHash("#effect=warp").panelHidden).toBe(false);
+    expect(stateFromHash("#panel=hidden", effects, defaultEffect).panelHidden).toBe(true);
+  });
 });
 
 describe("stepDecimals", () => {
@@ -207,6 +231,15 @@ describe("registry", () => {
     expect(getEffect(DEFAULT_EFFECT_ID)).toBe(defaultEffect);
     expect(effects).toContain(defaultEffect);
   });
+
+  it.each(effects.map((e) => [e.id, e] as const))(
+    "%s doesn't name a param after a reserved hash key",
+    (_, e) => {
+      for (const key of RESERVED_KEYS) {
+        expect(e.params).not.toHaveProperty(key);
+      }
+    },
+  );
 
   it("has unique ids", () => {
     const ids = effects.map((e) => e.id);
