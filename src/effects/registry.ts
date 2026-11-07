@@ -15,6 +15,7 @@ import { starfighterMeta } from "./starfighter/starfighter.meta";
 import { jetcockpitMeta } from "./jetcockpit/jetcockpit.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { timemachineMeta } from "./timemachine/timemachine.meta";
+import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
@@ -152,6 +153,10 @@ export const effects: readonly EffectEntry[] = [
   {
     ...timemachineMeta,
     load: () => import("./timemachine/timemachine").then((m) => m.timemachine),
+  },
+  {
+    ...lunarlanderMeta,
+    load: () => import("./lunarlander/lunarlander").then((m) => m.lunarlander),
   },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
