@@ -178,7 +178,7 @@ const MARGIN = 0.025;
 
 /**
  * Each panel's title, fixed by what it shows, so no two panels share one. Button
- * banks take NAVIGATION, and COMMS for a second bank (when the outside view is
+ * banks take OPERATIONS, and COMMS for a second bank (when the outside view is
  * off, both outer panels are banks). The display's title is in `displayHeader`.
  */
 const TITLES: Readonly<Record<Exclude<PanelKind, "bank" | "band" | "display">, string>> = {
@@ -187,7 +187,7 @@ const TITLES: Readonly<Record<Exclude<PanelKind, "bank" | "band" | "display">, s
   schematic: "SYSTEMS",
   graph: "POWER",
 };
-const BANK_TITLES = ["NAVIGATION", "COMMS"] as const;
+const BANK_TITLES = ["OPERATIONS", "COMMS"] as const;
 
 interface Builder {
   rng: () => number;
@@ -903,7 +903,7 @@ export function buildPanels(
     live: [],
   };
   let groups = 0;
-  // Banks are titled right to left, so a lone bank is always NAVIGATION.
+  // Banks are titled right to left, so a lone bank is always OPERATIONS.
   const titles = layout.panels.map((p) =>
     p.kind === "bank" || p.kind === "band" || p.kind === "display" ? "" : TITLES[p.kind],
   );

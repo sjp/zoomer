@@ -195,9 +195,9 @@ describe("bridge panels", () => {
 
   it("title every panel by what it shows, never twice", () => {
     const expected = {
-      "left,true": ["EXTERIOR", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "NAVIGATION"],
-      "right,true": ["NAVIGATION", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "EXTERIOR"],
-      "left,false": ["COMMS", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "NAVIGATION"],
+      "left,true": ["EXTERIOR", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "OPERATIONS"],
+      "right,true": ["OPERATIONS", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "EXTERIOR"],
+      "left,false": ["COMMS", "ENVIRONMENT", "SENSORS", "SYSTEMS", "POWER", "OPERATIONS"],
     };
     for (const [key, titles] of Object.entries(expected)) {
       const [side, view] = key.split(",");
