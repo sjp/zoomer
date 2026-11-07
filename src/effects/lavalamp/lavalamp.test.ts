@@ -1,16 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  BASE_RADIUS,
-  blobY,
-  EPS,
-  fillBlobs,
-  makeBlobs,
-  MAX_ASPECT,
-  MAX_BLOBS,
-  POOL_WOB,
-  REF_H,
-  TILE,
-} from "./lavalamp";
+import { MAX_ASPECT, POOL_WOB, TILE } from "./lavalamp";
+import { BASE_RADIUS, blobY, EPS, fillBlobs, makeBlobs, MAX_BLOBS, REF_H } from "./lavalamp-blobs";
 import { createRng } from "../noise";
 
 describe("makeBlobs", () => {
