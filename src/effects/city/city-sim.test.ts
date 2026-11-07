@@ -124,6 +124,19 @@ describe("createWindowState", () => {
     }
   });
 
+  it("fades windows towards a new target gradually, without touching any at once", () => {
+    const s = createWindowState(2000);
+    s.reset(1000, 4, 0.1);
+    s.setTarget(0.5);
+    expect(s.litCount).toBe(100);
+    s.step(1 / 30, 20);
+    expect(s.litCount).toBeLessThan(110);
+    for (let t = 0; t < 60; t += 1 / 30) {
+      s.step(1 / 30, 20);
+    }
+    expect(s.litCount).toBe(500);
+  });
+
   it("toggles windows at about the requested rate, and not at all at rate 0", () => {
     const s = createWindowState(2000);
     s.reset(1000, 3, 0.4);

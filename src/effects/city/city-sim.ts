@@ -332,6 +332,11 @@ export interface WindowState {
   /** Lights exactly round(fraction * count) windows (instantly) and cancels fades. */
   setLit: (fraction: number) => void;
   /**
+   * Moves the lit target to round(fraction * count) without touching any window,
+   * so `step` fades windows on or off towards it at its toggle rate.
+   */
+  setTarget: (fraction: number) => void;
+  /**
    * Advances fades and, at `rate` toggles per second, starts new ones that keep
    * the lit count near the target. Fills `dirty` with the texels that changed.
    */
@@ -484,6 +489,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       setLit(fraction);
       dirtyCount = 0;
       fading = true;
+    },
+    setTarget(fraction) {
+      target = Math.round(clamp(fraction, 0, 1) * count);
     },
     step(dt, rate) {
       dirtyCount = 0;
