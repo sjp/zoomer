@@ -3,8 +3,10 @@
  * graph widget. Each row is a mean-reverting walk (so it wanders but stays on
  * the graph) with strong jitter on every sample, drawn from a seeded hash of
  * the sample's index, so the trace never repeats. Values are bytes, one row per
- * widget, ready to upload as an R8 texture.
+ * widget, ready to upload as an R8 texture. `walkWander` averages a row's
+ * newest samples into a slowly wandering value, for gauge needles.
  */
+import { clamp } from "../math";
 import { hash32 } from "../noise";
 
 /** Samples held per row: the graph shows `GRAPH_SAMPLES - 2` segments across its width. */
@@ -92,4 +94,21 @@ export function advanceGraph(g: GraphWalk, t: number): boolean {
 export function graphShift(t: number): number {
   const x = Math.max(0, t) * GRAPH_RATE;
   return x - Math.floor(x);
+}
+
+/** Samples of the random walk averaged into one wander value: about 3 s of the walk. */
+export const WANDER_SAMPLES = 48;
+
+/**
+ * The newest `n` samples of `row` of a graph walk, averaged and centred:
+ * about -1..1, wandering slowly where the walk's own samples jitter.
+ */
+export function walkWander(g: GraphWalk, row: number, n = WANDER_SAMPLES): number {
+  const count = clamp(Math.floor(n), 1, GRAPH_SAMPLES);
+  const base = row * GRAPH_SAMPLES + GRAPH_SAMPLES - count;
+  let sum = 0;
+  for (let i = 0; i < count; i++) {
+    sum += g.values[base + i];
+  }
+  return (sum / (count * 255) - 0.5) * 2;
 }

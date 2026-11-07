@@ -1,7 +1,7 @@
 import { FISH_FRAGMENT, FISH_VERTEX } from "../aquarium/aquarium-fish";
 import { createFishSim, type FishEnv, fishInstances, stepFishSim } from "../aquarium/aquarium-sim";
 import { GLOW_CAP } from "../biolum/biolum-sim";
-import { advanceGraph, createGraphWalk } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, walkWander } from "../bridge/bridge-graph";
 import { tileFragment } from "../caustics/caustics";
 import {
   advancePhases,
@@ -72,7 +72,6 @@ import {
   type SubLayout,
   submarineLayout,
   TOP_PIPE_Y,
-  walkWander,
   waterAt,
   whaleProgress,
   whaleX,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceGraph, createGraphWalk } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, walkWander } from "../bridge/bridge-graph";
 import {
   createWhales,
   createZones,
@@ -18,7 +18,6 @@ import {
   RISE_TIME,
   stepWhales,
   submarineLayout,
-  walkWander,
   waterAt,
   WHALE_MAX_TIME,
   WHALE_MIN_GAP,
