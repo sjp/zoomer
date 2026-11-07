@@ -107,12 +107,29 @@ export function bandT(xn: number, side: number): number {
 }
 
 /**
+ * Light through a row of slats at stripe phase `n` (in periods; gaps centred on
+ * half-integers) with penumbra `pen` (in periods), when each gap reaches
+ * `halfGap` periods either side of its centre. 1 in the gap, 0 behind a slat.
+ */
+export function slatGap(n: number, pen: number, halfGap: number): number {
+  const g = Math.abs(fract(n) - 0.5);
+  return 1 - smoothstep(halfGap - 0.5 * pen, halfGap + 0.5 * pen, g);
+}
+
+/** GLSL twin of `slatGap`: `float slatGap(float n, float pen, float halfGap)`. */
+export const SLAT_GAP_GLSL = /* glsl */ `
+float slatGap(float n, float pen, float halfGap) {
+  float g = abs(fract(n) - 0.5);
+  return 1.0 - smoothstep(halfGap - 0.5 * pen, halfGap + 0.5 * pen, g);
+}
+`;
+
+/**
  * Stripe profile at stripe phase `n` (in periods; lit gaps centred on half-integers)
  * with penumbra `pen` (in periods). 1 in the lit gap, 0 behind a slat.
  */
 export function stripe(n: number, pen: number): number {
-  const g = Math.abs(fract(n) - 0.5);
-  return 1 - smoothstep(HALF_DUTY - 0.5 * pen, HALF_DUTY + 0.5 * pen, g);
+  return slatGap(n, pen, HALF_DUTY);
 }
 
 /**

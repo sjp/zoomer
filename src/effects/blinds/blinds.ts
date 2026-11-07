@@ -11,6 +11,7 @@ import {
   HALF_DUTY,
   layoutShape,
   sunColor,
+  SLAT_GAP_GLSL,
   sunLevelAt,
 } from "./blinds-sim";
 import { type Rgb, unitRgbMemo } from "../color";
@@ -83,6 +84,7 @@ uniform vec3 uWallBottom;
 uniform vec3 uSun;
 out vec4 outColor;
 ${DITHER_GLSL}
+${SLAT_GAP_GLSL}
 void main() {
   vec2 p = gl_FragCoord.xy * uPix.xy + uPix.zw;
   float dx = p.x - uBand.x;
@@ -90,8 +92,7 @@ void main() {
   float w = (p.y - uBand.y - uBand.z * dx) * uStripe.x;
   float t = clamp(0.5 - 0.5 * xn * uStripe.z, 0.0, 1.0);
   float pen = uPen.x + uPen.y * t;
-  float g = abs(fract((w + 0.5) * uStripe.y) - 0.5);
-  float s = 1.0 - smoothstep(${glslFloat(HALF_DUTY)} - 0.5 * pen, ${glslFloat(HALF_DUTY)} + 0.5 * pen, g);
+  float s = slatGap((w + 0.5) * uStripe.y, pen, ${glslFloat(HALF_DUTY)});
   float ex = ${glslFloat(EDGE_X0)} + ${glslFloat(EDGE_XK)} * t;
   float ey = ${glslFloat(EDGE_Y0)} + ${glslFloat(EDGE_YK)} * t;
   float m = (1.0 - smoothstep(1.0 - ex, 1.0 + ex, abs(xn)))
