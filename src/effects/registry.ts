@@ -22,6 +22,7 @@ import { ringMeta } from "./ring/ring.meta";
 import { noirMeta } from "./noir/noir.meta";
 import { diningcarMeta } from "./diningcar/diningcar.meta";
 import { lamproomMeta } from "./lamproom/lamproom.meta";
+import { captainscabinMeta } from "./captainscabin/captainscabin.meta";
 import { submarineMeta } from "./submarine/submarine.meta";
 import { observatoryMeta } from "./observatory/observatory.meta";
 import { bubblesMeta } from "./bubbles/bubbles.meta";
@@ -169,6 +170,10 @@ export const effects: readonly EffectEntry[] = [
   { ...noirMeta, load: () => import("./noir/noir").then((m) => m.noir) },
   { ...diningcarMeta, load: () => import("./diningcar/diningcar").then((m) => m.diningcar) },
   { ...lamproomMeta, load: () => import("./lamproom/lamproom").then((m) => m.lamproom) },
+  {
+    ...captainscabinMeta,
+    load: () => import("./captainscabin/captainscabin").then((m) => m.captainscabin),
+  },
   { ...submarineMeta, load: () => import("./submarine/submarine").then((m) => m.submarine) },
   {
     ...observatoryMeta,
