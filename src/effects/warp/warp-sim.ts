@@ -2,6 +2,11 @@
  * Warp's starfield simulation, kept free of GL so it can be tested: stars fly
  * towards the camera from depth 1, are projected to streaks, and respawn at the
  * back once they pass the camera or leave the screen.
+ *
+ * A negative speed runs it backwards, for a camera looking back the way it
+ * came: stars come in from just outside the screen's edge, drift in towards
+ * the centre as they recede, fade with depth and respawn at an edge once they
+ * reach the back.
  */
 import type { Rgb } from "../color";
 import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
@@ -11,13 +16,16 @@ import { STREAK_FLOATS } from "../streaks";
 export const FADE_IN = 0.8;
 /** Depth at which a star has passed the camera and respawns. */
 export const NEAR_Z = 0.01;
+/** Nearest and farthest depth at which a receding star comes in at the edge. */
+export const EDGE_NEAR = 0.1;
+export const EDGE_FAR = 0.7;
 
 /** Per-frame inputs to `step`; reuse one object rather than allocating per frame. */
 export interface StarFrame {
   width: number;
   height: number;
   scale: number;
-  /** Params: see warp.ts. */
+  /** Params: see warp.ts. Negative runs the stars backwards, receding. */
   speed: number;
   count: number;
   streak: number;
@@ -56,6 +64,30 @@ export function createStarfield(max: number, random: () => number = Math.random)
   for (let i = 0; i < max; i++) {
     spawn(i, random());
   }
+  /** Respawns star `i` just outside the screen's edge, ready to recede in. */
+  const spawnAtEdge = (i: number, w: number, h: number, focal: number, inset: number) => {
+    const z = EDGE_NEAR + (EDGE_FAR - EDGE_NEAR) * random();
+    let u = random() * 2 * (w + h);
+    let ex: number;
+    let ey: number;
+    if (u < w) {
+      ex = u;
+      ey = -inset;
+    } else if ((u -= w) < w) {
+      ex = u;
+      ey = h + inset;
+    } else if ((u -= w) < h) {
+      ex = -inset;
+      ey = u;
+    } else {
+      ex = w + inset;
+      ey = u - h;
+    }
+    xs[i] = ((ex - w / 2) * z) / focal;
+    ys[i] = ((ey - h / 2) * z) / focal;
+    zs[i] = z;
+    mix[i] = random();
+  };
 
   return {
     xs,
@@ -80,6 +112,7 @@ export function createStarfield(max: number, random: () => number = Math.random)
       const tb = f.tint[2];
       const margin = 50 * scale;
       const sizePx = f.size * scale;
+      const reverse = dz < 0;
 
       const target = Math.min(Math.floor(f.count), max);
       const n = (live = growLive(life, live, target));
@@ -91,6 +124,9 @@ export function createStarfield(max: number, random: () => number = Math.random)
         if (z <= NEAR_Z) {
           spawn(i, 1);
           z = 1;
+        } else if (reverse && z >= 1) {
+          spawnAtEdge(i, width, height, focal, margin / 2);
+          z = zs[i];
         }
         zs[i] = z;
         // Added stars appear mid-flight, so they fade in rather than pop.
@@ -102,7 +138,10 @@ export function createStarfield(max: number, random: () => number = Math.random)
         const hx = cx + x * fz;
         const hy = cy + y * fz;
         if (hx < -margin || hx > width + margin || hy < -margin || hy > height + margin) {
-          spawn(i, 1);
+          // Receding stars drift in from off screen, so they are kept.
+          if (!reverse) {
+            spawn(i, 1);
+          }
           continue;
         }
         const fzt = focal / (z + tail);

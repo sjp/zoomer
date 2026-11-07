@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../noise";
 import { STREAK_FLOATS } from "../streaks";
-import { createStarfield, FADE_IN, NEAR_Z, type StarFrame } from "./warp-sim";
+import { createStarfield, EDGE_FAR, FADE_IN, NEAR_Z, type StarFrame } from "./warp-sim";
 
 const MAX = 500;
 const frame = (over: Partial<StarFrame> = {}): StarFrame => ({
@@ -110,5 +110,66 @@ describe("createStarfield", () => {
     const stars = createStarfield(MAX, createRng(5));
     stars.step(1 / 60, frame({ count: 10_000 }), data);
     expect(stars.live).toBe(MAX);
+  });
+
+  describe("backwards", () => {
+    it("draws receding stars drifting in towards the centre, never past the back", () => {
+      const stars = createStarfield(MAX, createRng(6));
+      const f = frame({ speed: -0.5, streak: 0 });
+      const xs = new Float64Array(MAX);
+      const ys = new Float64Array(MAX);
+      const zs = new Float64Array(MAX);
+      const bad: string[] = [];
+      let drawn = 0;
+      for (let k = 0; k < 2000; k++) {
+        for (let i = 0; i < MAX; i++) {
+          xs[i] = stars.xs[i];
+          ys[i] = stars.ys[i];
+          zs[i] = stars.zs[i];
+        }
+        drawn += stars.step(1 / 30, f, data);
+        for (let i = 0; i < stars.live; i++) {
+          const z = stars.zs[i];
+          if (!(z > NEAR_Z && z <= 1)) {
+            bad.push(`depth ${String(z)}`);
+          }
+          // Unless it just respawned, a star keeps its place and recedes.
+          if (stars.xs[i] === xs[i] && stars.ys[i] === ys[i] && !(z > zs[i])) {
+            bad.push(`not receding ${String(i)}`);
+          }
+        }
+      }
+      expect(bad).toEqual([]);
+      // Once the starting stars have cycled, most are on screen.
+      expect(stars.step(1 / 30, f, data)).toBeGreaterThan(250);
+      expect(drawn).toBeGreaterThan(2000 * 150);
+    });
+
+    it("brings respawned stars in from just outside the edge", () => {
+      const stars = createStarfield(MAX, createRng(7));
+      const f = frame({ speed: -2, streak: 0 });
+      const zs = new Float64Array(MAX);
+      let respawned = 0;
+      const bad: string[] = [];
+      for (let k = 0; k < 600; k++) {
+        zs.set(stars.zs);
+        stars.step(1 / 30, f, data);
+        for (let i = 0; i < stars.live; i++) {
+          if (stars.zs[i] >= zs[i]) {
+            continue;
+          }
+          respawned++;
+          const hx = 960 + (stars.xs[i] * 960) / stars.zs[i];
+          const hy = 540 + (stars.ys[i] * 960) / stars.zs[i];
+          const outside = hx < 1 || hx > 1919 || hy < 1 || hy > 1079;
+          const near = hx > -50 && hx < 1970 && hy > -50 && hy < 1130;
+          if (stars.zs[i] > EDGE_FAR || !outside || !near) {
+            bad.push(`${String(hx)},${String(hy)} at ${String(stars.zs[i])}`);
+          }
+        }
+      }
+      expect(bad).toEqual([]);
+      expect(respawned).toBeGreaterThan(100);
+    });
   });
 });
