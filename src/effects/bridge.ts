@@ -70,6 +70,7 @@ import {
 import { approach } from "./math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "./bridge-ship-shapes";
 import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt, type ShipPlan } from "./bridge-ships";
+import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "./bridge-graph";
 import { planetStyle } from "./bridge-planets";
 import {
   clockText,
@@ -114,10 +115,8 @@ const WARP_ABERRATION = 0.15 * 0.03;
  */
 const GRAPH_HALF_WIDTH = 0.004;
 const GRAPH_GLOW = 0.012;
-/** The graph's swing about its centre line, as a fraction of the full harmonic sum. */
-const GRAPH_AMPLITUDE = 0.25;
-/** Seconds the widgets' animation repeats over: the sweep turns in 10, the graph scrolls in 20. */
-const WIDGET_PERIOD = 20;
+/** Seconds the sweep's animation repeats over: it turns in 10. */
+const WIDGET_PERIOD = 10;
 /** Seconds the outside view repeats over; every drift in it is a whole number of cycles. */
 const EXTERIOR_PERIOD = 1000;
 /** Seconds for a lighting change (day to night) to fade. */
@@ -585,6 +584,9 @@ uniform vec4 uWidget[${String(MAX_WIDGETS)}];
 uniform vec2 uWidgetInfo[${String(MAX_WIDGETS)}];
 uniform int uWidgetCount;
 uniform float uTime;
+// Each widget's row of graph samples (R8), and how far they have scrolled past the newest.
+uniform sampler2D uGraph;
+uniform float uGraphShift;
 uniform vec3 uLight;
 uniform vec3 uLens;
 uniform float uLinePx;
@@ -614,18 +616,22 @@ vec3 widget(int i, vec2 p) {
       k = exp(-behind * 7.0) * 0.55 * (1.0 - pow(rr, 6.0));
     }
   } else {
-    // Graph: a curve of whole-number harmonics scrolling once per 20 s. The
-    // distance to it is measured across the line (vertical distance over the
-    // slope's secant), so it keeps its width where it climbs steeply.
+    // Graph: a polyline through the widget's row of random-walk samples,
+    // scrolling left as new ones arrive. Measured to the nearest of the
+    // segments around the pixel, in metres, so steep jumps keep their width.
     vec2 size = r.zw - r.xy;
     vec2 gp = (p - r.xy) / size;
-    float ph = TAU * (gp.x * 1.5 + uTime / 20.0);
-    float wave = 0.22 * sin(ph) + 0.12 * sin(ph * 3.0 + 1.3) + 0.06 * sin(ph * 7.0);
-    float curve = 0.5 + ${g(GRAPH_AMPLITUDE)} * wave;
-    float slope = ${g(GRAPH_AMPLITUDE)} * TAU * 1.5
-      * (0.22 * cos(ph) + 0.36 * cos(ph * 3.0 + 1.3) + 0.42 * cos(ph * 7.0));
-    float slopeM = slope * size.y / size.x;
-    float dm = abs(gp.y - curve) * size.y / sqrt(1.0 + slopeM * slopeM);
+    const float SEGS = ${g(GRAPH_SAMPLES - 2)};
+    int j = int(floor(gp.x * SEGS + uGraphShift));
+    float dm = 1e9;
+    for (int k = j - 1; k <= j + 1; k++) {
+      int k0 = clamp(k, 0, ${String(GRAPH_SAMPLES - 2)});
+      vec2 a = vec2((float(k0) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0, i), 0).r) * size;
+      vec2 b = vec2((float(k0 + 1) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0 + 1, i), 0).r) * size;
+      vec2 pa = gp * size - a;
+      vec2 ba = b - a;
+      dm = min(dm, length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)));
+    }
     float core = 1.0 - smoothstep(${g(GRAPH_HALF_WIDTH)} - uLinePx, ${g(GRAPH_HALF_WIDTH)} + uLinePx, dm);
     float halo = 0.25 * exp(-dm / ${g(GRAPH_GLOW / 3)});
     float ends = smoothstep(0.0, 0.02, gp.x) * (1.0 - smoothstep(0.98, 1.0, gp.x));
@@ -907,6 +913,8 @@ export const bridge = defineEffect(bridgeMeta, {
         "uWidgetInfo",
         "uWidgetCount",
         "uTime",
+        "uGraph",
+        "uGraphShift",
         "uLight",
         "uLens",
         "uLinePx",
@@ -942,6 +950,22 @@ export const bridge = defineEffect(bridgeMeta, {
       cu.i1("uState", 3);
       cu.i1("uGlow", 4);
       cu.i1("uExterior", 5);
+      cu.i1("uGraph", 6);
+      // The POWER graphs' random walk, one row per widget, rebuilt with the seed.
+      let graph = createGraphWalk(MAX_WIDGETS, 0);
+      let graphStart = 0;
+      const graphTex = createDataTexture(gl, {
+        width: GRAPH_SAMPLES,
+        height: MAX_WIDGETS,
+        internalFormat: gl.R8,
+        format: gl.RED,
+        type: gl.UNSIGNED_BYTE,
+        data: graph.values,
+        filter: gl.NEAREST,
+      });
+      scope.defer(() => {
+        gl.deleteTexture(graphTex);
+      });
 
       // Resources rebuilt on resize or a layout change, released by the scope at the end.
       let room: RenderTarget | null = null;
@@ -1090,6 +1114,20 @@ export const bridge = defineEffect(bridgeMeta, {
         layout = bridgeLayout(display, showView);
         seed = newSeed;
         set = buildPanels(layout, seed, hidden);
+        if (graph.seed !== seed) {
+          graph = createGraphWalk(MAX_WIDGETS, seed);
+          graphStart = time;
+          gl.activeTexture(gl.TEXTURE6);
+          updateDataTexture(
+            gl,
+            graphTex,
+            GRAPH_SAMPLES,
+            MAX_WIDGETS,
+            gl.RED,
+            gl.UNSIGNED_BYTE,
+            graph.values,
+          );
+        }
         state = new Uint8Array(set.blocks.length * 4);
         scratch = createStateScratch(groupCount(set));
         if (stateTex) {
@@ -1329,6 +1367,20 @@ export const bridge = defineEffect(bridgeMeta, {
           gl.bindTexture(gl.TEXTURE_2D, glow.texture);
           gl.activeTexture(gl.TEXTURE5);
           gl.bindTexture(gl.TEXTURE_2D, exterior ? exterior.texture : glow.texture);
+          gl.activeTexture(gl.TEXTURE6);
+          if (advanceGraph(graph, time - graphStart)) {
+            updateDataTexture(
+              gl,
+              graphTex,
+              GRAPH_SAMPLES,
+              MAX_WIDGETS,
+              gl.RED,
+              gl.UNSIGNED_BYTE,
+              graph.values,
+            );
+          } else {
+            gl.bindTexture(gl.TEXTURE_2D, graphTex);
+          }
           cu.f2("uResolution", width, height);
           cu.f2("uAtlasScale", tpm / atlasW, tpm / atlasH);
           cu.f2("uGlowTexel", 1 / glow.width, 1 / glow.height);
@@ -1340,6 +1392,7 @@ export const bridge = defineEffect(bridgeMeta, {
           gl.uniform2fv(cu.loc.uWidgetInfo, widgetInfo);
           cu.i1("uWidgetCount", set.widgets.length);
           cu.f1("uTime", time % WIDGET_PERIOD);
+          cu.f1("uGraphShift", graphShift(time - graphStart));
           cu.f3("uLight", light[0], light[1], light[2]);
           const k = (mix.red + mix.yellow) * (0.25 + 0.75 * alertPulse(time));
           const share = mix.red + mix.yellow > 0 ? mix.red / (mix.red + mix.yellow) : 1;
