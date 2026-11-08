@@ -3,6 +3,7 @@ import { auroraMeta } from "./aurora/aurora.meta";
 import { balloonsMeta } from "./balloons/balloons.meta";
 import { bambooMeta } from "./bamboo/bamboo.meta";
 import { beachMeta } from "./beach/beach.meta";
+import { beachdayMeta } from "./beachday/beachday.meta";
 import { biolumMeta } from "./biolum/biolum.meta";
 import { blindsMeta } from "./blinds/blinds.meta";
 import { blobsMeta } from "./blobs/blobs.meta";
@@ -188,6 +189,7 @@ export const effects: readonly EffectEntry[] = [
   { ...cloudseaMeta, load: () => import("./cloudsea/cloudsea").then((m) => m.cloudsea) },
   { ...lighthouseMeta, load: () => import("./lighthouse/lighthouse").then((m) => m.lighthouse) },
   { ...biolumMeta, load: () => import("./biolum/biolum").then((m) => m.biolum) },
+  { ...beachdayMeta, load: () => import("./beachday/beachday").then((m) => m.beachday) },
   { ...blobsMeta, load: () => import("./blobs/blobs").then((m) => m.blobs) },
   { ...startrailsMeta, load: () => import("./startrails/startrails").then((m) => m.startrails) },
   { ...desertcampMeta, load: () => import("./desertcamp/desertcamp").then((m) => m.desertcamp) },
