@@ -231,6 +231,11 @@ export interface SeaWater {
    * (active unit 0).
    */
   draw: (f: SeaWaterFrame) => void;
+  /**
+   * Reshapes the headland for a new seed. Binds its table to the active texture
+   * unit (see `ColumnTable.upload`).
+   */
+  setLandSeed: (seed: number) => void;
   /** The headland's heights (`LAND_COLUMNS` wide, R), for a sky pass to draw it too. */
   readonly landTexture: WebGLTexture;
   dispose: () => void;
@@ -354,6 +359,10 @@ export function createSeaWater(
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, rippleTex);
         triangle.draw();
+      },
+      setLandSeed(seed) {
+        buildHeadland(land.data, seed);
+        land.upload();
       },
       landTexture: land.texture,
       dispose: () => {
