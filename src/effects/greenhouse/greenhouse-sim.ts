@@ -11,7 +11,7 @@
 import { hexToUnitRgb, type Rgb } from "../color";
 import { DENSITY_MAX, type PaletteId, type RoofId } from "./greenhouse.meta";
 import { clamp, fract, smoothstep } from "../math";
-import { createRng } from "../noise";
+import { createRng, hash32 } from "../noise";
 import { STREAK_FLOATS } from "../streaks";
 import { lookup } from "../lookup";
 import { createSwell, type Swell } from "../sway";
@@ -621,6 +621,11 @@ export const LEAF_STRIP: readonly number[] = ribbonStrip(LEAF_SEGMENTS);
 
 export interface Leaf {
   readonly layer: number;
+  /**
+   * Identifies the leaf across rebuilds: its layer, plant and place in the
+   * plant. The same key means the same leaf in the same place.
+   */
+  readonly key: number;
   /** Anchor: fraction of the width, plus an x offset and the y (heights). */
   readonly anchor: number;
   readonly offX: number;
@@ -680,15 +685,19 @@ export function leafPoint(leaf: Leaf, t: number, aspect: number, out: [number, n
   out[1] = leaf.y + L * dy;
 }
 
+/** Key spacing (see `Leaf.key`): plants per layer and leaves per plant, both above any layout's. */
+const PLANT_KEYS = 4096;
+const LEAF_KEYS = 64;
+
 const range = (rng: () => number, r: readonly [number, number]) => r[0] + (r[1] - r[0]) * rng();
 
-/** Picks a leaf kind index (0 broad, 1 monstera, 2 palm, 3 fern) from a palette's shares. */
-function pickKind(rng: () => number, shares: readonly number[]): number {
+/** Picks a leaf kind index (0 broad, 1 monstera, 2 palm, 3 fern) from a palette's shares and `u` (0..1). */
+function pickKind(u: number, shares: readonly number[]): number {
   let total = 0;
   for (const s of shares) {
     total += s;
   }
-  let x = rng() * total;
+  let x = u * total;
   for (let k = 0; k < shares.length; k++) {
     x -= shares[k];
     if (x < 0) {
@@ -715,9 +724,14 @@ function staysClear(leaf: Leaf): boolean {
  * right and bottom edges, each a clump of one leaf kind fanning inwards and
  * drooping. Leaves that would reach into the centre third are shortened or
  * dropped. Deterministic per (seed, density, palette).
+ *
+ * Each plant draws from its own random stream, and its kind from its own hash,
+ * so the layout is prefix-stable: more density adds plants at the end of each
+ * layer and leaves every other plant where it was, and a palette change only
+ * changes kinds (and the shapes that follow from them), not where plants grow.
  */
 export function buildLeaves(seed: number, density: number, palette: PaletteId): LeafLayout {
-  const rng = createRng((Math.floor(seed) * 7919) ^ 0x6e3e);
+  const base = hash32((Math.floor(seed) * 7919) ^ 0x6e3e);
   const d = clamp(Number.isFinite(density) ? density : 1, 0.1, DENSITY_MAX);
   const shares = lookup(PALETTES, palette, "jungle").kinds;
   const leaves: Leaf[] = [];
@@ -728,7 +742,9 @@ export function buildLeaves(seed: number, density: number, palette: PaletteId): 
     starts.push(leaves.length);
     const plants = Math.max(1, Math.round(layer.plants * d));
     for (let pl = 0; pl < plants; pl++) {
-      const kindIdx = pickKind(rng, shares);
+      const plantHash = hash32(base ^ hash32(l * PLANT_KEYS + pl));
+      const rng = createRng(plantHash);
+      const kindIdx = pickKind(hash32(plantHash ^ 0x4b1d) / 4294967296, shares);
       const kind = kindIdx >= 2 ? KIND_FROND : kindIdx;
       const fern = kindIdx === 3;
       // Alternate sides so both edges stay full; one plant in five grows from the bottom.
@@ -786,6 +802,7 @@ export function buildLeaves(seed: number, density: number, palette: PaletteId): 
           const x0 = anchor * LAYOUT_ASPECT + offX;
           const leaf: Leaf = {
             layer: l,
+            key: (l * PLANT_KEYS + pl) * LEAF_KEYS + k,
             anchor,
             offX,
             y,
@@ -878,6 +895,30 @@ export function createBobs(lengths: readonly number[], seed: number): Bobs {
     omega[i] = TAU * hz;
   }
   return { rng, x: new Float64Array(n), v: new Float64Array(n), omega };
+}
+
+/**
+ * Carries each leaf's dip and its velocity from `from` to `to` across a
+ * rebuild, matching leaves by key, so a density or palette change doesn't
+ * reset the leaves that stay.
+ */
+export function carryBobs(
+  from: Bobs,
+  fromKeys: readonly number[],
+  to: Bobs,
+  toKeys: readonly number[],
+): void {
+  const at = new Map<number, number>();
+  for (let i = 0; i < fromKeys.length && i < from.x.length; i++) {
+    at.set(fromKeys[i], i);
+  }
+  for (let i = 0; i < toKeys.length && i < to.x.length; i++) {
+    const j = at.get(toKeys[i]);
+    if (j !== undefined) {
+      to.x[i] = from.x[j];
+      to.v[i] = from.v[j];
+    }
+  }
 }
 
 /**

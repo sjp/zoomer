@@ -13,6 +13,7 @@ import {
   buildRoof,
   CLOUD_PERIOD,
   cloudThin,
+  carryBobs,
   createBobs,
   createDrips,
   createRivulets,
@@ -397,12 +398,22 @@ export const greenhouse = defineEffect(greenhouseMeta, {
             roofAspect = aspect;
           }
           if (seed !== builtSeed || p.density !== builtDensity || palette !== builtPalette) {
+            const before = layout;
             layout = buildLeaves(seed, p.density, palette);
             leafCount = writeLeaves(layout, leafBatch.data);
-            bobs = createBobs(
+            const next = createBobs(
               layout.leaves.map((l) => l.length),
               seed,
             );
+            if (before && seed === builtSeed) {
+              carryBobs(
+                bobs,
+                before.leaves.map((l) => l.key),
+                next,
+                layout.leaves.map((l) => l.key),
+              );
+            }
+            bobs = next;
             builtSeed = seed;
             builtDensity = p.density;
             builtPalette = palette;

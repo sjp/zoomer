@@ -5,6 +5,7 @@ import {
   buildLeaves,
   buildRoof,
   cloudThin,
+  carryBobs,
   createBobs,
   createDrips,
   createRivulets,
@@ -239,6 +240,38 @@ describe("buildLeaves", () => {
     expect(PALETTES.fern.kinds[3]).toBeGreaterThan(PALETTES.jungle.kinds[3]);
   });
 
+  it("keeps every existing leaf in place when the density rises", () => {
+    for (const seed of SEEDS) {
+      for (const [lo, hi] of [
+        [1, 1.05],
+        [0.5, 1],
+        [1, DENSITY_MAX],
+      ]) {
+        const a = buildLeaves(seed, lo, "jungle");
+        const b = new Map(buildLeaves(seed, hi, "jungle").leaves.map((l) => [l.key, l]));
+        for (const leaf of a.leaves) {
+          expect(b.get(leaf.key)).toEqual(leaf);
+        }
+      }
+    }
+  });
+
+  it("keeps plants where they grow when the palette changes", () => {
+    for (const seed of SEEDS) {
+      const a = buildLeaves(seed, 1, "jungle");
+      const b = new Map(buildLeaves(seed, 1, "fern").leaves.map((l) => [l.key, l]));
+      let same = 0;
+      for (const leaf of a.leaves) {
+        const other = b.get(leaf.key);
+        if (other && other.anchor === leaf.anchor && other.y === leaf.y) {
+          same++;
+        }
+      }
+      // Kinds change, and a kind's length can drop a leaf near the centre; the rest stay.
+      expect(same / a.leaves.length).toBeGreaterThan(0.9);
+    }
+  });
+
   it("writes finite instance data", () => {
     const layout = buildLeaves(5, DENSITY_MAX, "evening");
     const out = new Float32Array(MAX_LEAVES * LEAF_FLOATS);
@@ -274,6 +307,16 @@ describe("bob springs", () => {
     }
     expect(Math.abs(b.x[0])).toBeLessThan(1e-3);
     expect(Math.abs(b.x[1])).toBeLessThan(1e-3);
+  });
+
+  it("carry each leaf's motion across a rebuild by key", () => {
+    const from = createBobs([0.3, 0.5, 0.7], 1);
+    from.x.set([0.01, 0.02, 0.03]);
+    from.v.set([0.1, 0.2, 0.3]);
+    const to = createBobs([0.5, 0.4, 0.3, 0.7], 1);
+    carryBobs(from, [10, 20, 30], to, [20, 99, 10, 30]);
+    expect(Array.from(to.x)).toEqual([0.02, 0, 0.01, 0.03]);
+    expect(Array.from(to.v)).toEqual([0.2, 0, 0.1, 0.3]);
   });
 
   it("ignores bad time steps", () => {
