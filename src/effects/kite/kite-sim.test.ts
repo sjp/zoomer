@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   catenary,
+  catenaryParam,
   createKiteState,
   gustAt,
   gustNoise,
   kiteCounts,
+  layTail,
   lineCounts,
   MAX_BACK_STREAKS,
   MAX_FRONT_STREAKS,
@@ -12,11 +14,13 @@ import {
   MAX_TRIS,
   PALETTES,
   paletteFor,
+  pathRate,
   poseMatrix,
   SHAPES,
   shapeFor,
   STRING_SEGMENTS,
   stepKite,
+  stepTail,
   TAIL_POINTS,
   TAIL_TRIS,
   TRI_FLOATS,
@@ -350,6 +354,129 @@ describe("writers", () => {
         }
       }
       expect(bad).toBe(0);
+    }
+  });
+});
+
+describe("pathRate and catenaryParam", () => {
+  const winds = [0, 0.25, 0.5, 0.75, 1];
+  const gusts = [0, 0.5, 1];
+
+  it("fly a figure-eight every 16 s at wind 0.5 without gusts", () => {
+    expect(pathRate(0.5, 0)).toBeCloseTo((2 * Math.PI) / 16, 12);
+  });
+
+  it("speed up and tighten the string with wind and gusts, staying positive", () => {
+    for (const g of gusts) {
+      for (let i = 1; i < winds.length; i++) {
+        expect(pathRate(winds[i], g)).toBeGreaterThan(pathRate(winds[i - 1], g));
+        expect(catenaryParam(winds[i], g)).toBeGreaterThan(catenaryParam(winds[i - 1], g));
+      }
+    }
+    for (const w of winds) {
+      expect(pathRate(w, 1)).toBeGreaterThan(pathRate(w, 0));
+      expect(catenaryParam(w, 1)).toBeGreaterThan(catenaryParam(w, 0));
+      expect(pathRate(w, 0)).toBeGreaterThan(0);
+      // A positive parameter keeps the catenary a sag, never a hump.
+      expect(catenaryParam(w, 0)).toBeGreaterThan(0.5);
+    }
+  });
+});
+
+describe("tail", () => {
+  const SPACING = 0.01;
+  const tailState = (windDir: number, wind = 0.5) => {
+    const s = createKiteState();
+    s.wind = wind;
+    s.windDir = windDir;
+    return s;
+  };
+  const gaps = (t: Float64Array) =>
+    Array.from({ length: TAIL_POINTS - 1 }, (_, i) =>
+      Math.hypot(t[i * 2 + 2] - t[i * 2], t[i * 2 + 3] - t[i * 2 + 1]),
+    );
+  /** Unit direction from the head to the free end. */
+  const heading = (t: Float64Array) => {
+    const dx = t[(TAIL_POINTS - 1) * 2] - t[0];
+    const dy = t[(TAIL_POINTS - 1) * 2 + 1] - t[1];
+    const d = Math.hypot(dx, dy);
+    return [dx / d, dy / d];
+  };
+
+  it("lays out straight, at rest, downwind and hanging", () => {
+    for (const dir of [-1, 1]) {
+      const s = tailState(dir);
+      layTail(s, 0.3, 0.2, SPACING);
+      expect(s.tailReady).toBe(true);
+      expect([s.tail[0], s.tail[1]]).toEqual([0.3, 0.2]);
+      for (const g of gaps(s.tail)) {
+        expect(g).toBeCloseTo(SPACING, 12);
+      }
+      expect(Array.from(s.tailV).every((v) => v === 0)).toBe(true);
+      const [ux, uy] = heading(s.tail);
+      expect(Math.sign(ux)).toBe(dir);
+      expect(uy).toBeLessThan(0);
+      // Every point on the one line.
+      for (let i = 1; i < TAIL_POINTS; i++) {
+        const dx = s.tail[i * 2] - 0.3;
+        const dy = s.tail[i * 2 + 1] - 0.2;
+        expect(Math.abs(dx * uy - dy * ux)).toBeLessThan(1e-12);
+      }
+    }
+  });
+
+  it("streams further out in a stronger wind", () => {
+    const calm = tailState(1, 0);
+    const windy = tailState(1, 1);
+    layTail(calm, 0, 0, SPACING);
+    layTail(windy, 0, 0, SPACING);
+    expect(heading(windy.tail)[0]).toBeGreaterThan(heading(calm.tail)[0]);
+  });
+
+  it("keeps its links at the spacing and its head on the kite while the kite moves", () => {
+    const s = tailState(-1);
+    layTail(s, 0, 0, SPACING);
+    let x = 0;
+    let y = 0;
+    for (let f = 0; f < 240; f++) {
+      const nx = 0.2 * Math.sin(f * 0.05);
+      const ny = 0.1 * Math.cos(f * 0.07);
+      stepTail(s, 1 / 60, x, y, nx, ny, SPACING);
+      x = nx;
+      y = ny;
+      expect([s.tail[0], s.tail[1]]).toEqual([x, y]);
+    }
+    for (const g of gaps(s.tail)) {
+      expect(g).toBeCloseTo(SPACING, 9);
+    }
+    expect(Array.from(s.tail).every((v) => Number.isFinite(v))).toBe(true);
+    expect(Array.from(s.tailV).every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it("settles back to its laid-out line once the kite holds still", () => {
+    const s = tailState(1);
+    layTail(s, 0, 0, SPACING);
+    const rest = heading(s.tail);
+    // Swing it about, then hold the head still.
+    for (let f = 0; f < 60; f++) {
+      stepTail(s, 1 / 60, 0.05 * Math.sin(f * 0.3), 0, 0.05 * Math.sin((f + 1) * 0.3), 0, SPACING);
+    }
+    const x0 = s.tail[0];
+    for (let f = 0; f < 1200; f++) {
+      stepTail(s, 1 / 60, x0, 0, x0, 0, SPACING);
+    }
+    const [ux, uy] = heading(s.tail);
+    expect(ux).toBeCloseTo(rest[0], 2);
+    expect(uy).toBeCloseTo(rest[1], 2);
+  });
+
+  it("substeps a long frame rather than blowing up", () => {
+    const s = tailState(-1);
+    layTail(s, 0, 0, SPACING);
+    stepTail(s, 0.5, 0, 0, 0.3, 0.3, SPACING);
+    expect([s.tail[0], s.tail[1]]).toEqual([0.3, 0.3]);
+    for (const g of gaps(s.tail)) {
+      expect(g).toBeCloseTo(SPACING, 9);
     }
   });
 });
