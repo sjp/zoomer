@@ -28,6 +28,7 @@
  * width the arrival climbs steeply, so the visible edge stays sharp under
  * bilinear filtering.
  */
+import { finishBuild, type BuildSteps } from "../rebuild";
 import { clamp } from "../math";
 import { createNoise, createRng, hash32 } from "../noise";
 
@@ -217,6 +218,18 @@ class TipHeap {
  * are normalised so the latest point arrives at `ARRIVAL_FILL`. Deterministic.
  */
 export function growFrost(seed: number, width: number, height: number): FrostSkeleton {
+  return finishBuild(growFrostSteps(seed, width, height));
+}
+
+/** Tip steps between yields of `growFrostSteps`. */
+const GROW_CHUNK = 512;
+
+/** `growFrost` as build steps, yielding every `GROW_CHUNK` tip steps. */
+export function* growFrostSteps(
+  seed: number,
+  width: number,
+  height: number,
+): BuildSteps<FrostSkeleton> {
   const rng = createRng(seed);
   const H = height;
   const owner = new Int32Array(width * height).fill(-1);
@@ -295,6 +308,9 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
   let steps = 0;
   while (heap.size > 0 && steps < MAX_STEPS) {
     steps++;
+    if (steps % GROW_CHUNK === 0) {
+      yield;
+    }
     const tip = heap.pop();
     const b = branches[tip.branch];
     const depth = b.depth;
@@ -481,11 +497,31 @@ export interface FrostField {
 
 /** Builds the full field for `seed` (see the module comment). Deterministic. */
 export function buildFrostField(seed: number, width: number, height: number): FrostField {
-  const skeleton = growFrost(seed, width, height);
+  return finishBuild(buildFrostFieldSteps(seed, width, height));
+}
+
+/** Branches stamped, and field rows finished, between yields of `buildFrostFieldSteps`. */
+const STAMP_CHUNK = 24;
+const ROW_CHUNK = 16;
+
+/**
+ * `buildFrostField` as build steps, so the effect can spread a build over many
+ * frames: every chunk of growth, of branches stamped and of rows finished yields.
+ */
+export function* buildFrostFieldSteps(
+  seed: number,
+  width: number,
+  height: number,
+): BuildSteps<FrostField> {
+  const skeleton = yield* growFrostSteps(seed, width, height);
   const n = width * height;
   const arrival = new Float32Array(n).fill(NEVER);
 
+  let stamped = 0;
   for (const b of skeleton.branches) {
+    if (++stamped % STAMP_CHUNK === 0) {
+      yield;
+    }
     const p = b.points;
     let len = 0;
     for (let i = 3; i < p.length; i += 3) {
@@ -519,6 +555,9 @@ export function buildFrostField(seed: number, width: number, height: number): Fr
   const maxDepth = SHEET_DEPTH + SHEET_CORNER + SHEET_NOISE + (1 + THICKEN) / (FALLOFF * H);
   const data = new Float32Array(n * 2);
   for (let j = 0; j < height; j++) {
+    if (j % ROW_CHUNK === ROW_CHUNK - 1) {
+      yield;
+    }
     const y = j + 0.5;
     const v = y / height;
     for (let i = 0; i < width; i++) {
