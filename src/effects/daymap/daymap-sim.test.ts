@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   CLOCK_READ_INTERVAL,
   createMapClock,
+  DEMO_EASE,
   DEMO_RATE,
+  easeOffset,
   latLonToPixel,
   latLonToVector,
   type LatLon,
@@ -188,12 +190,35 @@ describe("createMapClock", () => {
     expect(reads).toBe(2);
   });
 
-  it("runs DEMO_RATE times faster in demo mode and snaps back afterwards", () => {
-    const clock = createMapClock(() => 0);
+  it("runs DEMO_RATE times faster in demo mode and eases back afterwards", () => {
+    const wall = 1000000;
+    const clock = createMapClock(() => wall);
     clock.step(2, true);
-    expect(clock.ms).toBe(2000 * DEMO_RATE);
-    clock.step(0.01, false);
-    expect(clock.ms).toBe(0);
+    expect(clock.ms).toBe(wall + 2000 * DEMO_RATE);
+    // Two seconds of demo is 0.03 days ahead: no whole days to unwind.
+    let last = clock.ms;
+    for (let i = 0; i < DEMO_EASE * 10 - 2; i++) {
+      clock.step(0.1, false);
+      expect(clock.ms).toBeLessThan(last);
+      expect(last - clock.ms).toBeLessThan(2000 * DEMO_RATE * 0.06);
+      last = clock.ms;
+    }
+    clock.step(0.2, false);
+    expect(clock.ms).toBe(wall);
+  });
+
+  it("unwinds whole days in whole days, never spinning the time of day", () => {
+    const day = 86400000;
+    const offset = 37 * day + 5 * 3600000;
+    expect(easeOffset(offset, 0)).toBe(offset);
+    expect(easeOffset(offset, 1)).toBe(0);
+    for (let f = 0; f <= 1; f += 0.01) {
+      const o = easeOffset(offset, f);
+      const timeOfDay = o - Math.round(o / day) * day;
+      // The time-of-day part goes straight from +5 h to 0.
+      expect(timeOfDay).toBeCloseTo(5 * 3600000 * (1 - f), -1);
+    }
+    expect(easeOffset(-offset, 0.5)).toBe(-easeOffset(offset, 0.5));
   });
 });
 

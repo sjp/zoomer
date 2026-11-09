@@ -22,22 +22,42 @@ export const CLOCK_READ_INTERVAL = 1;
 /** Simulated seconds per real second in demo mode: one day a minute. */
 export const DEMO_RATE = 1440;
 
+/** Seconds leaving demo mode takes to ease back to the wall clock. */
+export const DEMO_EASE = 4;
+
 export interface MapClock {
   /** The current simulated time, in Unix milliseconds (unwrapped, float64). */
   readonly ms: number;
   /**
    * Advances by `dt` real seconds and returns the new time. In real time the wall
    * clock is read about once a second and the time advances with `dt` in between;
-   * demo mode runs `DEMO_RATE` times faster from wherever it is, and leaving demo
-   * mode snaps back to the wall clock.
+   * demo mode runs `DEMO_RATE` times faster from wherever it is. Leaving demo mode
+   * eases back to the wall clock over `DEMO_EASE` seconds (see `easeOffset`).
    */
   step: (dt: number, demo: boolean) => number;
+}
+
+/**
+ * How far from the wall clock (ms) the map shows, a fraction `f` (0..1) of the
+ * way back from `offset`. The time of day (the offset's part within ±12 hours)
+ * unwinds smoothly, at most half a turn of the terminator; whole days unwind in
+ * whole days, so the date walks back through the seasons without spinning the
+ * Earth round once per day of offset.
+ */
+export function easeOffset(offset: number, f: number): number {
+  const days = Math.round(offset / MS_PER_DAY);
+  const rest = offset - days * MS_PER_DAY;
+  const left = days * (1 - f);
+  return Math.sign(left) * Math.round(Math.abs(left)) * MS_PER_DAY + rest * (1 - f);
 }
 
 export function createMapClock(now: () => number = () => Date.now()): MapClock {
   let ms = now();
   let sinceRead = 0;
   let lastDemo = false;
+  /** The offset from the wall clock when demo mode was left, and the ease's progress (1: done). */
+  let offset = 0;
+  let eased = 1;
   return {
     get ms() {
       return ms;
@@ -45,9 +65,21 @@ export function createMapClock(now: () => number = () => Date.now()): MapClock {
     step(dt, demo) {
       if (demo) {
         ms += dt * 1000 * DEMO_RATE;
+        eased = 1;
+      } else if (lastDemo || eased < 1) {
+        // Easing back from demo time: read the wall clock every frame.
+        const wall = now();
+        if (lastDemo) {
+          offset = ms - wall;
+          eased = 0;
+        }
+        eased = Math.min(1, eased + Math.max(0, dt) / DEMO_EASE);
+        const f = eased * eased * (3 - 2 * eased);
+        ms = wall + easeOffset(offset, f);
+        sinceRead = 0;
       } else {
         sinceRead += dt;
-        if (lastDemo || sinceRead >= CLOCK_READ_INTERVAL) {
+        if (sinceRead >= CLOCK_READ_INTERVAL) {
           sinceRead = 0;
           ms = now();
         } else {
