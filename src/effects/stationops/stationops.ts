@@ -1,4 +1,10 @@
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
+import {
+  advanceGraph,
+  createGraphWalk,
+  GRAPH_SAMPLES,
+  graphShift,
+  GRAPH_DISTANCE_GLSL,
+} from "../graph-walk";
 import {
   beginFrame,
   createDataTexture,
@@ -661,6 +667,7 @@ uniform vec2 uBeacons[${String(MAX_BEACONS)}];
 uniform float uBeaconPhase;
 uniform vec4 uGraphs[${String(GRAPH_COUNT)}];
 uniform float uGraphShift;
+${GRAPH_DISTANCE_GLSL}
 out vec4 outColor;
 ${COMMON_GLSL}
 ${OPS_SHIP_GLSL}
@@ -702,17 +709,7 @@ float graph(vec2 f, int i) {
   vec4 r = uGraphs[i];
   vec2 size = r.zw - r.xy;
   vec2 gp = (f - r.xy) / size;
-  const float SEGS = ${g(GRAPH_SAMPLES - 2)};
-  int j = int(floor(gp.x * SEGS + uGraphShift));
-  float dm = 1e9;
-  for (int k = j - 1; k <= j + 1; k++) {
-    int k0 = clamp(k, 0, ${String(GRAPH_SAMPLES - 2)});
-    vec2 a = vec2((float(k0) - uGraphShift) / SEGS, 0.1 + 0.8 * texelFetch(uGraph, ivec2(k0, i), 0).r) * size;
-    vec2 b = vec2((float(k0 + 1) - uGraphShift) / SEGS, 0.1 + 0.8 * texelFetch(uGraph, ivec2(k0 + 1, i), 0).r) * size;
-    vec2 pa = gp * size - a;
-    vec2 ba = b - a;
-    dm = min(dm, length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)));
-  }
+  float dm = graphDistance(i, gp, size, vec2(0.1, 0.8));
   float line = clamp(0.5 - (dm - 0.0012) / px, 0.0, 1.0) + 0.2 * exp(-dm / 0.003);
   vec2 cell = abs(fract(gp * vec2(8.0, 4.0)) - 0.5) / vec2(8.0, 4.0) * size;
   float grid = 0.12 * clamp(0.5 - (min(cell.x, cell.y) - 0.0004) / px, 0.0, 1.0);

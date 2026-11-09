@@ -70,7 +70,13 @@ import {
 import { approach } from "../math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "../ship-shapes";
 import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt, type ShipPlan } from "./bridge-ships";
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
+import {
+  advanceGraph,
+  createGraphWalk,
+  GRAPH_SAMPLES,
+  graphShift,
+  GRAPH_DISTANCE_GLSL,
+} from "../graph-walk";
 import { planetStyle } from "./bridge-planets";
 import {
   clockText,
@@ -587,6 +593,7 @@ uniform float uTime;
 // Each widget's row of graph samples (R8), and how far they have scrolled past the newest.
 uniform sampler2D uGraph;
 uniform float uGraphShift;
+${GRAPH_DISTANCE_GLSL}
 uniform vec3 uLight;
 uniform vec3 uLens;
 uniform float uLinePx;
@@ -621,17 +628,7 @@ vec3 widget(int i, vec2 p) {
     // segments around the pixel, in metres, so steep jumps keep their width.
     vec2 size = r.zw - r.xy;
     vec2 gp = (p - r.xy) / size;
-    const float SEGS = ${g(GRAPH_SAMPLES - 2)};
-    int j = int(floor(gp.x * SEGS + uGraphShift));
-    float dm = 1e9;
-    for (int k = j - 1; k <= j + 1; k++) {
-      int k0 = clamp(k, 0, ${String(GRAPH_SAMPLES - 2)});
-      vec2 a = vec2((float(k0) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0, i), 0).r) * size;
-      vec2 b = vec2((float(k0 + 1) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0 + 1, i), 0).r) * size;
-      vec2 pa = gp * size - a;
-      vec2 ba = b - a;
-      dm = min(dm, length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)));
-    }
+    float dm = graphDistance(i, gp, size, vec2(0.0, 1.0));
     float core = 1.0 - smoothstep(${g(GRAPH_HALF_WIDTH)} - uLinePx, ${g(GRAPH_HALF_WIDTH)} + uLinePx, dm);
     float halo = 0.25 * exp(-dm / ${g(GRAPH_GLOW / 3)});
     float ends = smoothstep(0.0, 0.02, gp.x) * (1.0 - smoothstep(0.98, 1.0, gp.x));

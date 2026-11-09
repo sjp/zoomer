@@ -81,7 +81,13 @@ import {
   WALL_GRAPHS,
   writeLine,
 } from "../dot-matrix";
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
+import {
+  advanceGraph,
+  createGraphWalk,
+  GRAPH_SAMPLES,
+  graphShift,
+  GRAPH_DISTANCE_GLSL,
+} from "../graph-walk";
 import { hexToUnitRgb, type Rgb } from "../color";
 import {
   beginFrame,
@@ -619,16 +625,9 @@ vec4 crt(vec2 uv, float lines, float linePx, float seed) {
   return vec4(w, mask, scan * flicker);
 }
 
+${GRAPH_DISTANCE_GLSL}
 float graphTrace(int row, vec2 gp, vec2 size, float hw, float mpp) {
-  const float SEGS = ${g(GRAPH_SAMPLES - 2)};
-  int j = int(floor(gp.x * SEGS + uGraphShift));
-  float dm = 1e9;
-  for (int k = j - 1; k <= j + 1; k++) {
-    int k0 = clamp(k, 0, ${String(GRAPH_SAMPLES - 2)});
-    vec2 a = vec2((float(k0) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0, row), 0).r) * size;
-    vec2 b = vec2((float(k0 + 1) - uGraphShift) / SEGS, texelFetch(uGraph, ivec2(k0 + 1, row), 0).r) * size;
-    dm = min(dm, segDist(gp * size, a, b));
-  }
+  float dm = graphDistance(row, gp, size, vec2(0.0, 1.0));
   float ends = smoothstep(0.0, 0.02, gp.x) * (1.0 - smoothstep(0.98, 1.0, gp.x));
   return max(1.0 - smoothstep(hw - mpp, hw + mpp, dm), 0.25 * exp(-dm / (3.0 * hw))) * ends;
 }

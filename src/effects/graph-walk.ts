@@ -6,6 +6,7 @@
  * widget, ready to upload as an R8 texture. `walkWander` averages a row's
  * newest samples into a slowly wandering value, for gauge needles.
  */
+import { glslFloat } from "./gl";
 import { clamp } from "./math";
 import { hash32 } from "./noise";
 
@@ -112,3 +113,29 @@ export function walkWander(g: GraphWalk, row: number, n = WANDER_SAMPLES): numbe
   }
   return (sum / (count * 255) - 0.5) * 2;
 }
+
+/**
+ * GLSL `graphDistance(row, gp, size, range)`: distance from `gp` (0..1 across a
+ * graph widget, scaled to `size`, its width and height in the shader's units) to
+ * the polyline through row `row` of the uploaded walk, measured to the nearest of
+ * the three segments around the pixel so steep jumps keep their width. Sample
+ * values map to heights `range.x + range.y * value` (0..1 of the widget). The
+ * shader declares `uGraph` (the R8 texture of `values`) and `uGraphShift`
+ * (`graphShift`).
+ */
+export const GRAPH_DISTANCE_GLSL = /* glsl */ `
+float graphDistance(int row, vec2 gp, vec2 size, vec2 range) {
+  const float SEGS = ${glslFloat(GRAPH_SAMPLES - 2)};
+  int j = int(floor(gp.x * SEGS + uGraphShift));
+  float dm = 1e9;
+  for (int k = j - 1; k <= j + 1; k++) {
+    int k0 = clamp(k, 0, ${String(GRAPH_SAMPLES - 2)});
+    vec2 a = vec2((float(k0) - uGraphShift) / SEGS, range.x + range.y * texelFetch(uGraph, ivec2(k0, row), 0).r) * size;
+    vec2 b = vec2((float(k0 + 1) - uGraphShift) / SEGS, range.x + range.y * texelFetch(uGraph, ivec2(k0 + 1, row), 0).r) * size;
+    vec2 pa = gp * size - a;
+    vec2 ba = b - a;
+    dm = min(dm, length(pa - ba * clamp(dot(pa, ba) / max(dot(ba, ba), 1e-12), 0.0, 1.0)));
+  }
+  return dm;
+}
+`;
