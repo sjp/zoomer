@@ -140,6 +140,11 @@ export interface SmokeField {
   /** The current density (R channel), or null if the grid couldn't be allocated. */
   readonly texture: WebGLTexture | null;
   /**
+   * The density one step before `texture` (clear until the first step), for
+   * drawing between steps; null with `texture`.
+   */
+  readonly previous: WebGLTexture | null;
+  /**
    * Sets the grid size. A change replaces the field with a clear one (no
    * resampling). Returns whether a field exists. Leaves GL state as it was.
    */
@@ -193,6 +198,9 @@ export function createSmokeField(
     },
     get texture() {
       return pair.ready ? pair.src.texture : null;
+    },
+    get previous() {
+      return pair.ready ? pair.dst.texture : null;
     },
     resize(w, h) {
       if (w === pair.width && h === pair.height) {

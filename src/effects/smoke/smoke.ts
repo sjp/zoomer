@@ -51,13 +51,16 @@ const LIGHT_DIR_Y = 0.44;
 /**
  * Full-resolution composite: background with a soft pool of light, the source
  * props (incense sticks or a cup), then the smoke (density to alpha, and the
- * drop in density towards the light for the lit edge: two bilinear fetches),
- * then the embers' glow, and dither.
+ * drop in density towards the light for the lit edge: two bilinear fetches,
+ * each from the last two steps and blended), then the embers' glow, and dither.
  */
 const COMPOSITE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 precision highp sampler2D;
 uniform sampler2D uField;
+/** The field one step earlier, and how far (0..1) the frame is from it to uField. */
+uniform sampler2D uPrev;
+uniform float uBlend;
 uniform float uAspect;
 /** One device pixel in height units, for antialiased prop edges. */
 uniform float uPx;
@@ -114,8 +117,9 @@ void main() {
     col = mix(col, ceramic, coverage(sdf));
   }
 
-  float d = texture(uField, vUv).r;
-  float toLight = texture(uField, vUv + uLightStep).r;
+  vec2 lightUv = vUv + uLightStep;
+  float d = mix(texture(uPrev, vUv).r, texture(uField, vUv).r, uBlend);
+  float toLight = mix(texture(uPrev, lightUv).r, texture(uField, lightUv).r, uBlend);
   float alpha = (1.0 - exp(-${glslFloat(OPACITY)} * d)) * (1.0 - smoothstep(0.8, 1.0, vUv.y));
   float lit = clamp((d - toLight) * ${glslFloat(LIT_GAIN)}, 0.0, 1.0);
   vec3 smoke = mix(uSmoke, DENSE, smoothstep(0.3, 0.9, d));
@@ -144,7 +148,8 @@ void main() {
  * per frame) advects it along an analytic, divergence-free velocity (buoyancy,
  * a draft that leans the column, and curl noise growing with height), fades it,
  * and splats the sources back in. A full-resolution pass composites it over the
- * background with a lit edge facing the light. Resizes and quality changes clear
+ * background with a lit edge facing the light, blending the last two steps by
+ * the time since the latest so the motion stays smooth above 60 Hz. Resizes and quality changes clear
  * the field rather than resampling it.
  */
 export const smoke = defineEffect(smokeMeta, {
@@ -155,6 +160,8 @@ export const smoke = defineEffect(smokeMeta, {
       const compositeProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
       const comp = createUniforms(gl, compositeProgram, [
         "uField",
+        "uPrev",
+        "uBlend",
         "uAspect",
         "uPx",
         "uLightStep",
@@ -167,6 +174,7 @@ export const smoke = defineEffect(smokeMeta, {
       ]);
       gl.useProgram(compositeProgram);
       comp.i1("uField", 0);
+      comp.i1("uPrev", 1);
       gl.useProgram(null);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
@@ -229,6 +237,12 @@ export const smoke = defineEffect(smokeMeta, {
           gl.viewport(0, 0, width, height);
           gl.useProgram(compositeProgram);
           gl.bindTexture(gl.TEXTURE_2D, field.texture);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, field.previous);
+          // Draw between the last two steps, at the fraction of a step since the
+          // latest, so the plume glides at any display rate rather than moving in
+          // 60 Hz jumps (a step behind real time, which nobody can see).
+          comp.f1("uBlend", clock.acc);
           // The light is on the outer side of the source, away from the speaker.
           const side = p.sourceX < 0.5 ? -1 : 1;
           const dirLen = Math.hypot(LIGHT_DIR_X, LIGHT_DIR_Y);
@@ -254,6 +268,8 @@ export const smoke = defineEffect(smokeMeta, {
           comp.f4("uTip1", emit[2], emit[3], second ? sticks : 0, ember);
           comp.f3("uCup", emit[0], emit[1], preset.prop === "cup" ? 1 : 0);
           triangle.draw();
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
         dispose: () => {
