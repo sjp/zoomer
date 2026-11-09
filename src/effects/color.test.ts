@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hexToRgb, hexToUnitRgb, unitRgbMemo } from "./color";
+import { buildGradientLut, hexToRgb, hexToUnitRgb, unitRgbMemo } from "./color";
 
 describe("hexToRgb", () => {
   it("parses six-digit hex, with or without #", () => {
@@ -53,5 +53,40 @@ describe("unitRgbMemo", () => {
     expect(m1("#ffffff")).toEqual([1, 1, 1]);
     expect(m2("#000000")).toEqual([0, 0, 0]);
     expect(m1("#ffffff")).toEqual([1, 1, 1]);
+  });
+});
+
+describe("buildGradientLut", () => {
+  const texel = (lut: Uint8Array, i: number) => [...lut.subarray(i * 4, i * 4 + 4)];
+
+  it("runs from the first stop to the last, opaque", () => {
+    const lut = buildGradientLut(
+      [
+        [0, "#000000"],
+        [1, "#ff8000"],
+      ],
+      new Uint8Array(5 * 4),
+    );
+    expect(texel(lut, 0)).toEqual([0, 0, 0, 255]);
+    expect(texel(lut, 4)).toEqual([255, 128, 0, 255]);
+    // Smoothstep-eased: halfway in position is halfway in colour.
+    expect(texel(lut, 2)).toEqual([128, 64, 0, 255]);
+    // and a quarter of the way in is less than a quarter of the colour.
+    expect(texel(lut, 1)[0]).toBeLessThan(64);
+  });
+
+  it("passes through every stop and holds before the first", () => {
+    const lut = buildGradientLut(
+      [
+        [0.25, "#ff0000"],
+        [0.5, "#00ff00"],
+        [1, "#0000ff"],
+      ],
+      new Uint8Array(9 * 4),
+    );
+    expect(texel(lut, 0)).toEqual([255, 0, 0, 255]);
+    expect(texel(lut, 2)).toEqual([255, 0, 0, 255]);
+    expect(texel(lut, 4)).toEqual([0, 255, 0, 255]);
+    expect(texel(lut, 8)).toEqual([0, 0, 255, 255]);
   });
 });

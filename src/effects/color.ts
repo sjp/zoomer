@@ -1,3 +1,5 @@
+import { smoothstep } from "./math";
+
 export type Rgb = [number, number, number];
 
 export function hexToRgb(hex: string): Rgb {
@@ -41,4 +43,33 @@ export function unitRgbMemo(): (hex: string) => Rgb {
     }
     return lastRgb;
   };
+}
+
+/** A gradient stop: position in 0..1 and a `#rrggbb` colour. Stops ascend in position. */
+export type GradientStop = readonly [number, string];
+
+/**
+ * Fills `out` with an RGBA8 lookup table of `out.length / 4` texels across the
+ * gradient `stops` (at least two), eased with a smoothstep between each pair of
+ * stops, alpha 255. Returns `out`.
+ */
+export function buildGradientLut(stops: readonly GradientStop[], out: Uint8Array): Uint8Array {
+  const size = out.length >> 2;
+  for (let i = 0; i < size; i++) {
+    const t = i / (size - 1);
+    let s = 0;
+    while (s < stops.length - 2 && t > stops[s + 1][0]) {
+      s++;
+    }
+    const [t0, c0] = stops[s];
+    const [t1, c1] = stops[s + 1];
+    const f = smoothstep(t0, t1, t);
+    const a = hexToRgb(c0);
+    const b = hexToRgb(c1);
+    for (let c = 0; c < 3; c++) {
+      out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
+    }
+    out[i * 4 + 3] = 255;
+  }
+  return out;
 }
