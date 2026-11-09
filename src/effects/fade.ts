@@ -54,6 +54,70 @@ export function trimLive(life: Float32Array, live: number, target: number): numb
   return live;
 }
 
+/** A count fade over a fixed capacity, stepping only while something is fading. */
+export interface CountFade {
+  /** Each item's fade factor in [0, 1]; items `live` and above are gone. */
+  readonly life: Float32Array;
+  /** Items to simulate and draw: the target plus any still fading out. */
+  readonly live: number;
+  /**
+   * Steps the fades by `dt` seconds towards `target` items (clamped to the
+   * capacity), added items fading in over `fadeIn` seconds and removed ones out
+   * over `fadeOut`. Returns whether `life` or `live` changed, so the caller
+   * knows to rewrite its instances; once everything has settled it returns
+   * false and does no work until the target changes.
+   */
+  step: (target: number, dt: number, fadeIn: number, fadeOut?: number) => boolean;
+  /** Shows `target` items at once, fully, without fading: for a fresh layout. */
+  snap: (target: number) => void;
+}
+
+export function createCountFade(capacity: number): CountFade {
+  const life = new Float32Array(capacity);
+  let live = 0;
+  let wanted = 0;
+  let settled = true;
+  const clampTarget = (target: number) =>
+    Math.max(0, Math.min(capacity, Number.isFinite(target) ? Math.floor(target) : 0));
+  return {
+    life,
+    get live() {
+      return live;
+    },
+    step(target, dt, fadeIn, fadeOut = FADE_OUT) {
+      const t = clampTarget(target);
+      if (t !== wanted) {
+        wanted = t;
+        settled = false;
+      }
+      if (settled) {
+        return false;
+      }
+      const d = Number.isFinite(dt) && dt > 0 ? dt : 0;
+      const inStep = fadeIn > 0 ? d / fadeIn : 1;
+      const outStep = fadeOut > 0 ? d / fadeOut : 1;
+      live = growLive(life, live, t);
+      let done = true;
+      for (let i = 0; i < live; i++) {
+        const l = stepLife(life, i, t, inStep, outStep);
+        if (i < t ? l < 1 : l > 0) {
+          done = false;
+        }
+      }
+      live = trimLive(life, live, t);
+      settled = done && live === t;
+      return true;
+    },
+    snap(target) {
+      const t = clampTarget(target);
+      life.fill(1, 0, t);
+      live = t;
+      wanted = t;
+      settled = true;
+    },
+  };
+}
+
 /**
  * Moves point `i` by (`dx`, `dy`) and wraps it into `[minX, minX + spanX) ×
  * [minY, minY + spanY)`, typically the frame plus a margin, so the jump happens

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { driftPoint, growLive, stepLife, trimLive } from "./fade";
+import { createCountFade, driftPoint, FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 import { createRng } from "./noise";
 
 /** One frame of the documented loop; returns the new live count. */
@@ -139,5 +139,43 @@ describe("driftPoint wrapping", () => {
       expect(flagged).toBe(crossings);
       expect(crossings).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("createCountFade", () => {
+  it("fades items in and out, then rests until the target changes", () => {
+    const fade = createCountFade(8);
+    fade.snap(3);
+    expect(fade.live).toBe(3);
+    expect([...fade.life.subarray(0, 3)]).toEqual([1, 1, 1]);
+    expect(fade.step(3, 0.1, 1)).toBe(false);
+
+    expect(fade.step(5, 0.25, 1)).toBe(true);
+    expect(fade.live).toBe(5);
+    expect([...fade.life.subarray(0, 5)]).toEqual([1, 1, 1, 0.25, 0.25]);
+    for (let k = 0; k < 3; k++) {
+      expect(fade.step(5, 0.25, 1)).toBe(true);
+    }
+    expect([...fade.life.subarray(3, 5)]).toEqual([1, 1]);
+    expect(fade.step(5, 0.25, 1)).toBe(false);
+
+    expect(fade.step(2, FADE_OUT / 2, 1)).toBe(true);
+    expect(fade.live).toBe(5);
+    expect(fade.life[4]).toBeCloseTo(0.5);
+    expect(fade.step(2, FADE_OUT / 2, 1)).toBe(true);
+    expect(fade.live).toBe(2);
+    expect(fade.step(2, 1, 1)).toBe(false);
+  });
+
+  it("clamps the target to the capacity and ignores bad steps", () => {
+    const fade = createCountFade(4);
+    fade.snap(99);
+    expect(fade.live).toBe(4);
+    fade.step(2, Number.NaN, 1);
+    expect(fade.live).toBe(4);
+    expect(fade.life[3]).toBe(1);
+    // A target that isn't a number counts as none.
+    fade.step(Number.NaN, FADE_OUT, 1);
+    expect(fade.live).toBe(0);
   });
 });
