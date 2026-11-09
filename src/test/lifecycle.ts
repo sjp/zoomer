@@ -5,16 +5,22 @@
  * every object deleted on dispose, the default framebuffer and FUNC_ADD left at
  * the end of each frame, and nothing leaked when `create` throws part-way.
  *
- * The effects are split across several test files (`src/effects/lifecycle-N.test.ts`),
- * each calling `describeLifecycle` with its own shard, so Vitest runs them on
- * separate workers instead of one file running every effect in turn.
+ * The effects are split by category across test files
+ * (`src/effects/lifecycle-<category>.test.ts`), each calling `describeLifecycle`,
+ * so Vitest runs them on separate workers instead of one file running every
+ * effect in turn. `registry.test.ts` checks every category has its file.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl, type FakeGl, type FakeGlOptions } from "./fake-gl";
 import { FakeOffscreenCanvas } from "./offscreen-canvas";
 import { paramSets } from "./param-sets";
 import { effects } from "../effects/registry";
-import type { AnyParamValues, EffectDefinition, Viewport } from "../effects/types";
+import type {
+  AnyParamValues,
+  EFFECT_CATEGORIES,
+  EffectDefinition,
+  Viewport,
+} from "../effects/types";
 
 const viewport = (width: number, height: number): Viewport => ({
   width,
@@ -85,23 +91,21 @@ function run(effect: EffectDefinition, options: FakeGlOptions = {}) {
  */
 const EFFECT_TIMEOUT = 60_000;
 
-/**
- * The shard (0 to `shards - 1`) the effect at registry index `index` runs in: dealt
- * back and forth (0 1 2 3 3 2 1 0 0 1 ...) rather than round-robin, so a run of heavy
- * effects next to each other in the registry lands evenly. Nothing cheap predicts an
- * effect's cost before loading it (source size and param set count barely correlate),
- * and this balanced the shards better than round-robin when measured.
- */
-function shardOf(index: number, shards: number): number {
-  const i = index % (2 * shards);
-  return i < shards ? i : 2 * shards - 1 - i;
+type Category = (typeof EFFECT_CATEGORIES)[number];
+
+/** The file-name form of a category: "Sky & weather" runs in `lifecycle-sky-weather.test.ts`. */
+export function categorySlug(category: string): string {
+  return category
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /**
- * Registers the lifecycle tests for shard `shard` (1 to `shards`) of the registry,
- * loading only that shard's effects.
+ * Registers the lifecycle tests for the effects in `category`, loading only those.
+ * Each category has its own test file, so Vitest runs them on separate workers.
  */
-export async function describeLifecycle(shard: number, shards: number): Promise<void> {
+export async function describeLifecycle(category: Category): Promise<void> {
   beforeAll(() => {
     vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
   });
@@ -110,7 +114,7 @@ export async function describeLifecycle(shard: number, shards: number): Promise<
   });
 
   const loaded = await Promise.all(
-    effects.filter((_, i) => shardOf(i, shards) === shard - 1).map((e) => e.load()),
+    effects.filter((e) => e.category === category).map((e) => e.load()),
   );
   const cases = loaded.map((e) => [e.id, e] as const);
 

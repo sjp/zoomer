@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaults, encodeHash, stateFromHash } from "./params";
+import { categorySlug } from "../test/lifecycle";
 import { defaultEffect, effects } from "./registry";
 import { EFFECT_CATEGORIES, EFFECT_COSTS } from "./types";
 
@@ -28,5 +29,14 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
     for (const tag of entry.tags) {
       expect(tag).toMatch(/^[a-z0-9][a-z0-9 '-]*$/);
     }
+  });
+});
+
+describe("lifecycle tests", () => {
+  it("have a file for every category, so no effect goes unchecked", () => {
+    const files = Object.keys(import.meta.glob("./lifecycle-*.test.ts")).toSorted();
+    expect(files).toEqual(
+      EFFECT_CATEGORIES.map((c) => `./lifecycle-${categorySlug(c)}.test.ts`).toSorted(),
+    );
   });
 });
