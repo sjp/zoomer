@@ -193,6 +193,22 @@ describe("crane mesh", () => {
   });
 });
 
+describe("extent", () => {
+  it("reaches every point of the mesh at every wing angle", () => {
+    const out: [number, number, number] = [0, 0, 0];
+    let farthest = 0;
+    for (const t of CRANE_TRIANGLES) {
+      for (const v of t.v) {
+        for (let k = 0; k <= 20; k++) {
+          hinge(v, t.side, FLAP_MIN + ((FLAP_MAX - FLAP_MIN) * k) / 20, true, out);
+          farthest = Math.max(farthest, Math.hypot(out[0], out[1], out[2]));
+        }
+      }
+    }
+    expect(farthest).toBeLessThan(EXTENT);
+  });
+});
+
 describe("crane rotation", () => {
   const m = new Float64Array(9);
   const apply = (v: V3): V3 => [

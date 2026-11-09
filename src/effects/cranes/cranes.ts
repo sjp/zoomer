@@ -4,6 +4,7 @@ import {
   CRANE_VERTICES,
   createCranes,
   createInstanceScratch,
+  EXTENT,
   HINGE_Y,
   INSTANCE_FLOATS,
   MAX_INSTANCES,
@@ -21,10 +22,14 @@ import {
 import { cranesMeta, MOBILE_CRANES } from "./cranes.meta";
 import {
   beginFrame,
+  createFullscreenTriangle,
   createGradientBackground,
+  createRenderTarget,
   createUniforms,
   DITHER_GLSL,
+  FULLSCREEN_VERTEX,
   glslFloat,
+  type RenderTarget,
   withScope,
   scopedProgram,
 } from "../gl";
@@ -188,14 +193,25 @@ void main() {
 }
 `;
 
+/** Copies the cranes' layer, premultiplied, over the sky. */
+const LAYER_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+uniform sampler2D uLayer;
+out vec4 outColor;
+void main() {
+  outColor = texelFetch(uLayer, ivec2(gl_FragCoord.xy), 0);
+}
+`;
+
 /**
  * Origami cranes drifting across a pale sky: a dithered gradient, then up to
  * twenty low-poly folded cranes and a four-crane mobile, all from one
  * instanced triangle list. Cranes are depth-sorted on the CPU and each gets its
  * own slice of clip z, so the depth test sorts each crane's own faces. Two passes
  * over the same instances: the opaque interior with depth writes, then the
- * anti-aliased silhouette fringe blended on top. The mobile's threads are alpha
- * streaks.
+ * anti-aliased silhouette fringe blended on top. The canvas has no depth
+ * buffer, so the cranes are drawn into their own layer with one, in the box
+ * round them, and blended over the sky. The mobile's threads are alpha streaks.
  */
 export const cranes = defineEffect(cranesMeta, {
   create(gl) {
@@ -210,6 +226,18 @@ export const cranes = defineEffect(cranesMeta, {
         "uPass",
       ]);
       const sky = scope.own(createGradientBackground(gl));
+      const triangle = scope.own(createFullscreenTriangle(gl));
+      const layerProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, LAYER_FRAGMENT);
+      gl.useProgram(layerProgram);
+      gl.uniform1i(gl.getUniformLocation(layerProgram, "uLayer"), 0);
+      /** The cranes' layer and its depth buffer, sized with the canvas. */
+      let layer: RenderTarget | null = null;
+      const depth = scope.add(gl.createRenderbuffer(), (r) => {
+        gl.deleteRenderbuffer(r);
+      });
+      scope.defer(() => {
+        layer?.dispose();
+      });
       const threads = scope.own(createStreakRenderer(gl, MOBILE_CRANES, { blend: "alpha" }));
 
       const vao = scope.add(gl.createVertexArray(), (v) => {
@@ -268,6 +296,16 @@ export const cranes = defineEffect(cranesMeta, {
       return {
         resize(v) {
           ({ width, height, scale } = v);
+          layer?.dispose();
+          layer = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
+          if (layer) {
+            gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, width, height);
+            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          }
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -293,13 +331,34 @@ export const cranes = defineEffect(cranesMeta, {
             scratch,
             instances,
           );
-          if (n > 0) {
+          // The box round every crane, in device px (y up), with the fringe's pixel.
+          let x0 = width;
+          let y0 = height;
+          let x1 = 0;
+          let y1 = 0;
+          for (let r = 0; r < n; r++) {
+            const o = r * INSTANCE_FLOATS;
+            const reach = EXTENT * instances[o + 7] + 2;
+            x0 = Math.min(x0, Math.floor(instances[o + 12] - reach));
+            y0 = Math.min(y0, Math.floor(instances[o + 13] - reach));
+            x1 = Math.max(x1, Math.ceil(instances[o + 12] + reach));
+            y1 = Math.max(y1, Math.ceil(instances[o + 13] + reach));
+          }
+          x0 = Math.max(0, x0);
+          y0 = Math.max(0, y0);
+          x1 = Math.min(width, x1);
+          y1 = Math.min(height, y1);
+          if (n > 0 && layer && x1 > x0 && y1 > y0) {
             gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances, 0, n * INSTANCE_FLOATS);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            layer.bind();
+            gl.enable(gl.SCISSOR_TEST);
+            gl.scissor(x0, y0, x1 - x0, y1 - y0);
             gl.depthMask(true);
             gl.clearDepth(1);
-            gl.clear(gl.DEPTH_BUFFER_BIT);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LESS);
             gl.useProgram(program);
@@ -319,6 +378,14 @@ export const cranes = defineEffect(cranesMeta, {
             gl.bindVertexArray(null);
             gl.depthMask(true);
             gl.disable(gl.DEPTH_TEST);
+            // The layer over the sky, in the same box.
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, width, height);
+            gl.useProgram(layerProgram);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, layer.texture);
+            triangle.draw();
+            gl.disable(gl.SCISSOR_TEST);
             gl.disable(gl.BLEND);
           }
 
