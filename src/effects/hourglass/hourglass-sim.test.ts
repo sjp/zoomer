@@ -13,11 +13,17 @@ import {
   FRAMES,
   glassUnit,
   hourglassLayout,
+  NECK_R,
+  PILE_ROUND,
+  PILE_SLOPE,
   pileLevel,
+  pileRadiusAt,
+  pileSurface,
   pileVolume,
   planeVolume,
   REACH,
   runSeconds,
+  sandRadius,
   SEAT_Y,
   SETTLE_TIME,
   stepClock,
@@ -27,6 +33,7 @@ import {
   topSand,
   topVolume,
   TURN_TIME,
+  WALL,
   turnAngle,
   turnBlend,
   turnDirection,
@@ -316,5 +323,65 @@ describe("meta", () => {
     expect(p.duration.default).toBeLessThanOrEqual(DURATION_RANGE[1]);
     expect(p.size.default).toBeGreaterThanOrEqual(SIZE_RANGE[0]);
     expect(p.size.default).toBeLessThanOrEqual(SIZE_RANGE[1]);
+  });
+});
+
+describe("sandRadius", () => {
+  it("is the bulb's radius less the glass wall, never negative", () => {
+    for (let h = 0; h <= 1; h += 0.05) {
+      expect(sandRadius(h)).toBeCloseTo(Math.max(0, bulbRadius(h) - WALL), 12);
+      expect(sandRadius(h)).toBeGreaterThanOrEqual(0);
+    }
+    expect(sandRadius(0)).toBeCloseTo(NECK_R - WALL, 12);
+  });
+
+  it("clamps outside the bulb to its ends", () => {
+    expect(sandRadius(-1)).toBe(sandRadius(0));
+    expect(sandRadius(2)).toBe(sandRadius(1));
+  });
+
+  it("widens from the neck to the bulb's widest point, then narrows to the end", () => {
+    const rs = Array.from({ length: 41 }, (_, i) => sandRadius(i / 40));
+    const widest = rs.indexOf(Math.max(...rs));
+    expect(widest).toBeGreaterThan(0);
+    expect(widest).toBeLessThan(40);
+    for (let i = 1; i <= widest; i++) {
+      expect(rs[i]).toBeGreaterThanOrEqual(rs[i - 1]);
+    }
+    for (let i = widest + 1; i <= 40; i++) {
+      expect(rs[i]).toBeLessThanOrEqual(rs[i - 1]);
+    }
+  });
+});
+
+describe("pile shape", () => {
+  it("peaks at the apex and falls away evenly on both sides", () => {
+    for (const apex of [0.1, 0.4]) {
+      expect(pileSurface(apex, 0)).toBe(apex);
+      let last = apex;
+      for (let rho = 0.02; rho < 0.5; rho += 0.02) {
+        const y = pileSurface(apex, rho);
+        expect(y).toBeLessThan(last);
+        expect(pileSurface(apex, -rho)).toBe(y);
+        last = y;
+      }
+    }
+  });
+
+  it("rounds its apex and settles to the angle of repose further out", () => {
+    const slope = (rho: number) => (pileSurface(0.5, rho) - pileSurface(0.5, rho + 1e-6)) / 1e-6;
+    expect(slope(0)).toBeCloseTo(0, 4);
+    expect(slope(PILE_ROUND)).toBeLessThan(PILE_SLOPE);
+    expect(slope(2)).toBeCloseTo(PILE_SLOPE, 3);
+  });
+
+  it("gives the radius at a depth below the apex, inverting the surface", () => {
+    expect(pileRadiusAt(0)).toBe(0);
+    expect(pileRadiusAt(-0.1)).toBe(0);
+    for (const depth of [0.001, 0.02, 0.1, 0.3]) {
+      const r = pileRadiusAt(depth);
+      expect(r).toBeGreaterThan(0);
+      expect(pileSurface(0.6, r)).toBeCloseTo(0.6 - depth, 12);
+    }
   });
 });
