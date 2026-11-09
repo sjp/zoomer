@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "check": "oxlint --deny-warnings --report-unused-disable-directives && oxfmt --check",
+    "check": "oxlint --deny-warnings --report-unused-disable-directives && oxfmt --check && node scripts/unused-exports.mjs",
     "fmt": "oxfmt",
     "test": "vitest run --passWithNoTests",
     "test:browser": "playwright test",
