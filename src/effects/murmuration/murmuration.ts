@@ -2,15 +2,14 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   withScope,
   scopedProgram,
   floatRenderable,
+  createPingPong,
 } from "../gl";
 import {
   ATTRACT_MAX,
@@ -348,29 +347,12 @@ export const murmuration = defineEffect(murmurationMeta, {
       let cur = 0;
       let seeded = false;
 
-      /** The field ping-pong pair; empty until the first frame, or if allocation failed. */
-      let targets: RenderTarget[] = [];
-      let gridW = 0;
-      let gridH = 0;
-      const deleteTargets = () => {
-        for (const t of targets) {
-          t.dispose();
-        }
-        targets = [];
-      };
-      scope.defer(deleteTargets);
+      /** The field and its blur scratch; not ready until the first frame, or if allocation failed. */
+      const field = scope.own(createPingPong(gl, fieldFormat));
       const regrid = (w: number, h: number) => {
-        deleteTargets();
-        gridW = w;
-        gridH = h;
-        const a = createRenderTarget(gl, w, h, fieldFormat);
-        const b = a && createRenderTarget(gl, w, h, fieldFormat);
-        if (!a || !b) {
-          a?.dispose();
+        if (!field.resize(w, h)) {
           console.warn(`murmuration: can't allocate a ${String(w)}x${String(h)} field grid`);
-          return;
         }
-        targets = [a, b];
       };
 
       let width = 1;
@@ -406,13 +388,13 @@ export const murmuration = defineEffect(murmurationMeta, {
             seeded = true;
           }
           const [w, h] = gridSize(aspect);
-          if (w !== gridW || h !== gridH) {
+          if (w !== field.width || h !== field.height) {
             regrid(w, h);
           }
           birdCounts(p.birds, p.quality, counts);
           const skyColors = skyFor(p.sky);
 
-          const n = targets.length === 2 ? takeSteps(clock, STEP_RATE, dt, MAX_STEPS) : 0;
+          const n = field.ready ? takeSteps(clock, STEP_RATE, dt, MAX_STEPS) : 0;
           const simDt = p.speed / STEP_RATE;
           if (n > 0) {
             fieldEncoding(float, counts.draw, w * h, encoding);
@@ -435,7 +417,7 @@ export const murmuration = defineEffect(murmurationMeta, {
             gl.activeTexture(gl.TEXTURE0);
             gl.blendFunc(gl.ONE, gl.ONE);
             gl.clearColor(0, 0, 0, 0);
-            const [a, b] = targets;
+            const { src: a, dst: b } = field;
             for (let i = 0; i < n; i++) {
               const salt = hash32(step);
 

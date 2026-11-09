@@ -2,16 +2,15 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   updateDataTexture,
   withScope,
   scopedProgram,
   floatRenderable,
+  createPingPong,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import {
@@ -308,18 +307,10 @@ export const physarum = defineEffect(physarumMeta, {
       /** Agents in the buffers; 0 until the first frame. */
       let agents = 0;
 
-      /** The trail ping-pong pair; empty until the first frame, or if allocation failed. */
-      let targets: RenderTarget[] = [];
-      let current = 0;
-      let gridW = 0;
-      let gridH = 0;
-      const deleteTargets = () => {
-        for (const t of targets) {
-          t.dispose();
-        }
-        targets = [];
-      };
-      scope.defer(deleteTargets);
+      /** The trail ping-pong pair; not ready until the first frame, or if allocation failed. */
+      const trail = scope.own(
+        createPingPong(gl, trailFormat, { filter: gl.LINEAR, wrap: gl.REPEAT }),
+      );
 
       let width = 1;
       let height = 1;
@@ -345,19 +336,9 @@ export const physarum = defineEffect(physarumMeta, {
 
       /** New, cleared trail targets of `w` x `h`; a failed allocation leaves none. */
       const regrid = (w: number, h: number) => {
-        deleteTargets();
-        gridW = w;
-        gridH = h;
-        const opts = { filter: gl.LINEAR, wrap: gl.REPEAT };
-        const a = createRenderTarget(gl, w, h, trailFormat, opts);
-        const b = a && createRenderTarget(gl, w, h, trailFormat, opts);
-        if (!a || !b) {
-          a?.dispose();
+        if (!trail.resize(w, h)) {
           console.warn(`physarum: can't allocate a ${String(w)}x${String(h)} trail grid`);
-          return;
         }
-        targets = [a, b];
-        current = 0;
       };
 
       return {
@@ -371,7 +352,7 @@ export const physarum = defineEffect(physarumMeta, {
           const [w, h] = gridSize(width, height, BASE_CELL * p.scale * scale);
           const count = agentCount(p.agents);
           let reseed = false;
-          if (w !== gridW || h !== gridH) {
+          if (w !== trail.width || h !== trail.height) {
             regrid(w, h);
             reseed = true;
           }
@@ -398,7 +379,7 @@ export const physarum = defineEffect(physarumMeta, {
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.activeTexture(gl.TEXTURE0);
           }
-          if (targets.length < 2) {
+          if (!trail.ready) {
             gl.clearColor(lutBytes[0] / 255, lutBytes[1] / 255, lutBytes[2] / 255, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
             return;
@@ -421,9 +402,8 @@ export const physarum = defineEffect(physarumMeta, {
             agent.f1("uDeposit", r8 ? Math.max(deposit / range, MIN_DEPOSIT_8BIT) : deposit);
             gl.blendFunc(gl.ONE, gl.ONE);
             for (let i = 0; i < n; i++) {
-              const src = targets[current];
-              current ^= 1;
-              const dst = targets[current];
+              const { src, dst } = trail;
+              trail.swap();
 
               // 1. Diffuse and decay src into dst.
               dst.bind();
@@ -463,7 +443,7 @@ export const physarum = defineEffect(physarumMeta, {
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, lut);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, targets[current].texture);
+          gl.bindTexture(gl.TEXTURE_2D, trail.src.texture);
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE1);

@@ -2,7 +2,6 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
@@ -11,6 +10,8 @@ import {
   withScope,
   scopedProgram,
   floatRenderable,
+  createPingPong,
+  createRenderTarget,
 } from "../gl";
 import { clamp } from "../math";
 import {
@@ -304,18 +305,8 @@ export const reaction = defineEffect(reactionMeta, {
       const cycle = createCycle();
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      /** The ping-pong pair; empty until the first frame, or if allocation failed. */
-      let targets: RenderTarget[] = [];
-      let current = 0;
-      let gridW = 0;
-      let gridH = 0;
-      const deleteTargets = () => {
-        for (const t of targets) {
-          t.dispose();
-        }
-        targets = [];
-      };
-      scope.defer(deleteTargets);
+      /** The ping-pong pair; not ready until the first frame, or if allocation failed. */
+      const pair = scope.own(createPingPong(gl, format, { filter }));
 
       let width = 1;
       let height = 1;
@@ -333,7 +324,7 @@ export const reaction = defineEffect(reactionMeta, {
       const reseed = () => {
         restartCycle(cycle);
         generation++;
-        const dst = targets[current];
+        const dst = pair.src;
         makeSpots(++seedNo, spots);
         dst.bind();
         gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
@@ -349,30 +340,22 @@ export const reaction = defineEffect(reactionMeta, {
        * and is not retried until the wanted size changes.
        */
       const regrid = (w: number, h: number) => {
-        const a = createRenderTarget(gl, w, h, format, { filter });
-        const b = a && createRenderTarget(gl, w, h, format, { filter });
-        gridW = w;
-        gridH = h;
-        if (!a || !b) {
-          a?.dispose();
+        const resampled = pair.ready;
+        const ok = pair.resize(w, h, {
+          carry: (old, into) => {
+            into.bind();
+            gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
+            gl.useProgram(resampleProgram);
+            resample.f2("uSize", old.width, old.height);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, old.texture);
+            triangle.draw();
+            gl.bindTexture(gl.TEXTURE_2D, null);
+          },
+        });
+        if (!ok) {
           console.warn(`reaction: can't allocate a ${String(w)}x${String(h)} simulation grid`);
-          return;
-        }
-        const old = targets.length === 2 ? targets[current] : null;
-        if (old) {
-          a.bind();
-          gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
-          gl.useProgram(resampleProgram);
-          resample.f2("uSize", old.width, old.height);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, old.texture);
-          triangle.draw();
-          gl.bindTexture(gl.TEXTURE_2D, null);
-        }
-        deleteTargets();
-        targets = [a, b];
-        current = 0;
-        if (!old) {
+        } else if (!resampled) {
           reseed();
         }
       };
@@ -447,10 +430,10 @@ export const reaction = defineEffect(reactionMeta, {
           const cell = Math.max(1, p.scale * scale);
           const w = clamp(Math.ceil(width / cell), 1, MAX_GRID);
           const h = clamp(Math.ceil(height / cell), 1, MAX_GRID);
-          if (w !== gridW || h !== gridH) {
+          if (w !== pair.width || h !== pair.height) {
             regrid(w, h);
           }
-          if (targets.length < 2) {
+          if (!pair.ready) {
             const c = color1(p.color1);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.viewport(0, 0, width, height);
@@ -473,13 +456,12 @@ export const reaction = defineEffect(reactionMeta, {
           gl.activeTexture(gl.TEXTURE0);
           if (n > 0) {
             gl.useProgram(stepProgram);
-            step.f2("uSize", targets[0].width, targets[0].height);
+            step.f2("uSize", pair.src.width, pair.src.height);
             step.f2("uFeedKill", feedKill[0], feedKill[1]);
-            step.f1("uFront", regrow ? cycleFront(cycle, targets[0].width) : -1);
+            step.f1("uFront", regrow ? cycleFront(cycle, pair.src.width) : -1);
             for (let i = 0; i < n; i++) {
-              const src = targets[current];
-              current ^= 1;
-              const dst = targets[current];
+              const { src, dst } = pair;
+              pair.swap();
               dst.bind();
               // Every cell is overwritten, so tiled GPUs need not load the old contents.
               gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
@@ -490,7 +472,7 @@ export const reaction = defineEffect(reactionMeta, {
 
           // Life cycle: grow, hold, retreat, clear, then reseed.
           const before = cycle.phase;
-          let again = advanceCycle(cycle, n, dt, targets[0].width, p.hold, regrow);
+          let again = advanceCycle(cycle, n, dt, pair.src.width, p.hold, regrow);
           again = collectStats(regrow) || again;
           if (import.meta.env.DEV && (again || cycle.phase !== before)) {
             // oxlint-disable-next-line eslint/no-console -- dev-only diagnostics, behind import.meta.env.DEV
@@ -499,14 +481,14 @@ export const reaction = defineEffect(reactionMeta, {
           if (again) {
             reseed();
           } else if (regrow && readback && !fence && wantsSample(cycle)) {
-            requestStats(targets[current]);
+            requestStats(pair.src);
           }
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.viewport(0, 0, width, height);
           gl.useProgram(displayProgram);
           // The live grid, which lags the wanted size if an allocation failed.
-          const grid = targets[current];
+          const grid = pair.src;
           gl.bindTexture(gl.TEXTURE_2D, grid.texture);
           display.f2("uSize", grid.width, grid.height);
           display.f2("uTexel", 1 / grid.width, 1 / grid.height);

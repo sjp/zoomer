@@ -3,13 +3,12 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createUniforms,
-  createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
   scopedProgram,
+  createPingPong,
 } from "../gl";
 import { createFlowField } from "./flowfield-field";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "../noise";
@@ -255,11 +254,8 @@ export const flowfield = defineEffect(flowfieldMeta, {
 
       /** 10-bit layers avoid 8-bit grain in long, faint trails at the same bandwidth. */
       let use10 = true;
-      let targets: RenderTarget[] = [];
-      /** Index of the target holding the latest layer. */
-      let current = 0;
-      let targetW = 0;
-      let targetH = 0;
+      /** The trail layer, ping-ponged each frame; `src` holds the latest. */
+      const layers = scope.own(createPingPong(gl, gl.RGB10_A2, { filter: gl.NEAREST }));
 
       let width = 1;
       let height = 1;
@@ -278,52 +274,25 @@ export const flowfield = defineEffect(flowfieldMeta, {
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
       const background = unitRgbMemo();
 
-      const deleteTargets = () => {
-        for (const t of targets) {
-          t.dispose();
-        }
-        targets = [];
-      };
-      scope.defer(deleteTargets);
-
-      const makeTarget = (tenBit: boolean) =>
-        createRenderTarget(gl, width, height, tenBit ? gl.RGB10_A2 : gl.RGBA8, {
-          filter: gl.NEAREST,
-        });
-
       /**
        * (Re)creates both layer targets at the canvas size; the next frame clears them.
        * A failed allocation isn't retried until the size changes, so a size past
        * MAX_TEXTURE_SIZE or out of memory doesn't reallocate every frame.
        */
       const ensureTargets = () => {
-        if (targetW === width && targetH === height) {
+        if (layers.width === width && layers.height === height) {
           return;
         }
-        deleteTargets();
-        for (let i = 0; i < 2; i++) {
-          let t = makeTarget(use10);
-          if (!t && use10) {
-            // 10-bit not renderable after all: start over in 8-bit.
-            use10 = false;
-            deleteTargets();
-            i = -1;
-            continue;
-          }
-          t ??= makeTarget(false);
-          if (!t) {
-            break;
-          }
-          targets.push(t);
+        if (!layers.resize(width, height) && use10) {
+          // 10-bit not renderable after all: carry on in 8-bit.
+          use10 = false;
+          layers.resize(width, height, { format: gl.RGBA8 });
         }
-        if (targets.length < 2) {
-          deleteTargets();
+        if (!layers.ready) {
           console.warn(
             `flowfield: can't allocate ${String(width)}x${String(height)} trail layers; drawing nothing`,
           );
         }
-        targetW = width;
-        targetH = height;
         lightMode = undefined;
       };
 
@@ -369,7 +338,7 @@ export const flowfield = defineEffect(flowfieldMeta, {
             reseed(p.seed, p.count);
           }
           ensureTargets();
-          if (targets.length < 2) {
+          if (!layers.ready) {
             return;
           }
 
@@ -379,16 +348,15 @@ export const flowfield = defineEffect(flowfieldMeta, {
           const light = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] > 140 / 255;
           if (light !== lightMode) {
             lightMode = light;
-            for (const t of targets) {
+            for (const t of [layers.src, layers.dst]) {
               gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
               gl.clearBufferfv(gl.COLOR, 0, EMPTY);
             }
           }
 
           // Fade the previous layer into the other target. The time constant spans 0.1s to 3s.
-          const src = targets[current];
-          current ^= 1;
-          const dst = targets[current];
+          const { src, dst } = layers;
+          layers.swap();
           gl.bindFramebuffer(gl.FRAMEBUFFER, dst.framebuffer);
           // Every pixel is overwritten below, so the old contents need not be loaded.
           gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);

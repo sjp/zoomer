@@ -12,16 +12,15 @@
  */
 import {
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   type Scope,
   typedParameters,
   type Uniforms,
   scopedProgram,
   floatRenderable,
+  createPingPong,
 } from "../gl";
 import { hash32, HASH32_GLSL } from "../noise";
 import { SIM_DT, SPLAT_CUTOFF, WAVE_COUNT, waveAmp, WAVES } from "./smoke-sim";
@@ -178,59 +177,40 @@ export function createSmokeField(
   uniforms.i1("uField", 0);
   gl.useProgram(prevProgram);
 
-  /** The ping-pong pair; empty until the first resize, or if allocation failed. */
-  let targets: RenderTarget[] = [];
-  let current = 0;
-  let gridW = 0;
-  let gridH = 0;
+  /** The ping-pong pair; not ready until the first resize, or if allocation failed. */
+  const pair = scope.own(createPingPong(gl, format));
   let stepNo = 0;
-  const deleteTargets = () => {
-    for (const t of targets) {
-      t.dispose();
-    }
-    targets = [];
-  };
-  scope.defer(deleteTargets);
   const INVALIDATE = [gl.COLOR_ATTACHMENT0];
 
   return {
     program,
     uniforms,
     get width() {
-      return gridW;
+      return pair.width;
     },
     get height() {
-      return gridH;
+      return pair.height;
     },
     get texture() {
-      return targets.length === 2 ? targets[current].texture : null;
+      return pair.ready ? pair.src.texture : null;
     },
     resize(w, h) {
-      if (w === gridW && h === gridH) {
-        return targets.length === 2;
+      if (w === pair.width && h === pair.height) {
+        return pair.ready;
       }
-      deleteTargets();
-      gridW = w;
-      gridH = h;
-      const a = createRenderTarget(gl, w, h, format);
-      const b = a && createRenderTarget(gl, w, h, format);
-      if (!a || !b) {
-        a?.dispose();
+      if (!pair.resize(w, h)) {
         console.warn(`${name}: can't allocate a ${String(w)}x${String(h)} density field`);
         return false;
       }
-      targets = [a, b];
-      current = 0;
       return true;
     },
     advance(n) {
-      if (targets.length < 2) {
+      if (!pair.ready) {
         return;
       }
       for (let i = 0; i < n; i++) {
-        const src = targets[current];
-        current ^= 1;
-        const dst = targets[current];
+        const { src, dst } = pair;
+        pair.swap();
         dst.bind();
         // Every cell is overwritten, so tiled GPUs need not load the old contents.
         gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);

@@ -12,6 +12,7 @@ import {
   updateDataTexture,
   withScope,
   scopedProgram,
+  createPingPong,
 } from "../gl";
 import {
   advanceLife,
@@ -309,18 +310,8 @@ export const lenia = defineEffect(leniaMeta, {
       const fieldStats: FieldStats = { mean: 0, max: 0 };
       const life = createLife();
 
-      /** The ping-pong pair; empty until the first frame, or if allocation failed. */
-      let targets: RenderTarget[] = [];
-      let current = 0;
-      let gridW = 0;
-      let gridH = 0;
-      const deleteTargets = () => {
-        for (const t of targets) {
-          t.dispose();
-        }
-        targets = [];
-      };
-      scope.defer(deleteTargets);
+      /** The ping-pong pair; not ready until the first frame, or if allocation failed. */
+      const pair = scope.own(createPingPong(gl, gl.RGBA8, { filter: gl.LINEAR, wrap: gl.REPEAT }));
       let field = new Float32Array(0);
       let fieldBytes = new Uint8Array(0);
       const patch = new Float32Array(PATCH_SIZE * PATCH_SIZE);
@@ -369,12 +360,11 @@ export const lenia = defineEffect(leniaMeta, {
         ruleId = sp.rules[ruleIndex % sp.rules.length];
         seedNo++;
         const s = seed * 1000 + seedNo;
-        seedField(s, ruleId, sp.soup, count, gridW, gridH, field);
+        seedField(s, ruleId, sp.soup, count, pair.width, pair.height, field);
         packState(field, fieldBytes);
         // Both targets, so the composite's interpolation starts from the new field.
-        for (const t of targets) {
-          upload(t, 0, 0, gridW, gridH, fieldBytes);
-        }
+        upload(pair.src, 0, 0, pair.width, pair.height, fieldBytes);
+        upload(pair.dst, 0, 0, pair.width, pair.height, fieldBytes);
         spawnRng = createRng(s + 17);
         restartLife(life);
         statsTimer = 0;
@@ -382,19 +372,10 @@ export const lenia = defineEffect(leniaMeta, {
       };
 
       const regrid = (w: number, h: number) => {
-        deleteTargets();
-        gridW = w;
-        gridH = h;
-        const opts = { filter: gl.LINEAR, wrap: gl.REPEAT };
-        const a = createRenderTarget(gl, w, h, gl.RGBA8, opts);
-        const b = a && createRenderTarget(gl, w, h, gl.RGBA8, opts);
-        if (!a || !b) {
-          a?.dispose();
+        if (!pair.resize(w, h)) {
           console.warn(`lenia: can't allocate a ${String(w)}x${String(h)} grid`);
           return;
         }
-        targets = [a, b];
-        current = 0;
         field = new Float32Array(w * h);
         fieldBytes = new Uint8Array(w * h * 4);
       };
@@ -404,21 +385,21 @@ export const lenia = defineEffect(leniaMeta, {
         if (!statsTarget) {
           return;
         }
-        const [tx, ty] = statsTile(gridW, gridH);
+        const [tx, ty] = statsTile(pair.width, pair.height);
         statsTarget.bind();
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.viewport(
           0,
           0,
-          Math.min(STATS_SIZE, Math.ceil(gridW / tx)),
-          Math.min(STATS_SIZE, Math.ceil(gridH / ty)),
+          Math.min(STATS_SIZE, Math.ceil(pair.width / tx)),
+          Math.min(STATS_SIZE, Math.ceil(pair.height / ty)),
         );
         gl.useProgram(statsProgram);
         gl.uniform2i(stats.loc.uTile, tx, ty);
-        gl.uniform2i(stats.loc.uSize, gridW, gridH);
+        gl.uniform2i(stats.loc.uSize, pair.width, pair.height);
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, targets[current].texture);
+        gl.bindTexture(gl.TEXTURE_2D, pair.src.texture);
         triangle.draw();
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -450,13 +431,13 @@ export const lenia = defineEffect(leniaMeta, {
 
       /** Writes one fresh seed patch into an empty part of the field, if there is one. */
       const spawn = (soup: boolean) => {
-        if (!pickSpawnSpot(statsBytes, gridW, gridH, spawnRng, spot)) {
+        if (!pickSpawnSpot(statsBytes, pair.width, pair.height, spawnRng, spot)) {
           return;
         }
         spawnPatch(spawnRng(), ruleId, soup, patch);
         // The current target only: the composite blends the patch in over one step.
         packState(patch, patchBytes);
-        upload(targets[current], spot[0], spot[1], PATCH_SIZE, PATCH_SIZE, patchBytes);
+        upload(pair.src, spot[0], spot[1], PATCH_SIZE, PATCH_SIZE, patchBytes);
         life.quiet = 0;
       };
 
@@ -471,9 +452,9 @@ export const lenia = defineEffect(leniaMeta, {
           const count = Math.round(p.count);
           const same =
             p.species === seededSpecies && count === seededCount && p.seed === seededSeed;
-          if (w !== gridW || h !== gridH) {
+          if (w !== pair.width || h !== pair.height) {
             regrid(w, h);
-            if (targets.length === 2) {
+            if (pair.ready) {
               ruleIndex = 0;
               reseed(p.species, count, p.seed);
               remember(p.species, count, p.seed);
@@ -495,7 +476,7 @@ export const lenia = defineEffect(leniaMeta, {
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.activeTexture(gl.TEXTURE0);
           }
-          if (targets.length < 2) {
+          if (!pair.ready) {
             gl.clearColor(lutBytes[0] / 255, lutBytes[1] / 255, lutBytes[2] / 255, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
             return;
@@ -514,7 +495,7 @@ export const lenia = defineEffect(leniaMeta, {
             remember(p.species, count, p.seed);
           }
           if (collectStats()) {
-            const n = judgeStats(life, fieldStats, count, ruleId, gridW * gridH);
+            const n = judgeStats(life, fieldStats, count, ruleId, pair.width * pair.height);
             for (let i = 0; i < n; i++) {
               spawn(sp.soup);
             }
@@ -522,13 +503,12 @@ export const lenia = defineEffect(leniaMeta, {
 
           const rule = RULES[ruleId];
           if (takeSteps(clock, p.speed * MAX_STEP_RATE, dt, 1) > 0) {
-            const src = targets[current];
-            current ^= 1;
-            const dst = targets[current];
+            const { src, dst } = pair;
+            pair.swap();
             dst.bind();
             gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
             gl.useProgram(stepProgram);
-            step.f2("uInvSize", 1 / gridW, 1 / gridH);
+            step.f2("uInvSize", 1 / pair.width, 1 / pair.height);
             step.f1("uMu", rule.mu);
             step.f1("uGrowthK", 1 / (2 * rule.sigma * rule.sigma));
             step.f1("uDt", 1 / rule.T);
@@ -548,17 +528,17 @@ export const lenia = defineEffect(leniaMeta, {
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           gl.viewport(0, 0, width, height);
           gl.useProgram(compositeProgram);
-          composite.f2("uSize", gridW, gridH);
+          composite.f2("uSize", pair.width, pair.height);
           composite.f1("uMix", clock.acc);
           composite.f1("uTrail", p.trail * TRAIL_WEIGHT);
           composite.f1("uFade", life.fade);
           composite.f1("uEmboss", EMBOSS * life.fade * (isLightPalette(paletteKey) ? 0.6 : 1));
           gl.activeTexture(gl.TEXTURE2);
-          gl.bindTexture(gl.TEXTURE_2D, targets[current ^ 1].texture);
+          gl.bindTexture(gl.TEXTURE_2D, pair.dst.texture);
           gl.activeTexture(gl.TEXTURE1);
           gl.bindTexture(gl.TEXTURE_2D, lut);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, targets[current].texture);
+          gl.bindTexture(gl.TEXTURE_2D, pair.src.texture);
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.activeTexture(gl.TEXTURE1);
