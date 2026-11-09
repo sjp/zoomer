@@ -60,9 +60,12 @@ import {
 import { advanceRotation, seedSalt } from "../starfield-sim";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
+import { createSettledValue } from "../rebuild";
 
 /** Sky pass: about 3 reference px per texel. The sky is all soft haze and gradient. */
 const SKY_TEXEL_REF = 3;
+/** Seconds the width and the Variation slider must hold still before the scene is rebuilt. */
+const INPUT_SETTLE = 0.3;
 /** Most point stars; a 21:9 frame at full density stays under it. */
 const MAX_STARS = 64000;
 /** Frame margin for listing stars, reference px (covers the largest sprite). */
@@ -331,6 +334,8 @@ export const desertcamp = defineEffect(desertcampMeta, {
       let sparks = createSparks(0);
       let meteors = createMeteors(0);
       let simSeed = Number.NaN;
+      const settledWidth = createSettledValue<number>(INPUT_SETTLE);
+      const settledSeed = createSettledValue<number>(INPUT_SETTLE);
 
       let width = 1;
       let height = 1;
@@ -354,27 +359,31 @@ export const desertcamp = defineEffect(desertcampMeta, {
           time += step;
           rot = advanceRotation(rot, step, clamp(p.rotation, 0, ROTATION_MAX));
           const refWidth = width / scale;
-          const seed = Math.floor(p.seed);
-          skyPole(refWidth, pole);
+          // The dune table, camp layout and stars follow the width and seed once they
+          // settle, so dragging the window or the slider rebuilds them once, not every
+          // frame; until then the scene stretches with the canvas.
+          const sceneWidth = settledWidth.update(refWidth, step);
+          const seed = settledSeed.update(Math.floor(p.seed), step);
+          skyPole(sceneWidth, pole);
 
           gl.activeTexture(gl.TEXTURE0);
           sceneInputs.set(0, seed);
-          sceneInputs.set(1, refWidth);
+          sceneInputs.set(1, sceneWidth);
           sceneInputs.set(2, p.fire === "right" ? 1 : p.fire === "left" ? 0 : 2);
           if (sceneInputs.take()) {
-            fillDuneTable(dunes.data, seed, refWidth);
+            fillDuneTable(dunes.data, seed, sceneWidth);
             dunes.upload();
-            layoutCamp(camp, dunes.data, p.fire, refWidth);
+            layoutCamp(camp, dunes.data, p.fire, sceneWidth);
           }
           starInputs.set(0, seed);
-          starInputs.set(1, refWidth);
+          starInputs.set(1, sceneWidth);
           starInputs.set(2, p.stars);
           if (starInputs.take()) {
             stars.build({
               salt: seedSalt(seed),
               density: clamp(p.stars, 0, 1) * DENSITY_MAX,
               pole,
-              refWidth,
+              refWidth: sceneWidth,
               refHeight: REF_HEIGHT,
               rotates: true,
               margin: STAR_MARGIN,
