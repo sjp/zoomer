@@ -27,6 +27,9 @@ import {
   VINE_SHAPES,
 } from "./vines-sim";
 
+/** Simulation step and CPU milliseconds per frame for the opening catch-up growth. */
+const PREWARM_STEP = 0.1;
+const PREWARM_BUDGET_MS = 2;
 /** Shadow offsets (ref px, light from the top left) and strength. */
 const STEM_SHADOW = [4, 7] as const;
 const LEAF_SHADOW = [6, 10] as const;
@@ -278,7 +281,8 @@ export const vines = defineEffect(vinesMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
-      let warmed = false;
+      /** Seconds of growth still to catch up on, so the wall opens part-grown. */
+      let prewarm = PREWARM;
       const f: VineFrame = {
         refWidth: 1920,
         type: PLANTS.ivy,
@@ -359,12 +363,15 @@ export const vines = defineEffect(vinesMeta, {
           f.density = p.density;
           f.border = p.border;
           f.flowers = p.flowers;
-          if (!warmed) {
-            // Start part-grown rather than on a bare wall.
-            warmed = true;
-            for (let t = 0; t < PREWARM; t += 0.1) {
-              sim.step(0.1, f);
-            }
+          // Start part-grown rather than on a bare wall: the catch-up runs within a
+          // small CPU budget per frame, so the vines grow in over the first moments
+          // instead of stalling the first frame.
+          if (prewarm > 0) {
+            const end = performance.now() + PREWARM_BUDGET_MS;
+            do {
+              sim.step(PREWARM_STEP, f);
+              prewarm -= PREWARM_STEP;
+            } while (prewarm > 0 && performance.now() < end);
           }
           sim.step(dt, f);
           uploadSegments();
