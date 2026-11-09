@@ -49,16 +49,6 @@ export const DESIGN_ASPECT = 16 / 9;
 /** A box: centre x, y and half width, half height. */
 export type Box = readonly [number, number, number, number];
 
-/**
- * Design units per frame unit's worth of the frame's height: 1 at 16:9 and
- * wider (wider frames show more wall at the sides), less for narrower frames,
- * which show the whole room smaller, with more wall and ceiling above it.
- */
-export function fitScale(aspect: number): number {
-  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DESIGN_ASPECT;
-  return Math.min(1, a / DESIGN_ASPECT);
-}
-
 /** Where the back wall meets the ceiling. */
 export const CEILING_Y = 0.39;
 /** The desk: its back edge, the top of its front edge, and how far it reaches towards the middle. */

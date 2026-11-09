@@ -33,7 +33,6 @@ import {
   DESK_BACK,
   DESK_END,
   DESK_FRONT,
-  fitScale,
   GLYPH_SCALE,
   HEADLIGHT_WIDTH,
   headlightAt,
@@ -80,6 +79,7 @@ import {
 } from "./bedroom80s-sim";
 import { bedroom80sMeta } from "./bedroom80s.meta";
 import { SDF2D_GLSL } from "../sdf-glsl";
+import { fitScale } from "../scene-layout";
 
 const g = glslFloat;
 const v3 = (c: readonly number[]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;

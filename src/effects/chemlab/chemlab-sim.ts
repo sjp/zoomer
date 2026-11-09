@@ -34,15 +34,6 @@ export const HALF_W = DESIGN_ASPECT / 2;
 /** The middle third's half width: the speaker's place. */
 export const MIDDLE = HALF_W / 3;
 
-/**
- * Design units per frame unit's worth of the frame's height: 1 at 16:9 and
- * wider, less for narrower frames, which show the whole room smaller.
- */
-export function fitScale(aspect: number): number {
-  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DESIGN_ASPECT;
-  return Math.min(1, a / DESIGN_ASPECT);
-}
-
 /** A box: centre x, y and half width, half height. */
 export type Box = readonly [number, number, number, number];
 

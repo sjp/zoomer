@@ -14,7 +14,6 @@ import {
   DEMO_W,
   DESIGN_ASPECT,
   FIRST_SWEEP,
-  fitScale,
   HEADLIGHT_PEAK,
   headlightAt,
   KEYBOARD,
@@ -52,6 +51,7 @@ import {
   WINDOW,
   type Box,
 } from "./bedroom80s-sim";
+import { fitScale } from "../scene-layout";
 
 const codesFor = (text: string) => {
   const codes = new Uint8Array(MAX_CODES);

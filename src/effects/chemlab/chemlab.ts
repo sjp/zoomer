@@ -43,7 +43,6 @@ import {
   CYLINDER,
   distillateAt,
   DROP,
-  fitScale,
   FLAME,
   FLAME_H,
   FLAME_W,
@@ -87,6 +86,7 @@ import {
 } from "./chemlab-sim";
 import { chemlabMeta } from "./chemlab.meta";
 import { SDF2D_GLSL } from "../sdf-glsl";
+import { fitScale } from "../scene-layout";
 
 const g = glslFloat;
 const v3 = (c: readonly number[]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
