@@ -121,12 +121,11 @@ framebuffer and `FUNC_ADD` left at the end of each frame.
 
 ## Deploying
 
-Pushing to `main` deploys the site to GitHub Pages: `.github/workflows/deploy.yml` runs
-`npm run check`, `npm test`, `npm run test:perf`, `npm run build` and `npm run test:browser`, then
-publishes `dist/`. The build uses a
-relative base path, so it works from a project subpath. `.github/workflows/ci.yml` runs the
-same checks on every push and pull request, and Dependabot keeps npm packages and action
-versions up to date.
+`.github/workflows/ci.yml` runs `npm run check`, `npm test`, `npm run test:perf`,
+`npm run build` and `npm run test:browser` on every push and pull request. On `main` (a push or
+a manual run), a final job publishes that same checked `dist/` to GitHub Pages, so nothing is
+built twice and only a passing build is deployed. The build uses a relative base path, so it
+works from a project subpath. Dependabot keeps npm packages and action versions up to date.
 
 The built `index.html` carries a Content-Security-Policy `<meta>` tag, since Pages can't send
 headers. It is added at build time only (see `vite.config.ts`), because the dev server needs
