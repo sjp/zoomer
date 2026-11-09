@@ -12,8 +12,8 @@ import { createNoise, createRng } from "../noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
 import { firefliesMeta, MAX_SPECKS, MAX_BEAMS } from "./fireflies.meta";
 import { defineEffect } from "../types";
-import { clamp, smoothstep, wrap } from "../math";
-import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
+import { clamp, smoothstep } from "../math";
+import { FADE_OUT, growLive, stepLife, trimLive, driftPoint } from "../fade";
 import { unitRgbMemo } from "../color";
 
 /** Sprite extent (where the halo reaches zero) relative to the `size` param. */
@@ -357,19 +357,17 @@ export const fireflies = defineEffect(firefliesMeta, {
             const sp = drift * pace[i];
             const radius = baseRadius * radiusK[i];
             const margin = radius;
-            // Wrap within a margin of the edges, so the jump is off-screen.
-            const mx = xs[i] + Math.cos(heading[i]) * sp * dt;
-            // Dust also settles very slowly, as it does in still air.
-            const my = ys[i] + (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt;
-            const x = wrap(mx, -margin, refWidth + 2 * margin);
-            const y = wrap(my, -margin, 1080 + 2 * margin);
-            xs[i] = x;
-            ys[i] = y;
-            // The margin shrinks with the size, so a wrap can land a speck on-screen:
-            // fade it in at its new place.
-            if (x !== mx || y !== my) {
+            // Wrap within a margin of the edges, so the jump is off-screen. The margin
+            // shrinks with the size, so a wrap can land a speck on-screen: fade it in
+            // at its new place. Dust also settles very slowly, as it does in still air.
+            const dx = Math.cos(heading[i]) * sp * dt;
+            const dy = (Math.sin(heading[i]) * sp + (dust ? drift * 0.25 : 0)) * dt;
+            const span = 2 * margin;
+            if (driftPoint(xs, ys, i, dx, dy, -margin, -margin, refWidth + span, 1080 + span)) {
               life[i] = 0;
             }
+            const x = xs[i];
+            const y = ys[i];
             const l = stepLife(life, i, target, fadeStep, outStep);
 
             let level: number;

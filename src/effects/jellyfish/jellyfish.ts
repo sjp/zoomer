@@ -21,8 +21,7 @@ import {
   STRIP_FLOATS,
   STRIP_VERTS,
 } from "./jellyfish-sim";
-import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
-import { wrap } from "../math";
+import { FADE_OUT, growLive, stepLife, trimLive, driftPoint } from "../fade";
 import { createNoise, createRng } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import {
@@ -237,15 +236,12 @@ export const jellyfish = defineEffect(jellyfishMeta, {
           for (let i = 0; i < snowLive; i++) {
             const z = snowZ[i];
             const pace = 0.4 + 0.6 * z;
-            const mx = snowX[i] + noise.noise2(time * 0.07, snowSeed[i]) * 6 * pace * dt;
-            const my = snowY[i] + 7 * pace * dt;
-            const x = wrap(mx, -6, refWidth + 12);
-            const y = wrap(my, -6, 1092);
-            snowX[i] = x;
-            snowY[i] = y;
-            if (x !== mx || y !== my) {
+            const dx = noise.noise2(time * 0.07, snowSeed[i]) * 6 * pace * dt;
+            if (driftPoint(snowX, snowY, i, dx, 7 * pace * dt, -6, -6, refWidth + 12, 1092)) {
               snowLife[i] = 0;
             }
+            const x = snowX[i];
+            const y = snowY[i];
             const l = stepLife(snowLife, i, target, inStep, outStep);
             const a = (0.25 + 0.45 * z) * l;
             if (a <= 0.003) {
