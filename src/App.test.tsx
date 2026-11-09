@@ -12,13 +12,21 @@ vi.mock("./components/EffectCanvas", () => ({
   EffectCanvas: ({ ref }: { ref?: Ref<HTMLCanvasElement> }) => <canvas ref={ref} />,
 }));
 
-// A recording that runs until the test finishes it.
-let finishRecording: (() => void) | undefined;
+// A recording that runs until the test finishes it, at the asked-for length by default.
+let finishRecording: ((seconds?: number) => void) | undefined;
+let recordingProgress: ((seconds: number) => void) | undefined;
 vi.mock("./lib/recorder", () => ({
-  recordCanvas: () =>
+  recordCanvas: (
+    _canvas: unknown,
+    seconds: number,
+    _fps: unknown,
+    _frames: unknown,
+    onProgress?: (seconds: number) => void,
+  ) =>
     new Promise((resolve) => {
-      finishRecording = () => {
-        resolve({ blob: new Blob(), extension: "mp4" });
+      recordingProgress = onProgress;
+      finishRecording = (length = seconds) => {
+        resolve({ blob: new Blob(), extension: "mp4", seconds: length });
       };
     }),
   download: () => undefined,
@@ -69,6 +77,7 @@ beforeEach(() => {
   window.localStorage.clear();
   setHash("");
   finishRecording = undefined;
+  recordingProgress = undefined;
 });
 afterEach(() => {
   finishRecording?.();
@@ -146,6 +155,36 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Record clip" })).toBeTruthy();
     });
+  });
+
+  it("counts the recording down by its own clock", async () => {
+    render(<App />);
+    await whenReady();
+    fireEvent.click(screen.getByRole("button", { name: "Record clip" }));
+    expect(screen.getByRole("button", { name: "Recording… 20s" })).toBeTruthy();
+    act(() => {
+      recordingProgress?.(2.5);
+    });
+    expect(screen.getByRole("button", { name: "Recording… 18s" })).toBeTruthy();
+    await act(async () => {
+      finishRecording?.();
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Record clip" })).toBeTruthy();
+    });
+    expect(document.querySelector(".toast")).toBeNull();
+  });
+
+  it("says when a clip came out shorter than asked", async () => {
+    render(<App />);
+    await whenReady();
+    fireEvent.click(screen.getByRole("button", { name: "Record clip" }));
+    await act(async () => {
+      finishRecording?.(3.2);
+      await Promise.resolve();
+    });
+    expect(await screen.findByText(/stopped early, at 3\.2 s of 20 s/)).toBeTruthy();
   });
 
   it("H toggles the panel", () => {

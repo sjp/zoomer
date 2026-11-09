@@ -28,6 +28,8 @@ function initialState() {
 
 /** How long the URL waits for params to settle before updating, in ms. */
 const HASH_DEBOUNCE = 250;
+/** How much shorter than asked a clip can come out before the user is told, in s. */
+const SHORT_CLIP_TOLERANCE = 0.5;
 /** How long a toast stays up, in ms. */
 const TOAST_MS = 2500;
 
@@ -360,25 +362,30 @@ export function App() {
     setRecordingLeft(seconds);
     // The list is locked while recording; don't bring it back when the recording ends.
     setListOpen(false);
-    const countdown = setInterval(() => {
-      setRecordingLeft((s) => (s === undefined ? s : Math.max(0, s - 1)));
-    }, 1000);
     try {
-      const { blob, extension } = await recordCanvas(
+      const clip = await recordCanvas(
         canvas,
         seconds,
         FRAME_RATES[frameRate].fps ?? 60,
         subscribeFrames,
+        // The countdown follows the recording's own clock, so it pauses with the frames.
+        (elapsed) => {
+          setRecordingLeft(Math.max(0, Math.ceil(seconds - elapsed)));
+        },
       );
       download(
-        blob,
-        `zoomer-${effect.id}-${String(canvas.width)}x${String(canvas.height)}.${extension}`,
+        clip.blob,
+        `zoomer-${effect.id}-${String(canvas.width)}x${String(canvas.height)}.${clip.extension}`,
       );
+      if (clip.seconds < seconds - SHORT_CLIP_TOLERANCE) {
+        showToast(
+          `The clip stopped early, at ${clip.seconds.toFixed(1)} s of ${String(seconds)} s: frames stopped arriving (keep the tab visible while recording)`,
+        );
+      }
     } catch (err) {
       // oxlint-disable-next-line eslint/no-alert -- a failed recording needs a blocking, dismissable message; the toast is for transient notices
       window.alert(err instanceof Error ? err.message : String(err));
     } finally {
-      clearInterval(countdown);
       setRecordingLeft(undefined);
     }
   };
