@@ -338,7 +338,8 @@ export const radar = defineEffect(radarMeta, {
       const noise = rgba8(NOISE_SIZE, NOISE_SIZE, getNoiseData(), gl.REPEAT);
       const lutData = new Uint8Array(SCALE_SIZE * 4);
       const lut = rgba8(SCALE_SIZE, 1, lutData);
-      const labelTex = rgba8(1, 1, new Uint8Array(4));
+      const EMPTY_TEXEL = new Uint8Array(4);
+      const labelTex = rgba8(1, 1, EMPTY_TEXEL);
       const stampTex = rgba8(1, 1, new Uint8Array(4));
       // Until the land mask loads: one "far out at sea" texel.
       const mask = scope.add(
@@ -428,7 +429,6 @@ export const radar = defineEffect(radarMeta, {
       let weatherTime = 0;
       let frontTravel = 0;
       let sweepAngle = 0;
-      let labelCanvas: OffscreenCanvas | undefined;
       let stampCanvas: OffscreenCanvas | undefined;
 
       let width = 1;
@@ -451,9 +451,13 @@ export const radar = defineEffect(radarMeta, {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, c);
       };
 
-      /** Draws the place labels for the current terrain onto a canvas-sized texture. */
+      /**
+       * Draws the place labels for the current terrain onto a canvas-sized
+       * texture, for one bake only: the canvas is dropped once uploaded, and
+       * `releaseLabels` shrinks the texture after the bake.
+       */
       const drawLabels = (seed: number, paletteId: string): boolean => {
-        labelCanvas = canvas2d(labelCanvas, width, height);
+        const labelCanvas = canvas2d(undefined, width, height);
         const ctx = labelCanvas?.getContext("2d");
         if (!labelCanvas || !ctx) {
           return false;
@@ -477,6 +481,14 @@ export const radar = defineEffect(radarMeta, {
         }
         uploadCanvas(labelTex, labelCanvas);
         return true;
+      };
+      /** Shrinks the label texture back to one texel once the bake has read it. */
+      const releaseLabels = () => {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, labelTex);
+        resetUnpackState(gl);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, EMPTY_TEXEL);
+        gl.bindTexture(gl.TEXTURE_2D, null);
       };
 
       const bakeMap = (region: string, seed: number, paletteId: string) => {
@@ -514,6 +526,9 @@ export const radar = defineEffect(radarMeta, {
         triangle.draw();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.activeTexture(gl.TEXTURE0);
+        if (labels) {
+          releaseLabels();
+        }
       };
 
       const drawStamp = (ms: number, paletteId: string, w: number, h: number) => {
