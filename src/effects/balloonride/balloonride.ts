@@ -30,6 +30,7 @@ import { defineEffect } from "../types";
 import { balloonrideMeta, MAX_OTHERS } from "./balloonride.meta";
 import {
   buildLandscape,
+  createRecentCache,
   burnerGlow,
   CAMERA_HEIGHT,
   createBurner,
@@ -65,29 +66,11 @@ const f = glslFloat;
 const TAU = Math.PI * 2;
 
 /**
- * The last few landscape maps built, by seed, most recent last: each takes a
- * good fraction of a second to build, and stepping back and forth between
- * variations (or opening the scene again) needn't build them again.
+ * The last few landscape maps built, by seed: each takes a good fraction of a
+ * second to build, and stepping back and forth between variations (or opening
+ * the scene again) needn't build them again.
  */
-const landscapes = new Map<number, Uint8Array>();
-const KEEP_LANDSCAPES = 3;
-
-function landscapeFor(seed: number): Uint8Array {
-  let map = landscapes.get(seed);
-  if (map) {
-    landscapes.delete(seed);
-  } else {
-    map = buildLandscape(seed);
-    for (const oldest of landscapes.keys()) {
-      if (landscapes.size < KEEP_LANDSCAPES) {
-        break;
-      }
-      landscapes.delete(oldest);
-    }
-  }
-  landscapes.set(seed, map);
-  return map;
-}
+const landscapeFor = createRecentCache(3, (seed: number) => buildLandscape(seed));
 
 /** The landscape is soft and hazy, so it renders every frame at 1/3 size. */
 const OUTSIDE_DIVISOR = 3;

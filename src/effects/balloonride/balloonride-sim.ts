@@ -458,6 +458,32 @@ const unit = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const wrapDiff = (d: number, n: number) => d - n * Math.round(d / n);
 
 /**
+ * `build(key)`, remembered for the `keep` keys most recently asked for: the
+ * least recently used is dropped when a new key would exceed `keep`.
+ */
+export function createRecentCache<K, V>(keep: number, build: (key: K) => V): (key: K) => V {
+  // A Map iterates in insertion order, so re-inserting on each use keeps the
+  // least recently used first.
+  const entries = new Map<K, V>();
+  return (key) => {
+    const cached = entries.get(key);
+    const value = cached ?? build(key);
+    if (cached === undefined) {
+      for (const oldest of entries.keys()) {
+        if (entries.size < keep) {
+          break;
+        }
+        entries.delete(oldest);
+      }
+    } else {
+      entries.delete(key);
+    }
+    entries.set(key, value);
+    return value;
+  };
+}
+
+/**
  * The landscape map for `seed`: `MAP_SIZE` square, RGBA8, colour in RGB and
  * the height of hedges, trees and roofs in A. It tiles in both directions.
  */

@@ -6,6 +6,7 @@ import {
   BURN_MIN,
   BURN_RAMP,
   buildLandscape,
+  createRecentCache,
   burnerGap,
   burnerGlow,
   createBurner,
@@ -278,5 +279,48 @@ describe("createLightEase", () => {
       end = ease.step(TIMES.midday, 1 / 60);
     }
     expect(end).toBe(TIMES.midday);
+  });
+});
+
+describe("createRecentCache", () => {
+  const counting = () => {
+    const built: number[] = [];
+    const get = createRecentCache(3, (k: number) => {
+      built.push(k);
+      return { k };
+    });
+    return { built, get };
+  };
+
+  it("builds each key once while it stays cached", () => {
+    const { built, get } = counting();
+    const a = get(1);
+    expect(get(1)).toBe(a);
+    get(2);
+    get(3);
+    expect(get(1)).toBe(a);
+    expect(built).toEqual([1, 2, 3]);
+  });
+
+  it("keeps the three most recently used, dropping the least recently used", () => {
+    const { built, get } = counting();
+    get(1);
+    get(2);
+    get(3);
+    // Using 1 again makes 2 the least recently used, so 4 drops it.
+    get(1);
+    get(4);
+    get(1);
+    get(3);
+    get(4);
+    expect(built).toEqual([1, 2, 3, 4]);
+    get(2);
+    expect(built).toEqual([1, 2, 3, 4, 2]);
+    // 2 pushed out the least recently used of 1, 3, 4: 1.
+    get(3);
+    get(4);
+    expect(built).toHaveLength(5);
+    get(1);
+    expect(built).toEqual([1, 2, 3, 4, 2, 1]);
   });
 });
