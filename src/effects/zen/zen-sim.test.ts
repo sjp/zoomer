@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  BIG_STONE,
   BOX_N,
   createRerake,
   fillStoneLayout,
   GAP,
   inCentre,
+  maxRingRadius,
   placeStones,
   rakePhase,
   RERAKE_DURATION,
   RERAKE_INTERVAL,
   RING_STEEP,
   ringRadius,
+  SMALL_STONE,
   STONE_FLOATS,
   STONE_PAD,
   stepRerake,
@@ -430,5 +433,29 @@ describe("rerake", () => {
     stepRerake(s, -5, true);
     stepRerake(s, Infinity, true);
     expect(s.idle).toBe(0);
+  });
+});
+
+describe("maxRingRadius", () => {
+  it("bounds every stone's rings at any spacing and line slope", () => {
+    for (const radius of [SMALL_STONE[0], SMALL_STONE[1], BIG_STONE[0], BIG_STONE[1], 63.7]) {
+      const max = maxRingRadius(radius);
+      let reached = 0;
+      for (let spacing = SPACING_MIN; spacing <= SPACING_MAX; spacing += 0.5) {
+        // The phase field's gradient is at least 1 (the lines only ever slope).
+        for (const g of [1, 1.05, 1.3, 2]) {
+          const r = ringRadius(radius, spacing, g);
+          expect(r).toBeLessThanOrEqual(max);
+          reached = Math.max(reached, r);
+        }
+      }
+      // Tight: within one widest spacing of the largest rings reached.
+      expect(max - reached).toBeLessThan(SPACING_MAX);
+    }
+  });
+
+  it("grows with the stone", () => {
+    expect(maxRingRadius(BIG_STONE[1])).toBeGreaterThan(maxRingRadius(SMALL_STONE[0]));
+    expect(maxRingRadius(0)).toBeGreaterThan(0);
   });
 });
