@@ -101,6 +101,28 @@ describe("ControlPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reload page" }));
     expect(onReload).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    // 6 ms on a 120 Hz display is within budget; 10 ms misses every other refresh.
+    ["display", 6, 1000 / 120, "ok"],
+    ["display", 7, 1000 / 120, "warn"],
+    ["display", 10, 1000 / 120, "bad"],
+    ["display", 10, 1000 / 60, "ok"],
+    // A 30 fps cap allows 33 ms whatever the display.
+    ["30", 20, 1000 / 120, "ok"],
+  ] as const)(
+    "meters frame rate %s at %d ms against the display interval",
+    (frameRate, frameMs, displayMs, level) => {
+      const stats = createStore<FrameStats | undefined>({
+        fps: 120,
+        frameMs,
+        source: "gpu",
+        displayMs,
+      });
+      renderPanel({ frameRate, stats });
+      expect(document.querySelector(".fps-meter")?.getAttribute("data-level")).toBe(level);
+    },
+  );
 });
 
 function renderPanelList() {

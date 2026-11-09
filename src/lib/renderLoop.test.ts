@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AnyParamValues, EffectDefinition, Viewport } from "../effects/types";
+import { defined } from "../test/defined";
 import { createFakeGl } from "../test/fake-gl";
 import type { FrameRate } from "./frameRate";
 import {
   createRenderLoop,
   fitSize,
   MAX_FIT_PIXELS,
+  medianOf,
   STATS_INTERVAL,
   type FrameStats,
   type LoopCanvas,
@@ -151,6 +153,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("medianOf", () => {
+  it("takes the middle of the first count values", () => {
+    expect(medianOf(new Float64Array([5, 1, 3, 99]), 3)).toBe(3);
+    expect(medianOf(new Float64Array([4, 1, 3, 2]), 4)).toBe(2.5);
+  });
+});
+
 describe("fitSize", () => {
   it("multiplies the layout size by the device pixel ratio", () => {
     expect(fitSize(800, 450, 1)).toEqual({ width: 800, height: 450 });
@@ -212,6 +221,32 @@ describe("createRenderLoop", () => {
     expect(stats[0].fps).toBeCloseTo(60, 0);
     expect(stats[0].source).toBe("cpu");
     expect(STATS_INTERVAL).toBeLessThan(40 * (1000 / 60));
+  });
+
+  it("estimates the display interval from the frame callbacks", () => {
+    const t = start();
+    t.setFrameRate("30");
+    for (let i = 0; i < 100; i++) {
+      // 120 Hz with jitter and the odd long gap.
+      t.step(i % 10 === 9 ? 25 : 1000 / 120 + (i % 2 === 0 ? 0.2 : -0.2));
+    }
+    const stats = t.onStats.mock.calls.map(([s]) => s).filter((s) => s !== undefined);
+    expect(stats.length).toBeGreaterThan(0);
+    expect(defined(stats.at(-1)).displayMs).toBeCloseTo(1000 / 120, 0);
+  });
+
+  it("keeps the shortest display interval when an effect starts missing frames", () => {
+    const t = start();
+    for (let i = 0; i < 80; i++) {
+      t.step(1000 / 120);
+    }
+    // Every other refresh missed: the callbacks now come at 60 Hz.
+    for (let i = 0; i < 80; i++) {
+      t.step(1000 / 60);
+    }
+    const last = defined(t.onStats.mock.calls.at(-1)?.[0]);
+    expect(last.fps).toBeCloseTo(60, 0);
+    expect(last.displayMs).toBeCloseTo(1000 / 120, 1);
   });
 
   it("draws every 4th frame for a 30 fps cap on a 120 Hz display", () => {

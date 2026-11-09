@@ -23,10 +23,29 @@ export interface FrameStats {
   frameMs: number;
   /** Which clock `frameMs` comes from. */
   source: "gpu" | "cpu";
+  /**
+   * The display's refresh interval in ms, estimated from the animation frame
+   * callbacks: the median gap between them in a sample window, and the shortest such
+   * median since the loop started (so a window where the effect kept missing frames,
+   * and the gaps doubled, can't pass for a slower display).
+   */
+  displayMs: number;
 }
 
 /** How often stats are reported, in ms. */
 export const STATS_INTERVAL = 500;
+
+/** Frame gaps kept per stats window; at 240 Hz a window holds 120. */
+const MAX_INTERVALS = 256;
+/** Assumed until the first window has measured the display. */
+const DEFAULT_DISPLAY_MS = 1000 / 60;
+
+/** The median of the first `count` values (copied, once per stats window). */
+export function medianOf(values: Float64Array, count: number): number {
+  const sorted = values.subarray(0, count).toSorted();
+  const mid = count >> 1;
+  return count % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
 
 const MAX_DPR = 2;
 /**
@@ -299,8 +318,17 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
   let gpuMs: number | undefined;
   // Whether the meter currently shows this effect's stats.
   let statsShown = false;
+  // Gaps between frame callbacks this window, drawn or not, to estimate the display rate.
+  const intervals = new Float64Array(MAX_INTERVALS);
+  let intervalCount = 0;
+  let lastTick: number | undefined;
+  let displayMs: number | undefined;
   const tick = (now: number) => {
     raf = host.requestFrame(tick);
+    if (lastTick !== undefined && intervalCount < MAX_INTERVALS) {
+      intervals[intervalCount++] = now - lastTick;
+    }
+    lastTick = now;
     if (!instance) {
       // Failed, crashed, or waiting for a lost context: hide the meter and restart
       // the sample window so stale numbers never show.
@@ -312,6 +340,7 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
       statsFrames = 0;
       statsWork = 0;
       gpuMs = undefined;
+      intervalCount = 0;
       last = now;
       return;
     }
@@ -336,10 +365,15 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
     const elapsed = now - statsStart;
     if (elapsed >= STATS_INTERVAL) {
       gpuMs = gpuTimer?.takeAverage() ?? gpuMs;
+      if (intervalCount > 0) {
+        displayMs = Math.min(displayMs ?? Infinity, medianOf(intervals, intervalCount));
+      }
+      intervalCount = 0;
       reportStats({
         fps: (statsFrames * 1000) / elapsed,
         frameMs: gpuMs ?? statsWork / statsFrames,
         source: gpuMs === undefined ? "cpu" : "gpu",
+        displayMs: displayMs ?? DEFAULT_DISPLAY_MS,
       });
       statsShown = true;
       statsStart = now;

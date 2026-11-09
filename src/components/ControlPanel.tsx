@@ -249,7 +249,8 @@ export function ControlPanel(props: Props) {
 /**
  * Live performance readout. Frame time is the GPU cost of the effect's draw calls
  * where the browser supports timer queries, otherwise the CPU cost of issuing them;
- * it turns amber past 75% of the frame budget and red once over it.
+ * it turns amber past 75% of the frame budget and red once over it. The budget is the
+ * display's refresh interval, or the capped rate's interval if that is longer.
  */
 function FpsMeter({
   stats,
@@ -262,18 +263,20 @@ function FpsMeter({
   if (!current) {
     return null;
   }
-  const budget = 1000 / (target ?? 60);
+  // "Match display" draws once per refresh, so the budget is the display's interval;
+  // a cap can only lengthen it.
+  const budget = Math.max(current.displayMs, target === undefined ? 0 : 1000 / target);
   const load = current.frameMs / budget;
   const level = load > 1 ? "bad" : load > 0.75 ? "warn" : "ok";
   return (
     <div
       className="fps-meter"
       data-level={level}
-      title={
+      title={`${
         current.source === "gpu"
           ? "Frames per second, and average GPU time each frame takes to draw"
           : "Frames per second, and average CPU time each frame takes to submit (GPU timing is unavailable in this browser)"
-      }
+      }. Budget ${budget.toFixed(1)} ms a frame (display ≈ ${String(Math.round(1000 / current.displayMs))} Hz).`}
     >
       <span>{Math.round(current.fps)} fps</span>
       <span>
