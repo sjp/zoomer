@@ -169,3 +169,19 @@ describe("condensation mask", () => {
     expect(stray).toBe(0);
   });
 });
+
+describe("narrow canvases", () => {
+  it.each([0.02, 0.05, 0.1, 0.3])(
+    "keeps every pane on a canvas %s wide and the right way round",
+    (aspect) => {
+      for (const layout of ["four", "six", "frame"] as const) {
+        for (const [x0, y0, x1, y1] of windowPanes(layout, aspect)) {
+          expect(x0).toBeGreaterThanOrEqual(0);
+          expect(x1).toBeLessThanOrEqual(aspect);
+          expect(x1).toBeGreaterThan(x0);
+          expect(y1).toBeGreaterThan(y0);
+        }
+      }
+    },
+  );
+});

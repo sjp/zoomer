@@ -44,16 +44,26 @@ export const sceneIndex = (value: string): number =>
  */
 export const faceArea = (aspect: number): Rect => [aspect / 3, 0.2, (aspect * 2) / 3, 0.75];
 
-/** The window opening inside the frame. */
-export const interior = (aspect: number): Rect => [
-  FRAME_SIDE,
-  FRAME_BOTTOM,
-  Math.max(FRAME_SIDE + 0.1, aspect - FRAME_SIDE),
-  1 - FRAME_TOP,
-];
+/**
+ * The window opening inside the frame. On a very narrow canvas the side frame
+ * thins so the opening stays on the canvas.
+ */
+export const interior = (aspect: number): Rect => {
+  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+  const side = Math.min(FRAME_SIDE, a * 0.1);
+  return [side, FRAME_BOTTOM, a - side, 1 - FRAME_TOP];
+};
 
-/** `cols` panes side by side across [x0, x1], with glazing bars between them. */
-function row(out: Rect[], x0: number, x1: number, y0: number, y1: number, cols: number): void {
+/** Narrowest pane a row keeps; a row too narrow for its columns drops some. */
+const MIN_PANE = BAR;
+
+/**
+ * Up to `cols` panes side by side across [x0, x1], with glazing bars between
+ * them: as many as fit at least `MIN_PANE` wide.
+ */
+function row(out: Rect[], x0: number, x1: number, y0: number, y1: number, want: number): void {
+  const fit = Math.floor((x1 - x0 + BAR) / (MIN_PANE + BAR));
+  const cols = Math.max(1, Math.min(want, fit));
   const w = (x1 - x0 - BAR * (cols - 1)) / cols;
   for (let c = 0; c < cols; c++) {
     const left = x0 + c * (w + BAR);
