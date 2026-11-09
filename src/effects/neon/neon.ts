@@ -33,7 +33,10 @@ import {
 import { neonMeta, type NeonPosition } from "./neon.meta";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
+import { createSettledValue } from "../rebuild";
 
+/** Seconds the text and the canvas aspect must hold still before the sign is rebuilt. */
+const INPUT_SETTLE = 0.3;
 /**
  * A rounded system font stack at a light weight, so the strokes are thin and even
  * like bent tube. No font is bundled.
@@ -250,6 +253,8 @@ export const neon = defineEffect(neonMeta, {
       upload(fieldTex, 1, 1, gl.RGBA16F, gl.RGBA, new Float32Array(4));
       upload(glowTex, 1, 1, gl.RG16F, gl.RG, new Float32Array(2));
 
+      const settledText = createSettledValue<string>(INPUT_SETTLE);
+      const settledAspect = createSettledValue<number>(INPUT_SETTLE);
       /** Lays out and rasterises the text, then rebuilds the field and glow textures. */
       const build = (text: string, position: NeonPosition, aspect: number) => {
         const lines = signLines(text);
@@ -365,11 +370,15 @@ export const neon = defineEffect(neonMeta, {
           const aspect = width / height;
           const position: NeonPosition =
             p.position === "left" || p.position === "right" ? p.position : "centre";
-          if (p.text !== builtText || position !== builtPosition || aspect !== builtAspect) {
-            build(p.text, position, aspect);
-            builtText = p.text;
+          // Typing and window resizes rebuild once they pause; the sign keeps its old
+          // text (stretched with the canvas, if need be) until then.
+          const text = settledText.update(p.text, dt);
+          const signAspect = settledAspect.update(aspect, dt);
+          if (text !== builtText || position !== builtPosition || signAspect !== builtAspect) {
+            build(text, position, signAspect);
+            builtText = text;
             builtPosition = position;
-            builtAspect = aspect;
+            builtAspect = signAspect;
           }
           const shimmer = Math.min(1, Math.max(0, p.shimmer));
 
