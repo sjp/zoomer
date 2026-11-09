@@ -15,6 +15,7 @@ import { createRng } from "../noise";
 import { STREAK_FLOATS } from "../streaks";
 import { lookup } from "../lookup";
 import { createSwell, type Swell } from "../sway";
+import { ribbonStrip } from "../sprites";
 
 const TAU = Math.PI * 2;
 
@@ -616,13 +617,7 @@ export const MAX_LEAVES = LEAF_LAYERS.reduce(
 
 /** Segments along a leaf's midrib, and the strip: (segment index, side) per vertex. */
 export const LEAF_SEGMENTS = 16;
-export const LEAF_STRIP: readonly number[] = (() => {
-  const out: number[] = [];
-  for (let i = 0; i <= LEAF_SEGMENTS; i++) {
-    out.push(i, -1, i, 1);
-  }
-  return out;
-})();
+export const LEAF_STRIP: readonly number[] = ribbonStrip(LEAF_SEGMENTS);
 
 export interface Leaf {
   readonly layer: number;

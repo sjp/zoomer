@@ -15,6 +15,7 @@ import { clamp } from "../math";
 import { createRng } from "../noise";
 import { createSwell, type Swell } from "../sway";
 import type { LightId, SpeciesId } from "./aquarium.meta";
+import { ribbonStrip } from "../sprites";
 
 const TAU = Math.PI * 2;
 
@@ -127,13 +128,7 @@ export const SWELL_TRAVEL = 2.5;
 
 /** Segments per plant strip, and the strip: (level, side) per vertex. */
 export const PLANT_SEGMENTS = 16;
-export const PLANT_STRIP: readonly number[] = (() => {
-  const out: number[] = [];
-  for (let i = 0; i <= PLANT_SEGMENTS; i++) {
-    out.push(i, -1, i, 1);
-  }
-  return out;
-})();
+export const PLANT_STRIP: readonly number[] = ribbonStrip(PLANT_SEGMENTS);
 
 /**
  * Floats per plant: (x, base y, height, half width) then (swell phase, lag, lean,

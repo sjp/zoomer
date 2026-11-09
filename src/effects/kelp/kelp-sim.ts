@@ -10,6 +10,7 @@ import type { Rgb } from "../color";
 import { clamp } from "../math";
 import { createRng } from "../noise";
 import { createSwell, swayOffset, type Swell } from "../sway";
+import { ribbonStrip } from "../sprites";
 
 const TAU = Math.PI * 2;
 
@@ -32,13 +33,7 @@ export const SWELL_TRAVEL = 3;
 
 /** Segments per frond strip, and the strip itself: (level, side) per vertex. */
 export const SEGMENTS = 20;
-export const FROND_STRIP: readonly number[] = (() => {
-  const out: number[] = [];
-  for (let i = 0; i <= SEGMENTS; i++) {
-    out.push(i, -1, i, 1);
-  }
-  return out;
-})();
+export const FROND_STRIP: readonly number[] = ribbonStrip(SEGMENTS);
 
 /** Floats per frond instance: (x, height, half width, profile row) and (phase, lag, lean, tone). */
 export const FROND_FLOATS = 8;

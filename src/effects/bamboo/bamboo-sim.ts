@@ -14,6 +14,7 @@ import { glslFloat } from "../gl";
 import { clamp, fract } from "../math";
 import { createRng } from "../noise";
 import { createSwell, swayAt, type Swell } from "../sway";
+import { ribbonStrip } from "../sprites";
 
 const TAU = Math.PI * 2;
 
@@ -114,13 +115,7 @@ export function swaySpeed(wind: number): number {
 
 /** Segments per stem strip, and the strip itself: (level, side) per vertex. */
 export const SEGMENTS = 16;
-export const STEM_STRIP: readonly number[] = (() => {
-  const out: number[] = [];
-  for (let i = 0; i <= SEGMENTS; i++) {
-    out.push(i, -1, i, 1);
-  }
-  return out;
-})();
+export const STEM_STRIP: readonly number[] = ribbonStrip(SEGMENTS);
 /** Strips run from just below the frame to just above it. */
 export const STRIP_BOTTOM = 1.03;
 export const STRIP_TOP = -0.04;
