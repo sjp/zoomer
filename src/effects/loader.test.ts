@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEffectLoader, createLatest, whenIdle, type EffectEntry } from "./loader";
 import { defineEffect, defineEffectMeta, type EffectDefinition } from "./types";
 
@@ -97,6 +97,14 @@ describe("createEffectLoader", () => {
 });
 
 describe("createLatest", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("passes on only the latest request's result when loads finish out of order", async () => {
     const latest = createLatest<string>();
     const a = deferred<string>();
@@ -135,9 +143,7 @@ describe("createLatest", () => {
         errors.push(e);
       },
     );
-    await new Promise((resolve) => {
-      setTimeout(resolve);
-    });
+    await vi.advanceTimersByTimeAsync(0);
     expect(errors).toEqual([failure]);
   });
 
@@ -152,9 +158,7 @@ describe("createLatest", () => {
       () => {},
     );
     latest.cancel();
-    await new Promise((resolve) => {
-      setTimeout(resolve);
-    });
+    await vi.advanceTimersByTimeAsync(0);
     expect(results).toEqual([]);
   });
 });

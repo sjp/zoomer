@@ -96,11 +96,8 @@ function frameSource() {
 const canvas = (width = 640, height = 360) => ({ width, height }) as HTMLCanvasElement;
 const opts = { seconds: 1, fps: 30, bitrate: 2_000_000 };
 
-/** Lets queued encoder promises run. */
-const flush = () =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, 0);
-  });
+/** Lets queued encoder promises run, without moving the (fake) clock. */
+const flush = () => vi.advanceTimersByTimeAsync(0);
 
 beforeEach(() => {
   Object.assign(seen, {
@@ -113,6 +110,7 @@ beforeEach(() => {
   });
   vi.stubGlobal("VideoFrame", FakeVideoFrame);
   vi.stubGlobal("VideoEncoder", vi.fn());
+  vi.useFakeTimers();
 });
 
 afterEach(() => {
@@ -198,10 +196,9 @@ describe("recordMp4", () => {
   });
 
   it("ends with what it has when frames stop arriving, and says how long it is", async () => {
-    vi.useFakeTimers();
     const frames = frameSource();
     const result = recordMp4(canvas(), opts, frames.subscribe);
-    await vi.advanceTimersByTimeAsync(0);
+    await flush();
     frames.draw(0);
     frames.draw(100);
     frames.draw(200);
@@ -213,7 +210,6 @@ describe("recordMp4", () => {
   });
 
   it("rejects when no frame ever arrives", async () => {
-    vi.useFakeTimers();
     const result = recordMp4(canvas(), opts, frameSource().subscribe);
     const settled = result.catch((err: unknown) => err);
     await vi.advanceTimersByTimeAsync(3000);

@@ -228,10 +228,7 @@ describe("recordCanvas", () => {
       mp4.canRecordMp4.mockResolvedValue(false);
       const { canvas } = fakeCanvas();
       const result = recordCanvas(canvas, 5, 30, frames);
-      await vi.waitFor(() => {
-        expect(vi.getTimerCount()).toBe(1);
-      });
-      vi.advanceTimersByTime(5000);
+      await vi.advanceTimersByTimeAsync(5000);
       expect((await result).extension).toBe("webm");
     });
   });
