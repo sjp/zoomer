@@ -3,7 +3,6 @@ import {
   advanceLife,
   buildPaletteLut,
   buildTaps,
-  centreOfMass,
   createLife,
   CREATURE_MASS,
   DEAD_MAX,
@@ -13,12 +12,12 @@ import {
   GRID_W,
   gridSize,
   growth,
+  judgeStats,
   KERNEL_B,
   KERNEL_R,
   kernelShell,
   leniaStep,
   LUT_SIZE,
-  judgeStats,
   mass,
   MAX_SPAWNS,
   packState,
@@ -30,19 +29,48 @@ import {
   pickSpawnSpot,
   potential,
   readStats,
-  RULES,
   type RuleId,
+  RULES,
   seedField,
   SETTLE_STEPS,
+  spawnPatch,
   SPECIES,
   speciesFor,
-  spawnPatch,
   STATS_SIZE,
   statsTile,
   TAPS,
 } from "./lenia-sim";
 import { PALETTE_OPTIONS, SPECIES_OPTIONS } from "./lenia.meta";
 import { createRng } from "../noise";
+
+/**
+ * Centre of mass on the wrapping grid, in cells: each axis is the angle of the
+ * mass-weighted mean of points on a circle, so a creature straddling an edge
+ * still has its centre on it. Writes [x, y] to `out`.
+ */
+function centreOfMass(A: Float32Array, w: number, h: number, out: Float64Array): void {
+  let sx = 0;
+  let cx = 0;
+  let sy = 0;
+  let cy = 0;
+  for (let y = 0; y < h; y++) {
+    const ay = (2 * Math.PI * y) / h;
+    for (let x = 0; x < w; x++) {
+      const v = A[y * w + x];
+      if (v === 0) {
+        continue;
+      }
+      const ax = (2 * Math.PI * x) / w;
+      sx += v * Math.sin(ax);
+      cx += v * Math.cos(ax);
+      sy += v * Math.sin(ay);
+      cy += v * Math.cos(ay);
+    }
+  }
+  const wrapTo = (a: number, n: number) => ((((a / (2 * Math.PI)) * n) % n) + n) % n;
+  out[0] = wrapTo(Math.atan2(sx, cx), w);
+  out[1] = wrapTo(Math.atan2(sy, cy), h);
+}
 
 describe("kernel", () => {
   it("sums to 1 with positive weights inside the radius", () => {

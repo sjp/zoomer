@@ -85,6 +85,7 @@ vec3 shade(vec2 p, vec4 view, vec4 map) {
   vec2 z = vec2(0.0);
   float r2 = 0.0;
   float nu = -1.0;
+  // smoothIter in mandel-sim.ts is this loop on the CPU, for the tests.
   for (int i = 0; i < n; i++) {
     float x2 = z.x * z.x;
     float y2 = z.y * z.y;

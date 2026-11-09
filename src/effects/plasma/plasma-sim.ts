@@ -279,15 +279,6 @@ export function filamentBrightness(p: Plasma, i: number): number {
   return p.fade[i] * (BRIGHT_BASE + BRIGHT_DEPTH * wobble);
 }
 
-/** Sum of the shown filaments' brightness: what the tests bound the change of. */
-export function totalBrightness(p: Plasma): number {
-  let sum = 0;
-  for (let i = 0; i < MAX_FILAMENTS; i++) {
-    sum += filamentBrightness(p, i);
-  }
-  return sum;
-}
-
 /**
  * Writes the sideways part (perpendicular to `e`) of a smooth noise vector into
  * `out[o..o+2]`, sampled at `x` along a path. `key` separates filaments and branches.

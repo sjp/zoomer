@@ -163,7 +163,8 @@ void main() {
     return;
   }
 
-  // Ground under the pixel, and the pixel's footprint there.
+  // Ground under the pixel, and the pixel's footprint there. groundFromScreen in
+  // lava-sim.ts is this projection on the CPU, for the tests: change them together.
   float hf = uCam.x * uCam.y;
   float z0 = hf / max(y - uCam.z, uCam.w);
   vec2 g0 = vec2((frag.x * uScreen.x + uScreen.y) * z0 / uCam.y, z0) + ${glslFloat(GRID_ORIGIN)};

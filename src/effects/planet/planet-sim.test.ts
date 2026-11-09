@@ -14,11 +14,10 @@ import {
   materialByte,
   mulMat3,
   planetLayout,
-  raySphere,
   SEA_LEVEL,
   SHADOW_SHIFT,
-  sphereUv,
   spherePoint,
+  sphereUv,
   sunDirection,
   sunSide,
   SURFACE_H,
@@ -28,6 +27,42 @@ import {
 } from "./planet-sim";
 import { FRAMING_OPTIONS, WORLD_OPTIONS } from "./planet.meta";
 import type { BuildSteps } from "../rebuild";
+
+/**
+ * Nearest non-negative distance along a unit ray (origin o, direction d) to a
+ * sphere (centre c, radius r), or -1 on a miss. A grazing (tangent) ray hits at
+ * its closest approach; a ray starting inside returns its exit distance.
+ */
+function raySphere(
+  ox: number,
+  oy: number,
+  oz: number,
+  dx: number,
+  dy: number,
+  dz: number,
+  cx: number,
+  cy: number,
+  cz: number,
+  r: number,
+): number {
+  const px = ox - cx;
+  const py = oy - cy;
+  const pz = oz - cz;
+  const b = px * dx + py * dy + pz * dz;
+  const c = px * px + py * py + pz * pz - r * r;
+  const disc = b * b - c;
+  if (disc < 0) {
+    return -1;
+  }
+  const s = Math.sqrt(disc);
+  if (-b - s >= 0) {
+    return -b - s;
+  }
+  if (-b + s >= 0) {
+    return -b + s;
+  }
+  return -1;
+}
 
 /** Mean absolute byte difference between columns a and b over all rows and RGB. */
 function columnDiff(data: Uint8Array, w: number, h: number, a: number, b: number): number {

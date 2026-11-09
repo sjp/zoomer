@@ -3,8 +3,8 @@ import {
   createHead,
   divergence,
   GOLDEN_ANGLE,
-  headLayout,
   type HeadLayout,
+  headLayout,
   MAX_PETAL_SPRITES,
   PETAL_STRIDE,
   PETALS,
@@ -16,11 +16,19 @@ import {
   stepHead,
   styleFor,
   STYLES,
-  vogelPoint,
   writePetals,
   writeSeeds,
 } from "./phyllotaxis-sim";
 import { MAX_SEEDS, POSITION_OPTIONS, STYLE_OPTIONS } from "./phyllotaxis.meta";
+
+/** Vogel's model: seed `index` sits at angle index·φ and radius c·√index. */
+function vogelPoint(index: number, phi: number, c: number, out: [number, number]) {
+  const r = c * Math.sqrt(index);
+  const a = index * phi;
+  out[0] = r * Math.cos(a);
+  out[1] = r * Math.sin(a);
+  return out;
+}
 
 /** Nearest-neighbour distance for each of seeds `from .. to - 1` among seeds 1 .. n. */
 function nearestDistances(phi: number, n: number, from: number, to: number): number[] {

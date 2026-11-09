@@ -140,15 +140,6 @@ export function headLayout(
   return out;
 }
 
-/** Vogel's model: seed `index` sits at angle index·φ and radius c·√index. */
-export function vogelPoint(index: number, phi: number, c: number, out: [number, number]) {
-  const r = c * Math.sqrt(index);
-  const a = index * phi;
-  out[0] = r * Math.cos(a);
-  out[1] = r * Math.sin(a);
-  return out;
-}
-
 export interface Head {
   /** Growth index s(t), unwrapped float64: seeds born so far. */
   s: number;

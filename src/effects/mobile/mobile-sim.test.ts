@@ -7,7 +7,6 @@ import {
   MAX_ARMS,
   MAX_SHAPES,
   MAX_WIRES,
-  maxYawOffset,
   type Mobile,
   type MobileArm,
   PALETTE_SLOTS,
@@ -17,13 +16,22 @@ import {
   SHAPE_DISC,
   SHAPE_PETAL,
   shapeArea,
-  shapeSdf,
   type ShapeKind,
+  shapeSdf,
   stepMotion,
   WIRE_FLOATS,
   writeWires,
 } from "./mobile-sim";
 import { PALETTE_OPTIONS, SIDE_OPTIONS } from "./mobile.meta";
+
+/** Largest |yaw - yaw0| an arm can reach. */
+function maxYawOffset(arm: MobileArm): number {
+  let s = 0;
+  for (const a of arm.amp) {
+    s += a;
+  }
+  return s;
+}
 
 const SIDES = SIDE_OPTIONS.map((o) => o.value);
 const SEEDS = [0, 7, 42, 123, 999];

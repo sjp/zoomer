@@ -47,6 +47,8 @@ export const minDrop = (cam: Camera) => (cam.height * cam.focal) / Z_MAX;
 /**
  * Ground point under screen point (x, y), written to `out` as [x, z]. Returns
  * false (leaving `out` alone) on or above the horizon, where no ground is seen.
+ * The ground pass in `lava.ts` projects each pixel the same way (its `z0` and
+ * `g0`, from `uCam`); change the two together.
  */
 export function groundFromScreen(x: number, y: number, cam: Camera, out: number[]): boolean {
   const drop = y - cam.horizon;
@@ -59,7 +61,7 @@ export function groundFromScreen(x: number, y: number, cam: Camera, out: number[
   return true;
 }
 
-/** Screen point of ground point (gx, z), z > 0, written to `out` as [x, y]. */
+/** Screen point of ground point (gx, z), z > 0, written to `out` as [x, y]: `groundFromScreen` inverted. */
 export function screenFromGround(gx: number, z: number, cam: Camera, out: number[]): number[] {
   out[0] = (gx * cam.focal) / z;
   out[1] = cam.horizon + (cam.height * cam.focal) / z;

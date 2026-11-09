@@ -147,7 +147,11 @@ export function spherePoint(u: number, v: number, out: Float64Array): Float64Arr
   return out;
 }
 
-/** Texture coordinates of a unit sphere point (the shader's mapping), written to `out`. */
+/**
+ * Texture coordinates of a unit sphere point, written to `out`: the planet
+ * shader's `u` and `v` (from `atan(B.x, B.z)` and `asin(B.y)` in `planet.ts`).
+ * Change the two together.
+ */
 export function sphereUv(x: number, y: number, z: number, out: Float64Array): Float64Array {
   out[0] = fract(Math.atan2(x, z) / TAU);
   out[1] = Math.asin(clamp(y, -1, 1)) / Math.PI + 0.5;
@@ -846,46 +850,11 @@ export function mulMat3(
 }
 
 /**
- * Nearest non-negative distance along a unit ray (origin o, direction d) to a
- * sphere (centre c, radius r), or -1 on a miss. A grazing (tangent) ray hits at
- * its closest approach; a ray starting inside returns its exit distance.
- */
-export function raySphere(
-  ox: number,
-  oy: number,
-  oz: number,
-  dx: number,
-  dy: number,
-  dz: number,
-  cx: number,
-  cy: number,
-  cz: number,
-  r: number,
-): number {
-  const px = ox - cx;
-  const py = oy - cy;
-  const pz = oz - cz;
-  const b = px * dx + py * dy + pz * dz;
-  const c = px * px + py * py + pz * pz - r * r;
-  const disc = b * b - c;
-  if (disc < 0) {
-    return -1;
-  }
-  const s = Math.sqrt(disc);
-  if (-b - s >= 0) {
-    return -b - s;
-  }
-  if (-b + s >= 0) {
-    return -b + s;
-  }
-  return -1;
-}
-
-/**
  * The shader's hit, for an orthographic view ray (towards -z) through the point
  * (dx, dy) from the disc centre, radius `r`: writes the view-space unit normal to
  * `out` and returns whether the ray hit. A miss returns the limb normal at the
- * closest approach (z = 0), which is what the shader lights the halo with.
+ * closest approach (z = 0), which is what the shader lights the halo with. This
+ * is the planet shader's `e` and `N` in `planet.ts`; change the two together.
  */
 export function discNormal(dx: number, dy: number, r: number, out: Float64Array): boolean {
   const len = Math.hypot(dx, dy) / r;

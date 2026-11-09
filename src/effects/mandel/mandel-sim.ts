@@ -295,7 +295,8 @@ export function inMainBulbs(cr: number, ci: number): boolean {
 }
 
 /**
- * CPU reference of the shader's smooth escape count: `i + 1 - log2(log2|z_i|)`
+ * CPU reference of the shader's smooth escape count (the loop in `shade` in
+ * `mandel.ts`, which shares `ESCAPE_R2`; change the two together): `i + 1 - log2(log2|z_i|)`
  * for the first `z_i` outside the escape radius, Infinity if none of
  * `z_0..z_{maxIter-1}` escapes. Continuous across escape bands: one more
  * iteration squares |z|, which doubles log2|z| and adds 1 to `i`.
@@ -317,22 +318,6 @@ export function smoothIter(cr: number, ci: number, maxIter: number): number {
     zr = x2 - y2 + cr;
   }
   return Infinity;
-}
-
-/**
- * Multiplier of the cycle a Misiurewicz target's critical orbit lands on, after
- * `preperiod` steps (period 1), as [|ρ|, arg ρ]. For checking the table.
- */
-export function landingMultiplier(t: MandelTarget): [number, number] {
-  const [cr, ci] = t.centre;
-  let zr = 0;
-  let zi = 0;
-  for (let k = 0; k < t.preperiod; k++) {
-    const x = zr * zr - zi * zi + cr;
-    zi = 2 * zr * zi + ci;
-    zr = x;
-  }
-  return [Math.hypot(2 * zr, 2 * zi), Math.atan2(2 * zi, 2 * zr)];
 }
 
 // ---------------------------------------------------------------------------

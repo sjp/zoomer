@@ -555,15 +555,6 @@ export function armYaw(arm: MobileArm, tau: number): number {
   return y;
 }
 
-/** Largest |yaw - yaw0| an arm can reach. */
-export function maxYawOffset(arm: MobileArm): number {
-  let s = 0;
-  for (const a of arm.amp) {
-    s += a;
-  }
-  return s;
-}
-
 /** Light direction (towards the light: up, left and in front), normalised. */
 const LIGHT_RAW = [-0.45, 0.55, 0.7];
 const LIGHT_LEN = Math.hypot(LIGHT_RAW[0], LIGHT_RAW[1], LIGHT_RAW[2]);

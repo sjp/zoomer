@@ -8,8 +8,8 @@ import {
   fadeWeight,
   inMainBulbs,
   iterCap,
-  landingMultiplier,
   loopDoublings,
+  type MandelTarget,
   MINIBROT_NUCLEUS,
   MINIBROT_SCALE,
   PALETTE_NAMES,
@@ -21,12 +21,11 @@ import {
   paletteTexels,
   smoothIter,
   TARGET_NAMES,
-  TARGETS,
   targetFor,
+  TARGETS,
   TAU,
   writePaletteMap,
   writeView,
-  type MandelTarget,
 } from "./mandel-sim";
 import {
   DEFAULT_DETAIL,
@@ -36,6 +35,22 @@ import {
   TARGET_OPTIONS,
   mandelMeta,
 } from "./mandel.meta";
+
+/**
+ * Multiplier of the cycle a Misiurewicz target's critical orbit lands on, after
+ * `preperiod` steps (period 1), as [|ρ|, arg ρ]. For checking the table.
+ */
+function landingMultiplier(t: MandelTarget): [number, number] {
+  const [cr, ci] = t.centre;
+  let zr = 0;
+  let zi = 0;
+  for (let k = 0; k < t.preperiod; k++) {
+    const x = zr * zr - zi * zi + cr;
+    zi = 2 * zr * zi + ci;
+    zr = x;
+  }
+  return [Math.hypot(2 * zr, 2 * zi), Math.atan2(2 * zi, 2 * zr)];
+}
 
 const MISIUREWICZ = TARGET_NAMES.filter((n) => TARGETS[n].preperiod > 0);
 

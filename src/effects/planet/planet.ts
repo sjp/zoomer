@@ -107,6 +107,8 @@ void main() {
   float r = length(d);
   float R = uDisc.z;
   // Inside: the hit normal. Outside: the limb normal at the ray's closest approach.
+  // discNormal (N) and sphereUv (u, v) in planet-sim.ts are these lines on the
+  // CPU, for the tests: change them together.
   vec2 e = d / max(r, R);
   vec3 N = vec3(e, sqrt(max(1.0 - dot(e, e), 0.0)));
   vec3 B = vec3(dot(BX, N), dot(BY, N), dot(BZ, N));

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Rgb } from "../color";
 import {
+  BASE_BOT,
   BRANCH_SEGMENTS,
   branchPath,
   CORE_R,
@@ -17,16 +18,24 @@ import {
   MAX_BRANCHES,
   PALETTES,
   PATH_SEGMENTS,
+  type Plasma,
   plasmaLayout,
   rainbowPalette,
   roomGlow,
   SEAT_Y,
-  BASE_BOT,
   settlePlasma,
   stepPlasma,
-  totalBrightness,
 } from "./plasma-sim";
 import { COLOUR_OPTIONS, CORNER_OPTIONS, MAX_FILAMENTS, plasmaMeta } from "./plasma.meta";
+
+/** Sum of the shown filaments' brightness: what the tests bound the change of. */
+function totalBrightness(p: Plasma): number {
+  let sum = 0;
+  for (let i = 0; i < MAX_FILAMENTS; i++) {
+    sum += filamentBrightness(p, i);
+  }
+  return sum;
+}
 
 const DT = 1 / 60;
 const SEED = 109;
