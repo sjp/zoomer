@@ -15,13 +15,7 @@ import {
 } from "../gl";
 import { BASE_RADIUS, EPS, fillBlobs, makeBlobs, REF_H } from "../lavalamp/lavalamp-blobs";
 import { approach, clamp, wrap } from "../math";
-import {
-  buildFontTexture,
-  GLYPH_COUNT,
-  GLYPH_H,
-  GLYPH_W,
-  glyphIndex,
-} from "../dot-matrix";
+import { buildFontTexture, GLYPH_COUNT, GLYPH_H, GLYPH_W, glyphIndex } from "../dot-matrix";
 import { createNoise, HASH32_GLSL } from "../noise";
 import { riseSpeed } from "../bubbles/bubbles-sim";
 import { createSmokeField, type SmokeField } from "../smoke/smoke-field";
@@ -92,6 +86,7 @@ import {
   vapourRegion,
 } from "./chemlab-sim";
 import { chemlabMeta } from "./chemlab.meta";
+import { SDF2D_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 const v3 = (c: readonly number[]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
@@ -158,20 +153,7 @@ const CODE_W = 16;
 const CHALK_DOT = 0.0027;
 
 const SHARED_GLSL = /* glsl */ `
-float px;
-float cover(float d) {
-  return clamp(0.5 - d / px, 0.0, 1.0);
-}
-float sdBox(vec2 p, vec2 b, float r) {
-  vec2 d = abs(p) - b + r;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
-float sdSeg(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
-  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
-}
-const float TAU = 6.28318530718;
+${SDF2D_GLSL}
 const float BENCH_Y = ${g(BENCH_Y)};
 const float BENCH_BACK = ${g(BENCH_BACK)};
 const float BENCH_FRONT = ${g(BENCH_FRONT)};

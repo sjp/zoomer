@@ -66,6 +66,7 @@ import {
   windowSpan,
 } from "./lunarlander-sim";
 import { lunarlanderMeta } from "./lunarlander.meta";
+import { SDF2D_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 
@@ -310,7 +311,6 @@ ${DITHER_GLSL}
 const float FRAME_W = ${g(FRAME_W)};
 const float DIAL_START = ${g(DIAL_START)};
 const float DIAL_SWEEP = ${g(DIAL_SWEEP)};
-const float TAU = 6.28318530718;
 const vec3 BULK = vec3(0.25, 0.285, 0.265);
 const vec3 GREEN = vec3(0.31, 0.35, 0.32);
 const vec3 GREY = vec3(0.34, 0.345, 0.35);
@@ -319,21 +319,9 @@ const vec3 INK = vec3(0.86, 0.87, 0.85);
 const vec3 BLACK = vec3(0.035, 0.037, 0.038);
 const vec3 AMBER = vec3(0.95, 0.6, 0.18);
 
-float px;
 vec3 emit;
 
-float cover(float d) {
-  return clamp(0.5 - d / px, 0.0, 1.0);
-}
-float sdBox(vec2 p, vec2 b, float r) {
-  vec2 d = abs(p) - b + r;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
-float sdSeg(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
-  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
-}
+${SDF2D_GLSL}
 float sdTri(vec2 p, vec2 p0, vec2 p1, vec2 p2) {
   vec2 e0 = p1 - p0;
   vec2 e1 = p2 - p1;

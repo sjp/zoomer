@@ -56,6 +56,7 @@ import {
   VIEW_Y,
 } from "./stationops-sim";
 import { OPS_SHIP_GLSL } from "./stationops-ships";
+import { SDF2D_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 
@@ -69,18 +70,10 @@ const SUN = ((v: number[]) => v.map((x) => x / Math.hypot(...v)))([0.62, 0.45, -
 /** Shared GLSL: anti-aliased shapes, the console edges and hashed noise. */
 const COMMON_GLSL = /* glsl */ `
 ${HASH32_GLSL}
-const float TAU = 6.28318530718;
 const float VIEW_X = ${g(VIEW_X)};
 const float VIEW_Y = ${g(VIEW_Y)};
 const vec2 VIEW_R = vec2(${g(VIEW_RX)}, ${g(VIEW_RY)});
-float px;
-float cover(float d) {
-  return clamp(0.5 - d / px, 0.0, 1.0);
-}
-float sdBox(vec2 p, vec2 b, float r) {
-  vec2 d = abs(p) - b + r;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
+${SDF2D_GLSL}
 // A close approximation to the distance to an ellipse of radii r.
 float sdEll(vec2 p, vec2 r) {
   float k0 = length(p / r);

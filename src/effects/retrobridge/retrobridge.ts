@@ -59,6 +59,7 @@ import {
   wallPoint,
 } from "./retrobridge-sim";
 import { type Lighting, retrobridgeMeta } from "./retrobridge.meta";
+import { SDF2D_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 
@@ -155,20 +156,13 @@ const vec3 RAIL_RED = vec3(0.9, 0.07, 0.05);
 const vec3 DOOR_RED = vec3(0.86, 0.12, 0.1);
 const vec3 CARPET = vec3(0.3, 0.3, 0.315);
 
-float px;
 vec3 gLight;
 float gWash;
 int gCode;
 vec2 gUV;
 float gCov;
 
-float cover(float d) {
-  return clamp(0.5 - d / px, 0.0, 1.0);
-}
-float sdBox(vec2 p, vec2 b, float r) {
-  vec2 d = abs(p) - b + r;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
+${SDF2D_GLSL}
 /** The far crossing of a ray from inside a circle of radius R round the y axis. */
 float farRoot(vec2 o, vec2 d, float R) {
   float a = dot(d, d);
