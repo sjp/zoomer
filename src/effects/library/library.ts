@@ -40,6 +40,7 @@ import { approach } from "../math";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { defineEffect } from "../types";
 import { lookup } from "../lookup";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 3 reference px per texel (divisor 6 at 4K). The room is all soft. */
 const ROOM_TEXEL_REF = 3;
@@ -211,6 +212,8 @@ export const library = defineEffect(libraryMeta, {
       let builtBeam = "";
       let builtWidth = -1;
       let lampRgb: Rgb = [0, 0, 0];
+      /** The room's inputs when it was last drawn (the size is the target's). */
+      const roomKey = createChangeKey(12);
 
       return {
         resize(v) {
@@ -271,22 +274,37 @@ export const library = defineEffect(libraryMeta, {
           const sun = beamLevel * sunLight;
           const blur = Math.max(0, Math.min(1, p.blur));
 
-          // 1. The room at low resolution, then upscaled with dither.
-          target.bind();
-          gl.useProgram(roomProgram);
-          gl.bindTexture(gl.TEXTURE_2D, shelves.texture);
-          ru.f2("uFrame", refWidth, REF_HEIGHT);
-          ru.f1("uSideW", shelfSideWidth(refWidth));
-          ru.f1("uLod", shelfBlurLod(blur));
-          ru.f1("uSoft", 0.015 + 0.05 * blur);
-          // The window lights the room a little too, so the ambient follows the clouds.
-          const amb = 0.6 + 0.25 * sun;
-          ru.f3("uAmbient", amb, amb * 0.96, amb * 0.9);
-          ru.f4("uLamp", lamp.x, lamp.y, 1 / LAMP_R, LAMP_POOL * lampLevel);
-          ru.f4("uBeamO", geom.ox, geom.oy, geom.dx, geom.dy);
-          ru.f2("uBeam", geom.length, BEAM_GAIN * sun);
-          triangle.draw();
-          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          // 1. The room at low resolution, then upscaled with dither. Redrawn
+          // only while something in it changes: a fade, a passing cloud, a setting.
+          roomKey.set(0, seed);
+          roomKey.setText(1, p.palette);
+          roomKey.set(2, blur);
+          roomKey.set(3, sun);
+          roomKey.set(4, lampLevel);
+          roomKey.set(5, lamp.x);
+          roomKey.set(6, lamp.y);
+          roomKey.set(7, geom.ox);
+          roomKey.set(8, geom.oy);
+          roomKey.set(9, geom.dx);
+          roomKey.set(10, geom.dy);
+          roomKey.set(11, geom.length);
+          if (target.needsRedraw(roomKey)) {
+            target.bind();
+            gl.useProgram(roomProgram);
+            gl.bindTexture(gl.TEXTURE_2D, shelves.texture);
+            ru.f2("uFrame", refWidth, REF_HEIGHT);
+            ru.f1("uSideW", shelfSideWidth(refWidth));
+            ru.f1("uLod", shelfBlurLod(blur));
+            ru.f1("uSoft", 0.015 + 0.05 * blur);
+            // The window lights the room a little too, so the ambient follows the clouds.
+            const amb = 0.6 + 0.25 * sun;
+            ru.f3("uAmbient", amb, amb * 0.96, amb * 0.9);
+            ru.f4("uLamp", lamp.x, lamp.y, 1 / LAMP_R, LAMP_POOL * lampLevel);
+            ru.f4("uBeamO", geom.ox, geom.oy, geom.dx, geom.dy);
+            ru.f2("uBeam", geom.length, BEAM_GAIN * sun);
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          }
           target.blit();
 
           // 2. Lamp bokeh and dust motes, additive.
