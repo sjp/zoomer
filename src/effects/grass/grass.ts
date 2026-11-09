@@ -18,7 +18,8 @@ import {
   BEND_SWAY,
   BLADE_STRIP,
   bladeCount,
-  buildBlades,
+  buildBladeField,
+  selectBlades,
   D_MIN,
   FIELDS,
   GUST_CX,
@@ -327,6 +328,9 @@ export const grass = defineEffect(grassMeta, {
       const blades = scope.own(createSpriteBatch(gl, MAX_BLADES, [4, 4], [BLADE_STRIP]));
       /** Blades in the batch; -1 builds them on the first frame. */
       let built = -1;
+      // Every blade the count can reach, sorted once: a resize or a density change only
+      // picks out a subset, rather than allocating and sorting again every frame.
+      const field = buildBladeField(SEED, MAX_BLADES);
 
       const band: Rgb = [0, 0, 0];
       const rootLit: Rgb = [0, 0, 0];
@@ -351,7 +355,7 @@ export const grass = defineEffect(grassMeta, {
 
           const count = bladeCount(p.density, width / Math.max(1, height));
           if (count !== built) {
-            built = buildBlades(SEED, count, blades.data);
+            built = selectBlades(field, count, blades.data);
             blades.upload(built);
           }
 
