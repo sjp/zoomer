@@ -22,7 +22,8 @@ import {
   PLANT_STRIP,
   PLANT_SEGMENTS,
   plantWeight,
-  schoolCount,
+  schoolOf,
+  schoolsFor,
   SPECIES_NEON,
   SPECIES_SILVER,
   speciesOf,
@@ -186,13 +187,28 @@ describe("air-stone bubbles", () => {
 
 describe("species", () => {
   it("follows the param, splitting mixed schools", () => {
-    expect(speciesOf("neon", 3, 1, 2)).toBe(SPECIES_NEON);
-    expect(speciesOf("silver", 3, 1, 2)).toBe(SPECIES_SILVER);
-    expect(speciesOf("mixed", 3, 0, 2)).toBe(SPECIES_NEON);
-    expect(speciesOf("mixed", 3, 1, 2)).toBe(SPECIES_SILVER);
-    expect(speciesOf("mixed", 3, 0, 1)).toBe(SPECIES_SILVER);
-    expect(schoolCount(5)).toBe(1);
-    expect(schoolCount(40)).toBe(3);
+    expect(speciesOf("neon", 1)).toBe(SPECIES_NEON);
+    expect(speciesOf("silver", 0)).toBe(SPECIES_SILVER);
+    expect(speciesOf("mixed", 0)).toBe(SPECIES_NEON);
+    expect(speciesOf("mixed", 1)).toBe(SPECIES_SILVER);
+    expect(speciesOf("mixed", 2)).toBe(SPECIES_NEON);
+    expect(schoolsFor(5)).toBe(2);
+    expect(schoolsFor(MAX_FISH)).toBe(3);
+  });
+
+  it("keeps every fish's school and species across counts", () => {
+    const at = (count: number) => {
+      const schools = schoolsFor(count);
+      return Array.from({ length: count }, (_, i) => {
+        const school = schoolOf(i);
+        expect(school).toBeLessThan(schools);
+        return [school, speciesOf("mixed", school)];
+      });
+    };
+    const all = at(MAX_FISH);
+    for (let count = 1; count < MAX_FISH; count++) {
+      expect(at(count)).toEqual(all.slice(0, count));
+    }
   });
 });
 

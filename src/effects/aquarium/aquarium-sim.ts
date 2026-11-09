@@ -394,20 +394,28 @@ export const FISH_FLOATS = 8;
 export const SPECIES_NEON = 0;
 export const SPECIES_SILVER = 1;
 
-/** Schools for `count` fish: one small group, or two or three larger ones. */
-export function schoolCount(count: number): number {
-  return count < 12 ? 1 : count < 26 ? 2 : 3;
-}
+/** Fish from this index on form the third school. */
+const THIRD_SCHOOL = 26;
 
-/** Fish `i`'s species for the species param, given its school and the school count. */
-export function speciesOf(species: SpeciesId, i: number, school: number, schools: number): number {
+/**
+ * Fish `i`'s school: the first fish alternate between two schools, and the
+ * rest form a third. It depends on `i` alone, so a change of count adds or
+ * removes fish at the end without regrouping the others.
+ */
+export const schoolOf = (i: number): number => (i < THIRD_SCHOOL ? i % 2 : 2);
+
+/** How many schools `count` fish make (see `schoolOf`). */
+export const schoolsFor = (count: number): number => (count > THIRD_SCHOOL ? 3 : count > 1 ? 2 : 1);
+
+/** A fish's species for the species param, given its school: mixed schools alternate. */
+export function speciesOf(species: SpeciesId, school: number): number {
   if (species === "neon") {
     return SPECIES_NEON;
   }
   if (species === "silver") {
     return SPECIES_SILVER;
   }
-  return schools > 1 ? school % 2 : i % 2;
+  return school % 2;
 }
 
 /** The on-screen width factor of a fish turned by `theta` (0 facing right, pi facing left). */
@@ -563,7 +571,7 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
   const n = sim.live;
   const aspect = Math.max(2 * TANK_X + 0.01, env.aspect);
   const xMax = aspect - TANK_X;
-  const schools = schoolCount(target);
+  const schools = schoolsFor(target);
 
   for (let s = 0; s < schools; s++) {
     sim.goalTimer[s] -= dt;
@@ -579,7 +587,7 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
   avy.fill(0);
   members.fill(0);
   for (let i = 0; i < n; i++) {
-    const s = i % schools;
+    const s = schoolOf(i);
     cx[s] += x[i];
     cy[s] += y[i];
     cz[s] += z[i];
@@ -600,7 +608,7 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
   const bandHalf = aspect * BAND_HALF;
   const r2 = SEPARATION_R * SEPARATION_R;
   for (let i = 0; i < n; i++) {
-    const s = i % schools;
+    const s = schoolOf(i);
     let ax = 0;
     let ay = 0;
     // Goal: steer toward a velocity that heads for it and slows on arrival, so a
@@ -704,7 +712,7 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
     vy[i] = uy;
 
     // Depth: a slow random walk, drawn toward the school's depth.
-    const s = i % schools;
+    const s = schoolOf(i);
     sim.zv[i] = clamp(sim.zv[i] + (rng() - 0.5) * 0.3 * dt, -0.05, 0.05);
     let zz = z[i] + (sim.zv[i] + 0.15 * (cz[s] - z[i])) * dt;
     if (zz < 0 || zz > 1) {
@@ -763,8 +771,6 @@ export function fishInstances(
     order[j + 1] = v;
   }
 
-  const target = clamp(Math.round(env.count), 1, sim.max);
-  const schools = schoolCount(target);
   let far = 0;
   let written = 0;
   for (let k = 0; k < n; k++) {
@@ -773,7 +779,7 @@ export function fishInstances(
     if (l <= 0) {
       continue;
     }
-    const sp = speciesOf(env.species, i, i % schools, schools);
+    const sp = speciesOf(env.species, schoolOf(i));
     const o = written * stride;
     out[o] = sim.x[i];
     out[o + 1] = sim.y[i];
