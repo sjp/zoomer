@@ -11,6 +11,7 @@ import {
   scopedProgram,
   floatRenderable,
   createPingPong,
+  createFeedbackPair,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import {
@@ -282,28 +283,8 @@ export const physarum = defineEffect(physarumMeta, {
       );
       let paletteKey = "gold";
 
-      // Agents: two ping-ponged vertex buffers, each with a VAO reading it.
-      const buffers = [0, 1].map(() =>
-        scope.add(gl.createBuffer(), (b) => {
-          gl.deleteBuffer(b);
-        }),
-      );
-      const vaos = buffers.map((buffer) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => {
-          gl.deleteVertexArray(v);
-        });
-        gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, AGENT_FLOATS * 4, 0);
-        return vao;
-      });
-      gl.bindVertexArray(null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
-        gl.deleteTransformFeedback(t);
-      });
-      let agentCur = 0;
+      // Agents: two ping-ponged vertex buffers, stepped with transform feedback.
+      const agentPair = scope.own(createFeedbackPair(gl, AGENT_FLOATS, [{ location: 0, size: 3 }]));
       /** Agents in the buffers; 0 until the first frame. */
       let agents = 0;
 
@@ -323,15 +304,9 @@ export const physarum = defineEffect(physarumMeta, {
       const food = new Float32Array(FOOD_COUNT * 2);
       const INVALIDATE = [gl.COLOR_ATTACHMENT0];
 
-      /** Scatters `agents` fresh agents into the current buffer and sizes the other. */
+      /** Scatters `agents` fresh agents into the agent buffers. */
       const seed = () => {
-        const data = seedAgents(++seedNo, agents, new Float32Array(agents * AGENT_FLOATS));
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers[0]);
-        gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_COPY);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers[1]);
-        gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_COPY);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        agentCur = 0;
+        agentPair.seed(seedAgents(++seedNo, agents, new Float32Array(agents * AGENT_FLOATS)));
       };
 
       /** New, cleared trail targets of `w` x `h`; a failed allocation leaves none. */
@@ -420,17 +395,8 @@ export const physarum = defineEffect(physarumMeta, {
                 gl.uniform2fv(agent.loc.uFood, food);
               }
               gl.enable(gl.BLEND);
-              gl.bindVertexArray(vaos[agentCur]);
-              gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
-              gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buffers[agentCur ^ 1]);
-              gl.beginTransformFeedback(gl.POINTS);
-              gl.drawArrays(gl.POINTS, 0, agents);
-              gl.endTransformFeedback();
-              gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
-              gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
-              gl.bindVertexArray(null);
+              agentPair.step(agents);
               gl.disable(gl.BLEND);
-              agentCur ^= 1;
               step = (step + 1) >>> 0;
               simTime += 1 / STEP_RATE;
             }

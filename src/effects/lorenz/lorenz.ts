@@ -13,6 +13,7 @@ import {
   withScope,
   scopedProgram,
   floatRenderable,
+  createFeedbackPair,
 } from "../gl";
 import {
   advanceOrbit,
@@ -398,33 +399,19 @@ export const lorenz = defineEffect(lorenzMeta, {
         },
       );
 
-      // Particles: two ping-ponged vertex buffers. vaos[c] reads buffer c (update
-      // and points); segVaos[c] reads the other buffer as the previous position.
-      const buffers = [0, 1].map(() => {
-        const b = scope.add(gl.createBuffer(), (x) => {
-          gl.deleteBuffer(x);
-        });
-        gl.bindBuffer(gl.ARRAY_BUFFER, b);
-        gl.bufferData(gl.ARRAY_BUFFER, MAX_PARTICLES * PARTICLE_FLOATS * 4, gl.DYNAMIC_COPY);
-        return b;
-      });
+      // Particles: two ping-ponged vertex buffers, stepped with transform feedback.
+      // particles.vao reads the current buffer (update and points); segVaos[c]
+      // reads buffer c as the position and the other as the previous one.
+      const particles = scope.own(
+        createFeedbackPair(gl, PARTICLE_FLOATS, [{ location: 0, size: 4 }]),
+      );
       const stride = PARTICLE_FLOATS * 4;
-      const vaos = buffers.map((buffer) => {
+      const segVaos = particles.buffers.map((buffer, c) => {
         const vao = scope.add(gl.createVertexArray(), (v) => {
           gl.deleteVertexArray(v);
         });
         gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, stride, 0);
-        return vao;
-      });
-      const segVaos = buffers.map((buffer, c) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => {
-          gl.deleteVertexArray(v);
-        });
-        gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers[c ^ 1]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, particles.buffers[c ^ 1]);
         gl.enableVertexAttribArray(0);
         gl.vertexAttribPointer(0, 4, gl.FLOAT, false, stride, 0);
         gl.vertexAttribDivisor(0, 1);
@@ -436,10 +423,6 @@ export const lorenz = defineEffect(lorenzMeta, {
       });
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
-        gl.deleteTransformFeedback(t);
-      });
-      let cur = 0;
       const seedData = new Float32Array(MAX_PARTICLES * PARTICLE_FLOATS);
 
       /** Trajectories are deterministic, so each is built once, on first use. */
@@ -533,11 +516,7 @@ export const lorenz = defineEffect(lorenzMeta, {
             updateDataTexture(gl, trajTexture, TRAJ_W, TRAJ_H, gl.RGBA, gl.FLOAT, traj.points);
             gl.bindTexture(gl.TEXTURE_2D, null);
             seedParticles(traj, MAX_PARTICLES, 1, seedData);
-            for (const buffer of buffers) {
-              gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-              gl.bufferSubData(gl.ARRAY_BUFFER, 0, seedData);
-            }
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            particles.seed(seedData);
             clearTrails();
           }
           const count = Math.max(1, Math.min(MAX_PARTICLES, Math.round(p.particles)));
@@ -557,18 +536,9 @@ export const lorenz = defineEffect(lorenzMeta, {
             update.u1("uSalt", hash32(frameNo));
             gl.bindTexture(gl.TEXTURE_2D, trajTexture);
             gl.enable(gl.RASTERIZER_DISCARD);
-            gl.bindVertexArray(vaos[cur]);
-            gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
-            gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buffers[cur ^ 1]);
-            gl.beginTransformFeedback(gl.POINTS);
-            gl.drawArrays(gl.POINTS, 0, count);
-            gl.endTransformFeedback();
-            gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
-            gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+            particles.step(count);
             gl.disable(gl.RASTERIZER_DISCARD);
-            gl.bindVertexArray(null);
             gl.bindTexture(gl.TEXTURE_2D, null);
-            cur ^= 1;
             moved = true;
           }
           yaw = advanceOrbit(yaw, dt, p.orbit);
@@ -589,7 +559,7 @@ export const lorenz = defineEffect(lorenzMeta, {
             segment.f2("uTarget", trails.width, trails.height);
             segment.f1("uHalfWidth", Math.max(0.5, (TRAIL_HALF_PX * scale) / TRAIL_DIVISOR));
             segment.f1("uGain", TRAIL_GAIN * gain);
-            gl.bindVertexArray(segVaos[cur]);
+            gl.bindVertexArray(segVaos[particles.current]);
             gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
             gl.bindVertexArray(null);
             gl.disable(gl.BLEND);
@@ -611,7 +581,7 @@ export const lorenz = defineEffect(lorenzMeta, {
           point.f1("uGain", POINT_GAIN * gain);
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE);
-          gl.bindVertexArray(vaos[cur]);
+          gl.bindVertexArray(particles.vao);
           gl.drawArrays(gl.POINTS, 0, count);
           gl.bindVertexArray(null);
           gl.disable(gl.BLEND);

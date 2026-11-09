@@ -10,6 +10,7 @@ import {
   scopedProgram,
   floatRenderable,
   createPingPong,
+  createFeedbackPair,
 } from "../gl";
 import {
   ATTRACT_MAX,
@@ -323,28 +324,8 @@ export const murmuration = defineEffect(murmurationMeta, {
       let horizonKey = "";
       let horizonAspect = 0;
 
-      // Birds: two ping-ponged vertex buffers, each with a VAO reading it.
-      const buffers = [0, 1].map(() =>
-        scope.add(gl.createBuffer(), (b) => {
-          gl.deleteBuffer(b);
-        }),
-      );
-      const vaos = buffers.map((buffer) => {
-        const vao = scope.add(gl.createVertexArray(), (v) => {
-          gl.deleteVertexArray(v);
-        });
-        gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, BIRD_FLOATS * 4, 0);
-        return vao;
-      });
-      gl.bindVertexArray(null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const feedback = scope.add(gl.createTransformFeedback(), (t) => {
-        gl.deleteTransformFeedback(t);
-      });
-      let cur = 0;
+      // Birds: two ping-ponged vertex buffers, stepped with transform feedback.
+      const birds = scope.own(createFeedbackPair(gl, BIRD_FLOATS, [{ location: 0, size: 4 }]));
       let seeded = false;
 
       /** The field and its blur scratch; not ready until the first frame, or if allocation failed. */
@@ -379,12 +360,7 @@ export const murmuration = defineEffect(murmurationMeta, {
           beginFrame(gl, width, height);
           const aspect = width / height;
           if (!seeded) {
-            const data = seedBirds(1, MAX_BIRDS, aspect, new Float32Array(MAX_BIRDS * BIRD_FLOATS));
-            for (const buffer of buffers) {
-              gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-              gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_COPY);
-            }
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            birds.seed(seedBirds(1, MAX_BIRDS, aspect, new Float32Array(MAX_BIRDS * BIRD_FLOATS)));
             seeded = true;
           }
           const [w, h] = gridSize(aspect);
@@ -427,7 +403,7 @@ export const murmuration = defineEffect(murmurationMeta, {
               gl.useProgram(splatProgram);
               splat.u1("uSalt", salt);
               gl.enable(gl.BLEND);
-              gl.bindVertexArray(vaos[cur]);
+              gl.bindVertexArray(birds.vao);
               gl.drawArrays(gl.POINTS, 0, counts.draw);
               gl.disable(gl.BLEND);
 
@@ -452,17 +428,8 @@ export const murmuration = defineEffect(murmurationMeta, {
               update.u1("uSalt", hash32(salt));
               gl.bindTexture(gl.TEXTURE_2D, a.texture);
               gl.enable(gl.RASTERIZER_DISCARD);
-              gl.bindVertexArray(vaos[cur]);
-              gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
-              gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buffers[cur ^ 1]);
-              gl.beginTransformFeedback(gl.POINTS);
-              gl.drawArrays(gl.POINTS, 0, counts.update);
-              gl.endTransformFeedback();
-              gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
-              gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+              birds.step(counts.update);
               gl.disable(gl.RASTERIZER_DISCARD);
-              gl.bindVertexArray(null);
-              cur ^= 1;
               step = (step + 1) >>> 0;
               simTime += simDt;
             }
@@ -497,7 +464,7 @@ export const murmuration = defineEffect(murmurationMeta, {
           bird.rgb("uColor", skyColors.bird);
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-          gl.bindVertexArray(vaos[cur]);
+          gl.bindVertexArray(birds.vao);
           gl.drawArrays(gl.POINTS, 0, counts.draw);
           gl.bindVertexArray(null);
           gl.disable(gl.BLEND);
