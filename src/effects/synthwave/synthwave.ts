@@ -20,6 +20,7 @@ import { defineEffect } from "../types";
 import { clamp, smoothstep } from "../math";
 import { createRng } from "../noise";
 import { createChangeKey } from "../change-key";
+import { capPatternSpeed } from "../motion-limits";
 
 /** Points per mountain ridge (2^n + 1 for midpoint displacement). */
 export const RIDGE_POINTS = 129;
@@ -37,6 +38,17 @@ export const FRONT_HEIGHT = 0.09;
 /** Width of the front range's edge line at 1080p. */
 export const EDGE_WIDTH = 1.5;
 const SUN_STRIPES = 7;
+/** Grid scroll in world units per second at speed 1. */
+export const SCROLL_PER_SPEED = 1.2;
+
+/**
+ * Grid scroll speed (world units per second) for the speed and cell size params.
+ * Every horizontal line passes a screen point once per cell scrolled, whatever its
+ * depth, so a small cell at a high speed would strobe; the line rate is capped at
+ * MAX_PATTERN_HZ, which leaves the default (2.4 Hz) alone.
+ */
+export const gridScrollSpeed = (speed: number, cell: number) =>
+  capPatternSpeed(speed * SCROLL_PER_SPEED, cell);
 const BLACK: Rgb = [0, 0, 0];
 const WHITE: Rgb = [1, 1, 1];
 
@@ -750,7 +762,7 @@ export const synthwave = defineEffect(synthwaveMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const cell = p.gridSize;
-          scroll = (scroll + dt * p.speed * 1.2) % cell;
+          scroll = (scroll + dt * gridScrollSpeed(p.speed, cell)) % cell;
           stripePhase = (stripePhase + dt * p.speed * 0.06) % 1;
           time += dt;
 

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { MAX_PATTERN_HZ } from "../motion-limits";
+import { synthwaveMeta } from "./synthwave.meta";
 import {
   BACK_HEIGHT,
   createRowScene,
@@ -7,6 +9,7 @@ import {
   FRONT_HEIGHT,
   generateRidge,
   getRidgeData,
+  gridScrollSpeed,
   mountainTop,
   RIDGE_POINTS,
   RIDGE_SPAN,
@@ -235,5 +238,27 @@ describe("fillRows", () => {
       }
     }
     expect(wrong).toEqual([]);
+  });
+});
+
+describe("gridScrollSpeed", () => {
+  const { speed, gridSize } = synthwaveMeta.params;
+
+  it("keeps the default speed and cell size", () => {
+    expect(gridScrollSpeed(speed.default, gridSize.default)).toBeCloseTo(1.2 * speed.default, 12);
+  });
+
+  it("never passes lines faster than MAX_PATTERN_HZ at any slider value", () => {
+    for (let s = speed.min; s <= speed.max + 1e-9; s += speed.step) {
+      for (let c = gridSize.min; c <= gridSize.max + 1e-9; c += gridSize.step) {
+        const v = gridScrollSpeed(s, c);
+        expect(v / c).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
+        expect(v).toBeLessThanOrEqual(1.2 * s + 1e-12);
+      }
+    }
+  });
+
+  it("still gets faster with speed below the cap", () => {
+    expect(gridScrollSpeed(1, 1.2)).toBeLessThan(gridScrollSpeed(2, 1.2));
   });
 });
