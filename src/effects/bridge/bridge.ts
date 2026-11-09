@@ -102,6 +102,7 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import { createStreakRenderer } from "../streaks";
 import { createStarfield, type StarFrame } from "../warp/warp-sim";
 import { defineEffect } from "../types";
+import { loadWebFont, webFontLoaded } from "../web-font";
 import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 import { HASH_CELL_GLSL } from "../noise";
 import { createChangeKey } from "../change-key";
@@ -1008,21 +1009,15 @@ export const bridge = defineEffect(bridgeMeta, {
       scope.defer(() => {
         disposed = true;
       });
-      // Load the panel font in the background; once it's in, redraw the atlas with it.
-      if (typeof FontFace !== "undefined" && typeof document !== "undefined") {
-        const face = new FontFace(FONT_FACE, `url(${FONT_URL})`, { weight: "600" });
-        face
-          .load()
-          .then((loaded) => {
-            document.fonts.add(loaded);
-            if (!disposed) {
-              atlasKey.invalidate();
-            }
-            return loaded;
-          })
-          .catch(() => {
-            console.warn(`Starship Bridge: couldn't load ${FONT_URL}`);
-          });
+      // Load the panel font in the background (once per page); if it wasn't in
+      // already, redraw the atlas with it once it arrives.
+      if (!webFontLoaded(FONT_FACE, FONT_URL)) {
+        void loadWebFont("Starship Bridge", FONT_FACE, FONT_URL, { weight: "600" }).then((ok) => {
+          if (ok && !disposed) {
+            atlasKey.invalidate();
+          }
+          return ok;
+        });
       }
       let layout: BridgeLayout = bridgeLayout("left", true);
       let set: PanelSet = buildPanels(layout, 0);
