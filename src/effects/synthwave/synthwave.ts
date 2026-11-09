@@ -11,6 +11,9 @@ import {
   updateDataTexture,
   withScope,
   scopedProgram,
+  createRenderTarget,
+  floatRenderable,
+  type RenderTarget,
 } from "../gl";
 import { synthwaveMeta } from "./synthwave.meta";
 import { defineEffect } from "../types";
@@ -511,6 +514,103 @@ export function fillRows(rows: Float32Array, n: number, s: RowScene, c: RowColor
 }
 
 /**
+ * \`fillRows\` on the GPU: one fragment per texel of the 3 x n row table, so the
+ * table is rebuilt every frame without CPU work or an upload. Texel 0 is the sky
+ * colour and sun stripe coverage, 1 the haze and scanlines, 2 the horizontal
+ * grid lines and the vertical lines' mask. Depths that need float64 (the
+ * scroll's wrap) come from the CPU.
+ */
+const ROWS_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+/** Canvas height, horizon y, camera height, scanline period (0: none). */
+uniform vec4 uFrame;
+/** Sun disc top and clip, scanline thickness in rows. */
+uniform vec3 uSunSpan;
+uniform vec2 uGaps[${String(SUN_STRIPES)}];
+/** Glow width, core width, glow alpha, cell size. */
+uniform vec4 uLine;
+/** Depth of the first line's phase, the farthest line drawn, and the far plane's y. */
+uniform vec3 uDepth;
+uniform vec3 uSkyTop;
+uniform vec3 uSkyMid;
+uniform vec3 uSkyBottom;
+uniform vec3 uGridColor;
+uniform vec3 uCoreColor;
+uniform vec3 uHaze;
+out vec4 outColor;
+
+float overlap(float a, float b, float y) {
+  return max(0.0, min(b, y + 0.5) - max(a, y - 0.5));
+}
+float lineCov(float d, float w) {
+  return clamp(min(d + 0.5 * w, 0.5) - max(d - 0.5 * w, -0.5), 0.0, 1.0);
+}
+
+void main() {
+  int texel = int(gl_FragCoord.x);
+  float height = uFrame.x;
+  float hy = uFrame.y;
+  float k = uFrame.z;
+  float y = height - gl_FragCoord.y;
+  if (texel == 0) {
+    float t = clamp(y / hy, 0.0, 1.0);
+    vec3 lo = t < 0.55 ? uSkyTop : uSkyMid;
+    vec3 hi = t < 0.55 ? uSkyMid : uSkyBottom;
+    float u = t < 0.55 ? t / 0.55 : (t - 0.55) / 0.45;
+    float cy = 0.0;
+    if (y < uSunSpan.y + 1.0) {
+      cy = overlap(uSunSpan.x, uSunSpan.y, y);
+      for (int i = 0; i < ${String(SUN_STRIPES)}; i++) {
+        cy -= overlap(uGaps[i].x, uGaps[i].y, y);
+      }
+    }
+    outColor = vec4(lo + (hi - lo) * u, clamp(cy, 0.0, 1.0));
+  } else if (texel == 1) {
+    float h = 0.45 * max(0.0, 1.0 - abs(y - hy) / (height * 0.07));
+    float scan = uFrame.w > 0.0 && mod(floor(y), uFrame.w) < uSunSpan.z ? 0.84 : 1.0;
+    outColor = vec4(uHaze * (h * scan), (1.0 - h) * scan);
+  } else {
+    float glowW = uLine.x;
+    float coreW = uLine.y;
+    float cell = uLine.w;
+    float zPhase = uDepth.x;
+    float zMax = uDepth.y;
+    float dy = y - hy;
+    float hg = 0.0;
+    float hc = 0.0;
+    float vmask = 0.0;
+    if (dy > 0.0) {
+      float groundH = height - hy;
+      float tv = dy / groundH;
+      float fv = tv < 0.08 ? (tv / 0.08) * 0.25 : min(1.0, 0.25 + ((tv - 0.08) / 0.22) * 0.75);
+      vmask = clamp(y + 0.5 - uDepth.z, 0.0, 1.0) * fv;
+      float z = k / dy;
+      float j0 = floor((z - zPhase) / cell);
+      for (int j = -2; j <= 2; j++) {
+        float zj = zPhase + (j0 + float(j)) * cell;
+        if (zj <= 0.0 || zj >= zMax) {
+          continue;
+        }
+        float yj = hy + k / zj;
+        float th = clamp(1.2 / zj, 0.35, 1.8);
+        float fade = smoothstep(0.0, 0.3, (yj - hy) / groundH);
+        hg += fade * lineCov(y - yj, glowW * th);
+        hc += fade * lineCov(y - yj, coreW * th);
+      }
+      float spacingH = (k * cell) / (z * z);
+      float thz = clamp(1.2 / z, 0.35, 1.8);
+      float avgH = ((smoothstep(0.0, 0.3, tv) * thz) / spacingH) * clamp((zMax - z) / cell, 0.0, 1.0);
+      float mg = smoothstep(3.0, 4.0, (glowW * thz + 1.0) / spacingH);
+      float mc = smoothstep(3.0, 4.0, (coreW * thz + 1.0) / spacingH);
+      hg = (hg + (avgH * glowW - hg) * mg) * uLine.z;
+      hc = (hc + (avgH * coreW - hc) * mc) * 0.9;
+    }
+    outColor = vec4(uGridColor * hg + uCoreColor * hc, vmask);
+  }
+}
+`;
+
+/**
  * Highest y (canvas pixels, y down) either ridge can affect, for a horizon at `hy`:
  * its peak, plus how far the anti-aliasing (and the front edge line) reaches up a
  * steep slope, plus a little slack for half-float rounding. The shader skips the
@@ -602,6 +702,31 @@ export const synthwave = defineEffect(synthwaveMeta, {
       let rows = new Float32Array(0);
       /** Rows allocated in rowTex; 0 forces (re)allocation. */
       let rowCount = 0;
+      /*
+       * Where a half-float target is renderable, the table is drawn on the GPU
+       * instead (`ROWS_FRAGMENT`), which costs no CPU time and no upload even
+       * while the camera sways and the grid scrolls. `rowTex` is the fallback.
+       */
+      let rowsOnGpu = floatRenderable(gl, gl.RGBA16F);
+      const rowsProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, ROWS_FRAGMENT);
+      const ru = createUniforms(gl, rowsProgram, [
+        "uFrame",
+        "uSunSpan",
+        "uGaps",
+        "uLine",
+        "uDepth",
+        "uSkyTop",
+        "uSkyMid",
+        "uSkyBottom",
+        "uGridColor",
+        "uCoreColor",
+        "uHaze",
+      ]);
+      const gaps32 = new Float32Array(SUN_STRIPES * 2);
+      let rowTarget: RenderTarget | null = null;
+      scope.defer(() => {
+        rowTarget?.dispose();
+      });
       /** Every input of the row table besides the palette. */
       const rowInputs = createChangeKey(13);
 
@@ -674,7 +799,12 @@ export const synthwave = defineEffect(synthwaveMeta, {
 
           // Per-row values, bottom row first (gl_FragCoord.y = r + 0.5).
           const n = Math.max(1, Math.ceil(height));
-          if (n !== rowCount) {
+          if (rowsOnGpu && rowTarget?.height !== n) {
+            rowTarget?.dispose();
+            rowTarget = createRenderTarget(gl, 3, n, gl.RGBA16F, { filter: gl.NEAREST });
+            rowsOnGpu = rowTarget !== null;
+          }
+          if (!rowsOnGpu && n !== rowCount) {
             rows = new Float32Array(n * ROW_FLOATS);
             rowCount = 0;
           }
@@ -693,7 +823,27 @@ export const synthwave = defineEffect(synthwaveMeta, {
           rowInputs.set(11, scroll);
           rowInputs.set(12, scale);
           const rebuildRows = rowInputs.take();
-          if (rebuildRows) {
+          if (rebuildRows && rowsOnGpu && rowTarget) {
+            const zTop = Z_FAR - ((Z_FAR + scroll) % cell);
+            gl.useProgram(rowsProgram);
+            ru.f4("uFrame", height, hy, k, scanPeriod);
+            ru.f3("uSunSpan", scene.sunTop, scene.sunClip, Math.max(1, Math.round(scanPeriod / 2)));
+            gaps32.set(scene.gaps);
+            gl.uniform2fv(ru.loc.uGaps, gaps32);
+            ru.f4("uLine", glowW, coreW, glowA, cell);
+            ru.f3("uDepth", zTop % cell, zTop + cell / 2, hy + k / Z_FAR);
+            ru.v3("uSkyTop", c.skyTop);
+            ru.v3("uSkyMid", c.skyMid);
+            ru.v3("uSkyBottom", c.skyBottom);
+            ru.v3("uGridColor", c.grid);
+            ru.v3("uCoreColor", c.core);
+            ru.v3("uHaze", c.haze);
+            rowTarget.bind();
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, width, height);
+            gl.useProgram(program);
+          } else if (rebuildRows) {
             scene.height = height;
             scene.hy = hy;
             scene.k = k;
@@ -711,7 +861,9 @@ export const synthwave = defineEffect(synthwaveMeta, {
           const frontH = FRONT_HEIGHT * height;
 
           gl.activeTexture(gl.TEXTURE1);
-          if (rowCount !== n) {
+          if (rowsOnGpu && rowTarget) {
+            gl.bindTexture(gl.TEXTURE_2D, rowTarget.texture);
+          } else if (rowCount !== n) {
             rowCount = n;
             gl.bindTexture(gl.TEXTURE_2D, rowTex);
             resetUnpackState(gl);
