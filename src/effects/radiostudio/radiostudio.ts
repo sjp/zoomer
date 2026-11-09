@@ -953,6 +953,18 @@ export const radiostudio = defineEffect(radiostudioMeta, {
         gl.viewport(0, 0, width, height);
       };
 
+      /** Mirrors the room: 1, or -1 with the mic on the right. */
+      let side = 1;
+      /** Draws gadget `kind` in a scissor round its box, mirrored by `side`. Expects the gadget program bound. */
+      const drawGadget = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
+        const x = side * cx;
+        gu.i1("uKind", kind);
+        gu.f4("uBox", x, cy, hw, hh);
+        if (scissorBox(gl, width, height, x, cy, hw, hh)) {
+          triangle.draw();
+        }
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -973,7 +985,7 @@ export const radiostudio = defineEffect(radiostudioMeta, {
           if (!roomTarget) {
             return;
           }
-          const side = p.mic === "right" ? -1 : 1;
+          side = p.mic === "right" ? -1 : 1;
           const foam = foamRgb(p.foam);
 
           // 1. The booth, when the size or a setting it shows changes. A new
@@ -1058,24 +1070,16 @@ export const radiostudio = defineEffect(radiostudioMeta, {
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           gl.enable(gl.SCISSOR_TEST);
-          const draw = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
-            const x = side * cx;
-            gu.i1("uKind", kind);
-            gu.f4("uBox", x, cy, hw, hh);
-            if (scissorBox(gl, width, height, x, cy, hw, hh)) {
-              triangle.draw();
-            }
-          };
           const [sx, sy] = layout.sign;
           gu.f4("uVal", shown, 0, 0, 0);
-          draw(KIND_SIGN, sx, sy, shw, shh);
+          drawGadget(KIND_SIGN, sx, sy, shw, shh);
           for (let i = 0; i < 2; i++) {
             const m = layout.meters[i];
             gu.f4("uVal", (2 * needles[i].pos - 1) * VU_SWING, 0, 0, 0);
-            draw(KIND_NEEDLE, m[0], m[1], m[2], m[3]);
+            drawGadget(KIND_NEEDLE, m[0], m[1], m[2], m[3]);
             const b = layout.bars[i];
             gu.f4("uVal", bars[i], 0, 0, 0);
-            draw(KIND_BAR, b[0], b[1], b[2], b[3]);
+            drawGadget(KIND_BAR, b[0], b[1], b[2], b[3]);
           }
           for (let i = 0; i < 4; i++) {
             const [rx, ry, rr] = layout.reels[i];
@@ -1084,12 +1088,12 @@ export const radiostudio = defineEffect(radiostudioMeta, {
             const angle = right ? tape.right : tape.left;
             const fill = right ? tape.fill : 1 - tape.fill;
             gu.f4("uVal", angle, packRadius(fill), 0, 0);
-            draw(KIND_REEL, rx, ry, rr, rr);
+            drawGadget(KIND_REEL, rx, ry, rr, rr);
           }
           if (p.clock) {
             const [cx, cy, cr] = layout.clock;
             gu.f4("uVal", hands[0], hands[1], hands[2], 0);
-            draw(KIND_HANDS, cx, cy, cr, cr);
+            drawGadget(KIND_HANDS, cx, cy, cr, cr);
           }
           gl.disable(gl.SCISSOR_TEST);
           gl.disable(gl.BLEND);

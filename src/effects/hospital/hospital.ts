@@ -972,6 +972,20 @@ export const hospital = defineEffect(hospitalMeta, {
       const hands = new Float64Array(3);
       const dropState = new Float64Array(2);
 
+      /** Mirrors the room: 1, or -1 with the monitor on the right. */
+      let side = 1;
+      /** Texels for a texture `v` frame heights across, at twice the frame's resolution. */
+      const px = (v: number) => Math.max(1, Math.min(MAX_TEXT_TEXELS, Math.round(2 * v * height)));
+      /** Draws gadget `kind` in a scissor round its box, mirrored by `side`. Expects the gadget program bound. */
+      const drawGadget = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
+        const x = side * cx;
+        gu.i1("uKind", kind);
+        gu.f4("uBox", x, cy, hw, hh);
+        if (scissorBox(gl, width, height, x, cy, hw, hh)) {
+          triangle.draw();
+        }
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -990,10 +1004,8 @@ export const hospital = defineEffect(hospitalMeta, {
           if (!roomTarget) {
             return;
           }
-          const side = p.monitor === "right" ? -1 : 1;
+          side = p.monitor === "right" ? -1 : 1;
           const night = p.lighting === "night" ? 1 : 0;
-          const px = (v: number) =>
-            Math.max(1, Math.min(MAX_TEXT_TEXELS, Math.round(2 * v * height)));
 
           // 1. The monitor's model: new for a new variation, then run on.
           if (!monitor || p.seed !== monitorSeed) {
@@ -1088,20 +1100,12 @@ export const hospital = defineEffect(hospitalMeta, {
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           gl.enable(gl.SCISSOR_TEST);
-          const draw = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
-            const x = side * cx;
-            gu.i1("uKind", kind);
-            gu.f4("uBox", x, cy, hw, hh);
-            if (scissorBox(gl, width, height, x, cy, hw, hh)) {
-              triangle.draw();
-            }
-          };
           gu.f4("uVal", monitor.cursor, heartFlash(monitor), 0, 0);
-          draw(KIND_SCREEN, scx, scy, shw, shh);
+          drawGadget(KIND_SCREEN, scx, scy, shw, shh);
           dripDrop(time, dropState);
           const [dx, dy, dw, dh] = layout.drip;
           gu.f4("uVal", dropState[0], dropState[1], 0, 0);
-          draw(KIND_DROP, dx, dy, dw, dh);
+          drawGadget(KIND_DROP, dx, dy, dw, dh);
           // The clock keeps time while hidden, so it shows the right time when it comes back.
           const dayTime = day.step(step, "local", 0, 0);
           if (p.clock) {
@@ -1109,7 +1113,7 @@ export const hospital = defineEffect(hospitalMeta, {
             const [cx, cy, cr] = layout.clock;
             // Mirroring flips the room, not the clock: its hands still turn clockwise.
             gu.f4("uVal", hands[0], hands[1], hands[2], 0);
-            draw(KIND_HANDS, cx, cy, cr, cr);
+            drawGadget(KIND_HANDS, cx, cy, cr, cr);
           }
           gl.disable(gl.SCISSOR_TEST);
           gl.disable(gl.BLEND);

@@ -1209,6 +1209,21 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
       const blobLife = new Float32Array(LAMP_BLOBS).fill(1);
       const lampW = (REF_H * LAMP_GLASS[2]) / LAMP_GLASS[3];
 
+      /** Mirrors the room: 1, or -1 for the right-hand side. */
+      let side = 1;
+      /** Draws gadget `kind` in a scissor round its box, mirrored by `side` and scaled by `k`. Expects the gadget program bound. */
+      const drawGadget = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
+        const x = side * cx * k;
+        const y = cy * k;
+        const w = hw * k;
+        const h = hh * k;
+        gu.i1("uKind", kind);
+        gu.f4("uBox", x, y, w, h);
+        if (scissorBox(gl, width, height, x, y, w, h)) {
+          triangle.draw();
+        }
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -1229,7 +1244,7 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
           if (!baseTarget || !albedoTarget) {
             return;
           }
-          const side = p.side === "right" ? -1 : 1;
+          side = p.side === "right" ? -1 : 1;
 
           // 1. The room, when the size or the side changes.
           if (side !== roomSide) {
@@ -1319,19 +1334,8 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           gl.enable(gl.SCISSOR_TEST);
-          const draw = (kind: number, cx: number, cy: number, hw: number, hh: number) => {
-            const x = side * cx * k;
-            const y = cy * k;
-            const w = hw * k;
-            const h = hh * k;
-            gu.i1("uKind", kind);
-            gu.f4("uBox", x, y, w, h);
-            if (scissorBox(gl, width, height, x, y, w, h)) {
-              triangle.draw();
-            }
-          };
           gu.f4("uVal", glowShown[0], glowShown[1], glowShown[2], 0);
-          draw(KIND_CRT, SCREEN[0], SCREEN[1], SCREEN[2], SCREEN[3]);
+          drawGadget(KIND_CRT, SCREEN[0], SCREEN[1], SCREEN[2], SCREEN[3]);
           fillBlobs(
             blobData,
             blobR2,
@@ -1346,11 +1350,11 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
           gl.uniform1fv(gu.loc.uBlobR2, blobR2);
           gu.f3("uLampRgb", lamp[0], lamp[1], lamp[2]);
           gu.f2("uLampW", lampW, LAMP_POOL_R * LAMP_POOL_R);
-          draw(KIND_LAMP, LAMP_GLASS[0], LAMP_GLASS[1], LAMP_GLASS[2], LAMP_GLASS[3]);
+          drawGadget(KIND_LAMP, LAMP_GLASS[0], LAMP_GLASS[1], LAMP_GLASS[2], LAMP_GLASS[3]);
           // Mirrored, the reels turn the other way, as a mirror shows them.
           gu.f4("uVal", side * reels.angle, 0, 0, 0);
           for (const [rx, ry] of REELS) {
-            draw(KIND_REEL, rx, ry, REEL_R, REEL_R);
+            drawGadget(KIND_REEL, rx, ry, REEL_R, REEL_R);
           }
           gl.bindTexture(gl.TEXTURE_2D, null);
           gl.disable(gl.SCISSOR_TEST);
