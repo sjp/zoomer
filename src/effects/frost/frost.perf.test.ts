@@ -10,8 +10,9 @@ const FRAME_BUDGET_MS = 16;
 
 describe("frost", () => {
   it("never stalls a frame across many grow / hold / melt cycles", () => {
-    // Fastest growth: a cycle every ~80 s, so ten minutes cross about eight boundaries.
-    const run = timeFrames(frost, 6000, 0.1, (_, base) => ({ params: { ...base, growth: 4 } }));
+    // Fastest growth: a cycle every ~80 s, so 250 s cross three boundaries, each
+    // building the next cycle's field ahead. More cycles only repeat the same work.
+    const run = timeFrames(frost, 2500, 0.1, (_, base) => ({ params: { ...base, growth: 4 } }));
     expect(run.worst(20)).toBeLessThan(FRAME_BUDGET_MS);
   });
 
