@@ -66,6 +66,17 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
   frames(2, sets[0], 0.1);
   instance.resize(viewport(16, 9));
   frames(2, sets[1]);
+  // Extreme aspects: a tall, narrow sidebar or OBS source, a thin strip, and 1x1.
+  for (const [w, h] of [
+    [60, 1080],
+    [1920, 60],
+    [1, 1],
+  ]) {
+    instance.resize(viewport(w, h));
+    frames(2, sets[0]);
+    frames(2, sets[1]);
+    frames(2, sets[2]);
+  }
   instance.resize(viewport(640, 360));
   frames(2, sets[0]);
   const draws = fake.draws();
