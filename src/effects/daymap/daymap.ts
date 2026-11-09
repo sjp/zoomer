@@ -36,8 +36,9 @@ import {
   loadLandMask,
   uploadLandMask,
 } from "../land-mask";
-import { defineEffect } from "../types";
+import { defineEffect, type ParamValues } from "../types";
 import { createCanvasTexture } from "../canvas-texture";
+import { createLowResTarget } from "../lowres";
 
 /** City-light grid cell, in degrees. Each cell holds at most one light. */
 const CITY_CELL = 2;
@@ -57,6 +58,12 @@ const SLOT_H = 32;
 const MARKER_INSET = 10;
 const LABEL_GAP = 12;
 const LABEL_FONT_PX = 16;
+/**
+ * Map time step in real time, in milliseconds: the map is cached and redrawn
+ * only when the sun and moon move on a step. At 4K the terminator moves about
+ * 0.05 px a second, so a step moves it by a quarter of a pixel.
+ */
+const MAP_STEP_REAL = 5000;
 /** Label time steps, in milliseconds: every minute in real time, every 15 minutes in demo mode. */
 const LABEL_STEP_REAL = 60000;
 const LABEL_STEP_DEMO = 900000;
@@ -317,7 +324,8 @@ void main() {
  * A flat world map showing where it is day and night right now. One full-screen
  * pass maps each pixel to latitude and longitude (Miller projection), shades it by
  * the sun's elevation through the twilight bands, and looks up land in a signed
- * distance field; city pins and their local times are a few textured quads.
+ * distance field. The map is cached and redrawn only when it changes (every few
+ * seconds in real time); city pins and their local times are a few textured quads.
  */
 export const daymap = defineEffect(daymapMeta, {
   create(gl) {
@@ -325,6 +333,10 @@ export const daymap = defineEffect(daymapMeta, {
       const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const pinProgram = scopedProgram(gl, scope, PIN_VERTEX, PIN_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
+      // The map shader dithers itself; the cache is copied as it is.
+      const map = scope.own(createLowResTarget(gl, { keep: true, dither: false }));
+      const mapInputs = createChangeKey(9);
+      let maskLoads = 0;
       const pins = scope.own(createSpriteBatch(gl, MAX_PINS, [4, 4]));
       // Until the mask loads, a single "far out at sea" texel: day and night over plain ocean.
       const mask = scope.add(
@@ -455,11 +467,71 @@ export const daymap = defineEffect(daymapMeta, {
         labelAtlas.upload(canvas);
       };
 
+      /** Draws the map at time `mapMs` into its cache. */
+      const drawMap = (
+        p: ParamValues<typeof daymapMeta.params>,
+        mapMs: number,
+        style: Style,
+        centre: number,
+      ) => {
+        const k = radiansPerPixel(width, height);
+        map.bind();
+        gl.useProgram(program);
+        gl.bindTexture(gl.TEXTURE_2D, mask);
+        u.f2("uHalf", 0.5 * width, 0.5 * height);
+        u.f1("uK", k);
+        u.f1("uCentre", (centre * Math.PI) / 180);
+        u.f1("uScale", scale);
+        // Smooth coastlines over about one and a half pixels.
+        u.f1("uAa", Math.max(0.05, (0.75 * k * LAND_MASK_WIDTH) / (2 * Math.PI)));
+        u.v3("uSun", latLonToVector(subsolarPoint(mapMs, sun), sunVec));
+        if (p.twilight !== lastTwilight) {
+          lastTwilight = p.twilight;
+          twilightRamps(p.twilight === "bands" ? "bands" : "smooth", lo, hi);
+          u.f4("uLo", lo[0], lo[1], lo[2], lo[3]);
+          u.f4(
+            "uInvSpan",
+            1 / (hi[0] - lo[0]),
+            1 / (hi[1] - lo[1]),
+            1 / (hi[2] - lo[2]),
+            1 / (hi[3] - lo[3]),
+          );
+        }
+        u.rgb("uOcean", style.ocean);
+        u.rgb("uShallow", style.shallow);
+        u.rgb("uLand", style.land);
+        u.rgb("uArid", style.arid);
+        u.rgb("uIce", style.ice);
+        u.rgb("uCoast", style.coast);
+        u.rgb("uNightMul", style.nightMul);
+        u.rgb("uNightAdd", style.nightAdd);
+        u.rgb("uWarm", style.warm);
+        u.rgb("uGlow", style.glow);
+        u.rgb("uCity", style.city);
+        u.rgb("uGrid", style.grid);
+        u.f4("uLook", style.desert, style.stroke, p.glow ? 1 : 0, p.cities ? 1 : 0);
+        u.f2(
+          "uGridMode",
+          style.gridAlpha,
+          p.grid === "graticule" ? 2 : p.grid === "dateline" ? 1 : 0,
+        );
+        if (p.moon) {
+          latLonToPixel(sublunarPoint(mapMs, moon), width, height, centre, px);
+          // gl_FragCoord has y up.
+          u.f3("uMoon", px[0], height - px[1], MOON_RADIUS * scale);
+        } else {
+          u.f3("uMoon", 0, 0, 0);
+        }
+        triangle.draw();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      };
+
       return {
         resize(v) {
           width = v.width;
           height = v.height;
           scale = v.scale;
+          map.resize(width, height, 1);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -467,7 +539,6 @@ export const daymap = defineEffect(daymapMeta, {
           const styleId = has(STYLES, p.style) ? p.style : "night";
           const style = STYLES[styleId];
           const centre = wrap(p.centre, -180, 360);
-          const k = radiansPerPixel(width, height);
 
           gl.activeTexture(gl.TEXTURE0);
           const image = maskImage.take();
@@ -475,55 +546,25 @@ export const daymap = defineEffect(daymapMeta, {
             gl.bindTexture(gl.TEXTURE_2D, mask);
             uploadLandMask(gl, image);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            maskLoads++;
           }
 
-          gl.useProgram(program);
-          gl.bindTexture(gl.TEXTURE_2D, mask);
-          u.f2("uHalf", 0.5 * width, 0.5 * height);
-          u.f1("uK", k);
-          u.f1("uCentre", (centre * Math.PI) / 180);
-          u.f1("uScale", scale);
-          // Smooth coastlines over about one and a half pixels.
-          u.f1("uAa", Math.max(0.05, (0.75 * k * LAND_MASK_WIDTH) / (2 * Math.PI)));
-          u.v3("uSun", latLonToVector(subsolarPoint(ms, sun), sunVec));
-          if (p.twilight !== lastTwilight) {
-            lastTwilight = p.twilight;
-            twilightRamps(p.twilight === "bands" ? "bands" : "smooth", lo, hi);
-            u.f4("uLo", lo[0], lo[1], lo[2], lo[3]);
-            u.f4(
-              "uInvSpan",
-              1 / (hi[0] - lo[0]),
-              1 / (hi[1] - lo[1]),
-              1 / (hi[2] - lo[2]),
-              1 / (hi[3] - lo[3]),
-            );
+          // The map, redrawn into its cache only when it changes: every frame in
+          // demo mode, once a time step in real time.
+          const mapMs = p.demo ? ms : Math.round(ms / MAP_STEP_REAL) * MAP_STEP_REAL;
+          mapInputs.set(0, mapMs);
+          mapInputs.setText(1, styleId);
+          mapInputs.set(2, centre);
+          mapInputs.setText(3, p.twilight);
+          mapInputs.set(4, p.glow ? 1 : 0);
+          mapInputs.set(5, p.cities ? 1 : 0);
+          mapInputs.setText(6, p.grid);
+          mapInputs.set(7, p.moon ? 1 : 0);
+          mapInputs.set(8, maskLoads);
+          if (map.needsRedraw(mapInputs)) {
+            drawMap(p, mapMs, style, centre);
           }
-          u.rgb("uOcean", style.ocean);
-          u.rgb("uShallow", style.shallow);
-          u.rgb("uLand", style.land);
-          u.rgb("uArid", style.arid);
-          u.rgb("uIce", style.ice);
-          u.rgb("uCoast", style.coast);
-          u.rgb("uNightMul", style.nightMul);
-          u.rgb("uNightAdd", style.nightAdd);
-          u.rgb("uWarm", style.warm);
-          u.rgb("uGlow", style.glow);
-          u.rgb("uCity", style.city);
-          u.rgb("uGrid", style.grid);
-          u.f4("uLook", style.desert, style.stroke, p.glow ? 1 : 0, p.cities ? 1 : 0);
-          u.f2(
-            "uGridMode",
-            style.gridAlpha,
-            p.grid === "graticule" ? 2 : p.grid === "dateline" ? 1 : 0,
-          );
-          if (p.moon) {
-            latLonToPixel(sublunarPoint(ms, moon), width, height, centre, px);
-            // gl_FragCoord has y up.
-            u.f3("uMoon", px[0], height - px[1], MOON_RADIUS * scale);
-          } else {
-            u.f3("uMoon", 0, 0, 0);
-          }
-          triangle.draw();
+          map.blit();
 
           const cities = PIN_PRESETS[p.pins] ?? PIN_PRESETS.none;
           if (cities.length === 0) {
