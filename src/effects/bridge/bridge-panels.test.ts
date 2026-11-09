@@ -2,18 +2,30 @@ import { describe, expect, it } from "vitest";
 import {
   type BoxShape,
   buildPanels,
+  copyText,
   createAtlasImage,
+  liveColumns,
+  liveRows,
   MAX_BLOCKS,
   MAX_WIDGETS,
   panelNumber,
   rasterisePanels,
+  type PanelSet,
   type Shape,
   shapeBounds,
   shapeDistance,
   textBounds,
   tickedNumber,
 } from "./bridge-panels";
-import { ATLAS_S0, ATLAS_Y0, bridgeLayout, type WallRect } from "./bridge-room";
+import {
+  ATLAS_S0,
+  ATLAS_S1,
+  ATLAS_Y0,
+  ATLAS_Y1,
+  atlasTexelsPerMetre,
+  bridgeLayout,
+  type WallRect,
+} from "./bridge-room";
 import { createRng } from "../noise";
 
 const layout = bridgeLayout("left", true);
@@ -286,6 +298,143 @@ describe("bridge panels", () => {
         }
       }
       expect(intruders).toEqual([]);
+    }
+  });
+});
+
+describe("live readout redraws", () => {
+  const atlasFor = (height: number) => {
+    const tpm = atlasTexelsPerMetre(height);
+    return createAtlasImage(
+      Math.ceil((ATLAS_S1 - ATLAS_S0) * tpm),
+      Math.ceil((ATLAS_Y1 - ATLAS_Y0) * tpm),
+      tpm,
+    );
+  };
+
+  /** Static text runs whose ink reaches into a readout's redrawn texels. */
+  const erased = (set: PanelSet, height: number): string[] => {
+    const atlas = atlasFor(height);
+    const { tpm } = atlas;
+    const [r0, rows] = liveRows(set, atlas);
+    const r1 = r0 + rows - 1;
+    const hits: string[] = [];
+    for (const t of set.texts) {
+      // Rows the run's ink reaches: capitals sit on the baseline (round ones
+      // overshoot it a little), lowercase may descend.
+      const b = textBounds(t);
+      const descent = (/[a-z,;]/.test(t.text + t.alt) ? 0.25 : 0.02) * t.size;
+      const t0 = Math.floor((t.y - descent - ATLAS_Y0) * tpm);
+      const t1 = Math.ceil((b.y1 - ATLAS_Y0) * tpm);
+      const s0 = Math.floor((b.s0 - ATLAS_S0) * tpm);
+      const s1 = Math.ceil((b.s1 - ATLAS_S0) * tpm);
+      if (t1 < r0 || t0 > r1) {
+        continue;
+      }
+      for (const live of set.live) {
+        const [c0, c1] = liveColumns(live, atlas);
+        if (s1 >= c0 && s0 <= c1) {
+          hits.push(`${t.text} under ${live.key} at ${String(height)}p`);
+        }
+      }
+    }
+    return hits;
+  };
+
+  it("cover every readout's bounds and stay inside the atlas", () => {
+    for (const height of [720, 1080, 2160]) {
+      const atlas = atlasFor(height);
+      const set = buildPanels(layout, 12);
+      const [r0, rows] = liveRows(set, atlas);
+      // No more than the rows the bounds reach.
+      const top = Math.max(...set.live.map((t) => t.bounds.y1));
+      expect(r0 + rows - 1).toBeLessThan((top - ATLAS_Y0) * atlas.tpm);
+      expect(r0).toBeGreaterThanOrEqual(0);
+      expect(r0 + rows).toBeLessThanOrEqual(atlas.height);
+      for (const t of set.live) {
+        expect(r0).toBeLessThanOrEqual((t.bounds.y0 - ATLAS_Y0) * atlas.tpm);
+        expect(r0 + rows).toBeGreaterThanOrEqual((t.bounds.y1 - ATLAS_Y0) * atlas.tpm);
+        const [c0, c1] = liveColumns(t, atlas);
+        expect(c0).toBeGreaterThanOrEqual(0);
+        expect(c1).toBeLessThan(atlas.width);
+        expect(c0).toBeLessThanOrEqual((t.bounds.s0 - ATLAS_S0) * atlas.tpm);
+        expect(c1).toBeGreaterThanOrEqual((t.bounds.s1 - ATLAS_S0) * atlas.tpm);
+      }
+    }
+  });
+
+  it("are empty with no readouts", () => {
+    const set = buildPanels(
+      layout,
+      12,
+      new Set(["stardate", "time", "date", "status", "location"]),
+    );
+    expect(set.live).toEqual([]);
+    expect(liveRows(set, atlasFor(1080))).toEqual([0, 0]);
+  });
+
+  it("never clear static text in the readouts' columns", () => {
+    // The redraw copies the union of all readouts' rows over each one's columns,
+    // so a taller readout elsewhere must not reach a neighbour's label.
+    const hits: string[] = [];
+    for (const side of ["left", "right"] as const) {
+      for (const view of [true, false]) {
+        for (const seed of [0, 12, 77]) {
+          for (const height of [360, 480, 720, 1080, 2160]) {
+            hits.push(...erased(buildPanels(bridgeLayout(side, view), seed), height));
+          }
+        }
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it("catch a label pushed into the readouts' rows", () => {
+    const set = buildPanels(layout, 12);
+    const live = set.live[0];
+    const label = set.texts.find(
+      (t) => t.x >= live.bounds.s0 && t.x <= live.bounds.s1 && t.y > live.bounds.y1,
+    );
+    expect(label).toBeDefined();
+    if (label) {
+      label.y = live.bounds.y1 - 0.005;
+    }
+    expect(erased(set, 1080).length).toBeGreaterThan(0);
+  });
+});
+
+describe("copyText", () => {
+  it("copies red and green into G and B over the given columns, flipping rows", () => {
+    const atlas = createAtlasImage(4, 5, 1);
+    atlas.rgba.fill(9);
+    const rows = 2;
+    // Canvas pixels, top down: row 0 has red = 10 + column, green = 20 + column;
+    // row 1 has red = 30 + column, green = 40 + column.
+    const data = new Uint8ClampedArray(4 * rows * 4);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < 4; c++) {
+        data[(r * 4 + c) * 4] = 10 + 20 * r + c;
+        data[(r * 4 + c) * 4 + 1] = 20 + 20 * r + c;
+      }
+    }
+    copyText(data, atlas, 1, rows, 1, 2);
+    const px = (row: number, col: number) =>
+      Array.from(atlas.rgba.slice((row * 4 + col) * 4, (row * 4 + col) * 4 + 4));
+    // Atlas row 1 (lower) takes the canvas's bottom row, row 2 its top row.
+    expect(px(1, 1)).toEqual([9, 31, 41, 9]);
+    expect(px(1, 2)).toEqual([9, 32, 42, 9]);
+    expect(px(2, 1)).toEqual([9, 11, 21, 9]);
+    expect(px(2, 2)).toEqual([9, 12, 22, 9]);
+    // Columns and rows outside the range are untouched.
+    for (const [row, col] of [
+      [1, 0],
+      [1, 3],
+      [2, 0],
+      [2, 3],
+      [0, 1],
+      [3, 1],
+    ]) {
+      expect(px(row, col)).toEqual([9, 9, 9, 9]);
     }
   });
 });

@@ -2,8 +2,11 @@ import { bridgeMeta, SHIP_OPTIONS } from "./bridge.meta";
 import {
   type AtlasImage,
   buildPanels,
+  copyText,
   createAtlasImage,
   groupCount,
+  liveColumns,
+  liveRows,
   MAX_WIDGETS,
   type PanelSet,
   rasterisePanels,
@@ -754,30 +757,6 @@ function canvasPixels(
   return data && data.length >= width * rows * 4 ? data : null;
 }
 
-/**
- * Copies canvas pixels' red and green into the atlas's G (text) and B (alt), for
- * atlas rows r0 to r0 + rows - 1 and columns c0 to c1, flipping rows (the canvas
- * runs top down).
- */
-function copyText(
-  data: Uint8ClampedArray,
-  atlas: AtlasImage,
-  r0: number,
-  rows: number,
-  c0: number,
-  c1: number,
-): void {
-  const { width, rgba } = atlas;
-  for (let k = 0; k < rows; k++) {
-    const src = (rows - 1 - k) * width * 4;
-    const dst = (r0 + k) * width * 4;
-    for (let i = c0; i <= c1; i++) {
-      rgba[dst + i * 4 + 1] = data[src + i * 4];
-      rgba[dst + i * 4 + 2] = data[src + i * 4 + 1];
-    }
-  }
-}
-
 function blankCanvas(width: number, height: number): OffscreenCanvasRenderingContext2D | null {
   const ctx = new OffscreenCanvas(width, height).getContext("2d");
   if (!ctx) {
@@ -808,22 +787,6 @@ function drawText(set: PanelSet, atlas: AtlasImage): void {
   }
 }
 
-/** Atlas rows (first, count) that the live readouts can draw in. */
-function liveRows(set: PanelSet, atlas: AtlasImage): [number, number] {
-  let y0 = Number.POSITIVE_INFINITY;
-  let y1 = Number.NEGATIVE_INFINITY;
-  for (const t of set.live) {
-    y0 = Math.min(y0, t.bounds.y0);
-    y1 = Math.max(y1, t.bounds.y1);
-  }
-  if (y1 < y0) {
-    return [0, 0];
-  }
-  const r0 = Math.max(0, Math.floor((y0 - ATLAS_Y0) * atlas.tpm));
-  const r1 = Math.min(atlas.height - 1, Math.ceil((y1 - ATLAS_Y0) * atlas.tpm));
-  return [r0, Math.max(0, r1 - r0 + 1)];
-}
-
 /**
  * Redraws the live readouts' values into the atlas image (clearing each one's
  * bounds first) and returns the rows (first, count) to re-upload.
@@ -852,8 +815,7 @@ function drawLive(
     return [0, 0];
   }
   for (const t of set.live) {
-    const c0 = Math.max(0, Math.floor((t.bounds.s0 - ATLAS_S0) * tpm));
-    const c1 = Math.min(atlas.width - 1, Math.ceil((t.bounds.s1 - ATLAS_S0) * tpm));
+    const [c0, c1] = liveColumns(t, atlas);
     copyText(data, atlas, r0, rows, c0, c1);
   }
   return [r0, rows];

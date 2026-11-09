@@ -1142,3 +1142,56 @@ export function rasterisePanels(set: PanelSet, atlas: AtlasImage): void {
     }
   }
 }
+
+/**
+ * Atlas rows (first, count) that the live readouts can draw in: the union of
+ * every readout's bounds, since they redraw together. Each readout's columns
+ * of these rows are cleared and recopied on a redraw, so no static text may
+ * reach into them (`bridge-panels.test.ts` checks).
+ */
+export function liveRows(set: PanelSet, atlas: AtlasImage): [number, number] {
+  let y0 = Number.POSITIVE_INFINITY;
+  let y1 = Number.NEGATIVE_INFINITY;
+  for (const t of set.live) {
+    y0 = Math.min(y0, t.bounds.y0);
+    y1 = Math.max(y1, t.bounds.y1);
+  }
+  if (y1 < y0) {
+    return [0, 0];
+  }
+  const r0 = Math.max(0, Math.floor((y0 - ATLAS_Y0) * atlas.tpm));
+  // Texel row k spans [k, k + 1), so the last row the bounds reach is ceil - 1.
+  const r1 = Math.min(atlas.height - 1, Math.ceil((y1 - ATLAS_Y0) * atlas.tpm) - 1);
+  return [r0, Math.max(0, r1 - r0 + 1)];
+}
+
+/** Atlas columns (first, last) a live readout's redraw copies, clipped to the atlas. */
+export function liveColumns(t: LiveText, atlas: AtlasImage): [number, number] {
+  const c0 = Math.max(0, Math.floor((t.bounds.s0 - ATLAS_S0) * atlas.tpm));
+  const c1 = Math.min(atlas.width - 1, Math.ceil((t.bounds.s1 - ATLAS_S0) * atlas.tpm));
+  return [c0, c1];
+}
+
+/**
+ * Copies canvas pixels' red and green into the atlas's G (text) and B (alt), for
+ * atlas rows r0 to r0 + rows - 1 and columns c0 to c1, flipping rows (the canvas
+ * runs top down).
+ */
+export function copyText(
+  data: Uint8ClampedArray,
+  atlas: AtlasImage,
+  r0: number,
+  rows: number,
+  c0: number,
+  c1: number,
+): void {
+  const { width, rgba } = atlas;
+  for (let k = 0; k < rows; k++) {
+    const src = (rows - 1 - k) * width * 4;
+    const dst = (r0 + k) * width * 4;
+    for (let i = c0; i <= c1; i++) {
+      rgba[dst + i * 4 + 1] = data[src + i * 4];
+      rgba[dst + i * 4 + 2] = data[src + i * 4 + 1];
+    }
+  }
+}
