@@ -1,4 +1,5 @@
 import { createChangeKey } from "../change-key";
+import { createColorEase } from "../color";
 import { cloudNoiseChannels, coverageOpacity } from "../clouds/clouds-sky";
 import {
   beginFrame,
@@ -23,12 +24,15 @@ import {
   COLUMNS,
   createFarm,
   type FarmPalette,
-  fillHillColors,
   fillHillTable,
   HILL_LAYERS,
   HUB_X,
   HUB_Y,
   layoutFarm,
+  PACKED,
+  packPalette,
+  PALETTE_FADE,
+  PALETTE_FLOATS,
   paletteFor,
   SPAN,
   TOWER_FOOT,
@@ -493,7 +497,20 @@ export const windfarm = defineEffect(windfarmMeta, {
       gl.useProgram(null);
 
       const farm = createFarm();
-      const hillColors = new Float32Array(HILL_LAYERS * 3);
+      const palTarget = new Float32Array(PALETTE_FLOATS);
+      const palEase = createColorEase(PALETTE_FLOATS);
+      const view = (at: number, n = 3) => palEase.value.subarray(at, at + n);
+      const skyTop = view(PACKED.skyTop);
+      const skyHorizon = view(PACKED.skyHorizon);
+      const glow = view(PACKED.glow);
+      const cloudLight = view(PACKED.cloudLight);
+      const cloudShade = view(PACKED.cloudShade);
+      const haze = view(PACKED.haze);
+      const turbineLit = view(PACKED.turbineLit);
+      const turbineShade = view(PACKED.turbineShade);
+      const hills = view(PACKED.hills, HILL_LAYERS * 3);
+      /** Whether the hill colours on the GPU are the settled ones. */
+      let hillsSent = false;
       const tableKey = createChangeKey(1);
       const layoutKey = createChangeKey(4);
       const sizeKey = createChangeKey(3);
@@ -562,21 +579,26 @@ export const windfarm = defineEffect(windfarmMeta, {
           gl.useProgram(scene);
           if (pal !== palette) {
             palette = pal;
-            fillHillColors(hillColors, pal);
-            gl.uniform3fv(u.loc.uHill, hillColors);
+            packPalette(palTarget, pal);
+          }
+          const v = palEase.step(palTarget, dt, PALETTE_FADE);
+          const k = PACKED.scalars;
+          if (palEase.moving || !hillsSent) {
+            hillsSent = !palEase.moving;
+            gl.uniform3fv(u.loc.uHill, hills);
             changed = true;
           }
           track(u.f2("uInvLow", aspect / target.width, 1 / target.height));
           track(u.f1("uMargin", 2.5 / target.height));
-          track(u.v3("uSkyTop", pal.skyTop));
-          track(u.v3("uSkyHorizon", pal.skyHorizon));
-          track(u.v3("uGlow", pal.glow));
-          track(u.f4("uSun", pal.sunX * aspect, pal.sunY, pal.glowRadius, pal.glowStrength));
-          track(u.v3("uCloudLight", pal.cloudLight));
-          track(u.v3("uCloudShade", pal.cloudShade));
+          track(u.v3("uSkyTop", skyTop));
+          track(u.v3("uSkyHorizon", skyHorizon));
+          track(u.v3("uGlow", glow));
+          track(u.f4("uSun", v[k] * aspect, v[k + 1], v[k + 2], v[k + 3]));
+          track(u.v3("uCloudLight", cloudLight));
+          track(u.v3("uCloudShade", cloudShade));
           track(u.f4("uCloud", cloudU, 0.21, cloudThreshold(cover), coverageOpacity(cover)));
-          track(u.f4("uShadow", shadowU, 0.53, pal.shadow, 0));
-          track(u.v3("uHaze", pal.haze));
+          track(u.f4("uShadow", shadowU, 0.53, v[k + 5], 0));
+          track(u.v3("uHaze", haze));
 
           // With no wind, nothing in the scene moves and the cached one stands.
           if (changed) {
@@ -587,7 +609,7 @@ export const windfarm = defineEffect(windfarmMeta, {
 
           gl.useProgram(target.program);
           cu.f2("uNear", 1 / height, height);
-          cu.f3("uHill0", hillColors[0], hillColors[1], hillColors[2]);
+          cu.v3("uHill0", hills);
           target.blit();
 
           const count = writeTurbines(farm, turbines.data, height);
@@ -598,10 +620,10 @@ export const windfarm = defineEffect(windfarmMeta, {
           gl.useProgram(turbineProgram);
           tu.f2("uInvRes", 1 / width, 1 / height);
           tu.f2("uNear", 1 / height, height);
-          tu.v3("uLit", pal.turbineLit);
-          tu.v3("uShade", pal.turbineShade);
-          tu.v3("uHaze", pal.haze);
-          const lx = pal.lightX;
+          tu.v3("uLit", turbineLit);
+          tu.v3("uShade", turbineShade);
+          tu.v3("uHaze", haze);
+          const lx = v[k + 4];
           const ly = 0.6;
           const len = Math.hypot(lx, ly);
           tu.f2("uLight", lx / len, ly / len);

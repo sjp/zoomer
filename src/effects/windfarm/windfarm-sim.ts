@@ -239,6 +239,51 @@ export function fillHillColors(out: Float32Array, pal: FarmPalette): void {
   }
 }
 
+/** Seconds for a change of time of day to crossfade. */
+export const PALETTE_FADE = 1.5;
+
+/**
+ * Offsets into a packed palette (see `packPalette`): colours are RGB triples,
+ * `HILLS` holds each hill layer's hazed colour, and `SCALARS` the sun's place,
+ * glow radius and strength, light direction and cloud shadow, in that order.
+ */
+export const PACKED = {
+  skyTop: 0,
+  skyHorizon: 3,
+  glow: 6,
+  cloudLight: 9,
+  cloudShade: 12,
+  haze: 15,
+  turbineLit: 18,
+  turbineShade: 21,
+  hills: 24,
+  scalars: 24 + HILL_LAYERS * 3,
+} as const;
+export const PALETTE_FLOATS = PACKED.scalars + 6;
+
+/**
+ * Writes everything a palette sets into `out` as flat floats, so a change of
+ * time of day can ease as one block (`createColorEase`).
+ */
+export function packPalette(out: Float32Array, pal: FarmPalette): void {
+  out.set(pal.skyTop, PACKED.skyTop);
+  out.set(pal.skyHorizon, PACKED.skyHorizon);
+  out.set(pal.glow, PACKED.glow);
+  out.set(pal.cloudLight, PACKED.cloudLight);
+  out.set(pal.cloudShade, PACKED.cloudShade);
+  out.set(pal.haze, PACKED.haze);
+  out.set(pal.turbineLit, PACKED.turbineLit);
+  out.set(pal.turbineShade, PACKED.turbineShade);
+  fillHillColors(out.subarray(PACKED.hills, PACKED.scalars), pal);
+  const k = PACKED.scalars;
+  out[k] = pal.sunX;
+  out[k + 1] = pal.sunY;
+  out[k + 2] = pal.glowRadius;
+  out[k + 3] = pal.glowStrength;
+  out[k + 4] = pal.lightX;
+  out[k + 5] = pal.shadow;
+}
+
 // ---------------------------------------------------------------------------
 // Turbine geometry (units of tower height, origin at the tower's foot, y up)
 // ---------------------------------------------------------------------------

@@ -11,6 +11,9 @@ import {
   HILLS,
   hillHeightAt,
   layoutFarm,
+  PACKED,
+  packPalette,
+  PALETTE_FLOATS,
   PALETTES,
   paletteFor,
   silhouettesOverlap,
@@ -49,6 +52,21 @@ describe("palettes", () => {
     for (let i = 1; i < HILL_LAYERS; i++) {
       expect(dist(i)).toBeLessThan(dist(i - 1));
     }
+  });
+
+  it("packs every eased palette value into one block", () => {
+    const out = new Float32Array(PALETTE_FLOATS).fill(Number.NaN);
+    const pal = PALETTES.evening;
+    packPalette(out, pal);
+    expect(out.every(Number.isFinite)).toBe(true);
+    expect(Array.from(out.subarray(PACKED.haze, PACKED.haze + 3))).toEqual(
+      pal.haze.map(Math.fround),
+    );
+    const hills = new Float32Array(HILL_LAYERS * 3);
+    fillHillColors(hills, pal);
+    expect(out.subarray(PACKED.hills, PACKED.scalars)).toEqual(hills);
+    expect(out[PACKED.scalars]).toBe(Math.fround(pal.sunX));
+    expect(out[PALETTE_FLOATS - 1]).toBe(Math.fround(pal.shadow));
   });
 });
 
