@@ -80,6 +80,7 @@ const browserHost: LoopHost = {
 export interface RenderLoopOptions {
   canvas: LoopCanvas;
   effect: EffectDefinition;
+  /** The starting resolution; change it with `RenderLoop.setResolution`. */
   resolution: Resolution;
   /** Read every frame, so param changes never recreate the effect. */
   getParams: () => AnyParamValues;
@@ -108,6 +109,12 @@ export interface RenderLoop {
    * Unlocking applies the current layout size.
    */
   setSizeLocked: (locked: boolean) => void;
+  /**
+   * Switches the buffer size between "Fit window" and the fixed sizes, keeping the
+   * running instance (a resize, not a re-create, so simulations carry on). While the
+   * size is locked the new size waits for the unlock.
+   */
+  setResolution: (resolution: Resolution) => void;
   /** Stops the loop and disposes the effect. */
   dispose: () => void;
 }
@@ -166,7 +173,7 @@ function createInstance(
 
 /** Starts hosting `effect` on `canvas`; runs until `dispose`. */
 export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
-  const { canvas, effect, resolution, getParams, getFrameRate } = options;
+  const { canvas, effect, getParams, getFrameRate } = options;
   const host = options.host ?? browserHost;
   const reportError = (message: string) => options.onError?.(message);
   const reportStats = (stats: FrameStats | undefined) => options.onStats?.(stats);
@@ -225,7 +232,8 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
     reportError(`This effect stopped after an error: ${describeError(err)}`);
   };
   let viewport: Viewport | undefined;
-  const fixed = RESOLUTIONS[resolution].size;
+  let resolution = options.resolution;
+  let fixed = RESOLUTIONS[resolution].size;
   let sizeLocked = options.sizeLocked ?? false;
 
   const resizeInstance = () => {
@@ -273,7 +281,13 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
   canvas.addEventListener("webglcontextlost", onLost);
   canvas.addEventListener("webglcontextrestored", onRestored);
 
-  const disconnect = fixed ? undefined : host.observeResize(canvas, applySize);
+  // Only "Fit window" follows the layout.
+  let disconnect: (() => void) | undefined;
+  const observeLayout = () => {
+    disconnect?.();
+    disconnect = fixed ? undefined : host.observeResize(canvas, applySize);
+  };
+  observeLayout();
 
   let raf = 0;
   let last = host.now();
@@ -341,9 +355,18 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
         return;
       }
       sizeLocked = locked;
-      if (!locked && !fixed) {
+      if (!locked) {
         applySize();
       }
+    },
+    setResolution(next) {
+      if (next === resolution) {
+        return;
+      }
+      resolution = next;
+      fixed = RESOLUTIONS[next].size;
+      applySize();
+      observeLayout();
     },
     dispose() {
       host.cancelFrame(raf);

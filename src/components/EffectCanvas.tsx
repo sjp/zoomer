@@ -73,6 +73,12 @@ export function EffectCanvas({
     sizeLockedRef.current = sizeLocked;
     loopRef.current?.setSizeLocked(sizeLocked);
   }, [sizeLocked]);
+  // A resolution change resizes the running effect rather than re-creating it.
+  const resolutionRef = useRef(resolution);
+  useEffect(() => {
+    resolutionRef.current = resolution;
+    loopRef.current?.setResolution(resolution);
+  }, [resolution]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -82,7 +88,7 @@ export function EffectCanvas({
     const loop = createRenderLoop({
       canvas,
       effect,
-      resolution,
+      resolution: resolutionRef.current,
       getParams: () => paramsRef.current,
       getFrameRate: () => frameRateRef.current,
       onStats: (stats) => onStatsRef.current?.(stats),
@@ -95,7 +101,7 @@ export function EffectCanvas({
       loopRef.current = null;
       loop.dispose();
     };
-  }, [effect, resolution]);
+  }, [effect]);
 
   return (
     <canvas

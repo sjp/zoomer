@@ -63,7 +63,10 @@ function fakeHost(dpr = 1) {
     devicePixelRatio: () => dpr,
     observeResize: (_canvas, cb) => {
       resizeCallback = cb;
-      return disconnect;
+      return () => {
+        resizeCallback = undefined;
+        disconnect();
+      };
     },
   };
   /** Advances the clock by `ms` and runs the queued frame callbacks. */
@@ -293,6 +296,52 @@ describe("createRenderLoop", () => {
     expect(t.instance.dispose).toHaveBeenCalledTimes(1);
     expect(t.listenerCount()).toBe(0);
     expect(t.onStats).toHaveBeenLastCalledWith(undefined);
+  });
+});
+
+describe("resolution change", () => {
+  it("resizes the running effect instead of re-creating it", () => {
+    const t = start();
+    t.loop.setResolution("1080p");
+    expect(t.create).toHaveBeenCalledTimes(1);
+    expect(t.instance.dispose).not.toHaveBeenCalled();
+    expect(t.canvas.width).toBe(1920);
+    expect(t.canvas.height).toBe(1080);
+    expect(t.instance.resize).toHaveBeenLastCalledWith({ width: 1920, height: 1080, scale: 1 });
+    // A fixed size stops following the layout.
+    expect(t.hasObserver()).toBe(false);
+    expect(t.disconnect).toHaveBeenCalledTimes(1);
+    t.loop.setResolution("720p");
+    expect(t.canvas.width).toBe(1280);
+    expect(t.instance.resize).toHaveBeenCalledTimes(3);
+    expect(t.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the layout again after switching back to Fit window", () => {
+    const t = start({ resolution: "4k" });
+    expect(t.canvas.width).toBe(3840);
+    t.loop.setResolution("window");
+    expect(t.hasObserver()).toBe(true);
+    expect(t.canvas.width).toBe(800);
+    t.canvas.clientWidth = 640;
+    t.resize();
+    expect(t.canvas.width).toBe(640);
+    expect(t.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the current size while locked and applies the new one on unlock", () => {
+    const t = start({ sizeLocked: true });
+    t.loop.setResolution("1080p");
+    expect(t.canvas.width).toBe(800);
+    t.loop.setSizeLocked(false);
+    expect(t.canvas.width).toBe(1920);
+  });
+
+  it("does nothing for the same resolution", () => {
+    const t = start();
+    t.loop.setResolution("window");
+    expect(t.instance.resize).toHaveBeenCalledTimes(1);
+    expect(t.disconnect).not.toHaveBeenCalled();
   });
 });
 
