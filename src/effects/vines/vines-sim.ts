@@ -383,7 +383,16 @@ export interface Vines {
   /** Sprites in each group from the last `writeSprites`: leaves (attached and falling), then flowers. */
   readonly leafSprites: number;
   readonly flowerSprites: number;
-  /** Sets the screen width (ref px); call before the first `step` and on resize. */
+  /**
+   * Stem segments per density grid cell (`crowdCell`), which steers growth
+   * away from crowded spots; for tests.
+   */
+  readonly crowd: Uint16Array;
+  /**
+   * Sets the screen width (ref px); call before the first `step` and on resize.
+   * Plants keep their points relative to their anchor edge, so the density grid
+   * is rebuilt at their new world positions.
+   */
   resize: (refWidth: number) => void;
   /** Advances `dt` real seconds. */
   step: (dt: number, f: VineFrame) => void;
@@ -406,9 +415,16 @@ export interface Vines {
 }
 
 /** Density grid cell (ref px) and size: wide enough for a 4.4:1 frame. */
-const CELL = 40;
-const GRID_COLS = 120;
+export const CELL = 40;
+export const GRID_COLS = 120;
 const GRID_ROWS = 28;
+
+/** The density grid cell holding world point (`wx`, `wy`) in ref px, clamped to the grid. */
+export function crowdCell(wx: number, wy: number): number {
+  const c = clamp(Math.floor(wx / CELL), 0, GRID_COLS - 1);
+  const r = clamp(Math.floor(wy / CELL), 0, GRID_ROWS - 1);
+  return r * GRID_COLS + c;
+}
 
 export function createVines(seed = 0x7173): Vines {
   const rng = createRng(seed);
@@ -515,11 +531,7 @@ export function createVines(seed = 0x7173): Vines {
   let leafSprites = 0;
   let flowerSprites = 0;
 
-  const cellOf = (wx: number, wy: number) => {
-    const c = clamp(Math.floor(wx / CELL), 0, GRID_COLS - 1);
-    const r = clamp(Math.floor(wy / CELL), 0, GRID_ROWS - 1);
-    return r * GRID_COLS + c;
-  };
+  const cellOf = crowdCell;
   const crowd = (wx: number, wy: number) => grid[cellOf(wx, wy)];
 
   const markDirty = (p: number, slot: number) => {
@@ -1008,6 +1020,7 @@ export function createVines(seed = 0x7173): Vines {
     plantData,
     active,
     leafCount,
+    crowd: grid,
     get plants() {
       return plants;
     },

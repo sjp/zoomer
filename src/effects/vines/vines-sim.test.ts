@@ -5,6 +5,7 @@ import {
   bandHeight,
   bandWidth,
   createVines,
+  crowdCell,
   intrusion,
   KAPPA_MAX,
   KIND_TENDRIL,
@@ -14,6 +15,7 @@ import {
   MAX_STEP,
   OFF_FRAME,
   offFrame,
+  PLANT_FLOATS,
   PLANT_FLOWERS,
   PLANT_LEAVES,
   PLANT_SEGS,
@@ -306,5 +308,63 @@ describe("shapes", () => {
       expect(max).toBeCloseTo(1, 5);
       expect(VINE_SHAPES[s].length).toBe(outline.length * 2 + 2);
     }
+  });
+});
+
+describe("resize", () => {
+  const sum = (a: Uint16Array) => a.reduce((t, v) => t + v, 0);
+  const grown = () => {
+    const v = createVines(5);
+    const f = frame({ density: MAX_PLANTS });
+    run(v, f, 60, 1000, () => undefined);
+    return { v, f };
+  };
+  /** Each active plant's anchor (0 left, 0.5 centre, 1 right), from its uploaded x offset. */
+  const anchors = (v: Vines, width: number) =>
+    Array.from({ length: MAX_PLANTS }, (_, p) =>
+      v.active[p] ? v.plantData[p * PLANT_FLOATS] / width : -1,
+    );
+
+  it("keeps each plant's points relative to its anchor edge, moving the anchor", () => {
+    const { v, f } = grown();
+    const before = anchors(v, 1920);
+    expect(before.some((a) => a > 0)).toBe(true);
+    const segs = Array.from(v.segData);
+    v.resize(2560);
+    expect(Array.from(v.segData)).toEqual(segs);
+    v.step(0, { ...f, refWidth: 2560 });
+    const after = anchors(v, 2560);
+    expect(after.map((a, p) => Math.abs(a - before[p]))).toEqual(before.map(() => 0));
+  });
+
+  it("rebuilds the density grid at the plants' new world positions, and back", () => {
+    const { v } = grown();
+    const at1920 = Array.from(v.crowd);
+    const total = sum(v.crowd);
+    expect(total).toBeGreaterThan(0);
+    const anchor = anchors(v, 1920);
+    v.resize(2560);
+    // The same segments, counted once each, in new cells where their plant moved.
+    expect(sum(v.crowd)).toBe(total);
+    expect(Array.from(v.crowd)).not.toEqual(at1920);
+    // A segment counted where it was is counted where it is now.
+    const lost = [...segments(v)].filter(([p, slot]) => {
+      const x = v.segData[slot * SEG_FLOATS + 2];
+      const y = v.segData[slot * SEG_FLOATS + 3];
+      return (
+        at1920[crowdCell(x + anchor[p] * 1920, y)] > 0 &&
+        v.crowd[crowdCell(x + anchor[p] * 2560, y)] === 0
+      );
+    });
+    expect(lost).toEqual([]);
+    v.resize(1920);
+    expect(Array.from(v.crowd)).toEqual(at1920);
+  });
+
+  it("does nothing for the same width", () => {
+    const { v } = grown();
+    const before = Array.from(v.crowd);
+    v.resize(1920);
+    expect(Array.from(v.crowd)).toEqual(before);
   });
 });
