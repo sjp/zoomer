@@ -8,6 +8,7 @@
  * parallel index map says which block each texel belongs to, so one small state
  * texture animates every panel at once. Coordinates are wall (s, y) metres.
  */
+import type { Block, BlockKind } from "../console-blocks";
 import {
   ATLAS_S0,
   ATLAS_Y0,
@@ -38,22 +39,6 @@ export const COLOUR_COUNT = 8;
 const FRAME_COLOURS = [PEACH, PEACH, PALE_ORANGE, TAN, LILAC, MAUVE, PERIWINKLE];
 const BUTTON_COLOURS = [PEACH, PALE_ORANGE, PALE_ORANGE, TAN, LILAC, MAUVE, PERIWINKLE, PALE_BLUE];
 const TEXT_COLOURS = [PALE_ORANGE, PEACH, PALE_BLUE, PERIWINKLE, LILAC];
-
-export type BlockKind = "frame" | "button" | "text" | "readout" | "widget";
-
-export interface Block {
-  kind: BlockKind;
-  /** Resting colour, and the one it swaps to. */
-  colour: number;
-  alt: number;
-  /** Resting brightness, 0..1. */
-  level: number;
-  /** How busy it is, relative to the `activity` param. */
-  busy: number;
-  /** Chase group (-1 for none) and position in it, top to bottom. */
-  group: number;
-  order: number;
-}
 
 /** Rounded box, corner radii in the order bottom-left, bottom-right, top-right, top-left. */
 export interface BoxShape {

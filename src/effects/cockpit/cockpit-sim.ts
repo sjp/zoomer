@@ -10,8 +10,8 @@
  * - The console lamps: steady, blinking, and the Starship Bridge's event
  *   stream of dims, colour swaps, flashes and finger-run chases.
  */
-import type { Block } from "../bridge/bridge-panels";
 import {
+  type Block,
   blockEvent,
   type BlockEvent,
   CHASE_SLOT,
@@ -19,7 +19,7 @@ import {
   chaseWeight,
   eventWeight,
   slotLength,
-} from "../bridge/bridge-sim";
+} from "../console-blocks";
 import { hexToUnitRgb, type Rgb } from "../color";
 import { clamp, smoothstep } from "../math";
 import { hash32 } from "../noise";

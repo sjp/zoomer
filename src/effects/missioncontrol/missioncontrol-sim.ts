@@ -11,8 +11,8 @@
  * - Console activity: the Starship Bridge's block event stream, turned into
  *   CRT scrolling and push-button lights.
  */
-import type { Block } from "../bridge/bridge-panels";
 import {
+  type Block,
   blockEvent,
   type BlockEvent,
   CHASE_SLOT,
@@ -20,7 +20,7 @@ import {
   chaseWeight,
   eventWeight,
   slotLength,
-} from "../bridge/bridge-sim";
+} from "../console-blocks";
 import { clamp, wrap } from "../math";
 import { hash32 } from "../noise";
 

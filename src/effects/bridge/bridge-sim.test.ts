@@ -4,20 +4,22 @@ import { bridgeLayout } from "./bridge-room";
 import {
   ALERT_FADE,
   alertPulse,
-  blockEvent,
-  type BlockEvent,
   blockStates,
-  CHASE_SLOT,
-  chaseStart,
-  chaseWeight,
   createAlertMix,
   createStateScratch,
   eventsStarting,
-  eventWeight,
   PULSE_PERIOD,
-  slotLength,
   stepAlert,
 } from "./bridge-sim";
+import {
+  blockEvent,
+  type BlockEvent,
+  CHASE_SLOT,
+  chaseStart,
+  chaseWeight,
+  eventWeight,
+  slotLength,
+} from "../console-blocks";
 
 const set = buildPanels(bridgeLayout("left", true), 12);
 const blocks = set.blocks;

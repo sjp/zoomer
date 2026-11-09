@@ -8,7 +8,7 @@
  * the shaders use the same constants (interpolated with `glslFloat`), so the
  * tests can check the framing.
  */
-import type { Block } from "../bridge/bridge-panels";
+import type { Block } from "../console-blocks";
 import { smoothstep } from "../math";
 import { createRng, hash32 } from "../noise";
 import { TELEMETRY_LINES } from "./missioncontrol-text";
