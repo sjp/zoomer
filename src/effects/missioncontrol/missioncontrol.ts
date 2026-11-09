@@ -105,7 +105,7 @@ import {
   withScope,
 } from "../gl";
 import { wrap } from "../math";
-import { HASH32_GLSL } from "../noise";
+import { HASH_CELL_GLSL } from "../noise";
 import {
   LAND_MASK_BIAS,
   LAND_MASK_GAIN,
@@ -193,8 +193,9 @@ float faceHit(int k, vec3 d, out float f) {
 
 ${SD_RECT_GLSL}
 
+${HASH_CELL_GLSL}
 float hash2(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  return hashCell(p);
 }
 
 float vnoise(vec2 p) {
@@ -488,7 +489,6 @@ uniform vec2 uClockText;
 uniform vec2 uCountText;
 out vec4 outColor;
 ${COMMON_GLSL}
-${HASH32_GLSL}
 ${DITHER_GLSL}
 const vec4 MAP = ${rect(S.map)};
 const vec4 TELEMETRY = ${rect(S.telemetry)};

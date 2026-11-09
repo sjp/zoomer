@@ -16,7 +16,7 @@ import {
 import { createSkyState } from "../horizon/horizon-sim";
 import { lowResSize } from "../lowres";
 import { approach, wrap } from "../math";
-import { buildPeriodicNoiseTexture, createRng } from "../noise";
+import { buildPeriodicNoiseTexture, createRng, HASH32_GLSL } from "../noise";
 import { landColor, presetSky, SEA_PRESETS } from "../sea/sea-sim";
 import { createSeaWater, createSeaWaterFrame, SEA_SKY_GLSL } from "../sea/sea-water";
 import { createSpriteBatch, polygonStrip } from "../sprites";
@@ -559,7 +559,9 @@ float profile(float y) {
 
 float wrapPi(float a) { return a - TAU * floor(a / TAU + 0.5); }
 float sq(float x) { return x * x; }
-float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+${HASH32_GLSL}
+/** A uniform 0..1 value per float, from its bits: the same on every GPU. */
+float hash(float n) { return float(hash32(floatBitsToUint(n))) / 4294967296.0; }
 vec3 spectrum(float t) { return 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67))); }
 
 void main() {

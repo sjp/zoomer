@@ -95,6 +95,7 @@ import { createStreakRenderer } from "../streaks";
 import { createStarfield, type StarFrame } from "../warp/warp-sim";
 import { defineEffect } from "../types";
 import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
+import { HASH_CELL_GLSL } from "../noise";
 
 /** Most glass rects the room pass draws (every panel and the band). */
 const MAX_GLASS = 8;
@@ -168,8 +169,9 @@ float wallS(vec3 p) {
   return WALL_R * atan(p.x, p.z - WALL_CZ);
 }
 
+${HASH_CELL_GLSL}
 float hash2(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  return hashCell(p);
 }
 
 // Value noise, repeating every period cells in x.

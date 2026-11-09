@@ -73,6 +73,7 @@ import {
   WEIGHT_SPAN,
 } from "./observatory-sim";
 import { observatoryMeta } from "./observatory.meta";
+import { HASH_CELL_GLSL } from "../noise";
 
 /** Sky pass: about 3 reference px per texel; it is all soft gradient and haze. */
 const SKY_TEXEL_REF = 3;
@@ -218,8 +219,9 @@ float band(float d, float halfWidth, float px) {
   return clamp((halfWidth - abs(d)) / px + 0.5, 0.0, 1.0);
 }
 
+${HASH_CELL_GLSL}
 float hash12(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  return hashCell(p);
 }
 
 /**

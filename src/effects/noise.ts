@@ -70,6 +70,18 @@ uint hash32(uint x) {
 `;
 
 /**
+ * `hashCell(cell)`: a uniform 0..1 value for an integer lattice cell (floored),
+ * hashed with lowbias32 (it includes `HASH32_GLSL`) so every GPU agrees.
+ */
+export const HASH_CELL_GLSL = /* glsl */ `
+${HASH32_GLSL}
+float hashCell(vec2 c) {
+  uvec2 u = uvec2(ivec2(floor(c)) + 65536);
+  return float(hash32(u.x ^ hash32(u.y + 0x9e3779b9u))) / 4294967296.0;
+}
+`;
+
+/**
  * Seeded 2D value noise, `vnoise(p, seed)` in 0..1, hashed with lowbias32 (it
  * includes `HASH32_GLSL`) so every GPU agrees. `hash2(cell, seed)` is the
  * per-lattice-point value.
