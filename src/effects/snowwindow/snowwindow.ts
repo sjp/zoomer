@@ -357,7 +357,8 @@ void main() {
  * Looking out through a lamplit window on a snowy evening: a soft, low-res
  * twilight scene (rendered only when it changes), the shared snowflakes falling
  * in front of it, then one full-res pass for the frame, the snow on the ledge,
- * the condensation in the pane corners and the room's warm light.
+ * the condensation in the pane corners and the room's warm light, cached and
+ * redrawn only when a setting or the size changes.
  */
 export const snowWindow = defineEffect(snowWindowMeta, {
   create(gl) {
@@ -366,6 +367,10 @@ export const snowWindow = defineEffect(snowWindowMeta, {
       const glassProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, GLASS_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
+      // The window has no time input: cached at full size, redrawn when it changes.
+      const glass = scope.own(
+        createLowResTarget(gl, { keep: true, premultiplied: true, dither: false }),
+      );
       const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_SNOWFALL));
       /** The condensation mask, replaced when its size changes. */
       let condTexture: WebGLTexture | null = null;
@@ -409,6 +414,11 @@ export const snowWindow = defineEffect(snowWindowMeta, {
       const settledAspect = createSettledValue<number>(INPUT_SETTLE);
       const settledSeed = createSettledValue<number>(INPUT_SETTLE);
       const sceneKey = createChangeKey(4);
+      /** Pane and condensation rebuilds so far, for the glass key. */
+      let paneBuilds = 0;
+      let condBuilds = 0;
+      const glassKey = createChangeKey(5);
+      let glassFrame = "";
 
       let width = 1;
       let height = 1;
@@ -435,6 +445,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
           refWidth = f.refWidth = newRefWidth;
           f.scale = v.scale;
           target.resize(width, height, Math.max(1, SCENE_DIVISOR * v.scale));
+          glass.resize(width, height, 1);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -458,6 +469,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             });
             gl.useProgram(glassProgram);
             gl.uniform4fv(gu.loc.uPane, paneData);
+            paneBuilds++;
           }
           const condAspect = settledAspect.update(aspect, dt);
           const condSeed = settledSeed.update(seed, dt);
@@ -465,6 +477,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
           condKey.set(1, condAspect);
           condKey.set(2, condSeed);
           if (condKey.take()) {
+            condBuilds++;
             const panes = windowPanes(layout, condAspect);
             const size = condensationSize(condAspect);
             if (size.width !== condWidth || size.height !== condHeight || !condTexture) {
@@ -528,21 +541,32 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             flakeRenderer.draw(0, visible, width, height, FLAKE_COLOR);
           }
 
-          // The window itself.
-          gl.useProgram(glassProgram);
-          gu.i1("uPaneCount", paneCount);
-          gu.f1("uInvHeight", 1 / height);
-          gu.f1("uAspect", aspect);
-          gu.f1("uSill", sill);
-          gu.rgb("uFrame", p.frameColor);
-          gu.f1("uWarmth", clamp(p.warmth, 0, 1));
-          gu.f1("uFog", clamp(p.fog, 0, 1));
-          gu.f1("uPhase", phase);
-          gu.f2("uReflect", aspect * REFLECT_X, REFLECT_Y);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, condTexture);
-          triangle.draw();
-          gl.disable(gl.BLEND);
+          // The window itself, redrawn into its cache when it changes.
+          glassKey.set(0, paneBuilds);
+          glassKey.set(1, condBuilds);
+          glassKey.set(2, p.warmth);
+          glassKey.set(3, p.fog);
+          glassKey.set(4, phase);
+          if (glass.needsRedraw(glassKey) || p.frameColor !== glassFrame) {
+            glassFrame = p.frameColor;
+            gl.disable(gl.BLEND);
+            glass.bind();
+            gl.useProgram(glassProgram);
+            gu.i1("uPaneCount", paneCount);
+            gu.f1("uInvHeight", 1 / height);
+            gu.f1("uAspect", aspect);
+            gu.f1("uSill", sill);
+            gu.rgb("uFrame", p.frameColor);
+            gu.f1("uWarmth", clamp(p.warmth, 0, 1));
+            gu.f1("uFog", clamp(p.fog, 0, 1));
+            gu.f1("uPhase", phase);
+            gu.f2("uReflect", aspect * REFLECT_X, REFLECT_Y);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, condTexture);
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          }
+          glass.blit();
         },
         dispose: () => {
           scope.dispose();
