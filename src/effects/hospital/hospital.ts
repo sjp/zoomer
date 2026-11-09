@@ -14,7 +14,6 @@ import {
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
 import { HASH32_GLSL } from "../noise";
-import { clockHands } from "../radiostudio/radiostudio-sim";
 import { defineEffect } from "../types";
 import {
   BOARD_BAND,
@@ -44,6 +43,7 @@ import {
 } from "./hospital-sim";
 import { hospitalMeta } from "./hospital.meta";
 import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
+import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
 
 const g = glslFloat;
 const vec3 = (c: readonly [number, number, number]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
@@ -283,6 +283,7 @@ void oxygen(vec2 f) {
   lay(lit(vec3(0.94) * (0.8 + 0.25 * smoothstep(-0.007, 0.007, q.y - hs.y))), cover(sdBox(q - vec2(0.0, hs.y + 0.002), vec2(hs.x + 0.003, 0.008), 0.003)), 0.7);
 }
 
+${CLOCK_MARKS_GLSL}
 /** The wall clock's face: a black rim, a white dial and its marks. The hands are drawn live. */
 void clockFace(vec2 f) {
   if (CLOCK.w < 0.5) {
@@ -299,16 +300,7 @@ void clockFace(vec2 f) {
   vec3 rim = vec3(0.07) + vec3(0.14) * max(0.0, cos(ang - 2.0)) * smoothstep(R, R * 0.93, r);
   lay(lit(rim), cover(r - R), 0.8);
   vec3 dial = vec3(0.95, 0.95, 0.93) * (0.88 + 0.12 * smoothstep(R * 0.9, 0.0, r));
-  float step6 = TAU / 60.0;
-  float a = atan(q.x * uSide, q.y);
-  float k = floor(a / step6 + 0.5);
-  float ka = k * step6;
-  vec2 qs = vec2(q.x * uSide, q.y);
-  vec2 qq = vec2(cos(ka) * qs.x - sin(ka) * qs.y, sin(ka) * qs.x + cos(ka) * qs.y);
-  bool hour = mod(k + 60.0, 5.0) < 0.5;
-  float len = hour ? 0.1 : 0.04;
-  float wd = hour ? 0.022 : 0.007;
-  float tick = sdBox(qq - vec2(0.0, R * (0.85 - len)), vec2(R * wd, R * len), 0.0);
+  float tick = clockMarks(vec2(q.x * uSide, q.y), R, 0.85, vec4(0.1, 0.022, 0.04, 0.007));
   dial = mix(dial, vec3(0.06), cover(tick));
   lay(lit(dial), cover(r - R * 0.9), 0.6);
   col += lightK * vec3(0.05) * smoothstep(R * 0.9, R * 0.6, r) * smoothstep(0.3, 0.9, dot(normalize(q + 1e-5), vec2(-0.6, 0.8))) * smoothstep(R * 0.4, R * 0.8, r);
@@ -854,35 +846,11 @@ vec4 drop(vec2 q) {
   return o * uDim;
 }
 
-vec4 hand(vec2 q, float ang, float len, float tail, float w, vec3 c) {
-  vec2 dir = vec2(sin(ang), cos(ang));
-  float d = max(abs(q.x * dir.y - q.y * dir.x) - w, max(-tail - dot(q, dir), dot(q, dir) - len));
-  float a = cover(d);
-  return vec4(c * a, a);
-}
+${CLOCK_HANDS_GLSL}
 
 /** The clock's hands at uVal.xyz (hour, minute, second; clockwise from twelve), with their shadows. */
 vec4 clockHands(vec2 q) {
-  float R = uBox.z;
-  vec2 s = q - vec2(0.004, -0.006) * (R / 0.088);
-  float sh = 0.0;
-  for (int i = 0; i < 3; i++) {
-    float ang = i == 0 ? uVal.x : i == 1 ? uVal.y : uVal.z;
-    float len = i == 0 ? 0.5 : i == 1 ? 0.76 : 0.8;
-    float w = i == 0 ? 0.03 : i == 1 ? 0.02 : 0.008;
-    vec2 dir = vec2(sin(ang), cos(ang));
-    float d = max(abs(s.x * dir.y - s.y * dir.x) - w * R, max(-0.15 * R - dot(s, dir), dot(s, dir) - len * R));
-    sh = max(sh, clamp(0.5 - d / (4.0 * px), 0.0, 1.0));
-  }
-  vec4 o = vec4(0.0, 0.0, 0.0, 0.3 * sh * step(length(q), 0.9 * R));
-  vec3 ink = vec3(0.05) * uDim;
-  o = over(hand(q, uVal.x, 0.5 * R, 0.12 * R, 0.03 * R, ink), o);
-  o = over(hand(q, uVal.y, 0.76 * R, 0.14 * R, 0.02 * R, ink), o);
-  vec3 red = vec3(0.85, 0.08, 0.06) * uDim;
-  o = over(hand(q, uVal.z, 0.8 * R, 0.2 * R, 0.0085 * R, red), o);
-  float cap = cover(length(q) - 0.045 * R);
-  o = over(vec4(red * cap, cap), o);
-  return o;
+  return clockHandsAt(q, uVal.xyz, uBox.z, vec3(0.05) * uDim, vec3(0.85, 0.08, 0.06) * uDim, false);
 }
 
 void main() {

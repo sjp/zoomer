@@ -301,20 +301,3 @@ export function stepTape(tape: Tape, dt: number, speed: number): Tape {
   tape.right = fract((tape.right + turn / packRadius(tape.fill)) / TAU) * TAU;
   return tape;
 }
-
-// ---------------------------------------------------------------------------
-// Clock
-// ---------------------------------------------------------------------------
-
-/**
- * The clock's hands for a local time of day `phase` (0..1 from midnight):
- * hour, minute and second angles, clockwise from twelve in radians. All move
- * smoothly, the second hand sweeping.
- */
-export function clockHands(phase: number, out: Float64Array): Float64Array {
-  const p = fract(Number.isFinite(phase) ? phase : 0);
-  out[0] = fract(p * 2) * TAU;
-  out[1] = fract(p * 24) * TAU;
-  out[2] = fract(p * 1440) * TAU;
-  return out;
-}
