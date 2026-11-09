@@ -139,6 +139,10 @@ export const MAX_PERIOD = 256;
  * through unchanged.
  */
 export function toPeriod(p: number): number {
+  // Fast path for valid periods: periodic2 coerces on every call.
+  if (p >= 1 && p <= MAX_PERIOD && Number.isInteger(p)) {
+    return p;
+  }
   return p >= 1 ? Math.min(MAX_PERIOD, Math.round(p)) : 1;
 }
 
@@ -170,7 +174,7 @@ export function createNoise(seed: number): Noise {
     const t = (i + j) * G2;
     const x0 = x - (i - t);
     const y0 = y - (j - t);
-    const i1 = x0 > y0 ? 1 : 0;
+    const i1 = Number(x0 > y0);
     const j1 = 1 - i1;
     const x1 = x0 - i1 + G2;
     const y1 = y0 - j1 + G2;
@@ -178,26 +182,22 @@ export function createNoise(seed: number): Noise {
     const y2 = y0 - 1 + 2 * G2;
     const ii = i & 255;
     const jj = j & 255;
+    // Branch-free like `noise3` (see there): weights are clamped to 0, and the
+    // triangle choice `i1` and the NaN check on return are plain comparisons.
+    const t0 = Math.max(0, 0.5 - x0 * x0 - y0 * y0);
+    const t1 = Math.max(0, 0.5 - x1 * x1 - y1 * y1);
+    const t2 = Math.max(0, 0.5 - x2 * x2 - y2 * y2);
+    const g0 = permMod12[ii + perm[jj]] * 3;
+    const g1 = permMod12[ii + i1 + perm[jj + j1]] * 3;
+    const g2 = permMod12[ii + 1 + perm[jj + 1]] * 3;
+    const w0 = t0 * t0;
+    const w1 = t1 * t1;
+    const w2 = t2 * t2;
     let n = 0;
-    let t0 = 0.5 - x0 * x0 - y0 * y0;
-    if (t0 > 0) {
-      const g = permMod12[ii + perm[jj]] * 3;
-      t0 *= t0;
-      n += t0 * t0 * (GRAD3[g] * x0 + GRAD3[g + 1] * y0);
-    }
-    let t1 = 0.5 - x1 * x1 - y1 * y1;
-    if (t1 > 0) {
-      const g = permMod12[ii + i1 + perm[jj + j1]] * 3;
-      t1 *= t1;
-      n += t1 * t1 * (GRAD3[g] * x1 + GRAD3[g + 1] * y1);
-    }
-    let t2 = 0.5 - x2 * x2 - y2 * y2;
-    if (t2 > 0) {
-      const g = permMod12[ii + 1 + perm[jj + 1]] * 3;
-      t2 *= t2;
-      n += t2 * t2 * (GRAD3[g] * x2 + GRAD3[g + 1] * y2);
-    }
-    return 70 * n;
+    n += w0 * w0 * (GRAD3[g0] * x0 + GRAD3[g0 + 1] * y0);
+    n += w1 * w1 * (GRAD3[g1] * x1 + GRAD3[g1 + 1] * y1);
+    n += w2 * w2 * (GRAD3[g2] * x2 + GRAD3[g2 + 1] * y2);
+    return Number.isNaN(n) ? 0 : 70 * n;
   };
 
   const noise3 = (x: number, y: number, z: number): number => {
@@ -209,39 +209,21 @@ export function createNoise(seed: number): Noise {
     const x0 = x - (i - t);
     const y0 = y - (j - t);
     const z0 = z - (k - t);
-    // Simplex ordering, set field by field: no per-call array allocation, as
-    // effects call this per particle per frame.
-    let i1 = 0;
-    let j1 = 0;
-    let k1 = 0;
-    let i2 = 0;
-    let j2 = 0;
-    let k2 = 0;
-    if (x0 >= y0) {
-      i2 = 1;
-      if (y0 >= z0) {
-        i1 = 1;
-        j2 = 1;
-      } else if (x0 >= z0) {
-        i1 = 1;
-        k2 = 1;
-      } else {
-        k1 = 1;
-        k2 = 1;
-      }
-    } else {
-      j2 = 1;
-      if (y0 < z0) {
-        k1 = 1;
-        k2 = 1;
-      } else if (x0 < z0) {
-        j1 = 1;
-        k2 = 1;
-      } else {
-        j1 = 1;
-        i2 = 1;
-      }
-    }
+    // Which simplex the point is in, and which corners fall inside the kernel, are
+    // unpredictable from call to call, and branching on them cost more than the
+    // arithmetic. So both are branch-free: the ordering is built from 0/1
+    // comparisons (corner 1 steps along the largest offset, corner 2 along the two
+    // largest, x before y before z on ties), and corner weights are clamped to 0, so
+    // an outside corner adds exactly ±0.
+    const xy = Number(x0 >= y0);
+    const xz = Number(x0 >= z0);
+    const yz = Number(y0 >= z0);
+    const i1 = xy & xz;
+    const j1 = (1 - xy) & yz;
+    const k1 = 1 - i1 - j1;
+    const i2 = xy | xz;
+    const j2 = (1 - xy) | yz;
+    const k2 = 1 - (xz & yz);
     const x1 = x0 - i1 + G3;
     const y1 = y0 - j1 + G3;
     const z1 = z0 - k1 + G3;
@@ -254,46 +236,43 @@ export function createNoise(seed: number): Noise {
     const ii = i & 255;
     const jj = j & 255;
     const kk = k & 255;
+    const t0 = Math.max(0, 0.6 - x0 * x0 - y0 * y0 - z0 * z0);
+    const t1 = Math.max(0, 0.6 - x1 * x1 - y1 * y1 - z1 * z1);
+    const t2 = Math.max(0, 0.6 - x2 * x2 - y2 * y2 - z2 * z2);
+    const t3 = Math.max(0, 0.6 - x3 * x3 - y3 * y3 - z3 * z3);
+    const g0 = permMod12[ii + perm[jj + perm[kk]]] * 3;
+    const g1 = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]] * 3;
+    const g2 = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]] * 3;
+    const g3 = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]] * 3;
+    const w0 = t0 * t0;
+    const w1 = t1 * t1;
+    const w2 = t2 * t2;
+    const w3 = t3 * t3;
     let n = 0;
-    let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
-    if (t0 > 0) {
-      const g = permMod12[ii + perm[jj + perm[kk]]] * 3;
-      t0 *= t0;
-      n += t0 * t0 * (GRAD3[g] * x0 + GRAD3[g + 1] * y0 + GRAD3[g + 2] * z0);
-    }
-    let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
-    if (t1 > 0) {
-      const g = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]] * 3;
-      t1 *= t1;
-      n += t1 * t1 * (GRAD3[g] * x1 + GRAD3[g + 1] * y1 + GRAD3[g + 2] * z1);
-    }
-    let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
-    if (t2 > 0) {
-      const g = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]] * 3;
-      t2 *= t2;
-      n += t2 * t2 * (GRAD3[g] * x2 + GRAD3[g + 1] * y2 + GRAD3[g + 2] * z2);
-    }
-    let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
-    if (t3 > 0) {
-      const g = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]] * 3;
-      t3 *= t3;
-      n += t3 * t3 * (GRAD3[g] * x3 + GRAD3[g + 1] * y3 + GRAD3[g + 2] * z3);
-    }
-    return 32 * n;
+    n += w0 * w0 * (GRAD3[g0] * x0 + GRAD3[g0 + 1] * y0 + GRAD3[g0 + 2] * z0);
+    n += w1 * w1 * (GRAD3[g1] * x1 + GRAD3[g1 + 1] * y1 + GRAD3[g1 + 2] * z1);
+    n += w2 * w2 * (GRAD3[g2] * x2 + GRAD3[g2 + 1] * y2 + GRAD3[g2 + 2] * z2);
+    n += w3 * w3 * (GRAD3[g3] * x3 + GRAD3[g3 + 1] * y3 + GRAD3[g3 + 2] * z3);
+    // Only when every corner is outside can an offset be non-finite (huge or
+    // non-finite coordinates), making 0 * Infinity = NaN where the sum is 0.
+    return Number.isNaN(n) ? 0 : 32 * n;
   };
 
   const periodic2 = (x: number, y: number, px: number, py: number): number => {
     // Out-of-range or fractional periods would index past `perm` and return NaN.
-    px = toPeriod(px);
-    py = toPeriod(py);
+    // The Math.imul(v, 1)s around toPeriod (a no-op on its integers) and each `%`
+    // keep the wrap in int32 arithmetic: a negative multiple of the period gives
+    // -0, and without them that makes `%` a much slower floating-point modulo.
+    px = Math.imul(toPeriod(px), 1);
+    py = Math.imul(toPeriod(py), 1);
     const xf = Math.floor(x);
     const yf = Math.floor(y);
     const fx = x - xf;
     const fy = y - yf;
     // Wrap lattice coordinates before hashing so the gradients repeat exactly.
     // Math.imul(v, 1) is ToInt32(v), as `v | 0`: huge or non-finite coordinates still index `perm`.
-    let x0 = Math.imul(xf, 1) % px;
-    let y0 = Math.imul(yf, 1) % py;
+    let x0 = Math.imul(Math.imul(xf, 1) % px, 1);
+    let y0 = Math.imul(Math.imul(yf, 1) % py, 1);
     if (x0 < 0) {
       x0 += px;
     }
