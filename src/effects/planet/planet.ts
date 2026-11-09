@@ -230,14 +230,18 @@ export const planet = defineEffect(planetMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
-      /** The world and seed the textures hold, as `world|seed`, and the world alone. */
-      let builtKey = "";
+      /** The world and seed the textures hold; NaN until the first build lands. */
       let builtWorld = "";
+      let builtSeed = Number.NaN;
       // Dragging the seed slider or flicking through worlds builds once, when it settles,
       // and the build (tens of ms) is spread over frames while the old world keeps turning.
       const settledWorld = createSettledValue<string>(INPUT_SETTLE);
       const settledSeed = createSettledValue<number>(INPUT_SETTLE);
-      const build = createBackgroundBuild<string, string>();
+      // Each build's key is a new number, taken when the world or seed wanted changes.
+      const build = createBackgroundBuild<number, string>();
+      let buildId = 0;
+      let buildWorldName = "";
+      let buildSeed = Number.NaN;
       function* buildWorld(world: string, seed: number): BuildSteps<string> {
         yield* buildSurfaceSteps(world, seed, surfaceData);
         yield* buildCloudsSteps(world, seed, cloudData);
@@ -260,14 +264,23 @@ export const planet = defineEffect(planetMeta, {
           // runs at once so the planet never opens blank.
           const wantWorld = settledWorld.update(p.world, dt);
           const wantSeed = settledSeed.update(p.seed, dt);
-          const key = `${wantWorld}|${String(wantSeed)}`;
-          if (key !== builtKey) {
-            const make = () => buildWorld(wantWorld, wantSeed);
-            build.request(key, make);
-            const done = builtKey === "" ? build.finish() : build.step(BUILD_BUDGET_MS);
+          const first = Number.isNaN(builtSeed);
+          if (first || wantWorld !== builtWorld || wantSeed !== builtSeed) {
+            if (
+              build.building === undefined ||
+              wantWorld !== buildWorldName ||
+              wantSeed !== buildSeed
+            ) {
+              // Allocates only when the world or seed wanted changes.
+              buildWorldName = wantWorld;
+              buildSeed = wantSeed;
+              buildId++;
+              build.request(buildId, () => buildWorld(wantWorld, wantSeed));
+            }
+            const done = first ? build.finish() : build.step(BUILD_BUDGET_MS);
             if (done !== undefined) {
-              builtKey = key;
               builtWorld = done;
+              builtSeed = buildSeed;
               gl.activeTexture(gl.TEXTURE0);
               updateDataTexture(
                 gl,
