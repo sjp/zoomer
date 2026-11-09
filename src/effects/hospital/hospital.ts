@@ -1077,8 +1077,10 @@ export const hospital = defineEffect(hospitalMeta, {
           const [dx, dy, dw, dh] = layout.drip;
           gu.f4("uVal", dropState[0], dropState[1], 0, 0);
           draw(KIND_DROP, dx, dy, dw, dh);
+          // The clock keeps time while hidden, so it shows the right time when it comes back.
+          const dayTime = day.step(step, "local", 0, 0);
           if (p.clock) {
-            clockHands(day.step(step, "local", 0, 0), hands);
+            clockHands(dayTime, hands);
             const [cx, cy, cr] = layout.clock;
             // Mirroring flips the room, not the clock: its hands still turn clockwise.
             gu.f4("uVal", hands[0], hands[1], hands[2], 0);
