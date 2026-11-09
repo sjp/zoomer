@@ -9,7 +9,6 @@ import {
   FULLSCREEN_VERTEX,
   glslFloat,
   type RenderTarget,
-  resetUnpackState,
   withScope,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
@@ -44,6 +43,7 @@ import {
 import { hospitalMeta } from "./hospital.meta";
 import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
 import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
+import { createCanvasTexture, paintCanvas, type CanvasTexture } from "../canvas-texture";
 
 const g = glslFloat;
 const vec3 = (c: readonly [number, number, number]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
@@ -931,59 +931,18 @@ export const hospital = defineEffect(hospitalMeta, {
       gl.useProgram(null);
 
       const traceTable = scope.own(createColumnTable(gl, TRACE_COLUMNS, TRACE_CHANNELS));
-      const texture = () =>
-        scope.add(gl.createTexture(), (t) => {
-          gl.deleteTexture(t);
-        });
-      const boardTex = texture();
-      const screenTex = texture();
-      const upload = (tex: WebGLTexture, source: TexImageSource | null) => {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        resetUnpackState(gl);
-        if (source) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
-        } else {
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA8,
-            1,
-            1,
-            0,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            new Uint8Array(4),
-          );
-        }
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      };
-      upload(boardTex, null);
-      upload(screenTex, null);
-
-      /** Draws on a fresh canvas of `w` x `h` and uploads it to `tex`, or blanks `tex` without a canvas. */
+      const board = createCanvasTexture(gl, scope);
+      const screen = createCanvasTexture(gl, scope);
+      const boardTex = board.texture;
+      const screenTex = screen.texture;
+      /** Draws on a fresh canvas of `w` x `h` and uploads it, or blanks the texture without a canvas. */
       const paint = (
-        tex: WebGLTexture,
+        target: CanvasTexture,
         w: number,
         h: number,
         draw: (ctx: OffscreenCanvasRenderingContext2D) => void,
       ) => {
-        if (typeof OffscreenCanvas === "undefined") {
-          upload(tex, null);
-          return;
-        }
-        const canvas = new OffscreenCanvas(w, h);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          upload(tex, null);
-          return;
-        }
-        draw(ctx);
-        upload(tex, canvas);
+        target.upload(paintCanvas(w, h, draw));
       };
 
       let roomTarget: RenderTarget | null = null;
@@ -1051,7 +1010,7 @@ export const hospital = defineEffect(hospitalMeta, {
           const bKey = `${String(bpw)}x${String(bph)}|${p.board}`;
           if (bKey !== boardKey) {
             boardKey = bKey;
-            paint(boardTex, bpw, bph, (ctx) => {
+            paint(board, bpw, bph, (ctx) => {
               drawBoard(ctx, bpw, bph, p.board);
             });
             roomSide = Number.NaN;
@@ -1084,7 +1043,7 @@ export const hospital = defineEffect(hospitalMeta, {
           if (sKey !== screenKey) {
             screenKey = sKey;
             const vitals = monitor.vitals;
-            paint(screenTex, spw, sph, (ctx) => {
+            paint(screen, spw, sph, (ctx) => {
               drawScreen(ctx, spw, sph, vitals);
             });
           }

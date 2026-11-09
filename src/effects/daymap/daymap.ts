@@ -8,7 +8,6 @@ import {
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  resetUnpackState,
   TO_CLIP_GLSL,
   withScope,
 } from "../gl";
@@ -38,6 +37,7 @@ import {
   uploadLandMask,
 } from "../land-mask";
 import { defineEffect } from "../types";
+import { createCanvasTexture } from "../canvas-texture";
 
 /** City-light grid cell, in degrees. Each cell holds at most one light. */
 const CITY_CELL = 2;
@@ -344,19 +344,8 @@ export const daymap = defineEffect(daymapMeta, {
           gl.deleteTexture(t);
         },
       );
-      const atlas = scope.add(
-        createDataTexture(gl, {
-          width: 1,
-          height: 1,
-          internalFormat: gl.RGBA8,
-          format: gl.RGBA,
-          type: gl.UNSIGNED_BYTE,
-          data: new Uint8Array(4),
-        }),
-        (t) => {
-          gl.deleteTexture(t);
-        },
-      );
+      const labelAtlas = createCanvasTexture(gl, scope);
+      const atlas = labelAtlas.texture;
 
       const u = createUniforms(gl, program, [
         "uMask",
@@ -467,10 +456,7 @@ export const daymap = defineEffect(daymapMeta, {
           ctx.strokeText(text, tx, my);
           ctx.fillText(text, tx, my);
         }
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, atlas);
-        resetUnpackState(gl);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+        labelAtlas.upload(canvas);
       };
 
       return {

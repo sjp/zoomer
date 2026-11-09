@@ -6,13 +6,14 @@
  */
 import { glslFloat, resetUnpackState } from "../gl";
 import { GLYPH_COUNT, GLYPHS } from "./splitflap-sim";
+import { SANS_FONT_STACK } from "../canvas-texture";
 
 /** Glyph tiles per row of the atlas. */
 export const ATLAS_COLS = 8;
 /** Blank texels around each atlas tile, so linear filtering never reads a neighbour. */
 export const ATLAS_PAD = 2;
 /** A system font stack for the glyphs: a bold grotesque, as on real boards. */
-const FONT_FAMILY = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
+const FONT_FAMILY = SANS_FONT_STACK;
 /** Cap height as a fraction of the cell height, and the widest a glyph may be. */
 const CAP_FRACTION = 0.56;
 const MAX_GLYPH_WIDTH = 0.82;

@@ -7,9 +7,10 @@
  * shader reads the same constants to put the traces in their rows.
  */
 import type { Vitals } from "./hospital-sim";
+import { SANS_FONT_STACK } from "../canvas-texture";
 
 /** A system font stack, a clean grotesque like a monitor's. */
-export const SANS = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
+export const SANS = SANS_FONT_STACK;
 /** Marker-pen handwriting, from whichever casual face the system has. */
 export const HAND = `"Segoe Print", "Bradley Hand", "Marker Felt", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive`;
 

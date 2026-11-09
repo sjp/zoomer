@@ -6,9 +6,9 @@
  */
 import type { Rgb } from "../color";
 import { barWidth, fitTextSize, type GraphicsLayout, TICKER_ROW, tickerLine } from "./newsdesk-sim";
+import { SANS_FONT_STACK } from "../canvas-texture";
 
-/** A clean system sans-serif. */
-const FONT_FAMILY = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
+const FONT_FAMILY = SANS_FONT_STACK;
 /** Capital height as a share of the font size, for centring text in a bar. */
 const CAP_RATIO = 0.72;
 /** Tallest texture the ticker's rows may stack to. */

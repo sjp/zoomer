@@ -12,7 +12,6 @@ import {
   FULLSCREEN_VERTEX,
   glslFloat,
   type RenderTarget,
-  resetUnpackState,
   withScope,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
@@ -46,6 +45,7 @@ import {
 } from "./newsdesk-sim";
 import { newsdeskMeta } from "./newsdesk.meta";
 import { SDF2D_GLSL } from "../sdf-glsl";
+import { createCanvasTexture, type CanvasTexture } from "../canvas-texture";
 
 const g = glslFloat;
 
@@ -702,7 +702,7 @@ void main() {
 
 /** One canvas graphic's texture and what it was last drawn for. */
 interface Overlay {
-  texture: WebGLTexture;
+  texture: CanvasTexture;
   width: number;
   height: number;
   /** Whether it holds a drawing. */
@@ -791,30 +791,12 @@ export const newsdesk = defineEffect(newsdeskMeta, {
       tu.i1("uTex", 0);
       gl.useProgram(null);
 
-      const overlay = (): Overlay => {
-        const texture = scope.add(gl.createTexture(), (t) => {
-          gl.deleteTexture(t);
-        });
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        resetUnpackState(gl);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0,
-          gl.RGBA8,
-          1,
-          1,
-          0,
-          gl.RGBA,
-          gl.UNSIGNED_BYTE,
-          new Uint8Array(4),
-        );
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return { texture, width: 1, height: 1, ready: false };
-      };
+      const overlay = (): Overlay => ({
+        texture: createCanvasTexture(gl, scope, { filter: gl.NEAREST, premultiply: true }),
+        width: 1,
+        height: 1,
+        ready: false,
+      });
       const lowerThird = overlay();
       const tickerTex = overlay();
       const liveTag = overlay();
@@ -824,13 +806,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
         if (!gfx) {
           return;
         }
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, o.texture);
-        resetUnpackState(gl);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, gfx.canvas);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.bindTexture(gl.TEXTURE_2D, null);
+        o.texture.upload(gfx.canvas);
         o.width = gfx.width;
         o.height = gfx.height;
       };
@@ -934,7 +910,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
         if (!o.ready || alpha <= 0 || x1 <= x0 || y1 <= y0) {
           return;
         }
-        gl.bindTexture(gl.TEXTURE_2D, o.texture);
+        gl.bindTexture(gl.TEXTURE_2D, o.texture.texture);
         bu.f1("uAlpha", alpha);
         gl.uniform2i(bu.loc.uOrigin, x, y);
         gl.scissor(x0, y0, x1 - x0, y1 - y0);
@@ -1169,7 +1145,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
             const y1 = Math.min(height, base + rowH);
             if (y1 > 0) {
               gl.useProgram(tickerProgram);
-              gl.bindTexture(gl.TEXTURE_2D, tickerTex.texture);
+              gl.bindTexture(gl.TEXTURE_2D, tickerTex.texture.texture);
               tu.f2("uRes", width, height);
               tu.i1("uBase", base);
               tu.i1("uRowH", rowH);

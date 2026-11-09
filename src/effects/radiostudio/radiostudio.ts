@@ -10,7 +10,6 @@ import {
   FULLSCREEN_VERTEX,
   glslFloat,
   type RenderTarget,
-  resetUnpackState,
   withScope,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
@@ -38,6 +37,7 @@ import {
 import { radiostudioMeta } from "./radiostudio.meta";
 import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
 import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
+import { createCanvasTexture, paintCanvas, SANS_FONT_STACK } from "../canvas-texture";
 
 const g = glslFloat;
 
@@ -51,7 +51,7 @@ const VU_RED = 0.72;
 /** The sign's red glow on the walls, at full strength. */
 const GLOW_RGB = [0.55, 0.06, 0.04] as const;
 /** The sign's lettering: a system font stack, a bold grotesque. */
-const FONT_FAMILY = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
+const FONT_FAMILY = SANS_FONT_STACK;
 /** Largest text texture side, in texels. */
 const MAX_TEXT_TEXELS = 2048;
 
@@ -830,35 +830,9 @@ export const radiostudio = defineEffect(radiostudioMeta, {
       gu.i1("uText", 0);
       gl.useProgram(null);
 
-      const textTex = scope.add(gl.createTexture(), (t) => {
-        gl.deleteTexture(t);
-      });
-      const uploadText = (source: TexImageSource | null) => {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, textTex);
-        resetUnpackState(gl);
-        if (source) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
-        } else {
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA8,
-            1,
-            1,
-            0,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            new Uint8Array(4),
-          );
-        }
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-      };
-      uploadText(null);
+      const signText = createCanvasTexture(gl, scope);
+      const textTex = signText.texture;
+      const uploadText = signText.upload;
 
       /**
        * Draws the sign's text white on black at the face's size in pixels: red
@@ -867,41 +841,38 @@ export const radiostudio = defineEffect(radiostudioMeta, {
        */
       const drawText = (text: string, pw: number, ph: number) => {
         const line = text.toUpperCase().trim();
-        if (typeof OffscreenCanvas === "undefined" || line === "") {
+        if (line === "") {
           uploadText(null);
           return;
         }
-        const canvas = new OffscreenCanvas(pw, ph);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          uploadText(null);
-          return;
-        }
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, pw, ph);
-        let size = 100;
-        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
-        // Typed loosely: the tests' fake 2D context returns undefined from every method.
-        const metrics = ctx.measureText(line) as TextMetrics | undefined;
-        const width = metrics?.width;
-        const em = typeof width === "number" && width > 0 ? width / size : 0.68 * line.length;
-        const capRatio = 0.72;
-        size = Math.min((0.5 * ph) / capRatio, (0.84 * pw) / Math.max(em, 0.01));
-        ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "alphabetic";
-        ctx.globalCompositeOperation = "lighter";
-        const x = pw / 2;
-        const y = ph / 2 + (capRatio * size) / 2;
-        ctx.shadowColor = "#0f0";
-        ctx.shadowBlur = ph * 0.12;
-        ctx.fillStyle = "#0f0";
-        ctx.fillText(line, x, y);
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = "transparent";
-        ctx.fillStyle = "#f00";
-        ctx.fillText(line, x, y);
-        uploadText(canvas);
+        uploadText(
+          paintCanvas(pw, ph, (ctx) => {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, pw, ph);
+            let size = 100;
+            ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
+            // Typed loosely: the tests' fake 2D context returns undefined from every method.
+            const metrics = ctx.measureText(line) as TextMetrics | undefined;
+            const width = metrics?.width;
+            const em = typeof width === "number" && width > 0 ? width / size : 0.68 * line.length;
+            const capRatio = 0.72;
+            size = Math.min((0.5 * ph) / capRatio, (0.84 * pw) / Math.max(em, 0.01));
+            ctx.font = `bold ${String(size)}px ${FONT_FAMILY}`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            ctx.globalCompositeOperation = "lighter";
+            const x = pw / 2;
+            const y = ph / 2 + (capRatio * size) / 2;
+            ctx.shadowColor = "#0f0";
+            ctx.shadowBlur = ph * 0.12;
+            ctx.fillStyle = "#0f0";
+            ctx.fillText(line, x, y);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+            ctx.fillStyle = "#f00";
+            ctx.fillText(line, x, y);
+          }),
+        );
       };
 
       let roomTarget: RenderTarget | null = null;
