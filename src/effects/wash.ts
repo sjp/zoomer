@@ -61,3 +61,74 @@ export function washSinceUncovered(n: number, tau: number, m: number): number {
   const q = clamp((m - n) / m, 0, 1);
   return tau - T_STOP - T_DRAIN * Math.sqrt(q);
 }
+
+/** A wave in a `WaveSlots` schedule. */
+export interface ScheduledWave {
+  /** Start time on the schedule's clock (s). */
+  start: number;
+}
+
+export interface WaveSlots<W extends ScheduledWave> {
+  /** Live waves, oldest first; only the first `count` are in flight. */
+  readonly waves: readonly W[];
+  readonly count: number;
+  /** The schedule's clock (s), unwrapped float64. */
+  readonly time: number;
+  /** Advances the clock, retires finished waves and starts a new one when due. */
+  step: (dt: number) => void;
+  /** Clears every wave and restarts the clock; the next `step` starts a wave. */
+  reset: () => void;
+}
+
+/**
+ * A schedule of waves in `slots` reusable objects, made by `make`. Waves share
+ * one `lifetime`, so they retire in start order from the front. When a wave is
+ * due and a slot is free, the slot's `start` is set to the clock and
+ * `spawn(wave)` fills in the rest, returning the seconds until the next wave.
+ * When every slot is busy, the next wave waits for one to free up. The first
+ * wave starts on the first `step`.
+ */
+export function createWaveSlots<W extends ScheduledWave>(
+  slots: number,
+  lifetime: number,
+  make: () => W,
+  spawn: (wave: W) => number,
+): WaveSlots<W> {
+  const waves: W[] = [];
+  for (let i = 0; i < slots; i++) {
+    waves.push(make());
+  }
+  let count = 0;
+  let time = 0;
+  let nextAt = 0;
+  return {
+    waves,
+    get count() {
+      return count;
+    },
+    get time() {
+      return time;
+    },
+    step(dt) {
+      time += Math.max(0, dt);
+      while (count > 0 && time - waves[0].start >= lifetime) {
+        const done = waves[0];
+        for (let i = 1; i < count; i++) {
+          waves[i - 1] = waves[i];
+        }
+        waves[count - 1] = done;
+        count--;
+      }
+      if (time >= nextAt && count < slots) {
+        const w = waves[count++];
+        w.start = time;
+        nextAt = time + spawn(w);
+      }
+    },
+    reset() {
+      count = 0;
+      time = 0;
+      nextAt = 0;
+    },
+  };
+}

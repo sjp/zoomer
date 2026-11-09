@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { T_ACTIVE, T_APPROACH, T_STOP, washFront, washSinceUncovered } from "./wash";
+import {
+  T_ACTIVE,
+  T_APPROACH,
+  T_STOP,
+  washFront,
+  washSinceUncovered,
+  createWaveSlots,
+} from "./wash";
 
 describe("washFront", () => {
   const [reach, brk, approach] = [0.2, 0.08, 1.2];
@@ -40,5 +47,64 @@ describe("washSinceUncovered", () => {
 
   it("is negative while still covered", () => {
     expect(washSinceUncovered(0, T_STOP, 0.2)).toBeLessThan(0);
+  });
+});
+
+describe("createWaveSlots", () => {
+  const make = (slots: number, lifetime: number, spacing: number) => {
+    const spawned: number[] = [];
+    let n = 0;
+    const s = createWaveSlots(
+      slots,
+      lifetime,
+      () => ({ start: 0, id: -1 }),
+      (w) => {
+        w.id = n++;
+        spawned.push(w.start);
+        return spacing;
+      },
+    );
+    return { s, spawned };
+  };
+
+  it("starts a wave on the first step, then one per spacing", () => {
+    const { s, spawned } = make(4, 10, 2);
+    expect(s.count).toBe(0);
+    s.step(0);
+    expect([s.count, s.waves[0].start]).toEqual([1, 0]);
+    s.step(1);
+    expect(s.count).toBe(1);
+    s.step(1);
+    expect(s.count).toBe(2);
+    expect(spawned).toEqual([0, 2]);
+    // A negative step doesn't move the clock.
+    s.step(-5);
+    expect(s.time).toBe(2);
+  });
+
+  it("retires waves from the front after their lifetime, reusing the slot", () => {
+    const { s } = make(2, 3, 1);
+    s.step(0);
+    s.step(1);
+    expect(s.waves.slice(0, s.count).map((w) => w.id)).toEqual([0, 1]);
+    // Both slots busy: the wave due at 2 waits.
+    s.step(1);
+    expect(s.count).toBe(2);
+    // At 3 wave 0 retires and the waiting wave starts in its slot.
+    const first = s.waves[0];
+    s.step(1);
+    expect(s.waves.slice(0, s.count).map((w) => w.id)).toEqual([1, 2]);
+    expect(s.waves[1]).toBe(first);
+    expect(s.waves[1].start).toBe(3);
+  });
+
+  it("resets to an empty schedule", () => {
+    const { s } = make(2, 3, 1);
+    s.step(0);
+    s.step(1.5);
+    s.reset();
+    expect([s.count, s.time]).toEqual([0, 0]);
+    s.step(0);
+    expect(s.count).toBe(1);
   });
 });
