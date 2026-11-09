@@ -98,8 +98,6 @@ const MIST_DRIFT = 0.0012;
 /** Noise texture widths of the flame's two octaves per second as it rises. */
 const FLAME_RISE = 0.11;
 const FLAME_RISE_2 = 0.19;
-/** Seconds after which the flame's shader time wraps. */
-const SHADER_PERIOD = 3600;
 /** The burner's warm light, and how strongly a full burn lights the envelope. */
 const FLAME_LIGHT: Rgb = [1, 0.62, 0.3];
 const GLOW_GAIN = 0.6;
@@ -863,7 +861,7 @@ export const balloonride = defineEffect(balloonrideMeta, {
           stepBurner(burner, step, p.burner);
           stepOthers(others, step, p.others);
           const burn = burnerGlow(burner);
-          const flicker = flickerAt(time % SHADER_PERIOD);
+          const flicker = flickerAt(time);
           sunOnScreen(light, yaw, sun);
           sunDirection(light, yaw, lightDir);
           const reach =
