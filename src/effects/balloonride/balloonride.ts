@@ -33,6 +33,7 @@ import {
   burnerGlow,
   CAMERA_HEIGHT,
   createBurner,
+  createLightEase,
   createOthers,
   flickerAt,
   FOCAL,
@@ -770,6 +771,7 @@ export const balloonride = defineEffect(balloonrideMeta, {
       let mapSeed = Number.NaN;
       let fgSeed = Number.NaN;
       let fgScheme = "";
+      const lightEase = createLightEase();
 
       return {
         resize(v) {
@@ -847,7 +849,7 @@ export const balloonride = defineEffect(balloonrideMeta, {
           }
 
           // 3. Motion: the turn, the drift, the burner, the other balloons.
-          const light = timeFor(p.time);
+          const light = lightEase.step(timeFor(p.time), step);
           yawPhase = advanceSwell(YAW_SWELL, yawPhase, step);
           ropePhase = advanceSwell(ROPE_SWELL, ropePhase, step);
           const yaw = yawAt(yawPhase);

@@ -22,7 +22,7 @@ import {
   stepBalloons,
 } from "../balloons/balloons-sim";
 import { MAX_BALLOONS } from "../balloons/balloons.meta";
-import { hexToUnitRgb, type Rgb } from "../color";
+import { createColorEase, hexToUnitRgb, type Rgb } from "../color";
 import { lookup } from "../lookup";
 import { approach, clamp, smoothstep, wrap } from "../math";
 import { createNoise, createRng } from "../noise";
@@ -249,6 +249,98 @@ export const TIMES: Readonly<Record<RideTime, RideLight>> = {
 };
 
 export const timeFor = (id: string): RideLight => lookup(TIMES, id, "sunrise");
+
+/** Seconds for a change of time of day to ease across. */
+export const LIGHT_FADE = 2.5;
+
+/** The colours and numbers of a `RideLight` that ease, in packing order. */
+const LIGHT_RGBS = 11;
+const LIGHT_FLOATS = LIGHT_RGBS * 3 + 4;
+
+const rideRgbs = (l: RideLight): readonly Rgb[] => [
+  l.base.zenith,
+  l.base.horizon,
+  l.base.glow,
+  l.base.sun,
+  l.base.lit,
+  l.base.shade,
+  l.base.mist,
+  l.sun,
+  l.ambient,
+  l.solid,
+  l.envelope,
+];
+
+/**
+ * Eases the ride's light towards a time of day, allocating nothing per step:
+ * sky, sun, ground light, mist and the light on the basket and envelopes all
+ * crossfade together over `LIGHT_FADE` seconds rather than switching in one
+ * frame. `step` returns the target itself once settled.
+ */
+export function createLightEase(): { step: (target: RideLight, dt: number) => RideLight } {
+  const ease = createColorEase(LIGHT_FLOATS);
+  const packed = new Float64Array(LIGHT_FLOATS);
+  const rgb = (): Rgb => [0, 0, 0];
+  const scratch: RideLight = {
+    // The fields that don't ease (unused by the ride) keep the sunrise values.
+    base: {
+      ...TIMES.sunrise.base,
+      zenith: rgb(),
+      horizon: rgb(),
+      glow: rgb(),
+      sun: rgb(),
+      lit: rgb(),
+      shade: rgb(),
+      mist: rgb(),
+    },
+    sunAz: 0,
+    sunElev: 0,
+    sun: rgb(),
+    ambient: rgb(),
+    solid: rgb(),
+    envelope: rgb(),
+    mist: 0,
+  };
+  const out = rideRgbs(scratch);
+  // The targets are fixed, so their colour lists are built once.
+  const targets = new Map<RideLight, readonly Rgb[]>();
+  for (const l of Object.values(TIMES)) {
+    targets.set(l, rideRgbs(l));
+  }
+  return {
+    step(target, dt) {
+      let rgbs = targets.get(target);
+      if (!rgbs) {
+        rgbs = rideRgbs(target);
+        targets.set(target, rgbs);
+      }
+      for (let i = 0; i < LIGHT_RGBS; i++) {
+        packed[i * 3] = rgbs[i][0];
+        packed[i * 3 + 1] = rgbs[i][1];
+        packed[i * 3 + 2] = rgbs[i][2];
+      }
+      const k = LIGHT_RGBS * 3;
+      packed[k] = target.base.glowStrength;
+      packed[k + 1] = target.sunAz;
+      packed[k + 2] = target.sunElev;
+      packed[k + 3] = target.mist;
+      const v = ease.step(packed, dt, LIGHT_FADE);
+      if (!ease.moving) {
+        return target;
+      }
+      for (let i = 0; i < LIGHT_RGBS; i++) {
+        out[i][0] = v[i * 3];
+        out[i][1] = v[i * 3 + 1];
+        out[i][2] = v[i * 3 + 2];
+      }
+      scratch.base.glowStrength = v[k];
+      scratch.sunAz = v[k + 1];
+      scratch.sunElev = v[k + 2];
+      scratch.mist = v[k + 3];
+      return scratch;
+    },
+  };
+}
 
 /**
  * The sun's place on screen (frame heights from the centre) with the balloon

@@ -9,6 +9,7 @@ import {
   burnerGap,
   burnerGlow,
   createBurner,
+  createLightEase,
   createOthers,
   FLICKER,
   flickerAt,
@@ -16,6 +17,7 @@ import {
   GAP_SPREAD,
   GORES,
   HORIZON,
+  LIGHT_FADE,
   MAX_GAP,
   MAX_SCHEME_COLOURS,
   MIN_GAP,
@@ -251,5 +253,30 @@ describe("other balloons", () => {
       stepOthers(o, 0.1, 0);
     }
     expect(writeOthers(o, out, palette, 1920, 1080, 0)).toBe(0);
+  });
+});
+
+describe("createLightEase", () => {
+  it("starts at the target and eases a change of time of day", () => {
+    const ease = createLightEase();
+    expect(ease.step(TIMES.sunrise, 1 / 60)).toBe(TIMES.sunrise);
+    const first = ease.step(TIMES.midday, 1 / 60);
+    expect(first).not.toBe(TIMES.midday);
+    // One frame in, the light has barely moved from sunrise.
+    expect(Math.abs(first.sunElev - TIMES.sunrise.sunElev)).toBeLessThan(0.01);
+    expect(Math.abs(first.base.zenith[0] - TIMES.sunrise.base.zenith[0])).toBeLessThan(0.01);
+    let mid = first;
+    for (let t = 1 / 60; t < LIGHT_FADE / 2; t += 1 / 60) {
+      mid = ease.step(TIMES.midday, 1 / 60);
+    }
+    expect(mid.sunElev).toBeGreaterThan(TIMES.sunrise.sunElev + 0.2);
+    expect(mid.sunElev).toBeLessThan(TIMES.midday.sunElev - 0.2);
+    expect(mid.mist).toBeLessThan(TIMES.sunrise.mist);
+    expect(mid.mist).toBeGreaterThan(TIMES.midday.mist);
+    let end = mid;
+    for (let t = 0; t < LIGHT_FADE; t += 1 / 60) {
+      end = ease.step(TIMES.midday, 1 / 60);
+    }
+    expect(end).toBe(TIMES.midday);
   });
 });
