@@ -80,8 +80,8 @@ const defaultClock: Clock = () => performance.now();
 export interface BackgroundBuild<K, T> {
   /**
    * Starts building `key` with the steps from `make`, unless that key is already
-   * being built. Replaces any build in flight; asking for the latest finished
-   * result's key just drops the build in flight.
+   * being built. Replaces any build in flight. The caller keeps track of which
+   * result it is showing, and asks only for what it lacks.
    */
   request: (key: K, make: () => BuildSteps<T>) => void;
   /**
@@ -103,10 +103,8 @@ export function createBackgroundBuild<K, T>(clock: Clock = defaultClock): Backgr
   let steps: BuildSteps<T> | null = null;
   let building: K | undefined;
   let built: K | undefined;
-  let hasBuilt = false;
   const done = (value: T) => {
     built = building;
-    hasBuilt = true;
     steps = null;
     building = undefined;
     return value;
@@ -114,12 +112,6 @@ export function createBackgroundBuild<K, T>(clock: Clock = defaultClock): Backgr
   return {
     request(key, make) {
       if (steps !== null && building === key) {
-        return;
-      }
-      if (hasBuilt && built === key) {
-        // Back to what's already built: whatever was in flight is no longer wanted.
-        steps = null;
-        building = undefined;
         return;
       }
       steps = make();

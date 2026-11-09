@@ -106,7 +106,7 @@ describe("createBackgroundBuild", () => {
     expect(build.step(0)).toBe(3);
   });
 
-  it("keeps a build going when asked for the same key again", () => {
+  it("keeps a build going when asked for the same key again, and rebuilds it after", () => {
     const build = createBackgroundBuild<number, number>(tickingClock());
     let made = 0;
     const make = () => {
@@ -119,8 +119,8 @@ describe("createBackgroundBuild", () => {
     expect(made).toBe(1);
     expect(build.finish()).toBe(finishBuild(sum(50)));
     build.request(7, make);
-    expect(made).toBe(1);
-    expect(build.building).toBeUndefined();
+    expect(made).toBe(2);
+    expect(build.building).toBe(7);
   });
 
   it("replaces a build in flight with a new key", () => {
@@ -130,18 +130,6 @@ describe("createBackgroundBuild", () => {
     build.request(2, () => sum(4));
     expect(build.finish()).toBe(6);
     expect(build.built).toBe(2);
-  });
-
-  it("drops a build in flight when asked for the built key", () => {
-    const build = createBackgroundBuild<number, number>(tickingClock());
-    build.request(1, () => sum(3));
-    build.finish();
-    build.request(2, () => sum(50));
-    build.step(5);
-    build.request(1, () => sum(3));
-    expect(build.building).toBeUndefined();
-    expect(build.finish()).toBeUndefined();
-    expect(build.built).toBe(1);
   });
 
   it("cancels", () => {
