@@ -47,6 +47,9 @@ import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
 import { createCanvasTexture, paintCanvas, type CanvasTexture } from "../canvas-texture";
 
 const g = glslFloat;
+
+/** How far round its box (frame heights) the care board draws: its frame, shadow and pen tray. */
+const BOARD_REACH = 0.05;
 const vec3 = (c: readonly [number, number, number]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
 
 /** Layout slots in the room shader's `uL` array (see `packLayout`). */
@@ -311,7 +314,7 @@ void clockFace(vec2 f) {
 void board(vec2 f) {
   vec2 q = f - BOARD.xy;
   vec2 hs = BOARD.zw;
-  if (sdBox(q, hs, 0.0) > 0.05) {
+  if (sdBox(q, hs, 0.0) > ${g(BOARD_REACH)}) {
     return;
   }
   shadow(sdBox(q - vec2(0.006, -0.011), hs + BOARD_FRAME, 0.003), 0.35, 0.02);
@@ -955,7 +958,11 @@ export const hospital = defineEffect(hospitalMeta, {
       let roomSide = Number.NaN;
       let roomNight = Number.NaN;
       let roomClock: boolean | null = null;
-      let boardKey: string | null = null;
+      let boardW = 0;
+      let boardH = 0;
+      let boardText: string | null = null;
+      /** Set when only the board's writing changed: the room is redrawn round the board alone. */
+      let boardOnly = false;
       let screenKey: string | null = null;
 
       let time = 0;
@@ -973,7 +980,7 @@ export const hospital = defineEffect(hospitalMeta, {
           roomTarget = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
           layout = roomLayout(width / height);
           roomSide = Number.NaN;
-          boardKey = null;
+          boardText = null;
           screenKey = null;
         },
         frame(dt, p) {
@@ -1001,21 +1008,24 @@ export const hospital = defineEffect(hospitalMeta, {
           traceTable.upload();
           gl.activeTexture(gl.TEXTURE0);
 
-          // 2. The board's writing; the room is redrawn with it.
-          const [, , bw, bh] = layout.board;
+          // 2. The board's writing; the room is redrawn round the board with it.
+          const [bx, by, bw, bh] = layout.board;
           const bpw = px(bw);
           const bph = px(bh);
-          const bKey = `${String(bpw)}x${String(bph)}|${p.board}`;
-          if (bKey !== boardKey) {
-            boardKey = bKey;
+          if (bpw !== boardW || bph !== boardH || p.board !== boardText) {
+            boardW = bpw;
+            boardH = bph;
+            boardText = p.board;
             paint(board, bpw, bph, (ctx) => {
               drawBoard(ctx, bpw, bph, p.board);
             });
-            roomSide = Number.NaN;
+            boardOnly = true;
           }
 
-          // 3. The room, when the size or a setting it shows changes.
-          if (side !== roomSide || night !== roomNight || p.clock !== roomClock) {
+          // 3. The room, when the size or a setting it shows changes; only the
+          // board's box when only its writing did, as while it is being typed.
+          const whole = side !== roomSide || night !== roomNight || p.clock !== roomClock;
+          if (whole || boardOnly) {
             roomSide = side;
             roomNight = night;
             roomClock = p.clock;
@@ -1028,7 +1038,17 @@ export const hospital = defineEffect(hospitalMeta, {
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, boardTex);
             roomTarget.bind();
-            triangle.draw();
+            if (whole) {
+              triangle.draw();
+            } else {
+              gl.enable(gl.SCISSOR_TEST);
+              const m = BOARD_REACH;
+              if (scissorBox(gl, width, height, side * bx, by, bw + m, bh + m)) {
+                triangle.draw();
+              }
+              gl.disable(gl.SCISSOR_TEST);
+            }
+            boardOnly = false;
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.viewport(0, 0, width, height);
           }
