@@ -396,6 +396,7 @@ export const tunnel = defineEffect(tunnelMeta, {
             u.f3("uRamp23", c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
             // The core glow leans colour 3 towards white, pre-multiplied by its gain.
             const bright = p.core !== "dark";
+            // Allocates only when a colour changes.
             const glow = mixRgb(hexToRgb(p.color3), [255, 255, 255], 0.55);
             const gain = bright ? (1.15 * p.brightness) / 255 : 0;
             u.f3("uGlow", glow[0] * gain, glow[1] * gain, glow[2] * gain);

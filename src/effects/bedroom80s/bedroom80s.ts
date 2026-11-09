@@ -1253,6 +1253,7 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
             ru.f2("uRes", width, height);
             ru.f1("uSide", side);
             ru.f1("uK", k);
+            // Allocates only when the room is redrawn.
             for (const [pass, target] of [
               [0, baseTarget],
               [1, albedoTarget],

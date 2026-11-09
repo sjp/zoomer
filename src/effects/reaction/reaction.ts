@@ -475,6 +475,7 @@ export const reaction = defineEffect(reactionMeta, {
           let again = advanceCycle(cycle, n, dt, pair.src.width, p.hold, regrow);
           again = collectStats(regrow) || again;
           if (import.meta.env.DEV && (again || cycle.phase !== before)) {
+            // Allocates only to log a phase change in development.
             // oxlint-disable-next-line eslint/no-console -- dev-only diagnostics, behind import.meta.env.DEV
             console.info(`reaction: ${before} -> ${again ? "reseed" : cycle.phase}`);
           }

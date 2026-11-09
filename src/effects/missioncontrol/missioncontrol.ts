@@ -1251,6 +1251,7 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
             }
             gl.activeTexture(gl.TEXTURE6);
             track.upload();
+            // Allocates only when a craft starts a new orbit.
             setLine(
               LINE.mapLabel,
               `GROUND TRACK   REV ${String(orbitNumber(mission, tau) + 1).padStart(4, "0")}`,

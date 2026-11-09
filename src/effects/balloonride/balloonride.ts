@@ -806,6 +806,7 @@ export const balloonride = defineEffect(balloonrideMeta, {
             if (mapTexture) {
               gl.deleteTexture(mapTexture);
             }
+            // Allocates only when the seed changes.
             mapTexture = createDataTexture(gl, {
               width: MAP_SIZE,
               height: MAP_SIZE,

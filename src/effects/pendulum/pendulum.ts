@@ -196,6 +196,7 @@ export const pendulum = defineEffect(pendulumMeta, {
           builtKey.setText(2, p.placement);
           builtKey.set(3, refWidth);
           if (builtKey.take()) {
+            // Allocates only when the rig's layout changes.
             rig.configure({ count: p.count, view: p.view, placement: p.placement, refWidth });
           }
           rig.update(dt, p.cycle, p.amplitude);

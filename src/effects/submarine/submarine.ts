@@ -1043,6 +1043,7 @@ export const submarine = defineEffect(submarineMeta, {
             const labelSize = Math.max(16, Math.min(1024, Math.round(2 * L.depthR * scale)));
             gl.deleteTexture(labels);
             labels = null;
+            // Allocates only when the side changes.
             labels = createDataTexture(gl, {
               width: labelSize * 2,
               height: labelSize,

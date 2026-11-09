@@ -374,6 +374,7 @@ export const desertcamp = defineEffect(desertcampMeta, {
           starInputs.set(1, sceneWidth);
           starInputs.set(2, p.stars);
           if (starInputs.take()) {
+            // Allocates only when the sky's inputs change.
             stars.build({
               salt: seedSalt(seed),
               density: clamp(p.stars, 0, 1) * DENSITY_MAX,

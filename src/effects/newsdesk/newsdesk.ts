@@ -943,6 +943,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
           if (setStale) {
             setStale = false;
             const l = layout;
+            // Allocates only once per resize.
             l.strips.forEach((s, i) => {
               stripData.set(s, i * 4);
             });

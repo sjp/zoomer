@@ -1002,6 +1002,7 @@ export const radiostudio = defineEffect(radiostudioMeta, {
           } else if (p.foam !== roomFoam) {
             roomFoam = p.foam;
             if (!tinting) {
+              // Allocates only the first time the room is tinted.
               maskTarget ??= createRenderTarget(gl, width, height, gl.R8, { filter: gl.NEAREST });
               if (maskTarget) {
                 drawRoom(roomTarget, 0, 0, 0, 1, side);

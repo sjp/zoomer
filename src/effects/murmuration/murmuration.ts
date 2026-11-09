@@ -361,6 +361,7 @@ export const murmuration = defineEffect(murmurationMeta, {
           beginFrame(gl, width, height);
           const aspect = width / height;
           if (!seeded) {
+            // Allocates only on the first frame.
             birds.seed(seedBirds(1, MAX_BIRDS, aspect, new Float32Array(MAX_BIRDS * BIRD_FLOATS)));
             seeded = true;
           }

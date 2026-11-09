@@ -423,6 +423,7 @@ export const frost = defineEffect(frostMeta, {
           } else if (p.cycle && (next?.base !== base || next.cycle !== s.cycle + 1)) {
             const field = stepBuild(base, fieldSeed, s.cycle + 1, fw, fh);
             if (field) {
+              // Allocates only when the next cycle's field lands.
               next = { base, cycle: s.cycle + 1, field };
             }
           }

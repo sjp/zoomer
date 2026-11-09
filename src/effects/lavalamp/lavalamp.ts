@@ -340,6 +340,7 @@ export const lavalamp = defineEffect(lavalampMeta, {
           if (!mask || tw !== mask.width || th !== mask.height) {
             mask?.dispose();
             mask = null;
+            // Allocates only when the mask's size changes.
             mask = createRenderTarget(gl, tw, th, gl.R8, { filter: gl.NEAREST });
             if (!mask) {
               throw new Error("Lava lamp: R8 mask is not renderable");

@@ -348,6 +348,7 @@ export const flowfield = defineEffect(flowfieldMeta, {
           const light = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] > 140 / 255;
           if (light !== lightMode) {
             lightMode = light;
+            // Allocates only when the background flips between light and dark.
             for (const t of [layers.src, layers.dst]) {
               gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
               gl.clearBufferfv(gl.COLOR, 0, EMPTY);

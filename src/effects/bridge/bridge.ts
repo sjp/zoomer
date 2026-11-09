@@ -1234,6 +1234,7 @@ export const bridge = defineEffect(bridgeMeta, {
           layoutKey.set(3, p.showTime ? 1 : 0);
           layoutKey.set(4, p.showDate ? 1 : 0);
           if (layoutKey.take()) {
+            // Allocates only when the layout changes.
             const hidden = new Set<LiveKey>();
             if (!p.showTime) {
               hidden.add("time");
@@ -1340,6 +1341,7 @@ export const bridge = defineEffect(bridgeMeta, {
                 shipChoice = p.ship;
                 shipEpoch = time;
                 // Options after "cycle" and "none" are in `SHIP_KINDS` order; cycling is -1.
+                // Allocates only when the ship settings change.
                 shipPlan.kind = Math.max(-1, SHIP_OPTIONS.findIndex((o) => o.value === p.ship) - 2);
                 shipPlan.stay = p.shipStay;
                 shipPlan.gap = p.shipGap;

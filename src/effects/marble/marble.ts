@@ -298,6 +298,7 @@ export const marble = defineEffect(marbleMeta, {
           const pal = paletteData(palette);
           if (!sim || sim.seed !== seed || simPalette !== palette) {
             // Baked paint carries the old colours, so a new palette or variation starts afresh.
+            // Allocates only for a new seed or palette.
             sim = createMarble({ seed, colours: pal.count, extent });
             simPalette = palette;
             hasBase = false;

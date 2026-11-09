@@ -801,10 +801,12 @@ export const synthwave = defineEffect(synthwaveMeta, {
           const n = Math.max(1, Math.ceil(height));
           if (rowsOnGpu && rowTarget?.height !== n) {
             rowTarget?.dispose();
+            // Allocates only when the canvas height changes.
             rowTarget = createRenderTarget(gl, 3, n, gl.RGBA16F, { filter: gl.NEAREST });
             rowsOnGpu = rowTarget !== null;
           }
           if (!rowsOnGpu && n !== rowCount) {
+            // Allocates only when the canvas height changes.
             rows = new Float32Array(n * ROW_FLOATS);
             rowCount = 0;
           }

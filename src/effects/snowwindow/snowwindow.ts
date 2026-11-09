@@ -464,6 +464,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             paneCount = panes.length;
             sill = interior(aspect)[1];
             paneData.fill(0);
+            // Allocates only when the layout changes.
             panes.forEach((r, i) => {
               paneData.set(r, i * 4);
             });
@@ -483,6 +484,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             if (size.width !== condWidth || size.height !== condHeight || !condTexture) {
               condWidth = size.width;
               condHeight = size.height;
+              // Allocates only when the condensation map's size changes.
               condData = new Uint8Array(condWidth * condHeight * 4);
               gl.deleteTexture(condTexture);
               condTexture = null;

@@ -1123,6 +1123,7 @@ export const lunarlander = defineEffect(lunarlanderMeta, {
             const bottom = w[5] - FRAME_W;
             const outer = Math.max(w[0], w[2], w[4]) + FRAME_W;
             const inner = Math.min(w[0], w[2], w[4]) - FRAME_W;
+            // Allocates only when the ground is redrawn.
             const toY = (y: number) => (y + 0.5) * gh;
             const y0 = Math.max(0, Math.floor(toY(bottom)) - 2);
             const y1 = Math.min(gh, Math.ceil(toY(top)) + 2);

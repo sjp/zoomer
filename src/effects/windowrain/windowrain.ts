@@ -519,6 +519,7 @@ export const windowRain = defineEffect(windowRainMeta, {
             for (const t of fogTargets) {
               t.dispose();
             }
+            // Allocates only when the fog is turned off.
             fogTargets = [];
           }
 

@@ -348,6 +348,7 @@ export const orbits = defineEffect(orbitsMeta, {
           if (starsKey.take()) {
             pole[0] = refWidth / 2;
             pole[1] = REF_HEIGHT / 2;
+            // Allocates only for a new seed or frame width.
             stars.build({
               salt: seedSalt(seed),
               density: STAR_DENSITY,

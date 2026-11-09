@@ -1115,6 +1115,7 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
             ru.f2("uBeaconA", beaconA, beaconB);
             gl.uniform3fv(ru.loc.uWash, WASHES[lighting]);
             gl.uniform1fv(ru.loc.uChairA, chairData);
+            // Allocates only when the room is redrawn.
             viewscreens(seed)
               .slice(0, 3)
               .forEach((v, i) => {

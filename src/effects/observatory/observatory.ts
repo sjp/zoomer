@@ -570,6 +570,7 @@ export const observatory = defineEffect(observatoryMeta, {
           starInputs.set(0, seed);
           starInputs.set(1, refWidth);
           if (starInputs.take()) {
+            // Allocates only when the sky's inputs change.
             stars.build({
               salt: seedSalt(seed),
               density: STAR_DENSITY,

@@ -204,6 +204,7 @@ export const spiderweb = defineEffect(spiderwebMeta, {
           const layoutChanged =
             corner !== builtCorner || seed !== builtSeed || refWidth !== builtWidth;
           if (!web || layoutChanged || p.size !== builtSize) {
+            // Allocates only when the web is rebuilt.
             web = buildWeb({ corner, size: p.size, seed, refWidth });
             builtSize = p.size;
           }

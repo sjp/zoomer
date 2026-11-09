@@ -401,6 +401,7 @@ export const greenhouse = defineEffect(greenhouseMeta, {
             const before = layout;
             layout = buildLeaves(seed, p.density, palette);
             leafCount = writeLeaves(layout, leafBatch.data);
+            // Allocates only when the leaves are rebuilt.
             const next = createBobs(
               layout.leaves.map((l) => l.length),
               seed,

@@ -360,6 +360,7 @@ export const fireplace = defineEffect(fireplaceMeta, {
             if (import.meta.env.DEV) {
               const err = gl.getError();
               if (err !== gl.NO_ERROR) {
+                // Allocates only to report a GL error.
                 console.error(`fireplace: GL error 0x${err.toString(16)} in rebuildLayout`);
               }
             }

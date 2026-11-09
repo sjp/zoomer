@@ -1033,6 +1033,7 @@ export const hospital = defineEffect(hospitalMeta, {
             boardW = bpw;
             boardH = bph;
             boardText = p.board;
+            // Allocates only when the board's size or writing changes.
             paint(board, bpw, bph, (ctx) => {
               drawBoard(ctx, bpw, bph, p.board);
             });
@@ -1083,6 +1084,7 @@ export const hospital = defineEffect(hospitalMeta, {
           screenKey.set(5, vitals.sys);
           screenKey.set(6, vitals.dia);
           if (screenKey.take()) {
+            // Allocates only when a number on the screen, or its size, changes.
             paint(screen, spw, sph, (ctx) => {
               drawScreen(ctx, spw, sph, vitals);
             });
