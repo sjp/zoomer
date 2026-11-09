@@ -46,6 +46,7 @@ import { type LampSide, porchMeta } from "./porch.meta";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Garden pass: about 3 reference px per texel (divisor 6 at 4K). It is all soft and dark. */
 const GARDEN_TEXEL_REF = 3;
@@ -295,6 +296,9 @@ export const porch = defineEffect(porchMeta, {
       let builtSide = "";
       let builtWidth = -1;
       let shapeSeed = -1;
+      /** The garden's inputs when it was last drawn. */
+      const gardenKey = createChangeKey(5);
+      let gardenColor = "";
 
       const d = sprites.data;
       /** Sprites written this frame. */
@@ -359,19 +363,28 @@ export const porch = defineEffect(porchMeta, {
             builtWidth = refWidth;
           }
 
-          // 1. The garden at low resolution, upscaled with dither.
-          target.bind();
-          gl.useProgram(gardenProgram);
-          if (seed !== shapeSeed) {
-            const rng = createRng(hash32(seed + 0x9a7d));
-            const tau = Math.PI * 2;
-            gu.f4("uShape", rng() * tau, rng() * tau, rng() * tau, rng());
-            shapeSeed = seed;
+          // 1. The garden at low resolution, upscaled with dither. It has no
+          // time input, so it is redrawn only when the lamp or the seed changes.
+          gardenKey.set(0, seed);
+          gardenKey.set(1, lamp.x);
+          gardenKey.set(2, lamp.y);
+          gardenKey.set(3, lamp.ax);
+          gardenKey.set(4, lamp.ay);
+          if (target.needsRedraw(gardenKey) || p.lampColor !== gardenColor) {
+            gardenColor = p.lampColor;
+            target.bind();
+            gl.useProgram(gardenProgram);
+            if (seed !== shapeSeed) {
+              const rng = createRng(hash32(seed + 0x9a7d));
+              const tau = Math.PI * 2;
+              gu.f4("uShape", rng() * tau, rng() * tau, rng() * tau, rng());
+              shapeSeed = seed;
+            }
+            gu.rgb("uLampColor", p.lampColor);
+            gu.f4("uLamp", lamp.x, lamp.y, lamp.ax, lamp.ay);
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           }
-          gu.rgb("uLampColor", p.lampColor);
-          gu.f4("uLamp", lamp.x, lamp.y, lamp.ax, lamp.ay);
-          triangle.draw();
-          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           target.blit();
 
           // 2. Rain: thin additive streaks, bright only where the cone lights them.
