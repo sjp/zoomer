@@ -7,9 +7,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl, type FakeGl, type FakeGlOptions } from "../test/fake-gl";
-import { defaults, sanitizeText } from "./params";
+import { paramSets } from "../test/param-sets";
 import { effects } from "./registry";
-import type { AnyParamValues, EffectWebGL2, ParamSchema, Viewport } from "./types";
+import type { AnyParamValues, EffectWebGL2, Viewport } from "./types";
 
 /** Digital rain draws its glyph atlas on an OffscreenCanvas, which Node lacks. */
 class FakeOffscreenCanvas {
@@ -39,37 +39,6 @@ const viewport = (width: number, height: number): Viewport => ({
   height,
   scale: height / 1080,
 });
-
-/** Param sets that reach the ends of every slider and every select option. */
-function paramSets(schema: ParamSchema): AnyParamValues[] {
-  const base = defaults(schema);
-  const atMin: AnyParamValues = { ...base };
-  const atMax: AnyParamValues = { ...base };
-  const sets = [base, atMax, atMin];
-  for (const [key, def] of Object.entries(schema)) {
-    if (def.kind === "number") {
-      atMin[key] = def.min;
-      atMax[key] = def.max;
-    } else if (def.kind === "boolean") {
-      atMin[key] = !def.default;
-      atMax[key] = !def.default;
-    } else if (def.kind === "color") {
-      atMin[key] = "#000000";
-      atMax[key] = "#ffffff";
-    } else if (def.kind === "text") {
-      // Empty, and every line full of mixed characters, some with no glyph.
-      atMin[key] = "";
-      const line = "Wa9 #?\u00e9\u6771".repeat(def.maxLength);
-      atMax[key] = sanitizeText(def, Array.from({ length: def.maxLines }, () => line).join("\n"));
-    } else {
-      for (const o of def.options) {
-        sets.push({ ...base, [key]: o.value });
-      }
-    }
-  }
-  sets.push(base);
-  return sets;
-}
 
 /** Messages for anything the frame left that the next effect would trip over. */
 function frameEndProblems(fake: FakeGl): string[] {

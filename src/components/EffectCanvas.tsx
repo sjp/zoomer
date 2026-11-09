@@ -11,6 +11,7 @@ import { createFrameLimiter, frameDelta, FRAME_RATES, type FrameRate } from "../
 import { describeError } from "../lib/errors";
 import { createGpuTimer, type GpuTimer } from "../lib/gpuTimer";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
+import { WEBGL_OPTIONS } from "../lib/webgl";
 
 export interface FrameStats {
   /** Frames drawn per second, averaged over the last sample window. */
@@ -55,17 +56,6 @@ const MAX_DPR = 2;
  * and on high-DPI screens it avoids drawing 3-4× the pixels for no visible gain.
  */
 const MAX_FIT_PIXELS = 1920 * 1080;
-
-/**
- * WebGL2 context settings. Without `preserveDrawingBuffer` the buffer is cleared
- * after each composite; `captureStream` still records, since it samples on composite.
- */
-const WEBGL_OPTIONS: WebGLContextAttributes = {
-  alpha: false,
-  antialias: false,
-  premultipliedAlpha: false,
-  preserveDrawingBuffer: false,
-};
 
 /**
  * Gets the context the effect asks for and creates its renderer. Returns null if the
