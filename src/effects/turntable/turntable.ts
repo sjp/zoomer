@@ -55,6 +55,7 @@ import {
 } from "./turntable-sim";
 import { turntableMeta } from "./turntable.meta";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -449,8 +450,6 @@ export const turntable = defineEffect(turntableMeta, {
       let height = 1;
       /** Record rotation in revolutions, wrapped to [0, 1). */
       let rotation = 0;
-      /** What the room target holds; cleared whenever it may have been reallocated or mid-fade. */
-      let drawnRoom = "";
       /** The room shown, the one it is fading from, and how far the fade is (1: done). */
       let shownRoom = "";
       let fromRoom = "";
@@ -486,7 +485,7 @@ export const turntable = defineEffect(turntableMeta, {
         lookTarget[11] = plinth.gloss;
         return lookTarget;
       };
-      let drawnSide = 0;
+      const roomKey = createChangeKey(3);
 
       return {
         resize(v) {
@@ -500,7 +499,6 @@ export const turntable = defineEffect(turntableMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          drawnRoom = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -529,7 +527,11 @@ export const turntable = defineEffect(turntableMeta, {
             roomMix = Math.min(1, roomMix + step / ROOM_FADE);
           }
           const room = roomFor(shownRoom);
-          if (target.direct || fading || drawnRoom !== shownRoom || drawnSide !== layout.side) {
+          // Mid-fade, the mix changes every frame; the frame it reaches 1 draws the room alone.
+          roomKey.setText(0, shownRoom);
+          roomKey.set(1, layout.side);
+          roomKey.set(2, roomMix);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
@@ -545,8 +547,6 @@ export const turntable = defineEffect(turntableMeta, {
               drawRoom(room);
             }
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnRoom = roomMix < 1 ? "" : shownRoom;
-            drawnSide = layout.side;
           }
           target.blit();
 

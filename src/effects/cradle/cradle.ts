@@ -42,6 +42,7 @@ import { createLowResTarget } from "../lowres";
 import { approach } from "../math";
 import { defineEffect } from "../types";
 import { PAINT_OVER_GLSL } from "../sdf-glsl";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -507,9 +508,9 @@ export const cradle = defineEffect(cradleMeta, {
         up: new Float32Array(3),
         stringCol: [0, 0, 0],
       };
-      /** What the statics and the room hold; reset whenever they may be stale. */
-      let staticKey = "";
-      let roomKey = "";
+      /** The inputs the statics and the room were built from. */
+      const staticKey = createChangeKey(3);
+      const roomKey = createChangeKey(2);
 
       let time = 0;
       let amp = Number.NaN;
@@ -528,7 +529,6 @@ export const cradle = defineEffect(cradleMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          roomKey = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -545,8 +545,9 @@ export const cradle = defineEffect(cradleMeta, {
           cradleLayout(aspect, p.size, count, view, layout);
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const rk = `${p.scene}|${String(view.side)}`;
-          if (target.direct || roomKey !== rk) {
+          roomKey.setText(0, p.scene);
+          roomKey.set(1, view.side);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
@@ -562,15 +563,16 @@ export const cradle = defineEffect(cradleMeta, {
             ru.f3("uGlowAt", scene.glowAt[0], scene.glowAt[1], scene.glowAt[2]);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            roomKey = rk;
           }
           target.blit();
 
           // 2. The cradle, premultiplied, in its box.
           gl.viewport(0, 0, width, height);
           gl.useProgram(cradleProgram);
-          const sk = `${p.scene}|${String(view.side)}|${String(count)}`;
-          if (sk !== staticKey) {
+          staticKey.setText(0, p.scene);
+          staticKey.set(1, view.side);
+          staticKey.set(2, count);
+          if (staticKey.take()) {
             buildStatics(view, count, scene, statics);
             const [bx, bz] = baseHalf(count);
             gl.uniform4fv(cu.loc.uRod, statics.rods);
@@ -584,7 +586,6 @@ export const cradle = defineEffect(cradleMeta, {
             cu.v3("uUp", statics.up);
             cu.v3("uStringCol", statics.stringCol);
             cu.f3("uBase", bx, bz, BASE_H);
-            staticKey = sk;
           }
           cu.f1("uPx", 1 / height);
           cu.f3("uOrigin", layout.ox, layout.oy, layout.unit);

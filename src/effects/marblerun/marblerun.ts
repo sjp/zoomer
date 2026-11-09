@@ -28,6 +28,7 @@ import { wrap } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 const g = glslFloat;
 
@@ -399,7 +400,7 @@ export const marblerun = defineEffect(marblerunMeta, {
 
       let width = 1;
       let height = 1;
-      let drawnBackdrop = "";
+      const backdropKey = createChangeKey(1);
 
       return {
         resize(v) {
@@ -407,7 +408,6 @@ export const marblerun = defineEffect(marblerunMeta, {
           height = Math.max(1, Math.round(v.height));
           const scale = v.scale > 0 ? v.scale : height / 1080;
           target.resize(width, height, Math.max(1, BACKDROP_TEXEL_REF * scale));
-          drawnBackdrop = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -437,8 +437,8 @@ export const marblerun = defineEffect(marblerunMeta, {
           liftTravel += time * LIFT_SPEED;
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const backdropKey = `${side}|${String(aspect)}`;
-          if (target.direct || drawnBackdrop !== backdropKey) {
+          backdropKey.setText(0, side);
+          if (target.needsRedraw(backdropKey)) {
             target.bind();
             gl.useProgram(bgu.program);
             bgu.f2(
@@ -450,7 +450,6 @@ export const marblerun = defineEffect(marblerunMeta, {
             bgu.f1("uRight", side === "right" ? 1 : 0);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnBackdrop = backdropKey;
           }
           target.blit();
           gl.viewport(0, 0, width, height);

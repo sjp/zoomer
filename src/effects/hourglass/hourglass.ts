@@ -50,6 +50,7 @@ import { smoothstep } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
 import { PAINT_OVER_GLSL } from "../sdf-glsl";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -359,8 +360,8 @@ export const hourglass = defineEffect(hourglassMeta, {
 
       let width = 1;
       let height = 1;
-      /** What the room target holds; cleared whenever it may have been reallocated. */
-      let drawnSide = 0;
+      /** The inputs the room target was drawn from. */
+      const roomKey = createChangeKey(1);
 
       return {
         resize(v) {
@@ -374,7 +375,6 @@ export const hourglass = defineEffect(hourglassMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          drawnSide = 0;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -385,14 +385,14 @@ export const hourglass = defineEffect(hourglassMeta, {
           flick = (flick + step * FLICK_RATE) % TAU;
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          if (target.direct || drawnSide !== layout.side) {
+          roomKey.set(0, layout.side);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
             ru.f1("uSide", layout.side);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnSide = layout.side;
           }
           target.blit();
 

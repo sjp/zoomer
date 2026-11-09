@@ -39,6 +39,7 @@ import {
 import { createLowResTarget } from "../lowres";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 3 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 3;
@@ -578,8 +579,8 @@ export const cat = defineEffect(catMeta, {
       let scale = 1;
       /** Seconds since create, unwrapped (float64); only the pose reaches the GPU. */
       let time = 0;
-      /** What the room target holds; cleared whenever it may have been reallocated. */
-      let drawnRoom = "";
+      /** The inputs the room target was drawn from. */
+      const roomKey = createChangeKey(3);
 
       return {
         resize(v) {
@@ -593,7 +594,6 @@ export const cat = defineEffect(catMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          drawnRoom = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -606,8 +606,10 @@ export const cat = defineEffect(catMeta, {
           beamFor(layout, look.slope, beam);
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          const key = `${p.time}|${String(layout.side)}|${String(layout.size)}`;
-          if (target.direct || drawnRoom !== key) {
+          roomKey.setText(0, p.time);
+          roomKey.set(1, layout.side);
+          roomKey.set(2, layout.size);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f1("uAspect", aspect);
@@ -622,7 +624,6 @@ export const cat = defineEffect(catMeta, {
             ru.f2("uBeamK", beam.length, look.haze);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnRoom = key;
           }
           target.blit();
 

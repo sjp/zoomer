@@ -32,6 +32,7 @@ import { HASH32_GLSL } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { defineEffect } from "../types";
 import { lookup } from "../lookup";
+import { createChangeKey } from "../change-key";
 
 const TAU = Math.PI * 2;
 const g = glslFloat;
@@ -392,11 +393,8 @@ export const gears = defineEffect(gearsMeta, {
 
       let width = 1;
       let height = 1;
-      /**
-       * What the backdrop target holds; cleared whenever it may have been
-       * reallocated or the light pool moved.
-       */
-      let drawnBackdrop = "";
+      /** The inputs the backdrop target was drawn from: the backdrop and the light pool. */
+      const backdropKey = createChangeKey(4);
 
       /** Regrows the train when the layout, seed or aspect changes. */
       const ensureTrain = (layout: GearLayoutId, seed: number, aspect: number) => {
@@ -417,7 +415,6 @@ export const gears = defineEffect(gearsMeta, {
           }
           layerCount[layer] = k - layerFirst[layer];
         }
-        drawnBackdrop = "";
       };
 
       return {
@@ -426,7 +423,6 @@ export const gears = defineEffect(gearsMeta, {
           height = Math.max(1, Math.round(v.height));
           const scale = v.scale > 0 ? v.scale : height / 1080;
           target.resize(width, height, Math.max(1, BACKDROP_TEXEL_REF * scale));
-          drawnBackdrop = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -439,8 +435,12 @@ export const gears = defineEffect(gearsMeta, {
           const swing = balanceAngle(drive);
 
           // 1. The backdrop, re-rendered only when it changes, upscaled every frame.
-          if (target.direct || drawnBackdrop !== p.backdrop) {
-            const b = lookup(BACKDROPS, p.backdrop, "plate");
+          const b = lookup(BACKDROPS, p.backdrop, "plate");
+          backdropKey.setText(0, p.backdrop);
+          backdropKey.set(1, pool[0]);
+          backdropKey.set(2, pool[1]);
+          backdropKey.set(3, pool[2]);
+          if (target.needsRedraw(backdropKey)) {
             target.bind();
             gl.useProgram(bu.program);
             bu.f2(
@@ -456,7 +456,6 @@ export const gears = defineEffect(gearsMeta, {
             bu.f3("uPool", pool[0], pool[1], pool[2]);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnBackdrop = p.backdrop;
           }
           target.blit();
           gl.viewport(0, 0, width, height);

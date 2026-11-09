@@ -50,6 +50,7 @@ import { createSmokeField } from "../smoke/smoke-field";
 import { type Flow, simSteps, WAVE_COUNT, wavePhases } from "../smoke/smoke-sim";
 import { defineEffect } from "../types";
 import type { StepClock } from "../step-clock";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -331,9 +332,8 @@ export const mug = defineEffect(mugMeta, {
       /** Seconds since create, unwrapped (float64); only wrapped phases reach the GPU. */
       let time = 0;
       let shelvesBaked = false;
-      /** What the room target holds; cleared whenever it may have been reallocated. */
-      let drawnRoom = "";
-      let drawnSide = 0;
+      /** The inputs the room target was drawn from. */
+      const roomKey = createChangeKey(2);
 
       /** Scissors to a box given in height units (x0, y0, x1, y1). */
       const scissor = (b: readonly number[]) => {
@@ -356,7 +356,6 @@ export const mug = defineEffect(mugMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          drawnRoom = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -394,7 +393,9 @@ export const mug = defineEffect(mugMeta, {
           }
 
           // 2. The room, re-rendered only when it changes, upscaled every frame.
-          if (target.direct || drawnRoom !== p.room || drawnSide !== layout.side) {
+          roomKey.setText(0, p.room);
+          roomKey.set(1, layout.side);
+          if (target.needsRedraw(roomKey)) {
             // Baked once, whatever the room: the room shader always has it bound.
             if (!shelvesBaked) {
               shelves.update(SHELF_SEED, SHELF_PALETTE);
@@ -417,8 +418,6 @@ export const mug = defineEffect(mugMeta, {
             );
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnRoom = p.room;
-            drawnSide = layout.side;
           }
           target.blit();
 

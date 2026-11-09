@@ -37,6 +37,7 @@ import {
 } from "./pottery-sim";
 import { potteryMeta } from "./pottery.meta";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Studio pass: about 4 reference px per texel. It is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -397,9 +398,8 @@ export const pottery = defineEffect(potteryMeta, {
       /** Wheel angle, radians, kept wrapped. */
       let angle = 0;
       let fresh = true;
-      /** What the room target holds; cleared whenever it may have been reallocated. */
-      let drawnSide = 0;
-      let drawnAspect = 0;
+      /** The inputs the room target was drawn from. */
+      const roomKey = createChangeKey(1);
 
       /** Scissors to a box given in height units (x0, y0, x1, y1). */
       const scissor = (b: readonly number[]) => {
@@ -422,7 +422,6 @@ export const pottery = defineEffect(potteryMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          drawnSide = 0;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -446,15 +445,14 @@ export const pottery = defineEffect(potteryMeta, {
           updateDataTexture(gl, profileTex, PROFILE_N, 1, gl.RED, gl.FLOAT, shown.radius);
 
           // 1. The studio, re-rendered only when it changes, upscaled every frame.
-          if (target.direct || drawnSide !== layout.side || drawnAspect !== aspect) {
+          roomKey.set(0, layout.side);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
             ru.f1("uSide", layout.side);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnSide = layout.side;
-            drawnAspect = aspect;
           }
           target.blit();
 

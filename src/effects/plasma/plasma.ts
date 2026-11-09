@@ -39,6 +39,7 @@ import { MAX_FILAMENTS, plasmaMeta } from "./plasma.meta";
 import { createSpriteBatch } from "../sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Room pass: about 4 reference px per texel. It is all soft gradients. */
 const ROOM_TEXEL_REF = 4;
@@ -308,11 +309,8 @@ export const plasma = defineEffect(plasmaMeta, {
 
       let width = 1;
       let height = 1;
-      /** What the room target holds; reset whenever it may have been reallocated. */
-      let roomKey = "";
-      let roomCx = Number.NaN;
-      let roomCy = Number.NaN;
-      let roomR = Number.NaN;
+      /** The inputs the room target was drawn from. */
+      const roomKey = createChangeKey(4);
 
       // Per-frame state for the writers below, set at the start of each frame.
       let streakCount = 0;
@@ -393,7 +391,6 @@ export const plasma = defineEffect(plasmaMeta, {
             target.fullWidth / target.width / height,
             target.fullHeight / target.height / height,
           );
-          roomKey = "";
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -408,13 +405,11 @@ export const plasma = defineEffect(plasmaMeta, {
           const px = 1 / height;
 
           // 1. The room, re-rendered only when it changes, upscaled every frame.
-          if (
-            target.direct ||
-            roomKey !== p.colour ||
-            roomCx !== layout.cx ||
-            roomCy !== layout.cy ||
-            roomR !== layout.r
-          ) {
+          roomKey.setText(0, p.colour);
+          roomKey.set(1, layout.cx);
+          roomKey.set(2, layout.cy);
+          roomKey.set(3, layout.r);
+          if (target.needsRedraw(roomKey)) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
@@ -422,10 +417,6 @@ export const plasma = defineEffect(plasmaMeta, {
             ru.v3("uGlow", glow);
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            roomKey = p.colour;
-            roomCx = layout.cx;
-            roomCy = layout.cy;
-            roomR = layout.r;
           }
           target.blit();
 
