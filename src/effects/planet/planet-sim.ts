@@ -14,6 +14,7 @@
  * the low octaves are evaluated on a grid a quarter of the size in each
  * direction and bilinearly upsampled; only the last two octaves run per texel.
  */
+import { finishBuild, type BuildSteps } from "../rebuild";
 import { clamp, fract, smoothstep } from "../math";
 import { createNoise, fbm3, hash32, type Noise } from "../noise";
 import { WORLD_OPTIONS } from "./planet.meta";
@@ -165,15 +166,16 @@ interface CoarseGrid {
   data: Float32Array;
 }
 
-function buildCoarse(
+function* buildCoarse(
   width: number,
   height: number,
   channels: number,
   fill: (x: number, y: number, z: number, out: Float32Array, o: number) => void,
-): CoarseGrid {
+): BuildSteps<CoarseGrid> {
   const data = new Float32Array(width * height * channels);
   const p = new Float64Array(3);
   for (let j = 0; j < height; j++) {
+    yield;
     for (let i = 0; i < width; i++) {
       spherePoint((i + 0.5) / width, (j + 0.5) / height, p);
       fill(p[0], p[1], p[2], data, (j * width + i) * channels);
@@ -262,18 +264,18 @@ interface Fields {
 
 type Fill = (x: number, y: number, z: number, out: Float32Array, o: number) => void;
 
-function buildFields(
+function* buildFields(
   width: number,
   height: number,
   coarseChannels: number,
   coarseFill: Fill,
   midChannels: number,
   midFill: Fill,
-): Fields {
+): BuildSteps<Fields> {
   const cw = width / COARSE;
   const mw = width / MID;
-  const c = buildCoarse(cw, height / COARSE, coarseChannels, coarseFill);
-  const m = buildCoarse(mw, height / MID, midChannels, midFill);
+  const c = yield* buildCoarse(cw, height / COARSE, coarseChannels, coarseFill);
+  const m = yield* buildCoarse(mw, height / MID, midChannels, midFill);
   return {
     c,
     cx: lerpTable(width, cw, true, coarseChannels),
@@ -284,21 +286,27 @@ function buildFields(
   };
 }
 
+/** Fine rows finished between yields of `forEachRow`. */
+const ROW_CHUNK = 4;
+
 /**
  * Calls `row(y, rows)` for every fine row, with `rows` holding that row of each
  * coarse channel followed by each mid channel.
  */
-function forEachRow(
+function* forEachRow(
   F: Fields,
   width: number,
   height: number,
   row: (y: number, rows: Float32Array[]) => void,
-): void {
+): BuildSteps<void> {
   const rows: Float32Array[] = [];
   for (let c = 0; c < F.c.channels + F.m.channels; c++) {
     rows.push(new Float32Array(width));
   }
   for (let y = 0; y < height; y++) {
+    if (y % ROW_CHUNK === 0) {
+      yield;
+    }
     upsampleRow(F.c, F.cx, F.cy, y, rows, 0);
     upsampleRow(F.m, F.mx, F.my, y, rows, F.c.channels);
     row(y, rows);
@@ -614,6 +622,15 @@ export function buildSurface(
   seed: number,
   out: Uint8Array = new Uint8Array(SURFACE_W * SURFACE_H * 4),
 ): Uint8Array {
+  return finishBuild(buildSurfaceSteps(world, seed, out));
+}
+
+/** `buildSurface` as build steps, yielding every few rows. */
+export function* buildSurfaceSteps(
+  world: string,
+  seed: number,
+  out: Uint8Array = new Uint8Array(SURFACE_W * SURFACE_H * 4),
+): BuildSteps<Uint8Array> {
   const id: WorldId = isWorldId(world) ? world : "earth";
   const noise = createNoise(worldSeed(id, seed, 0x1234567));
   const W = SURFACE_W;
@@ -621,17 +638,17 @@ export function buildSurface(
   let F: Fields;
   let shade: ShadeRow;
   if (id === "earth" || id === "desert") {
-    F = buildFields(W, H, 3, terrainCoarse(noise), 1, terrainDetail(noise));
+    F = yield* buildFields(W, H, 3, terrainCoarse(noise), 1, terrainDetail(noise));
     shade = id === "earth" ? earthShade : desertShade;
   } else if (id === "ice") {
-    F = buildFields(W, H, 1, iceCoarse(noise), 2, iceDetail(noise));
+    F = yield* buildFields(W, H, 1, iceCoarse(noise), 2, iceDetail(noise));
     shade = iceShade;
   } else {
-    F = buildFields(W, H, 1, gasCoarse(noise), 1, gasDetail(noise));
+    F = yield* buildFields(W, H, 1, gasCoarse(noise), 1, gasDetail(noise));
     shade = gasShade(gasStorms(seed));
   }
   const salt = worldSeed(id, seed, 0x7f4a7c15);
-  forEachRow(F, W, H, (y, rows) => {
+  yield* forEachRow(F, W, H, (y, rows) => {
     shade(out, y, Math.sin(((y + 0.5) / H - 0.5) * Math.PI), rows, salt);
   });
   return out;
@@ -649,13 +666,22 @@ export function buildClouds(
   seed: number,
   out: Uint8Array = new Uint8Array(CLOUD_W * CLOUD_H * 4),
 ): Uint8Array {
+  return finishBuild(buildCloudsSteps(world, seed, out));
+}
+
+/** `buildClouds` as build steps, yielding every few rows. */
+export function* buildCloudsSteps(
+  world: string,
+  seed: number,
+  out: Uint8Array = new Uint8Array(CLOUD_W * CLOUD_H * 4),
+): BuildSteps<Uint8Array> {
   if (worldStyle(world).clouds === 0) {
     out.fill(0);
     return out;
   }
   const noise = createNoise(worldSeed(world, seed, 0x2c1b3c6d));
   const f = CLOUD_FREQ;
-  const F = buildFields(
+  const F = yield* buildFields(
     CLOUD_W,
     CLOUD_H,
     1,
@@ -671,7 +697,7 @@ export function buildClouds(
         0.06 * noise.noise3(x * f * 16 + 9.1, y * f * 28.8, z * f * 16);
     },
   );
-  forEachRow(F, CLOUD_W, CLOUD_H, (y, rows) => {
+  yield* forEachRow(F, CLOUD_W, CLOUD_H, (y, rows) => {
     const row = y * CLOUD_W * 4;
     // More cloud at the equator and 60 degrees, less in the subtropics.
     const belts = 0.08 * Math.cos(((y + 0.5) / CLOUD_H - 0.5) * Math.PI * 6);
