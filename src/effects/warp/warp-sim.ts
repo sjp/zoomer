@@ -36,7 +36,10 @@ export interface StarFrame {
 }
 
 export interface Starfield {
-  /** Star positions in [-1, 1] (x, y) and depth (0, 1]; colour mix and count-fade life. */
+  /**
+   * Star positions (x, y, in units of the focal length at depth 1) and depth
+   * (0, 1]; colour mix and count-fade life. Filled on the first step.
+   */
   readonly xs: Float32Array;
   readonly ys: Float32Array;
   readonly zs: Float32Array;
@@ -54,16 +57,19 @@ export function createStarfield(max: number, random: () => number = Math.random)
   const mix = new Float32Array(max);
   const life = new Float32Array(max);
   let live = 0;
+  /** Half the kept view (screen plus margin) at depth 1, in star units; set each step. */
+  let spanX = 1;
+  let spanY = 1;
+  /** False until the first step, which fills the field for the screen it sees. */
+  let primed = false;
 
+  /** Spawns star `i` at depth `z`, somewhere in view. */
   const spawn = (i: number, z: number) => {
-    xs[i] = random() * 2 - 1;
-    ys[i] = random() * 2 - 1;
+    xs[i] = (random() * 2 - 1) * spanX * z;
+    ys[i] = (random() * 2 - 1) * spanY * z;
     zs[i] = z;
     mix[i] = random();
   };
-  for (let i = 0; i < max; i++) {
-    spawn(i, random());
-  }
   /** Respawns star `i` just outside the screen's edge, ready to recede in. */
   const spawnAtEdge = (i: number, w: number, h: number, focal: number, inset: number) => {
     const z = EDGE_NEAR + (EDGE_FAR - EDGE_NEAR) * random();
@@ -113,6 +119,17 @@ export function createStarfield(max: number, random: () => number = Math.random)
       const margin = 50 * scale;
       const sizePx = f.size * scale;
       const reverse = dz < 0;
+      spanX = (cx + margin) / focal;
+      spanY = (cy + margin) / focal;
+      if (!primed) {
+        // Mid-flight, as the field settles into: stars spawned at the back
+        // across the view, then thinned towards the camera as they leave it
+        // (depth density 3z^2).
+        primed = true;
+        for (let i = 0; i < max; i++) {
+          spawn(i, Math.max(NEAR_Z, Math.cbrt(random())));
+        }
+      }
 
       const target = Math.min(Math.floor(f.count), max);
       const n = (live = growLive(life, live, target));

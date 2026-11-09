@@ -54,6 +54,35 @@ describe("createStarfield", () => {
     expect(drawn).toBeGreaterThan(300 * 200);
   });
 
+  it("spawns stars only where they can be seen, at any aspect", () => {
+    for (const [width, height] of [
+      [1920, 1080],
+      [1080, 1920],
+      [1920, 200],
+    ]) {
+      const stars = createStarfield(MAX, createRng(8));
+      const f = frame({ width, height, count: MAX });
+      const focal = Math.max(width, height) / 2;
+      const margin = 50 * f.scale;
+      let offScreen = 0;
+      let drawn = 0;
+      for (let k = 0; k < 300; k++) {
+        drawn += stars.step(1 / 60, f, data);
+        // Every star alive after a step, fresh ones included, is in view.
+        for (let i = 0; i < stars.live; i++) {
+          const hx = width / 2 + (stars.xs[i] * focal) / stars.zs[i];
+          const hy = height / 2 + (stars.ys[i] * focal) / stars.zs[i];
+          if (hx < -margin || hx > width + margin || hy < -margin || hy > height + margin) {
+            offScreen++;
+          }
+        }
+      }
+      expect(offScreen).toBe(0);
+      // From the first frame on, nearly every star is drawn.
+      expect(drawn).toBeGreaterThan(0.95 * MAX * 300);
+    }
+  });
+
   it("keeps every star between the camera and the back", () => {
     const stars = createStarfield(MAX, createRng(2));
     const f = frame({ speed: 10 });
