@@ -73,3 +73,72 @@ export function buildGradientLut(stops: readonly GradientStop[], out: Uint8Array
   }
   return out;
 }
+
+/** A block of floats (colours, typically) that eases towards a target; see `createColorEase`. */
+export interface ColorEase {
+  /** The eased values, ready to upload as uniforms. Don't modify. */
+  readonly value: Float32Array;
+  /**
+   * Eases `value` towards the first `n` floats of `target` and returns `value`.
+   * A new target starts a smoothstep crossfade from the current values lasting
+   * `seconds`, so every channel arrives together; a target that changes again
+   * mid-way restarts from where the values are. The first call, and the first
+   * after `snap`, jumps straight to the target.
+   */
+  step: (target: ArrayLike<number>, dt: number, seconds: number) => Float32Array;
+  /** Makes the next `step` jump to its target, after a cut where easing would look wrong. */
+  snap: () => void;
+  /** Whether a crossfade is under way: the next `step` may change `value`. */
+  readonly moving: boolean;
+}
+
+/** Eases a block of `n` floats towards a target, allocating nothing per step. */
+export function createColorEase(n: number): ColorEase {
+  const value = new Float32Array(n);
+  const from = new Float32Array(n);
+  const to = new Float32Array(n);
+  /** Crossfade progress, 0..1; 1 when settled. */
+  let t = 1;
+  let snapNext = true;
+  return {
+    value,
+    get moving() {
+      return t < 1;
+    },
+    step(target, dt, seconds) {
+      if (snapNext) {
+        snapNext = false;
+        for (let i = 0; i < n; i++) {
+          to[i] = target[i];
+        }
+        value.set(to);
+        t = 1;
+        return value;
+      }
+      for (let i = 0; i < n; i++) {
+        // Compared as stored, so a target that float32 can't hold still counts as reached.
+        if (to[i] !== Math.fround(target[i])) {
+          from.set(value);
+          for (let k = 0; k < n; k++) {
+            to[k] = target[k];
+          }
+          t = 0;
+          break;
+        }
+      }
+      if (t >= 1) {
+        return value;
+      }
+      const s = seconds > 0 ? Math.max(0, dt) / seconds : 1;
+      t = Number.isFinite(s) ? Math.min(1, t + s) : 1;
+      const f = smoothstep(0, 1, t);
+      for (let i = 0; i < n; i++) {
+        value[i] = t >= 1 ? to[i] : from[i] + (to[i] - from[i]) * f;
+      }
+      return value;
+    },
+    snap() {
+      snapNext = true;
+    },
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGradientLut, hexToRgb, hexToUnitRgb, unitRgbMemo } from "./color";
+import { buildGradientLut, createColorEase, hexToRgb, hexToUnitRgb, unitRgbMemo } from "./color";
 
 describe("hexToRgb", () => {
   it("parses six-digit hex, with or without #", () => {
@@ -88,5 +88,51 @@ describe("buildGradientLut", () => {
     expect(texel(lut, 2)).toEqual([255, 0, 0, 255]);
     expect(texel(lut, 4)).toEqual([0, 255, 0, 255]);
     expect(texel(lut, 8)).toEqual([0, 0, 255, 255]);
+  });
+});
+
+describe("createColorEase", () => {
+  it("snaps on the first step, then crossfades over the given time", () => {
+    const ease = createColorEase(2);
+    expect([...ease.step([1, 0.5], 1 / 60, 1)]).toEqual([1, 0.5]);
+    expect(ease.moving).toBe(false);
+    const v = ease.step([0, 1], 0.5, 1);
+    // Halfway in time is halfway in value on a smoothstep.
+    expect(v[0]).toBeCloseTo(0.5, 6);
+    expect(v[1]).toBeCloseTo(0.75, 6);
+    expect(ease.moving).toBe(true);
+    ease.step([0, 1], 0.25, 1);
+    expect(v[0]).toBeLessThan(0.5);
+    expect(v[0]).toBeGreaterThan(0);
+    ease.step([0, 1], 0.25, 1);
+    expect([...v]).toEqual([0, 1]);
+    expect(ease.moving).toBe(false);
+  });
+
+  it("restarts from the current values when the target changes mid-way", () => {
+    const ease = createColorEase(1);
+    ease.step([0], 0, 1);
+    const v = ease.step([1], 0.5, 1);
+    expect(v[0]).toBeCloseTo(0.5, 6);
+    ease.step([0], 0, 1);
+    expect(v[0]).toBeCloseTo(0.5, 6);
+    ease.step([0], 1, 1);
+    expect(v[0]).toBe(0);
+  });
+
+  it("jumps after snap, and with no duration or a non-finite step", () => {
+    const ease = createColorEase(1);
+    ease.step([0], 0, 1);
+    ease.snap();
+    expect(ease.step([0.25], 0, 1)[0]).toBe(0.25);
+    expect(ease.step([0.75], 0, 0)[0]).toBe(0.75);
+    expect(ease.step([0.5], Number.POSITIVE_INFINITY, 1)[0]).toBe(0.5);
+  });
+
+  it("allocates nothing per step and keeps returning the same array", () => {
+    const ease = createColorEase(3);
+    const first = ease.step([0, 0, 0], 0, 1);
+    expect(ease.step([1, 1, 1], 0.1, 1)).toBe(first);
+    expect(ease.value).toBe(first);
   });
 });
