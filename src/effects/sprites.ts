@@ -60,6 +60,19 @@ vec2 spinCorner(vec2 corner, vec2 spin) {
 export const QUAD: readonly number[] = [-1, -1, 1, -1, -1, 1, 1, 1];
 
 /**
+ * A ribbon of `segments` quads as a triangle strip: (level, side) per vertex,
+ * level 0 to `segments` along the ribbon and side -1 or 1 across it, for a
+ * vertex shader to bend along a stem, frond or leaf.
+ */
+export function ribbonStrip(segments: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i <= segments; i++) {
+    out.push(i, -1, i, 1);
+  }
+  return out;
+}
+
+/**
  * A regular polygon circumscribing the unit circle (apothem 1), as a triangle strip.
  * Vertex 0 is at `angle` radians. Tighter than a quad around round sprites, so fewer
  * fragments are shaded and blended: an octagon covers 17% less area than the square.

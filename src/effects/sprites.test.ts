@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFakeGl } from "../test/fake-gl";
-import { createSpriteBatch, polygonStrip } from "./sprites";
+import { createSpriteBatch, polygonStrip, ribbonStrip } from "./sprites";
 
 const named = (calls: { name: string; args: unknown[] }[], name: string) =>
   calls.filter((c) => c.name === name).map((c) => c.args);
@@ -120,5 +120,12 @@ describe("polygonStrip", () => {
       const total = areas.reduce((s, a) => s + Math.abs(a), 0);
       expect(total).toBeCloseTo(sides * Math.tan(Math.PI / sides), 10);
     }
+  });
+});
+
+describe("ribbonStrip", () => {
+  it("pairs a left and right vertex at each level", () => {
+    expect(ribbonStrip(2)).toEqual([0, -1, 0, 1, 1, -1, 1, 1, 2, -1, 2, 1]);
+    expect(ribbonStrip(16)).toHaveLength(17 * 4);
   });
 });
