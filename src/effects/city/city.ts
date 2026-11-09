@@ -166,7 +166,7 @@ export const city = defineEffect(cityMeta, {
             litWindows = p.litWindows;
           } else if (p.litWindows !== litWindows) {
             litWindows = p.litWindows;
-            skyline.setLit(litWindows);
+            skyline.setTarget(litWindows);
           }
           if (p.seed !== planeSeed) {
             planeSeed = p.seed;

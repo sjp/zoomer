@@ -140,8 +140,8 @@ export interface Skyline {
   readonly windows: WindowState;
   /** Uploads a new layout's quads and resets every window for it. */
   setLayout: (layout: CityLayout, seed: number, litFraction: number) => void;
-  /** Lights exactly `fraction` of the windows at once. */
-  setLit: (fraction: number) => void;
+  /** Fades windows on or off until `fraction` of them are lit. */
+  setTarget: (fraction: number) => void;
   /**
    * Advances the window fades at `rate` toggles per second and uploads the
    * texels that changed. Returns whether the buildings look any different.
@@ -210,9 +210,8 @@ export function createSkyline(gl: WebGL2RenderingContext): Skyline {
         windows.reset(layout.windowCount, seed, litFraction);
         uploadAll();
       },
-      setLit(fraction) {
-        windows.setLit(fraction);
-        uploadAll();
+      setTarget(fraction) {
+        windows.setTarget(fraction);
       },
       step(dt, rate) {
         // The CPU writes a texel only when a fade starts or settles.

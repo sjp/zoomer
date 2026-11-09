@@ -3,6 +3,7 @@ import {
   BEACON_STRIDE,
   beaconPulse,
   createAircraft,
+  CATCH_UP_SECONDS,
   createWindowState,
   FADE_SECONDS,
   FADE_SLOTS,
@@ -92,7 +93,7 @@ describe("generateCity", () => {
 describe("createWindowState", () => {
   const litFraction = (s: ReturnType<typeof createWindowState>) => s.litCount / s.windowCount;
 
-  it("lights the requested fraction exactly on reset and setLit", () => {
+  it("lights the requested fraction exactly on reset", () => {
     const s = createWindowState(5000);
     s.reset(4000, 1, 0.3);
     expect(s.litCount).toBe(1200);
@@ -101,10 +102,34 @@ describe("createWindowState", () => {
       counted += s.isLit(i) ? 1 : 0;
     }
     expect(counted).toBe(1200);
-    s.setLit(0);
+    s.reset(4000, 1, 0);
     expect(s.litCount).toBe(0);
-    s.setLit(1);
+    s.reset(4000, 1, 1);
     expect(s.litCount).toBe(4000);
+  });
+
+  it("reaches a new target through fades even with no activity, a few windows a frame", () => {
+    const s = createWindowState(5000);
+    s.reset(3000, 3, 0.3);
+    s.setTarget(0.31);
+    let most = 0;
+    let t = 0;
+    for (; t < 10 && s.litCount !== 930; t += 1 / 60) {
+      const before = s.litCount;
+      s.step(1 / 60, 0);
+      most = Math.max(most, Math.abs(s.litCount - before));
+      // Every toggle starts a fade: nothing is lit or unlit in one step.
+      expect(s.fading).toBe(true);
+    }
+    expect(s.litCount).toBe(930);
+    expect(t).toBeLessThan(CATCH_UP_SECONDS * 3);
+    expect(most).toBeLessThan(5);
+    // Then it rests: no toggles at rate 0.
+    for (let k = 0; k < 120; k++) {
+      s.step(1 / 60, 0);
+    }
+    expect(s.litCount).toBe(930);
+    expect(s.fading).toBe(false);
   });
 
   it("keeps the lit fraction near the target over time", () => {
@@ -134,7 +159,8 @@ describe("createWindowState", () => {
     for (let t = 0; t < 60; t += 1 / 30) {
       s.step(1 / 30, 20);
     }
-    expect(s.litCount).toBe(500);
+    // Activity keeps toggling round the target, a window either side.
+    expect(Math.abs(s.litCount - 500)).toBeLessThanOrEqual(1);
   });
 
   it("toggles windows at about the requested rate, and not at all at rate 0", () => {

@@ -27,6 +27,8 @@ export const FADE_SLOTS = 64;
 export const FADE_SECONDS = 0.5;
 /** Fades starting this close together share a slot: well under a frame's worth of difference. */
 const JOIN_SECONDS = FADE_SECONDS / (FADE_SLOTS - 4);
+/** Seconds over which `setTarget` fades most of the way to a new lit fraction. */
+export const CATCH_UP_SECONDS = 1.5;
 /** Most toggles started in one frame, so a long hitch doesn't start a burst. */
 const MAX_TOGGLES_PER_FRAME = 48;
 /** Windows one slot can carry: a frame's worth of toggles. */
@@ -329,11 +331,10 @@ export interface WindowState {
   readonly fading: boolean;
   /** Assigns new random colours and levels, then lights `litFraction` of the windows. */
   reset: (windowCount: number, seed: number, litFraction: number) => void;
-  /** Lights exactly round(fraction * count) windows (instantly) and cancels fades. */
-  setLit: (fraction: number) => void;
   /**
-   * Moves the lit target to round(fraction * count) without touching any window,
-   * so `step` fades windows on or off towards it at its toggle rate.
+   * Moves the lit target to round(fraction * count) without touching any window:
+   * `step` then fades windows on or off towards it through the fade slots,
+   * catching up within about `CATCH_UP_SECONDS` whatever the toggle rate.
    */
   setTarget: (fraction: number) => void;
   /**
@@ -368,6 +369,8 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
   let fading = false;
   let rng = createRng(0);
   let untilToggle = 1;
+  /** Whether a new target is still being faded towards (see `setTarget`). */
+  let catchingUp = false;
 
   const markDirty = (i: number) => {
     if (dirtyCount < dirty.length) {
@@ -482,16 +485,13 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       }
       untilToggle = 0.5 + rng();
       dirtyCount = 0;
+      catchingUp = false;
       setLit(litFraction);
-      fading = true;
-    },
-    setLit(fraction) {
-      setLit(fraction);
-      dirtyCount = 0;
       fading = true;
     },
     setTarget(fraction) {
       target = Math.round(clamp(fraction, 0, 1) * count);
+      catchingUp = litCount !== target;
     },
     step(dt, rate) {
       dirtyCount = 0;
@@ -515,6 +515,20 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
           slotCount[s] = 0;
           active--;
         }
+      }
+      if (catchingUp && count > 0) {
+        // Towards a new target: a share of what is left each frame, at least one.
+        const off = Math.abs(litCount - target);
+        const want = Math.min(
+          MAX_TOGGLES_PER_FRAME,
+          off,
+          Math.max(1, Math.ceil((off * Math.max(0, dt)) / CATCH_UP_SECONDS)),
+        );
+        for (let n = 0; n < want; n++) {
+          toggleOne(litCount > target);
+        }
+        catchingUp = litCount !== target;
+        fading = fading || active > 0;
       }
       if (!(rate > 0) || count === 0) {
         return;
