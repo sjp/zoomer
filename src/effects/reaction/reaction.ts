@@ -10,6 +10,7 @@ import {
   type RenderTarget,
   withScope,
   scopedProgram,
+  floatRenderable,
 } from "../gl";
 import { clamp } from "../math";
 import {
@@ -235,17 +236,7 @@ export const reaction = defineEffect(reactionMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float state if it's renderable here, else the packed 8-bit fallback.
-      const floatExt =
-        gl.getExtension("EXT_color_buffer_float") !== null ||
-        gl.getExtension("EXT_color_buffer_half_float") !== null;
-      let packed = true;
-      if (floatExt) {
-        const probe = createRenderTarget(gl, 1, 1, gl.RG16F);
-        if (probe) {
-          packed = false;
-          probe.dispose();
-        }
-      }
+      const packed = !floatRenderable(gl, gl.RG16F);
       const codec = packed ? CODEC_PACKED : CODEC_FLOAT;
       const format = packed ? gl.RGBA8 : gl.RG16F;
       const filter = packed ? gl.NEAREST : gl.LINEAR;

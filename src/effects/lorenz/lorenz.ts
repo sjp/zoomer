@@ -12,6 +12,7 @@ import {
   type Uniforms,
   withScope,
   scopedProgram,
+  floatRenderable,
 } from "../gl";
 import {
   advanceOrbit,
@@ -347,9 +348,7 @@ export const lorenz = defineEffect(lorenzMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float trails if renderable here (16F blending needs no extension), else RGBA8.
-      const floatExt =
-        gl.getExtension("EXT_color_buffer_float") !== null ||
-        gl.getExtension("EXT_color_buffer_half_float") !== null;
+      const floatExt = floatRenderable(gl, gl.RGBA16F);
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
         scopedProgram(gl, scope, vertex, fragment, varyings);

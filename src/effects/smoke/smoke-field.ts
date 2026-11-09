@@ -21,6 +21,7 @@ import {
   typedParameters,
   type Uniforms,
   scopedProgram,
+  floatRenderable,
 } from "../gl";
 import { hash32, HASH32_GLSL } from "../noise";
 import { SIM_DT, SPLAT_CUTOFF, WAVE_COUNT, waveAmp, WAVES } from "./smoke-sim";
@@ -161,17 +162,7 @@ export function createSmokeField(
   scope: Scope,
   name: string,
 ): SmokeField {
-  const floatExt =
-    gl.getExtension("EXT_color_buffer_float") !== null ||
-    gl.getExtension("EXT_color_buffer_half_float") !== null;
-  let quantise = true;
-  if (floatExt) {
-    const probe = createRenderTarget(gl, 1, 1, gl.R16F);
-    if (probe) {
-      quantise = false;
-      probe.dispose();
-    }
-  }
+  const quantise = !floatRenderable(gl, gl.R16F);
   const format = quantise ? gl.R8 : gl.R16F;
 
   const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, advectFragment(quantise));

@@ -40,6 +40,7 @@ import {
   typedParameters,
   withScope,
   scopedProgram,
+  floatRenderable,
 } from "./gl";
 
 export type LowResQuality = "high" | "balanced" | "low";
@@ -206,7 +207,7 @@ function buildLowResTarget(
   gl.uniform1i(uTex, 0);
   const triangle = scope.own(createFullscreenTriangle(gl));
 
-  let wantFloat = opts.format === "rgba16f" && gl.getExtension("EXT_color_buffer_float") !== null;
+  let wantFloat = opts.format === "rgba16f" && floatRenderable(gl, gl.RGBA16F);
   /** Null only until the first `resize`. */
   let rt: RenderTarget | null = null;
   // `resize` replaces the target, so dispose whichever one is current.

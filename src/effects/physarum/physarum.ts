@@ -11,6 +11,7 @@ import {
   updateDataTexture,
   withScope,
   scopedProgram,
+  floatRenderable,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import {
@@ -217,17 +218,7 @@ export const physarum = defineEffect(physarumMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float trail if it's renderable (and so blendable) here, else R8.
-      const floatExt =
-        gl.getExtension("EXT_color_buffer_float") !== null ||
-        gl.getExtension("EXT_color_buffer_half_float") !== null;
-      let r8 = true;
-      if (floatExt) {
-        const probe = createRenderTarget(gl, 1, 1, gl.R16F);
-        if (probe) {
-          r8 = false;
-          probe.dispose();
-        }
-      }
+      const r8 = !floatRenderable(gl, gl.R16F);
       const trailFormat = r8 ? gl.R8 : gl.R16F;
       /** Trail units per stored unit. */
       const range = r8 ? TRAIL_MAX : 1;

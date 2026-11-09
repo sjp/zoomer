@@ -10,6 +10,7 @@ import {
   type RenderTarget,
   withScope,
   scopedProgram,
+  floatRenderable,
 } from "../gl";
 import {
   ATTRACT_MAX,
@@ -276,17 +277,7 @@ export const murmuration = defineEffect(murmurationMeta, {
   create(gl) {
     return withScope((scope) => {
       // Half-float field if it's renderable (and so blendable) here, else RGBA8.
-      const floatExt =
-        gl.getExtension("EXT_color_buffer_float") !== null ||
-        gl.getExtension("EXT_color_buffer_half_float") !== null;
-      let float = false;
-      if (floatExt) {
-        const probe = createRenderTarget(gl, 1, 1, gl.RGBA16F);
-        if (probe) {
-          float = true;
-          probe.dispose();
-        }
-      }
+      const float = floatRenderable(gl, gl.RGBA16F);
       const fieldFormat = float ? gl.RGBA16F : gl.RGBA8;
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
