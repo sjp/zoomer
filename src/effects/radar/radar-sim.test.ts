@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_FEATURE_PX_PER_FRAME, pxPerReferenceFrame } from "../motion-limits";
 import {
   advanceOffsets,
   advanceSweep,
@@ -21,6 +22,7 @@ import {
   PLACE_NAMES,
   placeLabels,
   rainLevel,
+  RANGE,
   SCALE_SIZE,
   sampleTerrain,
   SWEEP_PERIOD,
@@ -149,6 +151,11 @@ describe("sweep", () => {
     expect(outOfRange).toBe(0);
     const expected = 2 * Math.sin((Math.PI * dt) / SWEEP_PERIOD);
     expect(maxStep).toBeCloseTo(expected, 9);
+  });
+
+  it("moves the line's tip within the codec's per-frame limit", () => {
+    const tipSpeed = (TAU * RANGE) / SWEEP_PERIOD;
+    expect(pxPerReferenceFrame(tipSpeed)).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
   });
 });
 

@@ -42,8 +42,12 @@ export const WIND_SPEED = 0.016;
 export const WIND_X = Math.cos(-0.28);
 export const WIND_Y = Math.sin(-0.28);
 
-/** Seconds per turn of the sweep: slow, so the line stays easy on a video codec. */
-export const SWEEP_PERIOD = 14;
+/**
+ * Seconds per turn of the sweep. The thin bright line's tip, at RANGE from the
+ * centre, then moves about 9 px per frame at 1080p30, inside the codec limit
+ * (MAX_FEATURE_PX_PER_FRAME in motion-limits.ts).
+ */
+export const SWEEP_PERIOD = 28;
 
 /**
  * Advances the sweep angle (radians, clockwise on screen) by `dt` seconds,
