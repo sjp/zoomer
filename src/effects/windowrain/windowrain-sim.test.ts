@@ -900,6 +900,36 @@ describe("writeWipeStamps", () => {
     expect([sim.rStepX[0], sim.rStepY[0]]).toEqual([0, 0]);
   });
 
+  it("follows the runners directly, so the fog wipe draws only runners and their stamps", () => {
+    // The effect wipes the fog with one draw of instances runnerFirst onwards,
+    // runnersWritten + stamps long: runners must be the last drops written and
+    // the stamps must start right after them.
+    const sim = make();
+    const cap = instanceCapacity(SMALL) + wipeStampCapacity(SMALL);
+    const out = new Float32Array(cap * INSTANCE_STRIDE);
+    for (let t = 0; t < 40; t++) {
+      stepRainSim(sim, 0.1, { rain: 1, speed: 3 });
+    }
+    const n = writeDropInstances(sim, out, 1);
+    const k = writeWipeStamps(sim, out, 1, n, 0.5);
+    expect(sim.runnersWritten).toBeGreaterThan(0);
+    expect(sim.runnerFirst + sim.runnersWritten).toBe(n);
+    const radii = new Set(
+      Array.from({ length: sim.runnersWritten }, (_, i) => Math.fround(sim.rr[i])),
+    );
+    for (let i = sim.runnerFirst; i < n + k; i++) {
+      expect(radii.has(out[i * INSTANCE_STRIDE + 2])).toBe(true);
+    }
+    for (let r = 0; r < sim.runnersWritten; r++) {
+      const o = (sim.runnerFirst + r) * INSTANCE_STRIDE;
+      expect([out[o], out[o + 1]]).toEqual([Math.fround(sim.rx[r]), Math.fround(sim.ry[r])]);
+    }
+    // Everything before is a static droplet or trail, none of them a runner.
+    for (let i = 0; i < sim.runnerFirst; i++) {
+      expect(out[i * INSTANCE_STRIDE + 2]).toBeLessThanOrEqual(Math.max(STATIC_MAX_R, MAX_TRAIL_R));
+    }
+  });
+
   it("stamps fast runners at a low frame rate, within capacity", () => {
     const sim = make();
     const cap = instanceCapacity(SMALL) + wipeStampCapacity(SMALL);
