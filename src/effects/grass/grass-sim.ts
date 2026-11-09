@@ -61,15 +61,26 @@ function unit(seed: number, i: number, k: number): number {
 }
 
 /**
- * Fills `out` with `count` blades (BLADE_FLOATS each), sorted back to front
- * (decreasing z), and returns the count written (clamped to what `out` holds).
- * Blade i's values depend only on the seed and i, so raising the count adds
- * blades without moving the others. Depths are uniform in z, so blades get
- * denser towards the horizon in step with their shrinking size: screen coverage
- * stays even down the band. Allocates per call (rebuilds only, never per frame).
+ * Every blade up to some count, sorted back to front once, so any smaller count
+ * can be picked out without sorting again (`selectBlades`).
  */
-export function buildBlades(seed: number, count: number, out: Float32Array): number {
-  const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / BLADE_FLOATS)));
+export interface BladeField {
+  /** Blades in the field. */
+  count: number;
+  /** BLADE_FLOATS per blade, back to front (decreasing z). */
+  data: Float32Array;
+  /** Each sorted blade's index: blade i depends only on the seed and i. */
+  index: Uint32Array;
+}
+
+/**
+ * Builds `count` blades for `seed`, sorted back to front (decreasing z, ties by
+ * index). Depths are uniform in z, so blades get denser towards the horizon in
+ * step with their shrinking size: screen coverage stays even down the band.
+ * Allocates and sorts: build it once, then pick counts with `selectBlades`.
+ */
+export function buildBladeField(seed: number, count: number): BladeField {
+  const n = Math.max(0, Math.floor(count));
   const z = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     z[i] = Z_NEAR + unit(seed, i, 1) * (Z_FAR - Z_NEAR);
@@ -80,20 +91,53 @@ export function buildBlades(seed: number, count: number, out: Float32Array): num
   }
   // Far first; ties by index keep the order deterministic.
   order.sort((a, b) => z[b] - z[a] || a - b);
+  const data = new Float32Array(n * BLADE_FLOATS);
   for (let j = 0; j < n; j++) {
     const i = order[j];
     const o = j * BLADE_FLOATS;
-    out[o] = -X_MARGIN + unit(seed, i, 0) * (1 + 2 * X_MARGIN);
-    out[o + 1] = z[i];
-    out[o + 2] = HEIGHT_MIN + unit(seed, i, 2) * (HEIGHT_MAX - HEIGHT_MIN);
-    out[o + 3] = WIDTH_MIN + unit(seed, i, 3) * (WIDTH_MAX - WIDTH_MIN);
-    out[o + 4] = unit(seed, i, 4);
-    out[o + 5] =
+    data[o] = -X_MARGIN + unit(seed, i, 0) * (1 + 2 * X_MARGIN);
+    data[o + 1] = z[i];
+    data[o + 2] = HEIGHT_MIN + unit(seed, i, 2) * (HEIGHT_MAX - HEIGHT_MIN);
+    data[o + 3] = WIDTH_MIN + unit(seed, i, 3) * (WIDTH_MAX - WIDTH_MIN);
+    data[o + 4] = unit(seed, i, 4);
+    data[o + 5] =
       SWAY_CYCLES_MIN + Math.floor(unit(seed, i, 5) * (SWAY_CYCLES_MAX - SWAY_CYCLES_MIN));
-    out[o + 6] = 0.75 + 0.5 * unit(seed, i, 6);
-    out[o + 7] = (unit(seed, i, 7) * 2 - 1) * LEAN;
+    data[o + 6] = 0.75 + 0.5 * unit(seed, i, 6);
+    data[o + 7] = (unit(seed, i, 7) * 2 - 1) * LEAN;
   }
-  return n;
+  return { count: n, data, index: order };
+}
+
+/**
+ * Copies blades 0..count-1 of `field` into `out`, still back to front, and returns
+ * how many it wrote (clamped to the field and to what `out` holds). One pass, no
+ * sort and no allocation, so a count change (a resize or the density slider) is cheap.
+ */
+export function selectBlades(field: BladeField, count: number, out: Float32Array): number {
+  const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / BLADE_FLOATS)));
+  const { data, index } = field;
+  let j = 0;
+  for (let k = 0; k < field.count && j < n; k++) {
+    if (index[k] < n) {
+      const src = k * BLADE_FLOATS;
+      const dst = j * BLADE_FLOATS;
+      for (let f = 0; f < BLADE_FLOATS; f++) {
+        out[dst + f] = data[src + f];
+      }
+      j++;
+    }
+  }
+  return j;
+}
+
+/**
+ * Fills `out` with `count` blades (BLADE_FLOATS each), sorted back to front, and
+ * returns the count written (clamped to what `out` holds). Blade i's values depend
+ * only on the seed and i, so raising the count adds blades without moving the others.
+ */
+export function buildBlades(seed: number, count: number, out: Float32Array): number {
+  const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / BLADE_FLOATS)));
+  return selectBlades(buildBladeField(seed, n), n, out);
 }
 
 // --- Wind -------------------------------------------------------------------

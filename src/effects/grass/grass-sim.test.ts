@@ -8,6 +8,8 @@ import {
   BLADE_STRIP,
   bendPoints,
   bladeCount,
+  buildBladeField,
+  selectBlades,
   buildBlades,
   FIELDS,
   gustUv,
@@ -190,5 +192,24 @@ describe("palettes and strip", () => {
     );
     expect(channels.length).toBeGreaterThan(0);
     expect(channels.filter((c) => !(c >= 0 && c <= 1))).toEqual([]);
+  });
+});
+
+describe("selectBlades", () => {
+  it("picks any count out of a larger field exactly as building it directly", () => {
+    const field = buildBladeField(5, 3000);
+    for (const count of [0, 1, 17, 999, 3000]) {
+      const picked = new Float32Array(3000 * BLADE_FLOATS);
+      const direct = new Float32Array(3000 * BLADE_FLOATS);
+      expect(selectBlades(field, count, picked)).toBe(count);
+      expect(buildBlades(5, count, direct)).toBe(count);
+      expect(picked).toEqual(direct);
+    }
+  });
+
+  it("clamps to the field and to the output", () => {
+    const field = buildBladeField(5, 100);
+    expect(selectBlades(field, 500, new Float32Array(1000 * BLADE_FLOATS))).toBe(100);
+    expect(selectBlades(field, 50, new Float32Array(20 * BLADE_FLOATS))).toBe(20);
   });
 });
