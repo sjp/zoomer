@@ -936,3 +936,106 @@ export function createPingPong(
     dispose,
   };
 }
+
+/** A float vertex attribute of each item in a `FeedbackPair`. */
+export interface FeedbackAttrib {
+  location: number;
+  /** Floats in the attribute, 1 to 4. */
+  size: number;
+  /** Floats from the start of the item. Defaults to 0. */
+  offset?: number;
+}
+
+/**
+ * Two vertex buffers of interleaved float items that a transform-feedback
+ * program steps between, each with a vertex array reading it.
+ */
+export interface FeedbackPair {
+  readonly buffers: readonly [WebGLBuffer, WebGLBuffer];
+  /** Index of the buffer holding the latest items. */
+  readonly current: 0 | 1;
+  /** The vertex array reading `buffers[current]`. */
+  readonly vao: WebGLVertexArrayObject;
+  /** Uploads `data` into both buffers, sizing them to it, and makes buffer 0 current. */
+  seed: (data: Float32Array) => void;
+  /**
+   * Draws the first `count` items of the current buffer as points with the bound
+   * program, captures its varyings into the other buffer, then makes that one
+   * current. The caller sets up the program and any blend or rasterizer-discard
+   * state; the vertex array, transform feedback and its buffer are unbound after.
+   */
+  step: (count: number) => void;
+  dispose: () => void;
+}
+
+export function createFeedbackPair(
+  gl: WebGL2RenderingContext,
+  floatsPerItem: number,
+  attribs: readonly FeedbackAttrib[],
+): FeedbackPair {
+  return withScope((scope) => {
+    const buffer = () =>
+      scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+    const buffers = [buffer(), buffer()] as const;
+    const vaos = buffers.map((b) => {
+      const vao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      gl.bindVertexArray(vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      for (const a of attribs) {
+        gl.enableVertexAttribArray(a.location);
+        gl.vertexAttribPointer(
+          a.location,
+          a.size,
+          gl.FLOAT,
+          false,
+          floatsPerItem * 4,
+          (a.offset ?? 0) * 4,
+        );
+      }
+      return vao;
+    });
+    gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    const feedback = scope.add(gl.createTransformFeedback(), (t) => {
+      gl.deleteTransformFeedback(t);
+    });
+    let current: 0 | 1 = 0;
+    return {
+      buffers,
+      get current() {
+        return current;
+      },
+      get vao() {
+        return vaos[current];
+      },
+      seed(data) {
+        for (const b of buffers) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, b);
+          gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_COPY);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        current = 0;
+      },
+      step(count) {
+        const next = current === 0 ? 1 : 0;
+        gl.bindVertexArray(vaos[current]);
+        gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buffers[next]);
+        gl.beginTransformFeedback(gl.POINTS);
+        gl.drawArrays(gl.POINTS, 0, count);
+        gl.endTransformFeedback();
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+        gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
+        gl.bindVertexArray(null);
+        current = next;
+      },
+      dispose: () => {
+        scope.dispose();
+      },
+    };
+  });
+}

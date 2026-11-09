@@ -253,6 +253,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     createRenderbuffer: create("Renderbuffer"),
     createVertexArray: create("VertexArray"),
     createQuery: create("Query"),
+    createTransformFeedback: create("TransformFeedback"),
     deleteShader: del("Shader"),
     deleteProgram: del("Program"),
     deleteBuffer: del("Buffer"),
@@ -261,6 +262,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     deleteRenderbuffer: del("Renderbuffer"),
     deleteVertexArray: del("VertexArray"),
     deleteQuery: del("Query"),
+    deleteTransformFeedback: del("TransformFeedback"),
 
     compileShader: (shader: FakeObject) => {
       check("compileShader", "Shader", shader);

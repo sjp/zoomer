@@ -12,6 +12,7 @@ import {
   scopedProgram,
   floatRenderable,
   createPingPong,
+  createFeedbackPair,
 } from "./gl";
 import { createFakeGl } from "../test/fake-gl";
 import { defined } from "../test/defined";
@@ -579,5 +580,45 @@ describe("createPingPong", () => {
     expect(carried).toHaveLength(1);
     pair.dispose();
     expect(fake.live()).toEqual([]);
+  });
+});
+
+describe("createFeedbackPair", () => {
+  it("steps from the current buffer into the other and swaps", () => {
+    const fake = createFakeGl({ record: true });
+    const { gl } = fake;
+    const pair = createFeedbackPair(gl, 6, [
+      { location: 0, size: 4 },
+      { location: 1, size: 2, offset: 4 },
+    ]);
+    const pointers = fake.calls.filter((c) => c.name === "vertexAttribPointer");
+    expect(pointers.map((c) => [c.args[0], c.args[1], c.args[4], c.args[5]])).toEqual([
+      [0, 4, 24, 0],
+      [1, 2, 24, 16],
+      [0, 4, 24, 0],
+      [1, 2, 24, 16],
+    ]);
+    pair.seed(new Float32Array(12));
+    expect(pair.current).toBe(0);
+    gl.useProgram(gl.createProgram());
+    const vao0 = pair.vao;
+    fake.calls.length = 0;
+    pair.step(2);
+    const names = fake.calls.map((c) => c.name);
+    expect(names).toContain("beginTransformFeedback");
+    expect(defined(fake.calls.find((c) => c.name === "drawArrays")).args.slice(1)).toEqual([0, 2]);
+    expect(defined(fake.calls.find((c) => c.name === "bindBufferBase")).args[2]).toBe(
+      pair.buffers[1],
+    );
+    expect(pair.current).toBe(1);
+    expect(pair.vao).not.toBe(vao0);
+    expect(fake.state.vertexArray).toBeNull();
+    pair.step(2);
+    expect(pair.current).toBe(0);
+    pair.seed(new Float32Array(12));
+    expect(pair.current).toBe(0);
+    pair.dispose();
+    expect(fake.live().map((o) => o.kind)).toEqual(["Program"]);
+    expect(fake.errors).toEqual([]);
   });
 });
