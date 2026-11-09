@@ -44,5 +44,6 @@ export default defineConfig({
   base: "./",
   plugins: [react(), contentSecurityPolicy()],
   // Agent worktrees live under .claude/; keep their copies of the tests out of the run.
-  test: { exclude: [...configDefaults.exclude, "**/.claude/**"] },
+  // e2e/ holds the Playwright browser tests, run by `npm run test:browser`.
+  test: { exclude: [...configDefaults.exclude, "**/.claude/**", "e2e/**"] },
 });

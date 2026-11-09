@@ -27,3 +27,7 @@ coverage
 
 # Claude Code agent worktrees
 .claude/
+
+# Playwright
+/test-results/
+/playwright-report/
