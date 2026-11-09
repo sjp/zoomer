@@ -7,7 +7,7 @@
  *
  * Material ids: 0 hull, 1 blue glow, 2 red-orange glow, 3 green glow, 4 lit windows.
  */
-import { SDF_GLSL, shipMarchGlsl } from "../bridge/bridge-ship-shapes";
+import { SDF_GLSL, shipMarchGlsl } from "../ship-shapes";
 import { SHIP_RADIUS } from "./stationops-sim";
 
 /** Tilt (radians) towards the eye, so it looks down on each ship a little. */

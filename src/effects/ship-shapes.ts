@@ -1,5 +1,5 @@
 /**
- * GLSL for the Starship Bridge's visiting ships: each one built from a few
+ * GLSL for the ships the Scenes show through their windows: each one built from a few
  * signed-distance shapes (boxes, ellipsoids, capsules), in ship space with the
  * bow towards +z, up +y, about one unit long. `shipHit` ray-marches the chosen
  * ship inside its bounding sphere and shades it, so the cost is paid only on
@@ -8,7 +8,7 @@
  * Material ids: 0 hull, 1 blue glow, 2 red-orange glow, 3 green glow,
  * 4 yellow-green glow.
  */
-import { glslFloat as g } from "../gl";
+import { glslFloat as g } from "./gl";
 
 /** Camera focal length for the outside view, in view heights. */
 export const SHIP_FOCAL = 1.8;
