@@ -198,12 +198,31 @@ export const cornerFlips = (corner: WebCorner): [boolean, boolean] => [
   corner === "bottomLeft" || corner === "bottomRight",
 ];
 
+/**
+ * The smallest web radius (reference px). On a canvas too narrow for the corner
+ * box (a tall sidebar or OBS source) the web keeps this size and overhangs the
+ * box, rather than shrinking towards nothing.
+ */
+export const RADIUS_FLOOR = 40;
+
 /** Web radius for a size and frame width, shrunk to fit the corner box. */
 export function webRadius(size: number, refWidth: number): number {
   const wanted = RADIUS_MIN + (RADIUS_MAX - RADIUS_MIN) * clamp(size, 0, 1);
   const boxW = refWidth * BOX_WIDTH_FRACTION;
-  return Math.min(wanted, (boxW - INNER_MARGIN_X - 8) / 2.15, (BOX_HEIGHT - INNER_MARGIN_Y) / 2.1);
+  const fit = Math.min(
+    wanted,
+    (boxW - INNER_MARGIN_X - 8) / 2.15,
+    (BOX_HEIGHT - INNER_MARGIN_Y) / 2.1,
+  );
+  // NaN (from a bad width) also lands on the floor.
+  return fit >= RADIUS_FLOOR ? fit : RADIUS_FLOOR;
 }
+
+/**
+ * Most turns either spiral makes. The capture spiral plans 15-21; the cap only
+ * guards against a degenerate frame whose spokes run far beyond the web radius.
+ */
+const MAX_TURNS = 48;
 
 /**
  * Where along a bowed thread its lowest point lies (0–1): the thread runs from y0
@@ -410,7 +429,10 @@ export function buildWeb(o: WebOptions): WebGeometry {
     const a: number[] = [0, 0, 0];
     const b: number[] = [0, 0, 0];
     let have = false;
-    for (let turn = 0; ; turn++) {
+    if (!(pitch > 0)) {
+      return;
+    }
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
       let any = false;
       for (let k = 0; k < spokes; k++) {
         const r = r0 + pitch * (turn + spokeTheta[k] / (2 * Math.PI));

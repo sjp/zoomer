@@ -22,6 +22,7 @@ import {
   webTilt,
   writeDrops,
   writeThreads,
+  RADIUS_FLOOR,
 } from "./spiderweb-sim";
 
 const CORNERS: WebCorner[] = ["topLeft", "topRight", "bottomLeft", "bottomRight"];
@@ -344,5 +345,26 @@ describe("backdrop", () => {
     };
     expect(meanX("topLeft")).toBeLessThan(960);
     expect(meanX("bottomRight")).toBeGreaterThan(960);
+  });
+});
+
+describe("narrow canvases", () => {
+  it.each([1, 40, 80, 200])("builds a bounded web quickly at reference width %d", (refWidth) => {
+    for (const corner of ["topLeft", "bottomRight"] as const) {
+      const t0 = performance.now();
+      const g = buildWeb({ corner, size: 1, seed: 5, refWidth });
+      expect(performance.now() - t0).toBeLessThan(500);
+      expect(g.segments).toBeGreaterThan(0);
+      // The renderer's buffers hold 4096 segments and 8192 drops.
+      expect(g.segments).toBeLessThan(4096);
+      expect(g.drops).toBeLessThan(8192);
+      expect(Number.isFinite(g.ax[0]) && Number.isFinite(g.by[g.segments - 1])).toBe(true);
+    }
+  });
+
+  it("never shrinks the web below its floor", () => {
+    expect(webRadius(1, 60)).toBe(RADIUS_FLOOR);
+    expect(webRadius(0, 1)).toBe(RADIUS_FLOOR);
+    expect(webRadius(1, Number.NaN)).toBe(RADIUS_FLOOR);
   });
 });
