@@ -10,7 +10,7 @@
  */
 import { glslFloat } from "../gl";
 import { clamp } from "../math";
-import { createRng, HASH32_GLSL } from "../noise";
+import { createRng } from "../noise";
 
 /** Height of the console top at the centre, behind the speaker. */
 export const CONSOLE_LOW = -0.31;
@@ -33,32 +33,6 @@ export const CONSOLE_GLSL = /* glsl */ `
 float consoleTop(float x) {
   float u = clamp((abs(x) - ${glslFloat(CONSOLE_RISE0)}) / ${glslFloat(CONSOLE_RISE1 - CONSOLE_RISE0)}, 0.0, 1.0);
   return ${glslFloat(CONSOLE_LOW)} + ${glslFloat(CONSOLE_HIGH - CONSOLE_LOW)} * u;
-}
-`;
-
-/** Value noise and fbm, hashed with lowbias32 so every GPU agrees. */
-export const NOISE_GLSL = /* glsl */ `
-${HASH32_GLSL}
-float hash2(vec2 c, float s) {
-  uvec2 u = uvec2(ivec2(floor(c)) + 65536);
-  return float(hash32(u.x ^ hash32(u.y ^ hash32(uint(s) + 0x9e3779b9u)))) / 4294967296.0;
-}
-float vnoise(vec2 p, float s) {
-  vec2 i = floor(p);
-  vec2 t = fract(p);
-  t = t * t * (3.0 - 2.0 * t);
-  return mix(mix(hash2(i, s), hash2(i + vec2(1.0, 0.0), s), t.x),
-             mix(hash2(i + vec2(0.0, 1.0), s), hash2(i + vec2(1.0, 1.0), s), t.x), t.y);
-}
-float fbm(vec2 p, float s) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 4; i++) {
-    v += a * vnoise(p, s);
-    p = p * 2.03 + 17.1;
-    a *= 0.5;
-  }
-  return v / 0.9375;
 }
 `;
 

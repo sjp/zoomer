@@ -15,7 +15,7 @@ import {
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { approach, fract, smoothstep, wrap } from "../math";
-import { createRng, HASH32_GLSL } from "../noise";
+import { createRng, HASH32_GLSL, VALUE_NOISE_GLSL } from "../noise";
 import {
   BANK_CHANNELS,
   BANK_COLUMNS,
@@ -126,22 +126,6 @@ const BOWL_R = 46;
 const TEA_H = 150;
 const HOLDER_TOP = 80;
 
-/** Value noise, hashed with lowbias32 so every GPU agrees. */
-const NOISE_GLSL = /* glsl */ `
-${HASH32_GLSL}
-float hash2(vec2 c, float s) {
-  uvec2 u = uvec2(ivec2(floor(c)) + 65536);
-  return float(hash32(u.x ^ hash32(u.y ^ hash32(uint(s) + 0x9e3779b9u)))) / 4294967296.0;
-}
-float vnoise(vec2 p, float s) {
-  vec2 i = floor(p);
-  vec2 t = fract(p);
-  t = t * t * (3.0 - 2.0 * t);
-  return mix(mix(hash2(i, s), hash2(i + vec2(1.0, 0.0), s), t.x),
-             mix(hash2(i + vec2(0.0, 1.0), s), hash2(i + vec2(1.0, 1.0), s), t.x), t.y);
-}
-`;
-
 /** The drink's vessel, shared by the cached interior and the live liquid so they line up exactly. */
 const VESSEL_GLSL = /* glsl */ `
 // Outer half width of the bowl (kind 0, a wine glass) or the tea glass (kind 1)
@@ -211,7 +195,7 @@ uniform vec3 uItems;
 uniform vec2 uSides;
 uniform int uVessel;
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
 ${DITHER_GLSL}
 ${VESSEL_GLSL}
 ${COVER_GLSL}
@@ -636,7 +620,7 @@ uniform int uHouseCount;
 uniform vec4 uStation;
 uniform vec4 uStationB;
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
 const vec3 WARM = vec3(1.0, 0.7, 0.36);
 float sq(float x) { return x * x; }
 

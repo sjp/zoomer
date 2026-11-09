@@ -26,7 +26,6 @@ import {
   cockpitLayout,
   LIP,
   MAX_LIGHTS,
-  NOISE_GLSL,
   MAX_PANELS,
   MAX_SCREENS,
   PANEL_FLOATS,
@@ -49,6 +48,7 @@ import {
   sceneryAt,
   screenSetup,
 } from "./cockpit-sim";
+import { VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
 
 const f = glslFloat;
 
@@ -112,7 +112,8 @@ uniform int uPanelCount;
 uniform vec4 uPanels[${String(MAX_PANELS * 3)}];
 
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
+${VALUE_FBM_GLSL}
 ${CONSOLE_GLSL}
 
 const float EX = ${f(ELLIPSE_X)};
@@ -423,7 +424,8 @@ uniform vec3 uNebulaA;
 uniform vec3 uNebulaB;
 
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
+${VALUE_FBM_GLSL}
 ${DITHER_GLSL}
 
 /** Value noise whose lattice repeats every 'period' cells in each axis. */
@@ -526,7 +528,8 @@ uniform vec2 uSun;
 uniform vec4 uScreens[${String(MAX_SCREENS)}];
 
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
+${VALUE_FBM_GLSL}
 ${DITHER_GLSL}
 
 vec3 screen(int n, vec2 uv) {

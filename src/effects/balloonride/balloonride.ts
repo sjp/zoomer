@@ -1,7 +1,6 @@
 import { BALLOON_FLOATS, BALLOON_STRIP, paletteFor } from "../balloons/balloons-sim";
 import { BALLOON_FRAGMENT, BALLOON_LAYOUT, BALLOON_VERTEX } from "../balloons/balloon-sprite";
 import type { Rgb } from "../color";
-import { NOISE_GLSL } from "../cockpit/cockpit-layout";
 import {
   buildRamp,
   fireNoiseChannels,
@@ -24,7 +23,7 @@ import {
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { clamp, wrap } from "../math";
-import { buildPeriodicNoiseTexture } from "../noise";
+import { buildPeriodicNoiseTexture, VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
 import { createSpriteBatch } from "../sprites";
 import { advanceSwell, createSwell, swayAt } from "../sway";
 import { defineEffect } from "../types";
@@ -166,7 +165,8 @@ uniform vec3 uGores[${String(MAX_SCHEME_COLOURS)}];
 uniform vec2 uScheme;
 
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
+${VALUE_FBM_GLSL}
 
 const float PI = 3.14159265;
 const float TAU = 6.2831853;

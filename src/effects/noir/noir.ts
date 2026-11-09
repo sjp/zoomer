@@ -18,7 +18,7 @@ import {
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { approach } from "../math";
-import { createRng, HASH32_GLSL } from "../noise";
+import { createRng, HASH32_GLSL, VALUE_NOISE_GLSL } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { defineEffect } from "../types";
 import {
@@ -106,29 +106,13 @@ const CAR_HALF_X = 26;
 const CAR_HALF_Y = 12;
 const LIGHTS = 3;
 
-/** Value noise and fbm, hashed with lowbias32 so every GPU agrees. */
-const NOISE_GLSL = /* glsl */ `
-${HASH32_GLSL}
-float hash2(vec2 c, float s) {
-  uvec2 u = uvec2(ivec2(floor(c)) + 65536);
-  return float(hash32(u.x ^ hash32(u.y ^ hash32(uint(s) + 0x9e3779b9u)))) / 4294967296.0;
-}
-float vnoise(vec2 p, float s) {
-  vec2 i = floor(p);
-  vec2 t = fract(p);
-  t = t * t * (3.0 - 2.0 * t);
-  return mix(mix(hash2(i, s), hash2(i + vec2(1.0, 0.0), s), t.x),
-             mix(hash2(i + vec2(0.0, 1.0), s), hash2(i + vec2(1.0, 1.0), s), t.x), t.y);
-}
-`;
-
 /** The sky behind the towers, into the cache: dark above, orange smog low down, with low clouds. */
 const SKY_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 uniform vec2 uResolution;
 uniform float uSeed;
 out vec4 outColor;
-${NOISE_GLSL}
+${VALUE_NOISE_GLSL}
 ${DITHER_GLSL}
 void main() {
   vec2 frag = gl_FragCoord.xy;
