@@ -1008,16 +1008,21 @@ export const hospital = defineEffect(hospitalMeta, {
           const night = p.lighting === "night" ? 1 : 0;
 
           // 1. The monitor's model: new for a new variation, then run on.
+          // The traces are uploaded only when a column of them was written.
+          let traced: boolean;
           if (!monitor || p.seed !== monitorSeed) {
             monitorSeed = p.seed;
             monitor = createMonitor(p.seed, p.heartRate);
             screenKey.invalidate();
+            traced = true;
           } else {
-            stepMonitor(monitor, step, p.heartRate);
+            traced = stepMonitor(monitor, step, p.heartRate);
           }
-          traceTable.data.set(monitor.traces);
-          gl.activeTexture(gl.TEXTURE1);
-          traceTable.upload();
+          if (traced) {
+            traceTable.data.set(monitor.traces);
+            gl.activeTexture(gl.TEXTURE1);
+            traceTable.upload();
+          }
           gl.activeTexture(gl.TEXTURE0);
 
           // 2. The board's writing; the room is redrawn round the board with it.

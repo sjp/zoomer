@@ -794,6 +794,8 @@ export const cockpit = defineEffect(cockpitMeta, {
             for (let n = 0; n < MAX_SCREENS; n++) {
               screenSetup(n, seed, screenData, n * 4);
             }
+            gl.useProgram(compositeProgram);
+            gl.uniform4fv(cu.loc.uScreens, screenData);
             drawn = false;
           }
 
@@ -911,7 +913,6 @@ export const cockpit = defineEffect(cockpitMeta, {
           );
           cu.f4("uRockShape", Math.cos(rock.angle), Math.sin(rock.angle), rock.shape * 0.01, 0);
           cu.f2("uSun", scenery.sunX, scenery.sunY);
-          gl.uniform4fv(cu.loc.uScreens, screenData);
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           triangle.draw();

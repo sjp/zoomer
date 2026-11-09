@@ -571,6 +571,8 @@ export const noir = defineEffect(noirMeta, {
       gl.useProgram(roomProgram);
       roomU.i1("uView", 0);
       roomU.i1("uDrops", 1);
+      // Each light's penumbra (base, growth with distance), which never changes.
+      gl.uniform2fv(roomU.loc.uLightPen, new Float32Array([0.15, 0.5, 0.1, 0.35, 0.03, 0.05]));
       gl.useProgram(null);
 
       let cache: RenderTarget | null = null;
@@ -612,7 +614,6 @@ export const noir = defineEffect(noirMeta, {
       const carData = new Float32Array(MAX_CARS * CAR_STRIDE);
       const lightDir = new Float32Array(LIGHTS * 3);
       const lightCol = new Float32Array(LIGHTS * 3);
-      const lightPen = new Float32Array([0.15, 0.5, 0.1, 0.35, 0.03, 0.05]);
       const windowLight: Rgb = [0, 0, 0];
       const glow: Rgb = [0, 0, 0];
       const glowPrev: Rgb = [0, 0, 0];
@@ -854,7 +855,6 @@ export const noir = defineEffect(noirMeta, {
           roomU.f4("uCam", refWidth / 2, 540, room.focal, room.depth);
           gl.uniform3fv(roomU.loc.uLightDir, lightDir);
           gl.uniform3fv(roomU.loc.uLightCol, lightCol);
-          gl.uniform2fv(roomU.loc.uLightPen, lightPen);
           roomU.f3(
             "uSpot",
             refWidth * (0.5 + SPOT_TRAVEL * search.spot),

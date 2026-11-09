@@ -1154,6 +1154,9 @@ export const bridge = defineEffect(bridgeMeta, {
           widgetData.set([w.s0, w.y0, w.s1, w.y1], i * 4);
           widgetInfo.set([w.kind === "sweep" ? 0 : 1, w.block], i * 2);
         });
+        gl.useProgram(compositeProgram);
+        gl.uniform4fv(cu.loc.uWidget, widgetData);
+        gl.uniform2fv(cu.loc.uWidgetInfo, widgetInfo);
         roomDrawn = false;
         atlasKey.invalidate();
       };
@@ -1395,8 +1398,6 @@ export const bridge = defineEffect(bridgeMeta, {
           if (vp) {
             cu.f4("uViewport", vp.s0, vp.y0, vp.s1, vp.y1);
           }
-          gl.uniform4fv(cu.loc.uWidget, widgetData);
-          gl.uniform2fv(cu.loc.uWidgetInfo, widgetInfo);
           cu.i1("uWidgetCount", set.widgets.length);
           cu.f1("uTime", time % WIDGET_PERIOD);
           cu.f1("uGraphShift", graphShift(time - graphStart));
