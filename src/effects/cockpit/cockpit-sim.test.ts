@@ -17,6 +17,9 @@ import {
   LEAVE_SECONDS,
   sceneryAt,
   screenSetup,
+  advanceScreenTime,
+  SCREEN_PERIOD,
+  SCREEN_RATES,
   slotRate,
   SCREEN_KINDS,
   TUNNEL_MAX,
@@ -319,6 +322,26 @@ describe("scenery and screens", () => {
       expect(out[0]).toBeGreaterThanOrEqual(0);
       expect(out[0]).toBeLessThan(SCREEN_KINDS);
       expect([0, 1]).toContain(out[1]);
+    }
+  });
+});
+
+describe("screen picture time", () => {
+  it("wraps after a whole number of cycles of every screen motion", () => {
+    for (const rate of SCREEN_RATES) {
+      const cycles = rate * SCREEN_PERIOD;
+      expect(Math.abs(cycles - Math.round(cycles))).toBeLessThan(1e-9);
+    }
+  });
+
+  it("advances at the screen's speed and stays in one period", () => {
+    expect(advanceScreenTime(10, 1.2, 0.5)).toBeCloseTo(10.6, 9);
+    expect(advanceScreenTime(SCREEN_PERIOD - 0.1, 1, 0.3)).toBeCloseTo(0.2, 9);
+    let t = 0;
+    for (let i = 0; i < 100_000; i++) {
+      t = advanceScreenTime(t, 1.3, 1 / 60);
+      expect(t).toBeGreaterThanOrEqual(0);
+      expect(t).toBeLessThan(SCREEN_PERIOD);
     }
   });
 });

@@ -463,8 +463,31 @@ export function sceneryAt(leg: number, seed: number, out: Scenery): Scenery {
 export const SCREEN_KINDS = 4;
 
 /**
- * The picture, phosphor (0 green, 1 amber), speed and phase of screen `n`,
- * as one vec4's worth of floats written into `out` at `o`.
+ * Picture time (seconds times a screen's speed) after which every screen's
+ * picture repeats exactly, so it can wrap there without a jump.
+ */
+export const SCREEN_PERIOD = 100;
+/** The scrolling trace's two waves, per unit of picture time. */
+export const TRACE_RATES = [1.1, 0.37] as const;
+/** Lines of figures scrolled per unit of picture time. */
+export const SCROLL_RATE = 0.6;
+/** Turns of the sweep per unit of picture time. */
+export const SWEEP_RATE = 0.12;
+/** Noise cells the bar chart moves through per unit of picture time. */
+export const BAR_RATE = 0.35;
+/** Every screen motion's rate, each a whole number of cycles of SCREEN_PERIOD. */
+export const SCREEN_RATES: readonly number[] = [...TRACE_RATES, SCROLL_RATE, SWEEP_RATE, BAR_RATE];
+
+/** Picture time `t` moved on by `dt` seconds at `speed`, wrapped to [0, SCREEN_PERIOD). */
+export function advanceScreenTime(t: number, speed: number, dt: number): number {
+  const next = (t + speed * dt) % SCREEN_PERIOD;
+  return next < 0 ? next + SCREEN_PERIOD : next;
+}
+
+/**
+ * The picture, phosphor (0 green, 1 amber), speed and phase (0..1, a fraction
+ * of SCREEN_PERIOD) of screen `n`, as one vec4's worth of floats written into
+ * `out` at `o`.
  */
 export function screenSetup(n: number, seed: number, out: Float32Array, o: number): void {
   out[o] = Math.floor(rand(n, seed, 60) * SCREEN_KINDS);

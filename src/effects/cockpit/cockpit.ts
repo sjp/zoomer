@@ -49,6 +49,12 @@ import {
   sceneryAt,
   screenSetup,
   slotRate,
+  advanceScreenTime,
+  BAR_RATE,
+  SCREEN_PERIOD,
+  SCROLL_RATE,
+  SWEEP_RATE,
+  TRACE_RATES,
 } from "./cockpit-sim";
 import { VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
 import { createChangeKey } from "../change-key";
@@ -70,8 +76,6 @@ const LEVEL_RATE = 1;
 const SKY_DIVISOR = 2;
 /** Seconds after which the tunnel's pattern repeats exactly; its speeds are whole cycles of it. */
 const TUNNEL_PERIOD = 64;
-/** Seconds after which the screens' and lamps' shader time wraps. */
-const SHADER_PERIOD = 3600;
 /** Sway: a fraction of a degree of roll, and a few pixels of drift. */
 const SWAY_SWELL = createSwell(72, [
   { cycles: 4, amplitude: 1, offset: 0 },
@@ -523,7 +527,8 @@ uniform sampler2D uSky;
 uniform sampler2D uLamps;
 uniform vec2 uResolution;
 uniform vec4 uSway;
-uniform float uTime;
+// Each screen's picture time, wrapped by the CPU at SCREEN_PERIOD.
+uniform float uScreenTime[${String(MAX_SCREENS)}];
 uniform float uTunnel;
 uniform vec4 uRock;
 uniform vec4 uRockShape;
@@ -535,23 +540,35 @@ ${VALUE_NOISE_GLSL}
 ${VALUE_FBM_GLSL}
 ${DITHER_GLSL}
 
+// vnoise, repeating every period (a whole number of) cells in y.
+float vnoiseTileY(vec2 p, float period, float s) {
+  vec2 i = floor(p);
+  vec2 t = fract(p);
+  t = t * t * (3.0 - 2.0 * t);
+  float y0 = mod(i.y, period);
+  float y1 = mod(i.y + 1.0, period);
+  return mix(mix(hash2(vec2(i.x, y0), s), hash2(vec2(i.x + 1.0, y0), s), t.x),
+             mix(hash2(vec2(i.x, y1), s), hash2(vec2(i.x + 1.0, y1), s), t.x), t.y);
+}
+
 vec3 screen(int n, vec2 uv) {
   vec4 s = uScreens[n];
   int kind = int(s.x + 0.5);
-  float t = uTime * s.z + s.w * 100.0;
+  float t = uScreenTime[n];
   float v = 0.0;
   if (kind == 0) {
     // A scrolling trace over a faint grid.
-    float y = 0.5 + 0.28 * sin(uv.x * 11.0 + t * 1.1) * sin(uv.x * 3.1 - t * 0.37);
+    float y = 0.5 + 0.28 * sin(uv.x * 11.0 + t * ${f(TRACE_RATES[0])}) * sin(uv.x * 3.1 - t * ${f(TRACE_RATES[1])});
     v = smoothstep(0.07, 0.0, abs(uv.y - y));
     vec2 gd = abs(fract(uv * vec2(6.0, 4.0)) - 0.5);
     v += 0.18 * step(0.46, max(gd.x, gd.y));
   } else if (kind == 1) {
-    // Lines of figures scrolling up a line at a time.
-    float step_ = floor(t * 0.6);
-    float scroll = step_ + smoothstep(0.75, 1.0, fract(t * 0.6));
+    // Lines of figures scrolling up a line at a time; the lines repeat after
+    // one picture period's worth, so the wrap doesn't change them.
+    float step_ = floor(t * ${f(SCROLL_RATE)});
+    float scroll = step_ + smoothstep(0.75, 1.0, fract(t * ${f(SCROLL_RATE)}));
     float ly = uv.y * 6.0 - scroll;
-    float line = floor(ly);
+    float line = mod(floor(ly), ${f(SCROLL_RATE * SCREEN_PERIOD)});
     float inLine = step(0.25, fract(ly)) * step(fract(ly), 0.75);
     float word = floor(uv.x * 7.0);
     float len = hash2(vec2(word, line), s.w * 50.0);
@@ -561,19 +578,19 @@ vec3 screen(int n, vec2 uv) {
     // A slow sweep round a ranging grid, with a few contacts fading after it.
     vec2 q = (uv - 0.5) * vec2(1.5, 1.0);
     float r = length(q);
-    float ang = fract(atan(q.y, q.x) / 6.2831853 - t * 0.12);
+    float ang = fract(atan(q.y, q.x) / 6.2831853 - t * ${f(SWEEP_RATE)});
     v = exp(-ang * 7.0) * step(r, 0.48) * 0.8;
     v += 0.25 * smoothstep(0.012, 0.0, abs(fract(r * 6.0) - 0.5) / 6.0) * step(r, 0.48);
     for (int k = 0; k < 3; k++) {
       vec2 b = vec2(hash2(vec2(float(k), 1.0), s.w * 70.0), hash2(vec2(float(k), 2.0), s.w * 70.0)) - 0.5;
       b *= vec2(0.6, 0.8);
-      float ba = fract(atan(b.y, b.x) / 6.2831853 - t * 0.12);
+      float ba = fract(atan(b.y, b.x) / 6.2831853 - t * ${f(SWEEP_RATE)});
       v += exp(-ba * 4.0) * smoothstep(0.03, 0.01, length(q - b * vec2(1.5, 1.0) * 0.6));
     }
   } else {
     // A bar chart whose bars rise and fall.
     float k = floor(uv.x * 9.0);
-    float hgt = 0.15 + 0.75 * vnoise(vec2(k * 3.7, t * 0.35), s.w * 90.0);
+    float hgt = 0.15 + 0.75 * vnoiseTileY(vec2(k * 3.7, t * ${f(BAR_RATE)}), ${f(BAR_RATE * SCREEN_PERIOD)}, s.w * 90.0);
     v = step(0.18, fract(uv.x * 9.0)) * step(fract(uv.x * 9.0), 0.82) * step(uv.y, hgt);
     v *= 0.5 + 0.5 * step(hgt - 0.04, uv.y);
   }
@@ -684,7 +701,7 @@ export const cockpit = defineEffect(cockpitMeta, {
         "uLamps",
         "uResolution",
         "uSway",
-        "uTime",
+        "uScreenTime",
         "uTunnel",
         "uRock",
         "uRockShape",
@@ -747,6 +764,8 @@ export const cockpit = defineEffect(cockpitMeta, {
       let lampScratch: LampScratch = createLampScratch(layout.groups);
       const panelData = new Float32Array(MAX_PANELS * PANEL_FLOATS);
       const screenData = new Float32Array(MAX_SCREENS * 4);
+      const screenTime = new Float64Array(MAX_SCREENS);
+      const screenTimeData = new Float32Array(MAX_SCREENS);
 
       const jump = createJumpState();
       const scheduleKey = createChangeKey(3);
@@ -793,6 +812,7 @@ export const cockpit = defineEffect(cockpitMeta, {
             packPanels(layout.panels, panelData);
             for (let n = 0; n < MAX_SCREENS; n++) {
               screenSetup(n, seed, screenData, n * 4);
+              screenTime[n] = screenData[n * 4 + 3] * SCREEN_PERIOD;
             }
             gl.useProgram(compositeProgram);
             gl.uniform4fv(cu.loc.uScreens, screenData);
@@ -902,7 +922,11 @@ export const cockpit = defineEffect(cockpitMeta, {
             SWAY_X * scale * swayAt(SWAY_SWELL, swayPhase, 9),
             SWAY_Y * scale * swayAt(SWAY_SWELL, swayPhase, 23),
           );
-          cu.f1("uTime", time % SHADER_PERIOD);
+          for (let n = 0; n < MAX_SCREENS; n++) {
+            screenTime[n] = advanceScreenTime(screenTime[n], screenData[n * 4 + 2], step);
+            screenTimeData[n] = screenTime[n];
+          }
+          gl.uniform1fv(cu.loc.uScreenTime, screenTimeData);
           cu.f1("uTunnel", tunnel);
           cu.f4(
             "uRock",
