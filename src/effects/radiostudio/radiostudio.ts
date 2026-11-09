@@ -42,6 +42,13 @@ import { createCanvasTexture, paintCanvas, SANS_FONT_STACK } from "../canvas-tex
 
 const g = glslFloat;
 
+/** The downlights' colour; their strength varies over the booth. */
+const LIGHT_RGB = [1, 0.88, 0.75] as const;
+/** The foam's tint mask stores its light divided by this, to fit 8 bits. */
+const MASK_RANGE = 4;
+/** Seconds the foam colour must hold still before the booth is redrawn with it. */
+const FOAM_SETTLE = 0.3;
+
 /** Layout slots in the room shader's `uL` array (see `packLayout`). */
 const SLOTS = 19;
 /** A VU needle's pivot below its face's centre, and its swing either side of upright (radians), in face half-heights. */
@@ -81,6 +88,11 @@ uniform vec2 uRes;
 /** 1 with the microphone on the left, -1 mirrored. */
 uniform float uSide;
 uniform vec3 uFoam;
+/**
+ * 1 for the booth. 0 draws only the light on the foam (everything over it
+ * black), the mask that tints the foam while its colour changes.
+ */
+uniform float uOther;
 uniform vec4 uL[${String(SLOTS)}];
 out vec4 outColor;
 ${HASH32_GLSL}
@@ -116,7 +128,7 @@ vec3 lightK;
 
 /** Lays a surface of colour c over what's there, with coverage a, a tilt n and how much sign glow it catches. */
 void lay(vec3 c, float a, vec2 n, float r) {
-  col = mix(col, c, a);
+  col = mix(col, c * uOther, a);
   nrm = mix(nrm, n, a);
   recv = mix(recv, r, a);
 }
@@ -143,7 +155,7 @@ vec3 lighting(vec2 f) {
   k += 0.45 * exp(-dot(b, b) / 0.11);
   k += 0.2 * exp(-f.x * f.x / 0.1 - (f.y - 0.5) * (f.y - 0.5) / 0.15);
   k *= 1.0 - 0.3 * smoothstep(0.3, 0.75, length(f * vec2(0.6, 1.0)));
-  return vec3(1.0, 0.88, 0.75) * k;
+  return vec3(${LIGHT_RGB.map((v) => g(v)).join(", ")}) * k;
 }
 
 /** Wedge foam: square tiles of four ridges, alternately across and upright, with dark seams. */
@@ -292,7 +304,7 @@ void clockFace(vec2 f) {
   dial = mix(dial, vec3(0.06), cover(tick));
   lay(lit(dial), cover(r - R * 0.9), vec2(0.0), 0.6);
   // The glass's glint.
-  col += vec3(0.05) * smoothstep(R * 0.9, R * 0.6, r) * smoothstep(0.3, 0.9, dot(normalize(q + 1e-5), vec2(-0.6, 0.8))) * smoothstep(R * 0.4, R * 0.8, r);
+  col += vec3(0.05 * uOther) * smoothstep(R * 0.9, R * 0.6, r) * smoothstep(0.3, 0.9, dot(normalize(q + 1e-5), vec2(-0.6, 0.8))) * smoothstep(R * 0.4, R * 0.8, r);
 }
 
 /** A VU meter's backlit face: its scale (black, then red) and the plate hiding the needle's pivot. */
@@ -626,19 +638,31 @@ void main() {
     sum += room(vec2(f.x * uSide, f.y));
   }
   sum *= 0.25;
-  outColor = vec4(sum.rgb + dither8(gl_FragCoord.xy), sum.a);
+  outColor = uOther > 0.5
+    ? vec4(sum.rgb + dither8(gl_FragCoord.xy), sum.a)
+    : vec4(sum.r * ${g(1 / MASK_RANGE)}, 0.0, 0.0, 1.0);
 }
 `;
 
-/** Every frame: the cached booth, plus the sign's red glow on it. */
+/**
+ * Every frame: the cached booth, plus the sign's red glow on it. While the foam
+ * colour changes, the booth is cached without the foam and the foam is tinted
+ * here from its light mask (\`uTint\`: the colour times the light and the mask's
+ * range, and 1 in w while it applies).
+ */
 const COMPOSITE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 uniform sampler2D uRoom;
+uniform sampler2D uMask;
+uniform vec4 uTint;
 uniform float uGlow;
 out vec4 outColor;
 ${DITHER_GLSL}
 void main() {
   vec4 r = texelFetch(uRoom, ivec2(gl_FragCoord.xy), 0);
+  if (uTint.w > 0.5) {
+    r.rgb += uTint.rgb * texelFetch(uMask, ivec2(gl_FragCoord.xy), 0).r;
+  }
   vec3 glow = vec3(${g(GLOW_RGB[0])}, ${g(GLOW_RGB[1])}, ${g(GLOW_RGB[2])});
   outColor = vec4(r.rgb + glow * (uGlow * r.a) + dither8(gl_FragCoord.xy), 1.0);
 }
@@ -805,7 +829,8 @@ function packLayout(l: StudioLayout, showClock: boolean, out: Float32Array): voi
  * high on one side, a broadcast microphone on a sprung arm on the other, a
  * rack of meters, a shelf of records, two reel-to-reel machines under the
  * window into the producer's dim control room, a studio clock, and the desk's
- * edge with its faders along the bottom. The booth is drawn once per resize;
+ * edge with its faders along the bottom. The booth is drawn once per resize
+ * or setting change (a foam colour being dragged is tinted in the composite);
  * each frame adds the sign's glow and redraws a few small live parts: the
  * sign's face (fading on and off with the light), the VU needles and LED bars
  * dancing to a random music-like envelope, the turning reels and the clock's
@@ -819,11 +844,12 @@ export const radiostudio = defineEffect(radiostudioMeta, {
       const compProgram = program(COMPOSITE_FRAGMENT);
       const gadgetProgram = program(GADGET_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const ru = createUniforms(gl, roomProgram, ["uRes", "uSide", "uFoam", "uL"]);
-      const cu = createUniforms(gl, compProgram, ["uRoom", "uGlow"]);
+      const ru = createUniforms(gl, roomProgram, ["uRes", "uSide", "uFoam", "uOther", "uL"]);
+      const cu = createUniforms(gl, compProgram, ["uRoom", "uMask", "uTint", "uGlow"]);
       const gu = createUniforms(gl, gadgetProgram, ["uRes", "uKind", "uBox", "uVal", "uText"]);
       gl.useProgram(compProgram);
       cu.i1("uRoom", 0);
+      cu.i1("uMask", 1);
       gl.useProgram(gadgetProgram);
       gu.i1("uText", 0);
       gl.useProgram(null);
@@ -874,9 +900,16 @@ export const radiostudio = defineEffect(radiostudioMeta, {
       };
 
       let roomTarget: RenderTarget | null = null;
+      /** The foam's light mask, made the first time the foam colour changes. */
+      let maskTarget: RenderTarget | null = null;
       scope.defer(() => {
         roomTarget?.dispose();
+        maskTarget?.dispose();
       });
+      /** Whether the cached booth leaves the foam out, for the composite to tint. */
+      let tinting = false;
+      /** Seconds since the foam colour last changed. */
+      let foamStill = 0;
       let width = 1;
       let height = 1;
       let layout = studioLayout(16 / 9);
@@ -899,12 +932,36 @@ export const radiostudio = defineEffect(radiostudioMeta, {
       const day = createDayClock();
       const hands = new Float64Array(3);
 
+      /** Draws the booth (or with `other` 0, the foam's light mask) into `target`. */
+      const drawRoom = (
+        target: RenderTarget,
+        foamR: number,
+        foamG: number,
+        foamB: number,
+        other: number,
+        side: number,
+      ) => {
+        gl.useProgram(roomProgram);
+        ru.f2("uRes", width, height);
+        ru.f1("uSide", side);
+        ru.f3("uFoam", foamR, foamG, foamB);
+        ru.f1("uOther", other);
+        gl.uniform4fv(ru.loc.uL, slots);
+        target.bind();
+        triangle.draw();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, width, height);
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
           height = Math.max(1, Math.round(v.height));
           roomTarget?.dispose();
           roomTarget = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
+          maskTarget?.dispose();
+          maskTarget = null;
+          tinting = false;
           layout = studioLayout(width / height);
           roomSide = Number.NaN;
           textValue = null;
@@ -919,21 +976,32 @@ export const radiostudio = defineEffect(radiostudioMeta, {
           const side = p.mic === "right" ? -1 : 1;
           const foam = foamRgb(p.foam);
 
-          // 1. The booth, when the size or a setting it shows changes.
-          if (side !== roomSide || p.foam !== roomFoam || p.clock !== roomClock) {
+          // 1. The booth, when the size or a setting it shows changes. A new
+          // foam colour alone is tinted in the composite (step 4) until it
+          // holds still, so dragging the colour doesn't redraw the booth.
+          foamStill = p.foam === roomFoam ? foamStill + step : 0;
+          if (side !== roomSide || p.clock !== roomClock) {
             roomSide = side;
-            roomFoam = p.foam;
             roomClock = p.clock;
+            roomFoam = p.foam;
             packLayout(layout, p.clock, slots);
-            gl.useProgram(roomProgram);
-            ru.f2("uRes", width, height);
-            ru.f1("uSide", side);
-            ru.f3("uFoam", foam[0], foam[1], foam[2]);
-            gl.uniform4fv(ru.loc.uL, slots);
-            roomTarget.bind();
-            triangle.draw();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.viewport(0, 0, width, height);
+            drawRoom(roomTarget, foam[0], foam[1], foam[2], 1, side);
+            tinting = false;
+          } else if (p.foam !== roomFoam) {
+            roomFoam = p.foam;
+            if (!tinting) {
+              maskTarget ??= createRenderTarget(gl, width, height, gl.R8, { filter: gl.NEAREST });
+              if (maskTarget) {
+                drawRoom(roomTarget, 0, 0, 0, 1, side);
+                drawRoom(maskTarget, 1, 1, 1, 0, side);
+                tinting = true;
+              } else {
+                drawRoom(roomTarget, foam[0], foam[1], foam[2], 1, side);
+              }
+            }
+          } else if (tinting && foamStill >= FOAM_SETTLE) {
+            drawRoom(roomTarget, foam[0], foam[1], foam[2], 1, side);
+            tinting = false;
           }
 
           // 2. The sign's text, when it or the face's size changes.
@@ -965,6 +1033,20 @@ export const radiostudio = defineEffect(radiostudioMeta, {
           // 4. The booth and the sign's glow on it.
           gl.useProgram(compProgram);
           cu.f1("uGlow", shown);
+          if (tinting && maskTarget) {
+            const k = MASK_RANGE;
+            cu.f4(
+              "uTint",
+              foam[0] * LIGHT_RGB[0] * k,
+              foam[1] * LIGHT_RGB[1] * k,
+              foam[2] * LIGHT_RGB[2] * k,
+              1,
+            );
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, maskTarget.texture);
+          } else {
+            cu.f4("uTint", 0, 0, 0, 0);
+          }
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, roomTarget.texture);
           triangle.draw();
