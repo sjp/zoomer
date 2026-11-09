@@ -59,6 +59,12 @@ import {
   timeAtArgument,
   TRACK_BINS,
   unwrappedLon,
+  CRT_FLICKER_RATES,
+  RING_RATE,
+  SHADER_PERIOD,
+  TV_GRAIN_RATE,
+  VAPOUR_DRIFT,
+  VAPOUR_TILE,
 } from "./missioncontrol-sim";
 import {
   buildFontTexture,
@@ -115,10 +121,6 @@ import {
 import { defineEffect } from "../types";
 import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 
-/** Seconds the shaders' clock repeats over; every periodic motion in them divides it. */
-const SHADER_PERIOD = 1000;
-/** Frames per second of the launch screen's film grain: each is freshly random, at a pace the codec can follow. */
-const TV_GRAIN_RATE = 6;
 /** CRT phosphor colours. */
 const PHOSPHOR_GREEN: Rgb = hexToUnitRgb("#5cff7a");
 const PHOSPHOR_WHITE: Rgb = hexToUnitRgb("#d8e6ff");
@@ -205,6 +207,17 @@ float vnoise(vec2 p) {
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), u.x),
     mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// vnoise, repeating every period (a whole number of) cells in x.
+float vnoiseTileX(vec2 p, float period) {
+  vec2 i = floor(p);
+  vec2 f = p - i;
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float x0 = mod(i.x, period);
+  float x1 = mod(i.x + 1.0, period);
+  return mix(mix(hash2(vec2(x0, i.y)), hash2(vec2(x1, i.y)), u.x),
+    mix(hash2(vec2(x0, i.y + 1.0)), hash2(vec2(x1, i.y + 1.0)), u.x), u.y);
 }
 `;
 
@@ -616,7 +629,7 @@ vec4 crt(vec2 uv, float lines, float linePx, float seed) {
   float corner = length(max(e, 0.0)) + min(max(e.x, e.y), 0.0) - 0.14;
   float mask = 1.0 - smoothstep(-0.03, 0.0, corner);
   float scan = mix(1.0, 0.72 + 0.28 * cos(TAU * w.y * lines), smoothstep(1.6, 3.2, linePx));
-  float flicker = 1.0 + 0.02 * sin(TAU * (1.3 * uTime + seed)) * sin(TAU * (2.9 * uTime + 1.7 * seed));
+  float flicker = 1.0 + 0.02 * sin(TAU * (${g(CRT_FLICKER_RATES[0])} * uTime + seed)) * sin(TAU * (${g(CRT_FLICKER_RATES[1])} * uTime + 1.7 * seed));
   return vec4(w, mask, scan * flicker);
 }
 
@@ -766,7 +779,7 @@ vec3 mapScreen(vec2 uv, float mpp) {
     vec2 dv = pm - cp;
     dv.x -= size.x * floor(dv.x / size.x + 0.5);
     float r = length(dv);
-    float ring = 1.0 - smoothstep(0.012 - mpp, 0.012 + mpp, abs(r - 0.1 - 0.015 * sin(TAU * uTime / 2.5)));
+    float ring = 1.0 - smoothstep(0.012 - mpp, 0.012 + mpp, abs(r - 0.1 - 0.015 * sin(TAU * ${g(RING_RATE)} * uTime)));
     float dot_ = 1.0 - smoothstep(0.045 - mpp, 0.045 + mpp, r);
     col += mix(tint, vec3(1.0), 0.5) * max(dot_, 0.7 * ring) + tint * 0.25 * exp(-r / 0.08);
   }
@@ -845,7 +858,8 @@ float tvScene(vec2 uv) {
   } else if (uTv.w > 0.5) {
     // Vapour venting from the upper stage, drifting off.
     vec2 vp = vec2(p.x - 0.03, uv.y - (base + 0.4));
-    float n = vnoise(vec2(vp.x * 30.0 - uTime * 0.6, vp.y * 30.0));
+    // Its noise tiles across the drift, so the clock's wrap doesn't jump it.
+    float n = vnoiseTileX(vec2(vp.x * 30.0 - uTime * ${g(VAPOUR_DRIFT)}, vp.y * 30.0), ${g(VAPOUR_TILE)});
     float wisp = smoothstep(0.12, 0.0, length(vp * vec2(0.6, 2.5))) * step(0.0, vp.x) * smoothstep(0.35, 0.75, n);
     v = mix(v, 0.85, 0.6 * wisp);
   }

@@ -468,3 +468,25 @@ export function rocketClimb(s: number): number {
 
 /** Seconds from liftoff (engine start) until the rocket moves. */
 export const IGNITION = 3;
+
+/* ----- The shaders' clock ----- */
+
+/** Seconds the shaders' clock repeats over; every periodic motion in them makes whole cycles of it. */
+export const SHADER_PERIOD = 1000;
+/** The CRTs' two flicker rates (Hz). */
+export const CRT_FLICKER_RATES = [1.3, 2.9] as const;
+/** Breaths per second of the ring round each craft on the map. */
+export const RING_RATE = 0.4;
+/** Frames per second of the launch screen's film grain: each is freshly random, at a pace the codec can follow. */
+export const TV_GRAIN_RATE = 6;
+/** Noise cells per second the venting vapour drifts by. */
+export const VAPOUR_DRIFT = 0.6;
+/** Noise cells after which the vapour's noise repeats across its drift: one shader period's worth. */
+export const VAPOUR_TILE = Math.round(VAPOUR_DRIFT * SHADER_PERIOD);
+/** Every rate (per second) the shaders' periodic motions run at, as cycles of SHADER_PERIOD. */
+export const SHADER_RATES: readonly number[] = [
+  ...CRT_FLICKER_RATES,
+  RING_RATE,
+  TV_GRAIN_RATE,
+  VAPOUR_DRIFT,
+];

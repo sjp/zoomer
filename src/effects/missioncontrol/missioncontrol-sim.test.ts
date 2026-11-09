@@ -28,6 +28,10 @@ import {
   timeAtArgument,
   TRACK_BINS,
   unwrappedLon,
+  SHADER_PERIOD,
+  SHADER_RATES,
+  VAPOUR_DRIFT,
+  VAPOUR_TILE,
 } from "./missioncontrol-sim";
 import { BLOCK_COUNT, consoleLayout } from "./missioncontrol-room";
 import { MAX_LAUNCH_GAP, MIN_LAUNCH_GAP } from "./missioncontrol.meta";
@@ -341,5 +345,16 @@ describe("console activity", () => {
 
   it("is deterministic", () => {
     expect(run(0.6, 60).out).toEqual(run(0.6, 60).out);
+  });
+});
+
+describe("shader clock", () => {
+  it("wraps after a whole number of cycles of every motion", () => {
+    for (const rate of SHADER_RATES) {
+      const cycles = rate * SHADER_PERIOD;
+      expect(Math.abs(cycles - Math.round(cycles))).toBeLessThan(1e-9);
+    }
+    // The vapour's noise tiles over exactly the cells it drifts by in a period.
+    expect(VAPOUR_TILE).toBeCloseTo(VAPOUR_DRIFT * SHADER_PERIOD, 9);
   });
 });
