@@ -259,6 +259,20 @@ export function restartCycle(c: Cycle): void {
 }
 
 /**
+ * Forgets the per-tile coverage history and the run of still samples, keeping
+ * the phase: after the grid changes size, its tiles no longer line up with the
+ * old samples', so settling is judged afresh from the next sample on.
+ */
+export function resetSettle(c: Cycle): void {
+  c.samples = 0;
+  c.next = 0;
+  c.still = 0;
+  for (const h of c.history) {
+    h.fill(0);
+  }
+}
+
+/**
  * Extra kill rate at `x` (0..1 across the grid) for a retreat front at `front`
  * half-widths from the centre line: RETREAT_KILL behind it, ramping to 0 over
  * FRONT_BAND ahead. The shader computes the same.

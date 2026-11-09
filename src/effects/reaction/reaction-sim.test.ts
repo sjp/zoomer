@@ -10,6 +10,7 @@ import {
   FRONT_BAND,
   GROW_FALLBACK_SECONDS,
   readStats,
+  resetSettle,
   restartCycle,
   RETREAT_KILL,
   retreatKill,
@@ -344,6 +345,38 @@ describe("life cycle", () => {
     restartCycle(c);
     expect(sample(0, 0)).toBe(false);
     expect(sample(0, 0)).toBe(true);
+  });
+
+  it("judges settling afresh after a regrid, keeping the phase", () => {
+    const c = createCycle();
+    const st = createStats();
+    const sample = (cov: number) => {
+      for (let i = 0; i < SAMPLE_STEPS; i++) {
+        advanceCycle(c, 1, 0, W, 5, true);
+      }
+      st.tiles.fill(cov);
+      st.coverage = cov;
+      st.maxB = 0.4;
+      sampleCycle(c, st, true);
+    };
+    // One sample short of holding on the old grid.
+    for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS; k++) {
+      sample(0.5);
+    }
+    expect(c.still).toBe(SETTLE_CHECKS - 1);
+    expect(c.phase).toBe("grow");
+    resetSettle(c);
+    expect(c.phase).toBe("grow");
+    expect(c.still).toBe(0);
+    expect(c.samples).toBe(0);
+    // The new grid's tiles are never compared with the old grid's samples, even
+    // where they happen to match: it takes a full run of its own samples to hold.
+    for (let k = 0; k < SETTLE_SAMPLES + SETTLE_CHECKS; k++) {
+      sample(0.5);
+      expect(c.phase).toBe("grow");
+    }
+    sample(0.5);
+    expect(c.phase).toBe("hold");
   });
 
   it("reads the stats texels, skipping tiles past the grid", () => {

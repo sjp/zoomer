@@ -30,6 +30,7 @@ import {
   COVER_B,
   presetFor,
   readStats,
+  resetSettle,
   restartCycle,
   RETREAT_KILL,
   sampleCycle,
@@ -357,6 +358,10 @@ export const reaction = defineEffect(reactionMeta, {
           console.warn(`reaction: can't allocate a ${String(w)}x${String(h)} simulation grid`);
         } else if (!resampled) {
           reseed();
+        } else {
+          // Stats in flight, and the tiles sampled so far, describe the old grid.
+          generation++;
+          resetSettle(cycle);
         }
       };
 
