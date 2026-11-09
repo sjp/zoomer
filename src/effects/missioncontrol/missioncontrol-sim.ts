@@ -226,16 +226,45 @@ export interface LaunchState {
   sinceLiftoff: number;
   /** What the countdown reads, in whole seconds: 30 down to 0 at liftoff, then counting up. */
   display: number;
+  /** Liftoff time (s) of `index`, and of the next launch. */
+  liftoff: number;
+  next: number;
+  /** Seconds after liftoff when `index`'s launch screen cuts back to the pad. */
+  reset: number;
 }
 
 export function createLaunchState(): LaunchState {
-  return { phase: "idle", index: -1, sinceLiftoff: Number.NEGATIVE_INFINITY, display: 0 };
+  const s: LaunchState = {
+    phase: "idle",
+    index: -1,
+    sinceLiftoff: 0,
+    display: 0,
+    liftoff: 0,
+    next: 0,
+    reset: 0,
+  };
+  resetLaunch(s);
+  return s;
+}
+
+/** Starts the schedule again: the first liftoff comes `FIRST_LIFTOFF` seconds after time 0. */
+export function resetLaunch(s: LaunchState): void {
+  s.phase = "idle";
+  s.index = -1;
+  s.sinceLiftoff = Number.NEGATIVE_INFINITY;
+  s.display = 0;
+  s.liftoff = Number.NEGATIVE_INFINITY;
+  s.next = FIRST_LIFTOFF;
+  s.reset = 0;
 }
 
 /** Liftoff time (s) of launch `n`, with `gap` seconds between liftoffs. */
 export function liftoffTime(n: number, gap: number): number {
-  return FIRST_LIFTOFF + n * Math.max(COUNTDOWN + PAD_CUT * 2, gap);
+  return FIRST_LIFTOFF + n * launchStep(gap);
 }
+
+/** Seconds between liftoffs for a gap: room for the countdown and the cut to the pad. */
+const launchStep = (gap: number) => Math.max(COUNTDOWN + PAD_CUT * 2, gap);
 
 /** Seconds after liftoff when the launch screen cuts back to the pad, for this gap. */
 export function padReset(gap: number): number {
@@ -243,35 +272,50 @@ export function padReset(gap: number): number {
 }
 
 /**
- * The launch schedule at `t` seconds after it started: liftoffs every `gap`
- * seconds, each after a 30 s countdown that reads 0 exactly at liftoff. After
- * liftoff the countdown counts up until the launch screen cuts back to the pad,
- * then idles until the next countdown. Writes into `out`; allocates nothing.
+ * Advances the launch schedule to `t` seconds after it started (`t` never
+ * decreasing): liftoffs every `gap` seconds, each after a 30 s countdown that
+ * reads 0 exactly at liftoff. After liftoff the countdown counts up until the
+ * launch screen cuts back to the pad, then idles until the next countdown.
+ *
+ * Each launch latches the gap when its countdown begins: a change during a
+ * countdown or flight leaves it, its cut to the pad and the next liftoff
+ * alone. Once back on the pad, the next liftoff follows the new gap (from the
+ * last liftoff), starting its countdown at once if that time has passed.
+ * Writes into `s`; allocates nothing.
  */
-export function launchAt(t: number, gap: number, out: LaunchState): LaunchState {
-  const step = Math.max(COUNTDOWN + PAD_CUT * 2, gap);
-  // The launch whose countdown has begun most recently.
-  const n = Math.floor((t - FIRST_LIFTOFF + COUNTDOWN) / step);
-  if (n < 0) {
-    out.phase = "idle";
-    out.index = -1;
-    out.sinceLiftoff = Number.NEGATIVE_INFINITY;
-    out.display = 0;
-    return out;
+export function stepLaunch(s: LaunchState, t: number, gap: number): LaunchState {
+  const step = launchStep(gap);
+  if (s.index >= 0 && t - s.liftoff >= s.reset && t < s.next - COUNTDOWN) {
+    s.next = Math.max(s.liftoff + step, t + COUNTDOWN);
   }
-  const since = t - liftoffTime(n, gap);
+  while (t >= s.next - COUNTDOWN) {
+    s.index++;
+    s.liftoff = s.next;
+    s.reset = padReset(gap);
+    s.next = s.liftoff + step;
+  }
+  if (s.index < 0) {
+    s.phase = "idle";
+    s.sinceLiftoff = Number.NEGATIVE_INFINITY;
+    s.display = 0;
+    return s;
+  }
+  const since = t - s.liftoff;
+  s.sinceLiftoff = since;
   if (since < 0) {
-    out.phase = "countdown";
-    out.index = n;
-    out.sinceLiftoff = since;
-    out.display = Math.ceil(-since);
-    return out;
+    s.phase = "countdown";
+    s.display = Math.ceil(-since);
+    return s;
   }
-  out.index = n;
-  out.sinceLiftoff = since;
-  out.phase = since < padReset(gap) ? "flight" : "idle";
-  out.display = out.phase === "flight" ? Math.floor(since) : 0;
-  return out;
+  s.phase = since < s.reset ? "flight" : "idle";
+  s.display = s.phase === "flight" ? Math.floor(since) : 0;
+  return s;
+}
+
+/** The schedule at `t` with a fixed `gap` from the start, written into `out`. */
+export function launchAt(t: number, gap: number, out: LaunchState): LaunchState {
+  resetLaunch(out);
+  return stepLaunch(out, t, gap);
 }
 
 /** "t-00:30", "t+01:05" or "HOLD", for the seven-segment countdown. */

@@ -23,6 +23,7 @@ import {
   type Orbit,
   orbitNumber,
   padReset,
+  stepLaunch,
   rocketClimb,
   timeAtArgument,
   TRACK_BINS,
@@ -216,6 +217,46 @@ describe("launch schedule", () => {
     launchAt(0, 300, s);
     expect(s.index).toBe(-1);
     expect(countdownText(s, true)).toBe(" HOLD");
+  });
+
+  it("keeps the launch under way when the gap changes, and times the next from it", () => {
+    const run = (from: number, to: number, change: number, end: number) => {
+      const st = createLaunchState();
+      const log: [number, string, number][] = [];
+      for (let t = 0; t <= end; t += 0.25) {
+        stepLaunch(st, t, t < change ? from : to);
+        log.push([st.index, st.phase, st.display]);
+      }
+      return { st, log };
+    };
+    // Mid-flight of launch 1 the gap drops from 600 to 60.
+    const change = liftoffTime(1, 600) + 10;
+    const steady = run(600, 600, Infinity, change + 200);
+    const changed = run(600, 60, change, change + 200);
+    const at = (t: number) => Math.round(t / 0.25);
+    // Until its cut to the pad, launch 1 runs exactly as before.
+    const cut = liftoffTime(1, 600) + padReset(600);
+    expect(changed.log.slice(0, at(cut))).toEqual(steady.log.slice(0, at(cut)));
+    // Then the next countdown starts at once, as the new gap has passed.
+    const next = changed.log.findIndex(([i]) => i === 2);
+    expect(next).toBeGreaterThanOrEqual(at(cut));
+    expect(next).toBeLessThan(at(cut) + 2);
+    expect(changed.log[next]).toEqual([2, "countdown", 30]);
+    // And from then on liftoffs come every 60 s.
+    expect(changed.st.next - changed.st.liftoff).toBe(60);
+  });
+
+  it("follows a new gap from the last liftoff while waiting on the pad", () => {
+    const st = createLaunchState();
+    const idle = liftoffTime(0, 600) + padReset(600) + 5;
+    for (let t = 0; t <= idle; t += 0.5) {
+      stepLaunch(st, t, 600);
+    }
+    expect(st.phase).toBe("idle");
+    stepLaunch(st, idle + 0.5, 300);
+    expect(st.next).toBe(liftoffTime(0, 600) + 300);
+    stepLaunch(st, liftoffTime(0, 600) + 300 - COUNTDOWN, 300);
+    expect([st.index, st.phase, st.display]).toEqual([1, "countdown", 30]);
   });
 
   it("holds when launches are off", () => {

@@ -42,11 +42,9 @@ import {
   createTrackEdges,
   fillTrackRow,
   groundTrack,
-  launchAt,
   launchOrbit,
   LAUNCH_SITE,
   type LatLonDeg,
-  liftoffTime,
   localTimeText,
   missionOffset,
   missionOrbit,
@@ -55,8 +53,9 @@ import {
   type Orbit,
   orbitNumber,
   PAD_CUT,
-  padReset,
+  resetLaunch,
   rocketClimb,
+  stepLaunch,
   timeAtArgument,
   TRACK_BINS,
   unwrappedLon,
@@ -1085,7 +1084,7 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
       let metOffset = 0;
       const launch = createLaunchState();
       let launchEpoch = 0;
-      let launchKey = "";
+      let launchesOn: boolean | null = null;
       /** The latest launched craft: its launch number and liftoff time (effect seconds). */
       let flown = -1;
       let flownAt = 0;
@@ -1141,7 +1140,7 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
             mission = missionOrbit(seed);
             metOffset = missionOffset(seed) - time;
             trackOrbit = Number.NaN;
-            launchKey = "";
+            launchesOn = null;
             roomDrawn = false;
           }
           if (!room) {
@@ -1178,21 +1177,21 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
             gl.bindTexture(gl.TEXTURE_2D, graphTex);
           }
 
-          // 3. Launches: a change of settings restarts the schedule.
-          const gap = p.launchGap;
-          const lk = `${String(p.launches)}|${String(gap)}`;
-          if (lk !== launchKey) {
-            launchKey = lk;
+          // 3. Launches: turning them on starts the schedule again. A new gap
+          //    leaves the launch under way alone (see `stepLaunch`).
+          if (p.launches !== launchesOn) {
+            launchesOn = p.launches;
             launchEpoch = time;
+            resetLaunch(launch);
             if (!p.launches) {
               flown = -1;
               flownOrbit = null;
               trackOrbit = Number.NaN;
             }
           }
-          launchAt(time - launchEpoch, gap, launch);
+          stepLaunch(launch, time - launchEpoch, p.launchGap);
           if (p.launches && launch.index >= 0 && launch.sinceLiftoff >= 0) {
-            const at = launchEpoch + liftoffTime(launch.index, gap);
+            const at = launchEpoch + launch.liftoff;
             if (at !== flownAt || flown < 0) {
               flown = launch.index;
               flownAt = at;
@@ -1203,7 +1202,7 @@ export const missioncontrol = defineEffect(missioncontrolMeta, {
           let tv = -1;
           let fade = 1;
           if (p.launches && launch.index >= 0 && launch.phase !== "countdown") {
-            const reset = padReset(gap);
+            const reset = launch.reset;
             fade = Math.min(1, Math.abs(launch.sinceLiftoff - reset) / PAD_CUT);
             if (launch.phase === "flight") {
               tv = launch.sinceLiftoff;
