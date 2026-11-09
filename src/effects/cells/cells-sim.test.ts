@@ -16,6 +16,7 @@ import {
   MODE_GROWING,
   MODE_NORMAL,
   packCells,
+  fastestSpeed,
   palette,
   PALETTES,
   plannedCount,
@@ -31,6 +32,17 @@ const W = 1920;
 const H = 1080;
 /** Steps per simulated second. */
 const SPS = Math.round(1 / FIXED_DT);
+/** Index of the fastest live cell. */
+const fastestCell = (sim: ReturnType<typeof createCellsSim>) => {
+  let best = 0;
+  for (let i = 1; i < sim.n; i++) {
+    if (Math.hypot(sim.vx[i], sim.vy[i]) > Math.hypot(sim.vx[best], sim.vy[best])) {
+      best = i;
+    }
+  }
+  return best;
+};
+
 const opts = (o: Partial<CellsOptions> = {}): CellsOptions => ({
   count: 40,
   division: 3,
@@ -280,6 +292,36 @@ describe("power diagram", () => {
     expect(cells[2]).toBeCloseTo(sim.r[0] ** 2, 1);
     expect(cells[3]).toBeCloseTo(sim.r[0], 3);
     expect(info[2]).toBe(0);
+  });
+
+  it("extrapolates positions by the lead, so a 144 Hz display moves every frame", () => {
+    const o = opts({ motion: 1, division: 0 });
+    const sim = createCellsSim(21, o, W, H);
+    for (let i = 0; i < 120; i++) {
+      advanceCells(sim, 1 / 60, o);
+    }
+    const cells = new Float32Array(MAX_CELLS * 4);
+    const info = new Float32Array(MAX_CELLS * 4);
+    const moves: number[] = [];
+    const k = fastestCell(sim);
+    let prevX = 0;
+    let prevY = 0;
+    for (let f = 0; f <= 72; f++) {
+      advanceCells(sim, 1 / 144, o);
+      packCells(sim, cells, info, sim.acc);
+      if (f > 0) {
+        moves.push(Math.hypot(cells[k * 4] - prevX, cells[k * 4 + 1] - prevY));
+      }
+      prevX = cells[k * 4];
+      prevY = cells[k * 4 + 1];
+    }
+    const mean = moves.reduce((a, b) => a + b, 0) / moves.length;
+    expect(mean).toBeGreaterThan(0.01);
+    // Whole steps alone would give 0, 1 or 2 steps' worth a frame (a 2-3-2 cadence).
+    for (const m of moves) {
+      expect(Math.abs(m - mean)).toBeLessThan(0.25 * mean);
+    }
+    expect(fastestSpeed(sim)).toBeGreaterThan(0);
   });
 
   it("puts the edge on the radical line, which favours the larger cell", () => {

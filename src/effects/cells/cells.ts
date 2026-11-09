@@ -1,6 +1,7 @@
 import { hexToUnitRgb, type Rgb } from "../color";
 import {
   advanceCells,
+  fastestSpeed,
   CENTRE_EDGES,
   type CellsOptions,
   type CellsSim,
@@ -29,6 +30,8 @@ import { defineEffect } from "../types";
 const REF_H = 1080;
 /** Membrane falloff (1/e distance from the edge), reference px. */
 const MEMBRANE_PX = 4.5;
+/** Below this extrapolated move since the last redraw (reference px), the cells count as still. */
+const STILL_PX = 0.02;
 /** Membrane opacity over the body, and the halo it casts into the medium. */
 const MEMBRANE = 0.85;
 const HALO = 0.35;
@@ -180,7 +183,9 @@ void main() {
  * A soft microscope view of living cells: a power diagram of simulated discs that
  * pack, jostle, grow and divide (`cells-sim.ts`), shaded in one reduced-resolution
  * pass with a brute-force loop over the cells, then upscaled with dither. The
- * pass re-renders only when the simulation steps (60 Hz).
+ * pass re-renders when the simulation steps (60 Hz) and, on faster displays, in
+ * between with the cells extrapolated along their velocities, unless they are
+ * all but still.
  */
 export const cells = defineEffect(cellsMeta, {
   create(gl) {
@@ -209,6 +214,8 @@ export const cells = defineEffect(cellsMeta, {
       let lastPalette: Float32Array | undefined;
       /** Set when the low-res image must be redrawn even if the simulation didn't step. */
       let dirty = true;
+      /** Extrapolation lead (seconds past the last step) of the last redraw. */
+      let drawnLead = 0;
 
       return {
         resize(v) {
@@ -230,7 +237,8 @@ export const cells = defineEffect(cellsMeta, {
             dirty = true;
           }
           resizeCellsSim(sim, refW, REF_H);
-          if (advanceCells(sim, dt, opts) > 0) {
+          const stepped = advanceCells(sim, dt, opts) > 0;
+          if (stepped || Math.abs(sim.acc - drawnLead) * fastestSpeed(sim) > STILL_PX) {
             dirty = true;
           }
 
@@ -258,7 +266,8 @@ export const cells = defineEffect(cellsMeta, {
 
           // The canvas isn't preserved, so a direct target redraws every frame.
           if (dirty || target.direct) {
-            const n = packCells(sim, cellData, infoData);
+            const n = packCells(sim, cellData, infoData, sim.acc);
+            drawnLead = sim.acc;
             u.i1("uCount", n);
             gl.uniform4fv(u.loc.uCell, cellData, 0, n * 4);
             gl.uniform4fv(u.loc.uInfo, infoData, 0, n * 4);

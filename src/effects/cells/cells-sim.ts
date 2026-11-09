@@ -548,17 +548,34 @@ function move(sim: CellsSim, opts: CellsOptions, target: number) {
   }
 }
 
+/** Speed of the fastest cell, reference px per second. */
+export function fastestSpeed(sim: CellsSim): number {
+  let max = 0;
+  for (let i = 0; i < sim.n; i++) {
+    max = Math.max(max, Math.hypot(sim.vx[i], sim.vy[i]));
+  }
+  return max;
+}
+
 /**
  * Packs the live cells for the shader: per cell `(x, y, r², r)` in reference px,
  * and `(tone, sister serial, eased merge, nucleus)`. Cells not pinching apart get
- * merge 0, so the shader never pairs them.
+ * merge 0, so the shader never pairs them. Positions are extrapolated `lead`
+ * seconds along each cell's velocity (pass `sim.acc`, the time since the last
+ * step), so a display faster than the fixed step sees smooth motion rather than
+ * the uneven cadence of whole steps.
  */
-export function packCells(sim: CellsSim, cells: Float32Array, info: Float32Array): number {
+export function packCells(
+  sim: CellsSim,
+  cells: Float32Array,
+  info: Float32Array,
+  lead = 0,
+): number {
   for (let i = 0; i < sim.n; i++) {
     const o = i * 4;
     const r = sim.r[i];
-    cells[o] = sim.x[i];
-    cells[o + 1] = sim.y[i];
+    cells[o] = sim.x[i] + sim.vx[i] * lead;
+    cells[o + 1] = sim.y[i] + sim.vy[i] * lead;
     cells[o + 2] = r * r;
     cells[o + 3] = r;
     info[o] = sim.tone[i];
