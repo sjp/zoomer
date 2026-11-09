@@ -25,8 +25,8 @@
  * (about 20 cells long at R = 13) is the same fraction of the frame at any
  * resolution, about 150 px at 1080p.
  */
-import { clamp, smoothstep } from "../math";
-import { hexToRgb } from "../color";
+import { clamp } from "../math";
+import { buildGradientLut } from "../color";
 import { createRng } from "../noise";
 import { lookup } from "../lookup";
 import type { PALETTE_OPTIONS, SPECIES_OPTIONS } from "./lenia.meta";
@@ -749,22 +749,5 @@ export const LUT_SIZE = 256;
  * between its stops. Unknown ids fall back to bioluminescent.
  */
 export function buildPaletteLut(id: string, out: Uint8Array): Uint8Array {
-  const stops = lookup(PALETTES, id, "bioluminescent");
-  for (let i = 0; i < LUT_SIZE; i++) {
-    const t = i / (LUT_SIZE - 1);
-    let s = 0;
-    while (s < stops.length - 2 && t > stops[s + 1][0]) {
-      s++;
-    }
-    const [t0, c0] = stops[s];
-    const [t1, c1] = stops[s + 1];
-    const f = smoothstep(t0, t1, t);
-    const a = hexToRgb(c0);
-    const b = hexToRgb(c1);
-    for (let c = 0; c < 3; c++) {
-      out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
-    }
-    out[i * 4 + 3] = 255;
-  }
-  return out;
+  return buildGradientLut(lookup(PALETTES, id, "bioluminescent"), out);
 }

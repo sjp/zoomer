@@ -36,7 +36,7 @@
  *   decays the trail faster, which leaves only a faint, sparse mesh there.
  */
 import { clamp, fract, smoothstep } from "../math";
-import { hexToRgb } from "../color";
+import { buildGradientLut } from "../color";
 import { createRng, hash32 } from "../noise";
 import type { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
 import { lookup } from "../lookup";
@@ -159,24 +159,7 @@ export const LUT_SIZE = 256;
  * between its stops. Unknown ids fall back to gold.
  */
 export function buildPaletteLut(id: string, out: Uint8Array): Uint8Array {
-  const stops = lookup(PALETTES, id, "gold").stops;
-  for (let i = 0; i < LUT_SIZE; i++) {
-    const t = i / (LUT_SIZE - 1);
-    let s = 0;
-    while (s < stops.length - 2 && t > stops[s + 1][0]) {
-      s++;
-    }
-    const [t0, c0] = stops[s];
-    const [t1, c1] = stops[s + 1];
-    const f = smoothstep(t0, t1, t);
-    const a = hexToRgb(c0);
-    const b = hexToRgb(c1);
-    for (let c = 0; c < 3; c++) {
-      out[i * 4 + c] = Math.round(a[c] + (b[c] - a[c]) * f);
-    }
-    out[i * 4 + 3] = 255;
-  }
-  return out;
+  return buildGradientLut(lookup(PALETTES, id, "gold").stops, out);
 }
 
 /** Seconds per lap of each food source's swing, and its swing half-width (radians). */
