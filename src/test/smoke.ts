@@ -173,12 +173,107 @@ async function smoke(id: string, options: SmokeOptions): Promise<SmokeResult> {
   };
 }
 
+/** A seeded stand-in for `Math.random` (mulberry32), so captures repeat exactly. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The wall-clock time captures run at: 2026-03-14 15:09:26 UTC. */
+const CAPTURE_TIME = Date.UTC(2026, 2, 14, 15, 9, 26);
+
+/** `Date`, except that `new Date()` and `Date.now()` give `time`. */
+function fixedDate(RealDate: DateConstructor, time: number): DateConstructor {
+  return new Proxy(RealDate, {
+    construct(target, args: unknown[]) {
+      return args.length === 0 ? new target(time) : (Reflect.construct(target, args) as object);
+    },
+    get(target, key, receiver) {
+      return key === "now" ? () => time : (Reflect.get(target, key, receiver) as unknown);
+    },
+  });
+}
+
+export interface Capture {
+  width: number;
+  height: number;
+  /** RGBA rows, bottom row first (as `readPixels` returns them), base64-encoded. */
+  rgba: string;
+}
+
+/**
+ * Draws `frames` frames of an effect with its default params at `width` x `height`,
+ * with `Math.random` seeded, and returns the last frame's pixels: for comparing an
+ * effect before and after a refactor (`e2e/capture.spec.ts`).
+ */
+async function capture(id: string, frames: number, width = 480, height = 270): Promise<Capture> {
+  const meta = effects.find((e) => e.id === id);
+  if (!meta) {
+    throw new Error(`no effect "${id}"`);
+  }
+  const effect = await meta.load();
+  if (effect.context !== "webgl2") {
+    throw new Error("only WebGL2 effects can be captured");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
+  if (!gl) {
+    throw new Error("WebGL2 is unavailable");
+  }
+  // Everything an effect might read that changes between runs: randomness, the
+  // wall clock (clocks and news tickers in the Scenes) and the high-resolution
+  // timer (builds spread over frames by a time budget, which then advance by
+  // the same number of steps every run).
+  const random = Math.random;
+  const RealDate = Date;
+  const now = performance.now.bind(performance);
+  Math.random = seededRandom(1234);
+  let fakeNow = 0;
+  performance.now = () => {
+    fakeNow += 0.1;
+    return fakeNow;
+  };
+  globalThis.Date = fixedDate(RealDate, CAPTURE_TIME);
+  try {
+    const instance = effect.create(gl);
+    instance.resize({ width, height, scale: height / 1080 });
+    const params = paramSets(effect.params)[0];
+    instance.frame(0, params);
+    for (let i = 0; i < frames; i++) {
+      instance.frame(DT, params);
+    }
+    const px = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    instance.dispose?.();
+    let binary = "";
+    for (let i = 0; i < px.length; i += 0x8000) {
+      binary += String.fromCodePoint(...px.subarray(i, i + 0x8000));
+    }
+    return { width, height, rgba: btoa(binary) };
+  } finally {
+    Math.random = random;
+    globalThis.Date = RealDate;
+    performance.now = now;
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }
+}
+
 declare global {
   interface Window {
     smoke: typeof smoke;
+    capture: typeof capture;
     smokeIds: string[];
   }
 }
 
 window.smoke = smoke;
+window.capture = capture;
 window.smokeIds = effects.map((e) => e.id);

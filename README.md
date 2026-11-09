@@ -32,6 +32,16 @@ It runs every effect on SwiftShader's software WebGL2 and fails on shader compil
 errors, GL errors, uniform names no program uses, and frames that come out as one flat
 colour.
 
+To check that a refactor leaves effects looking the same, capture every effect's pixels
+before and after (randomness and clocks are pinned, so captures repeat exactly) and compare:
+
+```sh
+CAPTURE_DIR=/tmp/before npx playwright test capture
+# ...change the code...
+CAPTURE_DIR=/tmp/after npx playwright test capture
+node scripts/compare-captures.mjs /tmp/before /tmp/after
+```
+
 ## Using it
 
 The control panel sits in the corner and fades out, with the cursor, after a few seconds
