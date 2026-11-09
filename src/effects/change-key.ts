@@ -1,3 +1,5 @@
+import { hexToRgb } from "./color";
+
 /**
  * The inputs a cached result (a lookup table, an upload) was last built from, so
  * the work can be skipped while none of them changes. Each frame, write every
@@ -12,6 +14,17 @@ export interface ChangeKey {
    * fixed sets of strings: each distinct one is remembered for good.
    */
   setText: (index: number, value: string) => void;
+  /**
+   * Sets an input from a `#rrggbb` colour, as its packed RGB value. The string is
+   * parsed only when it differs from the last one set at this index.
+   */
+  setColor: (index: number, hex: string) => void;
+  /**
+   * Sets an input from free text, such as a text param: any string at all, which
+   * `setText` would remember for good. Compared with the last string set at this
+   * index, so the steady case costs one comparison.
+   */
+  setString: (index: number, value: string) => void;
   /** Whether anything changed since the last `take()`; clears the flag. */
   take: () => boolean;
   /** Forces the next `take()` to return true. */
@@ -23,6 +36,7 @@ const textIds = new Map<string, number>();
 
 export function createChangeKey(length: number): ChangeKey {
   const values = new Float64Array(length);
+  const strings: (string | undefined)[] = Array.from({ length });
   let dirty = true;
   const set = (index: number, value: number) => {
     if (values[index] !== value) {
@@ -39,6 +53,19 @@ export function createChangeKey(length: number): ChangeKey {
         textIds.set(value, id);
       }
       set(index, id);
+    },
+    setColor(index, hex) {
+      if (strings[index] !== hex) {
+        strings[index] = hex;
+        const [r, g, b] = hexToRgb(hex);
+        set(index, (r << 16) | (g << 8) | b);
+      }
+    },
+    setString(index, value) {
+      if (strings[index] !== value) {
+        strings[index] = value;
+        dirty = true;
+      }
     },
     take() {
       const was = dirty;
