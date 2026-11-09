@@ -137,25 +137,31 @@ describe("events", () => {
   });
 
   it("ramps the warning lamp and the plume over more than a second", () => {
+    // Tens of thousands of steps: gather the extremes, then assert once, as an
+    // expect per step costs more than the functions under test.
     const dt = 0.05;
     let prevGlow = 0;
     let prevPlume = 0;
+    let glowStep = 0;
+    let plumeStep = 0;
+    let lo = 0;
+    let hi = 0;
     const plume = createPlume();
     for (let t = 0; t < 10 * WARNING_GAP; t += dt) {
       const g = warningGlow(t, 7);
-      expect(g).toBeGreaterThanOrEqual(0);
-      expect(g).toBeLessThanOrEqual(1);
-      expect(Math.abs(g - prevGlow)).toBeLessThan(dt * 1.2);
+      glowStep = Math.max(glowStep, Math.abs(g - prevGlow));
       prevGlow = g;
       plumeAt(t, 7, plume);
-      expect(Math.abs(plume.amount - prevPlume)).toBeLessThan(dt);
-      expect(plume.across).toBeGreaterThanOrEqual(0);
-      expect(plume.across).toBeLessThanOrEqual(1);
+      plumeStep = Math.max(plumeStep, Math.abs(plume.amount - prevPlume));
       prevPlume = plume.amount;
       const d = dustLevel(t, 7);
-      expect(d).toBeGreaterThanOrEqual(0);
-      expect(d).toBeLessThanOrEqual(1);
+      lo = Math.min(lo, g, plume.across, d);
+      hi = Math.max(hi, g, plume.across, d);
     }
+    expect(lo).toBeGreaterThanOrEqual(0);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(glowStep).toBeLessThan(dt * 1.2);
+    expect(plumeStep).toBeLessThan(dt);
   });
 });
 
