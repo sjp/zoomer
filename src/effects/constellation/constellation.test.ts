@@ -4,9 +4,13 @@ import {
   createLinkGrid,
   driftPoint,
   findLinks,
+  LINK_BUDGET,
+  LINK_CAP,
+  linkDistanceFor,
   linkFalloff,
   type LinkFilter,
 } from "./constellation";
+import { constellationMeta, MAX_POINTS } from "./constellation.meta";
 import { createRng } from "../noise";
 import { wrap } from "../math";
 
@@ -348,5 +352,46 @@ describe("findLinks filter", () => {
     }
     pts.push([40, 50], [45, 50]);
     expect(linksOf(pts, 20, view(), 1).pairs).toEqual(["10,11"]);
+  });
+});
+
+describe("linkDistanceFor", () => {
+  const maxDist = constellationMeta.params.linkDistance.max * 1080;
+
+  it.each([
+    ["16:9", 1920],
+    ["4:3", 1440],
+    ["1:1", 1080],
+  ])("keeps the links at max settings under the cap at %s", (_, refWidth) => {
+    const dist = linkDistanceFor(MAX_POINTS, maxDist, refWidth);
+    expect(dist).toBeLessThan(maxDist);
+    let worst = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      // The points' domain includes the off-screen margin of one link distance.
+      const spanX = refWidth + 2 * dist;
+      const spanY = 1080 + 2 * dist;
+      const { xs, ys } = randomPoints(seed, MAX_POINTS, -dist, -dist, spanX, spanY);
+      const { count } = gridLinks(xs, ys, MAX_POINTS, -dist, -dist, spanX, spanY, dist, LINK_CAP);
+      worst = Math.max(worst, count);
+    }
+    expect(worst).toBeLessThan(LINK_CAP * 0.8);
+  });
+
+  it("leaves the defaults and smaller settings alone", () => {
+    const p = constellationMeta.params;
+    const d = p.linkDistance.default * 1080;
+    expect(linkDistanceFor(p.count.default, d, 1920)).toBe(d);
+    expect(linkDistanceFor(MAX_POINTS, 0.17 * 1080, 1920)).toBe(0.17 * 1080);
+  });
+
+  it("shrinks continuously as the count rises", () => {
+    let prev = linkDistanceFor(50, maxDist, 1920);
+    for (let n = 51; n <= MAX_POINTS; n++) {
+      const d = linkDistanceFor(n, maxDist, 1920);
+      expect(d).toBeLessThanOrEqual(prev);
+      expect(prev - d).toBeLessThan(2);
+      prev = d;
+    }
+    expect(LINK_BUDGET).toBeLessThan(LINK_CAP);
   });
 });

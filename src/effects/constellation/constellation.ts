@@ -29,6 +29,28 @@ const TAU = Math.PI * 2;
 // Pure logic: wrapping and the uniform-grid neighbour search.
 // ---------------------------------------------------------------------------
 
+/**
+ * Expected links the search may return, kept well under `LINK_CAP` so random
+ * clustering never reaches it: links past the cap would be dropped in scan order,
+ * the bottom of the screen first, and flicker as points cross cells.
+ */
+export const LINK_BUDGET = 4500;
+
+/**
+ * The link distance (reference px) to use for `count` points and a wanted
+ * distance on a frame `refWidth` x 1080: the wanted one, unless the expected
+ * number of links within it (pairs times the chance two points are that close,
+ * over the visible frame) passes `LINK_BUDGET`, in which case it shrinks just
+ * enough to stay within it. Continuous in every input, so a slider drag or a
+ * resize never pops links in or out.
+ */
+export function linkDistanceFor(count: number, wanted: number, refWidth: number): number {
+  const area = Math.max(1, refWidth) * 1080;
+  const pairs = (count * (count - 1)) / 2;
+  const expected = (pairs * Math.PI * wanted * wanted) / area;
+  return expected > LINK_BUDGET ? wanted * Math.sqrt(LINK_BUDGET / expected) : wanted;
+}
+
 /** Link opacity for a link of length `t` times the link distance: `(1 - t)²`, 0 beyond 1. */
 export function linkFalloff(t: number): number {
   const u = 1 - t;
@@ -393,7 +415,7 @@ export const constellation = defineEffect(constellationMeta, {
           const n = (live = growLive(life, live, target));
 
           // Off-screen margin of one link distance, so links fade out before a wrap.
-          const dist = p.linkDistance * 1080;
+          const dist = linkDistanceFor(target, p.linkDistance * 1080, refWidth);
           const minX = -dist;
           const minY = -dist;
           const spanX = refWidth + 2 * dist;
