@@ -9,6 +9,7 @@
  * layout is built in "u", the distance from the run's side edge, and mirrored
  * for the right side.
  */
+import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import { wrap } from "../math";
 
 export type MarbleSide = "left" | "right";
@@ -446,35 +447,114 @@ export function freeAdvance(run: Run, s: number, time: number): number {
 }
 
 export interface Marbles {
+  /**
+   * Marbles simulated and drawn: those wanted plus any still fading out.
+   * Arrays are indexed by marble (0..count-1), which also picks its colour.
+   */
   count: number;
-  /** Path coordinate in [0, length), in loop order: marble i + 1 is ahead of i. */
+  /** Marbles wanted (see `setMarbleCount`); the rest of `count` are fading out. */
+  target: number;
+  /** Path coordinate in [0, length). */
   s: Float64Array;
   /** Spin angle, wrapped to [0, 2π). */
   spin: Float64Array;
+  /** Fade: 0 (gone) to 1 (fully shown); see `fadeMarbles`. */
+  life: Float32Array;
+  /** The marbles in loop order: `order[k + 1]` is ahead of `order[k]`. */
+  order: Int32Array;
   /** Scratch: each step's advance. */
   move: Float64Array;
 }
 
 export function createMarbles(max: number): Marbles {
+  const order = new Int32Array(max);
+  for (let i = 0; i < max; i++) {
+    order[i] = i;
+  }
   return {
     count: 0,
+    target: 0,
     s: new Float64Array(max),
     spin: new Float64Array(max),
+    life: new Float32Array(max),
+    order,
     move: new Float64Array(max),
   };
 }
 
+/** Seconds a marble added by a higher count takes to fade in. */
+export const MARBLE_FADE_IN = 0.8;
+
+/** The most marbles that fit round `run` with room to roll, and at most `max`. */
+const marblesFitting = (run: Run, count: number, max: number) =>
+  Math.max(0, Math.min(Math.floor(count), max, Math.floor(run.length / (MIN_GAP * 1.5))));
+
 /**
  * Spreads `count` marbles evenly round the loop (at least `MIN_GAP` apart if
- * they fit; the count is cut to what does), with staggered spins.
+ * they fit; the count is cut to what does), with staggered spins, all shown.
  */
 export function placeMarbles(run: Run, m: Marbles, count: number): void {
-  const fit = Math.floor(run.length / (MIN_GAP * 1.5));
-  const n = Math.max(0, Math.min(Math.floor(count), m.s.length, fit));
+  const n = marblesFitting(run, count, m.s.length);
   m.count = n;
+  m.target = n;
   for (let i = 0; i < n; i++) {
     m.s[i] = (run.length * (i + 0.5)) / n;
     m.spin[i] = wrap(i * 2.399963, 0, Math.PI * 2);
+    m.life[i] = 1;
+    m.order[i] = i;
+  }
+}
+
+/**
+ * Changes how many marbles are wanted without moving the others. A new marble
+ * starts in the middle of the widest gap round the loop and fades in; when the
+ * count drops, the highest-numbered marbles fade out (`fadeMarbles`) and then
+ * leave the loop. A marble still fading out when the count rises again fades
+ * back in where it is.
+ */
+export function setMarbleCount(run: Run, m: Marbles, count: number): void {
+  const target = marblesFitting(run, count, m.s.length);
+  m.target = target;
+  const live = growLive(m.life, m.count, target);
+  for (let id = m.count; id < live; id++) {
+    // Into the widest gap, after the marble behind it in loop order.
+    const n = id;
+    let at = 0;
+    let widest = -1;
+    for (let k = 0; k < n; k++) {
+      const gap = ahead(run, m.s[m.order[k]], m.s[m.order[(k + 1) % n]]);
+      if (gap > widest) {
+        widest = gap;
+        at = k;
+      }
+    }
+    m.s[id] = n === 0 ? run.length / 2 : wrap(m.s[m.order[at]] + widest / 2, 0, run.length);
+    m.spin[id] = wrap(id * 2.399963, 0, Math.PI * 2);
+    m.order.copyWithin(at + 2, at + 1, n);
+    m.order[n === 0 ? 0 : at + 1] = id;
+  }
+  m.count = live;
+}
+
+/**
+ * Steps every marble's fade by `dt` seconds of wall time, and drops marbles
+ * that have faded out from the loop.
+ */
+export function fadeMarbles(m: Marbles, dt: number): void {
+  const t = Number.isFinite(dt) && dt > 0 ? dt : 0;
+  for (let i = 0; i < m.count; i++) {
+    stepLife(m.life, i, m.target, t / MARBLE_FADE_IN, t / FADE_OUT);
+  }
+  const live = trimLive(m.life, m.count, m.target);
+  if (live < m.count) {
+    // Remove the dropped marbles from the loop order, keeping the rest in turn.
+    let k = 0;
+    for (let j = 0; j < m.count; j++) {
+      if (m.order[j] < live) {
+        m.order[k++] = m.order[j];
+      }
+    }
+    m.count = live;
   }
 }
 
@@ -495,15 +575,16 @@ export function stepMarbles(run: Run, m: Marbles, time: number): void {
     return;
   }
   const t = Math.min(time, 0.25);
-  const { s, move } = m;
+  const { s, move, order } = m;
   for (let i = 0; i < n; i++) {
     move[i] = freeAdvance(run, s[i], t);
   }
   if (n > 1) {
     // Two passes backwards round the ring settle every limit (leaders never move back).
     for (let k = 0; k < 2 * n; k++) {
-      const i = (((n - 1 - k) % n) + n) % n;
-      const j = (i + 1) % n;
+      const r = (((n - 1 - k) % n) + n) % n;
+      const i = order[r];
+      const j = order[(r + 1) % n];
       const limit = ahead(run, s[i], s[j]) + move[j] - MIN_GAP;
       if (move[i] > limit) {
         move[i] = Math.max(0, limit);

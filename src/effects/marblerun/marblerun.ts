@@ -16,7 +16,9 @@ import {
   LIFT_SPEED,
   MARBLE_R,
   type MarbleSide,
+  fadeMarbles,
   placeMarbles,
+  setMarbleCount,
   pointAt,
   type Run,
   stepMarbles,
@@ -219,7 +221,7 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aPos;
 /** Body tint, core variation. */
 layout(location = 2) in vec4 aBody;
-/** Core colour, unused. */
+/** Core colour, opacity (fading in or out). */
 layout(location = 3) in vec4 aCore;
 uniform vec2 uToClip;
 uniform float uPx;
@@ -228,14 +230,14 @@ uniform vec4 uShadow;
 out vec2 vP;
 flat out vec4 vPos;
 flat out vec4 vBody;
-flat out vec3 vCore;
+flat out vec4 vCore;
 void main() {
   float rad = ${g(MARBLE_R)} * mix(1.0, uShadow.z, uShadow.w) + 1.5 * uPx;
   vec2 c = aPos.xy + uShadow.xy * uShadow.w;
   vP = aCorner * rad / ${g(MARBLE_R)};
   vPos = aPos;
   vBody = aBody;
-  vCore = aCore.rgb;
+  vCore = aCore;
   gl_Position = vec4((c + aCorner * rad) * uToClip - 1.0, 0.0, 1.0);
 }
 `;
@@ -252,7 +254,7 @@ precision highp float;
 in vec2 vP;
 flat in vec4 vPos;
 flat in vec4 vBody;
-flat in vec3 vCore;
+flat in vec4 vCore;
 uniform float uPx;
 uniform vec4 uShadow;
 uniform float uShadowAlpha;
@@ -267,7 +269,7 @@ void main() {
     float s = uShadowAlpha * (1.0 - smoothstep(0.45, 1.25, r));
     vec2 c = p - vec2(-0.12, 0.18);
     vec3 caustic = tint * uLight * 0.3 * exp(-9.0 * dot(c, c));
-    outColor = vec4(caustic, s);
+    outColor = vec4(caustic, s) * vCore.a;
     return;
   }
   float r = sqrt(r2);
@@ -301,7 +303,7 @@ void main() {
     float b2 = abs(q.y + 0.42 - 0.18 * sin(3.1 * q.x + ph * 1.7));
     band = max(1.0 - smoothstep(0.08, 0.15, b1), 0.7 * (1.0 - smoothstep(0.03, 0.07, b2)));
   }
-  vec3 core = vCore * uLight * (0.45 + 0.55 * nz) * (0.85 + 0.3 * smoothstep(0.2, -0.6, q.y));
+  vec3 core = vCore.rgb * uLight * (0.45 + 0.55 * nz) * (0.85 + 0.3 * smoothstep(0.2, -0.6, q.y));
   col = mix(col, core, band * depth);
 
   // Light focused through the glass onto its lower right.
@@ -313,7 +315,7 @@ void main() {
   float nh = max(dot(n, H), 0.0);
   col += uLight * (1.3 * pow(nh, 120.0) + 0.12 * pow(nh, 10.0));
   col += uLight * 0.16 * fres * smoothstep(-0.6, 0.6, p.y);
-  outColor = vec4(col * cov, cov);
+  outColor = vec4(col * cov, cov) * vCore.a;
 }
 `;
 
@@ -421,9 +423,15 @@ export const marblerun = defineEffect(marblerunMeta, {
             liftBoard = backCount + run.liftIndex < MAX_BOARDS ? backCount + run.liftIndex : -1;
           }
           if (placed !== p.marbles) {
-            placeMarbles(run, marbles, p.marbles);
+            // A new run spreads the marbles afresh; a new count only adds or removes some.
+            if (placed < 0) {
+              placeMarbles(run, marbles, p.marbles);
+            } else {
+              setMarbleCount(run, marbles, p.marbles);
+            }
             placed = p.marbles;
           }
+          fadeMarbles(marbles, Math.min(Math.max(dt, 0), 0.1));
           const time = Math.min(Math.max(dt, 0), 0.1) * Math.max(0, p.speed);
           stepMarbles(run, marbles, time);
           liftTravel += time * LIFT_SPEED;
@@ -498,7 +506,8 @@ export const marblerun = defineEffect(marblerunMeta, {
               d[o + 8] = core[0];
               d[o + 9] = core[1];
               d[o + 10] = core[2];
-              d[o + 11] = 0;
+              const l = marbles.life[i];
+              d[o + 11] = l * l * (3 - 2 * l);
             }
             marbleBatch.upload(n);
             gl.useProgram(mu.program);

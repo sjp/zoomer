@@ -3,6 +3,7 @@ import {
   BOARD_RAIL,
   buildRun,
   createMarbles,
+  fadeMarbles,
   freeAdvance,
   hopOffset,
   HOP_LEN,
@@ -12,7 +13,9 @@ import {
   MAX_LEVELS,
   MIN_GAP,
   MIN_LEVELS,
+  MARBLE_FADE_IN,
   placeMarbles,
+  setMarbleCount,
   pointAt,
   RAIL_HALF,
   ROLL_SPEED,
@@ -294,6 +297,56 @@ describe("stepMarbles", () => {
     // The leader moved at the lift's pace.
     expect(m.s[1]).toBeCloseTo(lift.s0 + 0.001 + 0.2 * LIFT_SPEED, 12);
     expect(segmentAt(run, m.s[0])).toBe(run.segments.length - 2);
+  });
+
+  it("keeps every marble in place when the count changes, fading the others", () => {
+    const run = buildRun(4, "right", ASPECT);
+    const m = createMarbles(MAX_MARBLES);
+    placeMarbles(run, m, 5);
+    for (let i = 0; i < 30; i++) {
+      stepMarbles(run, m, 0.05);
+    }
+    const before = Array.from(m.s.subarray(0, 5));
+    setMarbleCount(run, m, 8);
+    expect(m.count).toBe(8);
+    expect(Array.from(m.s.subarray(0, 5))).toEqual(before);
+    expect(Array.from(m.life.subarray(5, 8))).toEqual([0, 0, 0]);
+    // Each new marble starts mid-gap: at least MIN_GAP from every other.
+    for (let i = 5; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        const d = Math.abs(m.s[i] - m.s[j]);
+        expect(j === i || Math.min(d, run.length - d) >= MIN_GAP).toBe(true);
+      }
+    }
+    // The loop order stays a cycle: one wrap round the ring.
+    const ring = () => {
+      let descents = 0;
+      for (let k = 0; k < m.count; k++) {
+        if (m.s[m.order[(k + 1) % m.count]] < m.s[m.order[k]]) {
+          descents++;
+        }
+      }
+      return descents;
+    };
+    expect(ring()).toBe(1);
+    fadeMarbles(m, MARBLE_FADE_IN);
+    expect(m.life.subarray(0, 8).every((l) => l === 1)).toBe(true);
+
+    setMarbleCount(run, m, 3);
+    const kept = Array.from(m.s.subarray(0, 3));
+    expect(m.count).toBe(8);
+    fadeMarbles(m, 0.1);
+    expect(m.count).toBe(8);
+    expect(m.life[7]).toBeLessThan(1);
+    fadeMarbles(m, 1);
+    expect(m.count).toBe(3);
+    expect(Array.from(m.s.subarray(0, 3))).toEqual(kept);
+    expect(Array.from(m.order.subarray(0, 3)).toSorted((a, b) => a - b)).toEqual([0, 1, 2]);
+    expect(ring()).toBe(1);
+    for (let i = 0; i < 30; i++) {
+      stepMarbles(run, m, 0.05);
+      expect(ring()).toBe(1);
+    }
   });
 
   it("spins marbles as they roll and ignores bad steps", () => {
