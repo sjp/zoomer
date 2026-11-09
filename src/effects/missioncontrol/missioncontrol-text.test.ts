@@ -18,7 +18,7 @@ import {
   RANDOM_DIGIT,
   sevenSegmentMasks,
   writeLine,
-} from "./missioncontrol-text";
+} from "../dot-matrix";
 import { countdownText, createLaunchState, missionTimeText } from "./missioncontrol-sim";
 
 describe("dot-matrix font", () => {

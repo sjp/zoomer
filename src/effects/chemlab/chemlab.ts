@@ -21,7 +21,7 @@ import {
   GLYPH_H,
   GLYPH_W,
   glyphIndex,
-} from "../missioncontrol/missioncontrol-text";
+} from "../dot-matrix";
 import { createNoise, HASH32_GLSL } from "../noise";
 import { riseSpeed } from "../bubbles/bubbles-sim";
 import { createSmokeField, type SmokeField } from "../smoke/smoke-field";

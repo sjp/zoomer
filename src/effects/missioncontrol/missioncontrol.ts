@@ -80,7 +80,7 @@ import {
   TELEMETRY_LINES,
   WALL_GRAPHS,
   writeLine,
-} from "./missioncontrol-text";
+} from "../dot-matrix";
 import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
 import { hexToUnitRgb, type Rgb } from "../color";
 import {

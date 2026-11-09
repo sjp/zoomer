@@ -16,7 +16,7 @@
  */
 import type { Rgb } from "../color";
 import { approach, clamp, fract, smoothstep } from "../math";
-import { GLYPH_W, glyphIndex } from "../missioncontrol/missioncontrol-text";
+import { GLYPH_W, glyphIndex } from "../dot-matrix";
 import { hash32 } from "../noise";
 import { SCROLLER_MAX_LENGTH } from "./bedroom80s.meta";
 

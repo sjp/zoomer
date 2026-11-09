@@ -1,7 +1,8 @@
 /**
- * Mission Control lettering: a 5x7 dot-matrix font for the CRTs and wall
- * screens, seven-segment masks for the big clock and countdown, and the "text
- * page", a small grid of glyph indices the composite shader reads lines from.
+ * Dot-matrix lettering for the Scenes' screens (first drawn for Mission Control):
+ * a 5x7 dot-matrix font for CRTs and wall screens, seven-segment masks for big
+ * clocks and countdowns, and the "text page", a small grid of glyph indices the
+ * composite shader reads lines from.
  * All pure, so the font and formatting can be tested.
  *
  * In the text page, `RANDOM_DIGIT` marks a cell the shader fills with a digit

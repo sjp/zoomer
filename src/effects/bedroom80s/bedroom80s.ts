@@ -21,7 +21,7 @@ import {
   GLYPH_H,
   GLYPH_W,
   glyphIndex,
-} from "../missioncontrol/missioncontrol-text";
+} from "../dot-matrix";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
 import {

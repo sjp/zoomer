@@ -11,7 +11,7 @@
 import type { Block } from "../console-blocks";
 import { smoothstep } from "../math";
 import { createRng, hash32 } from "../noise";
-import { TELEMETRY_LINES } from "./missioncontrol-text";
+import { TELEMETRY_LINES } from "../dot-matrix";
 
 /** Camera eye height above the back row's floor. */
 export const EYE_Y = 1.2;

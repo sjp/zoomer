@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rgb } from "../color";
-import { glyphIndex } from "../missioncontrol/missioncontrol-text";
+import { glyphIndex } from "../dot-matrix";
 import { SCROLLER_MAX_LENGTH } from "./bedroom80s.meta";
 import {
   BEDSIDE_FADE,
