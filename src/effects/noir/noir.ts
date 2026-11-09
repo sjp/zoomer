@@ -35,6 +35,7 @@ import {
   DROP_DIR_GLSL,
   DROP_FRAGMENT,
   DROP_VERTEX,
+  ENC_MID,
   OFFSET_RANGE,
 } from "../windowrain/windowrain-drops";
 import { type AdvertSide, noirMeta } from "./noir.meta";
@@ -359,6 +360,8 @@ const ROOM_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 uniform sampler2D uView;
 uniform sampler2D uDrops;
+// 1 while there are drops on the glass; 0 skips the drop map, reading it as empty.
+uniform float uRainOn;
 uniform vec2 uResolution;
 /** Reference px per device px. */
 uniform float uRefPx;
@@ -440,7 +443,7 @@ void main() {
     float glass = opening(p, 0.5 * uRefPx);
     col = surround;
     if (glass > 0.0) {
-      vec4 d = texture(uDrops, uv);
+      vec4 d = uRainOn > 0.5 ? texture(uDrops, uv) : vec4(${f(ENC_MID)}, ${f(ENC_MID)}, 0.0, 0.0);
       vec2 dir = dropDir(d);
       float cov = d.a;
       vec3 v = texture(uView, uv + dir * uOffsetScale).rgb * (1.0 + 0.1 * cov);
@@ -550,6 +553,7 @@ export const noir = defineEffect(noirMeta, {
       const roomU = createUniforms(gl, roomProgram, [
         "uView",
         "uDrops",
+        "uRainOn",
         "uResolution",
         "uRefPx",
         "uWall",
@@ -596,6 +600,8 @@ export const noir = defineEffect(noirMeta, {
 
       const sim = createRainSim(1920, 1080, createRng(0x6e6f6972));
       const rainParams: RainSimParams = { rain: 0, speed: 1 };
+      /** Drops on the glass as of the last simulation step. */
+      let dropCount = 0;
       const style: SkylineStyle = {
         width: 1,
         height: 1,
@@ -815,19 +821,22 @@ export const noir = defineEffect(noirMeta, {
             gl.disable(gl.BLEND);
           }
 
-          // 3. The rain on the glass.
-          rainParams.rain = p.rain;
-          stepRainSim(sim, step, rainParams);
-          const count = writeDropInstances(sim, drops.data, scale);
-          drops.upload(count);
-          dropMap.bind();
-          gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
-          if (count > 0) {
-            gl.useProgram(dropProgram);
-            dropU.f2("uResolution", width, height);
-            dropU.f1("uInvScale", 1 / scale);
-            dropU.f1("uMargin", width / dropMap.width);
-            drops.draw(0, count);
+          // 3. The rain on the glass. With no rain wanted and no drops left,
+          // the simulation, the drop map and the glass's reads of it all stop.
+          if (p.rain > 0 || dropCount > 0) {
+            rainParams.rain = p.rain;
+            stepRainSim(sim, step, rainParams);
+            dropCount = writeDropInstances(sim, drops.data, scale);
+            if (dropCount > 0) {
+              drops.upload(dropCount);
+              dropMap.bind();
+              gl.clearBufferfv(gl.COLOR, 0, DROP_CLEAR);
+              gl.useProgram(dropProgram);
+              dropU.f2("uResolution", width, height);
+              dropU.f1("uInvScale", 1 / scale);
+              dropU.f1("uMargin", width / dropMap.width);
+              drops.draw(0, dropCount);
+            }
           }
 
           // 4. Glass, slats and room.
@@ -847,6 +856,7 @@ export const noir = defineEffect(noirMeta, {
           gl.bindTexture(gl.TEXTURE_2D, dropMap.texture);
           gl.useProgram(roomProgram);
           roomU.f2("uResolution", width, height);
+          roomU.f1("uRainOn", dropCount > 0 ? 1 : 0);
           roomU.f1("uRefPx", 1 / scale);
           roomU.f4("uWall", room.wallX0, room.wallX1, room.wallY0, room.wallY1);
           roomU.f4("uGlass", room.glassX0, room.glassX1, room.glassY0, room.glassY1);
