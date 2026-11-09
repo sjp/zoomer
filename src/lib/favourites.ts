@@ -37,12 +37,26 @@ interface Favourites {
   subscribe: (listener: () => void) => () => void;
 }
 
+/**
+ * The favourites store. It follows changes other tabs make: each `storage` event for
+ * the key (or for the whole storage being cleared) reloads the stored list, so this
+ * tab's next toggle doesn't write over another tab's.
+ */
 export function createFavourites(
   storage: () => PreferenceStorage | undefined = browserStorage,
+  events: Pick<EventTarget, "addEventListener"> | undefined = typeof window === "undefined"
+    ? undefined
+    : window,
 ): Favourites {
-  const store = createStore<ReadonlySet<string>>(
-    new Set(parseFavourites(readPreference(FAVOURITES_KEY, storage))),
-  );
+  const load = () => new Set(parseFavourites(readPreference(FAVOURITES_KEY, storage)));
+  const store = createStore<ReadonlySet<string>>(load());
+  events?.addEventListener("storage", (e) => {
+    // A StorageEvent's key; null when the whole storage was cleared.
+    const key = "key" in e ? e.key : undefined;
+    if (key === FAVOURITES_KEY || key === null) {
+      store.set(load());
+    }
+  });
   return {
     get: store.get,
     subscribe: store.subscribe,

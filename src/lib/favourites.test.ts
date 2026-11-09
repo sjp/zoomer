@@ -28,6 +28,30 @@ describe("favourites", () => {
     expect([...createFavourites(() => storage).get()]).toEqual(["koi"]);
   });
 
+  it("picks up another tab's changes before its own next toggle", () => {
+    const storage = memoryStorage();
+    const events = new EventTarget();
+    const favourites = createFavourites(() => storage, events);
+    favourites.toggle("warp");
+    let calls = 0;
+    favourites.subscribe(() => {
+      calls++;
+    });
+    // Another tab stars koi; this tab hears about it through a storage event.
+    storage.data.set(KEY, JSON.stringify(["warp", "koi"]));
+    events.dispatchEvent(Object.assign(new Event("storage"), { key: KEY }));
+    expect([...favourites.get()]).toEqual(["warp", "koi"]);
+    expect(calls).toBe(1);
+    favourites.toggle("snow");
+    expect(parseFavourites(storage.data.get(KEY) ?? null)).toEqual(["warp", "koi", "snow"]);
+    // Other keys are ignored; clearing the storage (key null) empties the list.
+    events.dispatchEvent(Object.assign(new Event("storage"), { key: "other" }));
+    expect(calls).toBe(2);
+    storage.data.clear();
+    events.dispatchEvent(Object.assign(new Event("storage"), { key: null }));
+    expect([...favourites.get()]).toEqual([]);
+  });
+
   it("gives a new set and notifies on each change", () => {
     const favourites = createFavourites(() => memoryStorage());
     const before = favourites.get();
