@@ -7,9 +7,9 @@ its motion slow so video codecs don't smear it.
 
 **Try it: <https://sjp.github.io/zoomer/>**
 
-Effects: Warp Speed, Hyperspace, Digital Rain, Synthwave Grid, Bokeh Lights, Wormhole Tunnel,
-Lava Lamp, Snowfall, Flow Field, Gradient Blobs, Aurora, Topographic Contours, Underwater
-Caustics, Rain on a Window, Fireflies, Constellation Network, Fireplace and Time-lapse Clouds.
+There are over 120 effects, grouped by category: Space, Sky & weather, Water, Nature, Cosy,
+Abstract, Science, Retro and Scenes (recreations of well-known kinds of set or place, such as a
+starship bridge). The list can be searched, starred and sorted.
 
 ## Running it
 
@@ -69,12 +69,14 @@ straight away, with no controls, and keeps its look even if a default changes la
 
 ### Keyboard shortcuts
 
-| Key | Action                         |
-| --- | ------------------------------ |
-| `H` | Hide or show the control panel |
-| `F` | Toggle fullscreen              |
-| `→` | Next effect                    |
-| `←` | Previous effect                |
+| Key | Action                             |
+| --- | ---------------------------------- |
+| `/` | Open the effect list and search it |
+| `S` | Star or unstar the current effect  |
+| `H` | Hide or show the control panel     |
+| `F` | Toggle fullscreen                  |
+| `→` | Next effect in the list            |
+| `←` | Previous effect in the list        |
 
 Shortcuts are ignored while a form field has focus. On touch devices, tap the corner button
 to bring a hidden panel back.
@@ -82,14 +84,34 @@ to bring a hidden panel back.
 ## Adding an effect
 
 1. Create a folder `src/effects/<id>/` holding everything that belongs to the effect:
-   `<id>.meta.ts` (its `id`, `name`, `description` and `params` schema, via
-   `defineEffectMeta`), `<id>.ts` (the effect, via `defineEffect` from
-   `src/effects/types.ts`, whose `create(gl)` returns `{ resize, frame, dispose }`), and any
-   `<id>-sim.ts` simulation code with its tests.
-2. Add it to the list in `src/effects/registry.ts`. The control panel builds its controls from
-   the params schema, and the URL hash picks them up too.
-3. Reuse the shared helpers that sit directly in `src/effects/` (`gl.ts`, `sprites.ts`, `streaks.ts`,
-   `noise.ts`, `math.ts`, `color.ts`), and add unit tests for any pure logic.
+   - `<id>.meta.ts`, via `defineEffectMeta`: its `id`, `name`, `description`, `params`
+     schema, and the list metadata:
+     - `category`: one of `EFFECT_CATEGORIES` in `src/effects/types.ts`;
+     - `tags`: a few lowercase search words that aren't already in the name or description
+       (synonyms, moods, places);
+     - `cost`: `"very low"`, `"low"` or `"medium"`, the rough GPU cost at 4K, for the
+       "Lightest first" sort.
+
+     The entry chunk imports every meta file, so it may import only `../types`,
+     `../param-options` and other `.meta` modules at runtime (`meta.test.ts` checks this).
+
+   - `<id>.ts`, the effect, via `defineEffect` from `src/effects/types.ts`, whose
+     `create(gl)` returns `{ resize, frame, dispose }`.
+   - any `<id>-sim.ts` simulation code, with its tests.
+2. Add it to the list in `src/effects/registry.ts` with a `load: () => import(...)`, never a
+   static import, so its code loads on demand. The registry's order is the "Featured" sort.
+   The control panel builds its controls from the params schema, and the URL hash picks them
+   up too.
+3. Reuse the shared helpers that sit directly in `src/effects/` (`gl.ts`, `sprites.ts`,
+   `streaks.ts`, `noise.ts`, `math.ts`, `color.ts` and others), and add unit tests for any
+   pure logic. No effect imports another effect's `<id>.ts` (`scene-imports.test.ts` checks
+   this); move shared code into `src/effects/` instead.
+
+A Scene recreates a well-known kind of set or place. Keep the feel of the source, but never
+its names, logos, insignia or traced artwork, and name it by what it shows ("Starship
+Bridge"). The video call draws the speaker over the middle of the frame, so build the scene
+around them (a headrest behind their head, a desk edge along the bottom) and put nothing in
+front of them. Bright events ramp over at least a second and never flash the whole frame.
 
 Start from an existing effect of a similar shape: `tunnel/` or `lavalamp/` for full-screen
 shaders, `bokeh/` or `snow/` for sprites, `warp/` for streaks and `flowfield/` for
