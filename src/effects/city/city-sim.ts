@@ -8,8 +8,13 @@ import { createRng } from "../noise";
 
 /** Reference frame height; every layout coordinate is in these units, y down. */
 export const REF_HEIGHT = 1080;
-/** Data texture width, in texels (windows). Window `i` is at `(i & 255, i >> 8)`. */
-export const WINDOW_TEX_WIDTH = 256;
+/** log2 of the window data texture's width. */
+export const WINDOW_TEX_SHIFT = 8;
+/**
+ * Data texture width, in texels (windows), a power of two. Window `i` is at
+ * `(i & (WINDOW_TEX_WIDTH - 1), i >> WINDOW_TEX_SHIFT)`.
+ */
+export const WINDOW_TEX_WIDTH = 1 << WINDOW_TEX_SHIFT;
 export const WINDOW_TEX_ROWS = 128;
 export const MAX_WINDOWS = WINDOW_TEX_WIDTH * WINDOW_TEX_ROWS;
 /** Building quads (bodies, stepped tops, antennas, water towers) across all layers. */

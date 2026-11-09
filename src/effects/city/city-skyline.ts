@@ -22,6 +22,7 @@ import {
   MAX_QUADS,
   QUAD_STRIDE,
   WINDOW_TEX_ROWS,
+  WINDOW_TEX_SHIFT,
   WINDOW_TEX_WIDTH,
   type WindowState,
 } from "./city-sim";
@@ -99,7 +100,7 @@ void main() {
     float windowPx = min(vGrid.x * vWin.z, vGrid.y * vWin.w) * uScale;
     mask = mix(mask, vWin.z * vWin.w, clamp((3.0 - windowPx) * 0.5, 0.0, 1.0));
     int idx = int(vMisc.x + 0.5) + int(cell.y) * int(vGrid.z + 0.5) + int(cell.x);
-    vec4 w = texelFetch(uWindows, ivec2(idx & ${String(WINDOW_TEX_WIDTH - 1)}, idx >> 8), 0);
+    vec4 w = texelFetch(uWindows, ivec2(idx & ${String(WINDOW_TEX_WIDTH - 1)}, idx >> ${String(WINDOW_TEX_SHIFT)}), 0);
     int slot = min(int(w.a * 255.0 + 0.5), ${String(FADE_SLOTS)});
     float level = slot > 0 ? mix(w.r, w.g, uFade[(slot - 1) >> 2][(slot - 1) & 3]) : w.g;
     vec3 tint = w.b > ${String(TV_PICK)} ? uTv : (w.b < uWarmth * ${String(TV_PICK)} ? uWarm : uCool);
@@ -226,7 +227,7 @@ export function createSkyline(gl: WebGL2RenderingContext): Skyline {
               gl.TEXTURE_2D,
               0,
               i & (WINDOW_TEX_WIDTH - 1),
-              i >> 8,
+              i >> WINDOW_TEX_SHIFT,
               1,
               1,
               gl.RGBA,
