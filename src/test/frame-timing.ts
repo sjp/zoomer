@@ -16,9 +16,15 @@ export interface TimedRun {
 }
 
 /**
+ * Frame timing for `*.perf.test.ts` files, which `npm run test:perf` runs one at a
+ * time: wall-clock times are only meaningful without other test files competing
+ * for the machine.
+ *
  * Runs `effect` on the fake GL context (so only CPU work is timed) for `frames`
  * frames of `dt` seconds, calling `script(i)` before each frame to get its params
- * and, optionally, a new viewport.
+ * and, optionally, a new viewport. The run is repeated and each frame keeps its
+ * fastest time: a stall built into the effect hits the same frame every run, while
+ * a garbage-collection pause or first-run compilation lands on different frames.
  */
 export function timeFrames(
   effect: EffectWebGL2,
@@ -30,6 +36,29 @@ export function timeFrames(
   ) => { params?: AnyParamValues; viewport?: Viewport } = () => ({}),
   start: Viewport = viewport(1920, 1080),
 ): TimedRun {
+  const times = runFrames(effect, frames, dt, script, start);
+  for (let run = 1; run < RUNS; run++) {
+    const again = runFrames(effect, frames, dt, script, start);
+    for (let i = 0; i < frames; i++) {
+      times[i] = Math.min(times[i], again[i]);
+    }
+  }
+  return {
+    times,
+    worst: (from = 0) => Math.max(0, ...times.slice(from)),
+  };
+}
+
+/** How many times `timeFrames` repeats a run. */
+const RUNS = 3;
+
+function runFrames(
+  effect: EffectWebGL2,
+  frames: number,
+  dt: number,
+  script: (i: number, base: AnyParamValues) => { params?: AnyParamValues; viewport?: Viewport },
+  start: Viewport,
+): number[] {
   const fake = createFakeGl({ extensions: ["EXT_color_buffer_float"] });
   const instance = effect.create(fake.gl);
   const base = defaults(effect.params);
@@ -50,8 +79,5 @@ export function timeFrames(
   } finally {
     instance.dispose?.();
   }
-  return {
-    times,
-    worst: (from = 0) => Math.max(0, ...times.slice(from)),
-  };
+  return times;
 }

@@ -23,6 +23,7 @@ npm run preview  # serve the built dist/
 npm run check    # type-aware oxlint (with type-checking) and oxfmt --check
 npm run fmt      # format with oxfmt
 npm test         # vitest
+npm run test:perf     # frame-timing tests (*.perf.test.ts), one file at a time
 npm run test:browser  # compile and draw every effect in headless Chromium (Playwright)
 ```
 
@@ -89,7 +90,8 @@ framebuffer and `FUNC_ADD` left at the end of each frame.
 ## Deploying
 
 Pushing to `main` deploys the site to GitHub Pages: `.github/workflows/deploy.yml` runs
-`npm run check`, `npm test`, `npm run build` and `npm run test:browser`, then publishes `dist/`. The build uses a
+`npm run check`, `npm test`, `npm run test:perf`, `npm run build` and `npm run test:browser`, then
+publishes `dist/`. The build uses a
 relative base path, so it works from a project subpath. `.github/workflows/ci.yml` runs the
 same checks on every push and pull request, and Dependabot keeps npm packages and action
 versions up to date.

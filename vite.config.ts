@@ -37,6 +37,9 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+/** Kept out of every Vitest run. */
+export const TEST_EXCLUDE = ["**/.claude/**", "e2e/**"];
+
 // https://vite.dev/config/
 export default defineConfig({
   // Relative base so the build works when served from a GitHub Pages
@@ -44,6 +47,7 @@ export default defineConfig({
   base: "./",
   plugins: [react(), contentSecurityPolicy()],
   // Agent worktrees live under .claude/; keep their copies of the tests out of the run.
-  // e2e/ holds the Playwright browser tests, run by `npm run test:browser`.
-  test: { exclude: [...configDefaults.exclude, "**/.claude/**", "e2e/**"] },
+  // e2e/ holds the Playwright browser tests, run by `npm run test:browser`, and
+  // *.perf.test.ts the frame-timing tests, run one file at a time by `npm run test:perf`.
+  test: { exclude: [...configDefaults.exclude, ...TEST_EXCLUDE, "**/*.perf.test.ts"] },
 });

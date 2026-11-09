@@ -10,7 +10,8 @@
     "check": "oxlint --deny-warnings --report-unused-disable-directives && oxfmt --check",
     "fmt": "oxfmt",
     "test": "vitest run --passWithNoTests",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:perf": "vitest run --config vitest.perf.config.ts"
   },
   "dependencies": {
     "mediabunny": "^1.65.0",
