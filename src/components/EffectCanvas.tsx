@@ -1,7 +1,7 @@
 import { useEffect, useRef, type Ref } from "react";
 import { contextKind, type AnyParamValues, type EffectDefinition } from "../effects/types";
 import type { FrameRate } from "../lib/frameRate";
-import { createRenderLoop, type FrameStats } from "../lib/renderLoop";
+import { createRenderLoop, type FrameStats, type RenderLoop } from "../lib/renderLoop";
 import type { Resolution } from "../lib/resolution";
 
 export type { FrameStats } from "../lib/renderLoop";
@@ -24,6 +24,11 @@ interface Props {
    * still holds it (the clip recorder copies it from here).
    */
   onFrame?: (now: number) => void;
+  /**
+   * Keeps the drawing buffer at its current size (CSS still stretches the canvas), so
+   * a recording captures one size even if the window resizes or goes fullscreen.
+   */
+  sizeLocked?: boolean;
   ref?: Ref<HTMLCanvasElement>;
 }
 
@@ -36,6 +41,7 @@ export function EffectCanvas({
   onStats,
   onError,
   onFrame,
+  sizeLocked = false,
   ref,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -61,6 +67,13 @@ export function EffectCanvas({
     onFrameRef.current = onFrame;
   }, [onFrame]);
 
+  const loopRef = useRef<RenderLoop | null>(null);
+  const sizeLockedRef = useRef(sizeLocked);
+  useEffect(() => {
+    sizeLockedRef.current = sizeLocked;
+    loopRef.current?.setSizeLocked(sizeLocked);
+  }, [sizeLocked]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !effect) {
@@ -75,8 +88,11 @@ export function EffectCanvas({
       onStats: (stats) => onStatsRef.current?.(stats),
       onError: (message) => onErrorRef.current?.(message),
       onFrame: (now) => onFrameRef.current?.(now),
+      sizeLocked: sizeLockedRef.current,
     });
+    loopRef.current = loop;
     return () => {
+      loopRef.current = null;
       loop.dispose();
     };
   }, [effect, resolution]);

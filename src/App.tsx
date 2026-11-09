@@ -54,7 +54,8 @@ export function App() {
   const [hoveringPanel, setHoveringPanel] = useState(false);
   const [recordingLeft, setRecordingLeft] = useState<number>();
   // A recording captures one canvas at one size, so switching effect (which can replace
-  // the canvas) or resolution is locked until it finishes.
+  // the canvas) or resolution is locked until it finishes, and the canvas keeps its
+  // drawing-buffer size through window resizes and fullscreen.
   const recording = recordingLeft !== undefined;
   // Why the current effect failed to start or stopped; the canvas clears it on switch.
   const [effectError, setEffectError] = useState<string>();
@@ -396,6 +397,7 @@ export function App() {
         onStats={statsStore.set}
         onError={setEffectError}
         onFrame={onFrame}
+        sizeLocked={recording}
       />
       <div
         className="panel-wrap"

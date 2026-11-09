@@ -96,10 +96,18 @@ export interface RenderLoopOptions {
    * buffer still holds it (the clip recorder copies it from here).
    */
   onFrame?: (now: number) => void;
+  /** Starts with the buffer size locked (see `RenderLoop.setSizeLocked`). */
+  sizeLocked?: boolean;
   host?: LoopHost;
 }
 
 export interface RenderLoop {
+  /**
+   * While locked, the drawing buffer keeps its size whatever the layout does (CSS
+   * still stretches the canvas), so a recording captures one size throughout.
+   * Unlocking applies the current layout size.
+   */
+  setSizeLocked: (locked: boolean) => void;
   /** Stops the loop and disposes the effect. */
   dispose: () => void;
 }
@@ -224,6 +232,7 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
   };
   let viewport: Viewport | undefined;
   const fixed = RESOLUTIONS[resolution].size;
+  let sizeLocked = options.sizeLocked ?? false;
 
   const resizeInstance = () => {
     if (!instance || !viewport) {
@@ -236,6 +245,10 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
     }
   };
   const applySize = () => {
+    // A recording captures one size; the layout size is picked up on unlock.
+    if (sizeLocked && viewport) {
+      return;
+    }
     const { width, height } =
       fixed ?? fitSize(canvas.clientWidth, canvas.clientHeight, host.devicePixelRatio());
     // ResizeObserver fires once on observe, and for layout changes that don't alter
@@ -329,6 +342,15 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
   raf = host.requestFrame(tick);
 
   return {
+    setSizeLocked(locked) {
+      if (locked === sizeLocked) {
+        return;
+      }
+      sizeLocked = locked;
+      if (!locked && !fixed) {
+        applySize();
+      }
+    },
     dispose() {
       host.cancelFrame(raf);
       disconnect?.();

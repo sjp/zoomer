@@ -295,3 +295,36 @@ describe("createRenderLoop", () => {
     expect(t.onStats).toHaveBeenLastCalledWith(undefined);
   });
 });
+
+describe("size lock", () => {
+  it("keeps the buffer size while locked and applies the layout on unlock", () => {
+    const t = start();
+    t.loop.setSizeLocked(true);
+    t.canvas.clientWidth = 1200;
+    t.canvas.clientHeight = 900;
+    t.resize();
+    expect(t.canvas.width).toBe(800);
+    expect(t.canvas.height).toBe(450);
+    expect(t.instance.resize).toHaveBeenCalledTimes(1);
+    t.loop.setSizeLocked(false);
+    expect(t.canvas.width).toBe(1200);
+    expect(t.canvas.height).toBe(900);
+    expect(t.instance.resize).toHaveBeenCalledTimes(2);
+  });
+
+  it("still sizes the buffer once when it starts locked", () => {
+    const t = start({ sizeLocked: true });
+    expect(t.canvas.width).toBe(800);
+    expect(t.instance.resize).toHaveBeenCalledTimes(1);
+    t.canvas.clientWidth = 400;
+    t.resize();
+    expect(t.canvas.width).toBe(800);
+  });
+
+  it("unlocks without a resize when the layout didn't change", () => {
+    const t = start();
+    t.loop.setSizeLocked(true);
+    t.loop.setSizeLocked(false);
+    expect(t.instance.resize).toHaveBeenCalledTimes(1);
+  });
+});
