@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildGradientLut, createColorEase, hexToRgb, hexToUnitRgb, unitRgbMemo } from "./color";
+import {
+  buildGradientLut,
+  createColorEase,
+  hexToLinear,
+  hexToRgb,
+  hexToUnitRgb,
+  unitRgbMemo,
+} from "./color";
 
 describe("hexToRgb", () => {
   it("parses six-digit hex, with or without #", () => {
@@ -134,5 +141,15 @@ describe("createColorEase", () => {
     const first = ease.step([0, 0, 0], 0, 1);
     expect(ease.step([1, 1, 1], 0.1, 1)).toBe(first);
     expect(ease.value).toBe(first);
+  });
+});
+
+describe("hexToLinear", () => {
+  it("maps endpoints and darkens mid-tones", () => {
+    expect(hexToLinear("#000000")).toEqual([0, 0, 0]);
+    expect(hexToLinear("#ffffff")).toEqual([1, 1, 1]);
+    const [r] = hexToLinear("#808080");
+    expect(r).toBeGreaterThan(0.2);
+    expect(r).toBeLessThan(0.25);
   });
 });

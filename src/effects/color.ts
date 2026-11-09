@@ -28,6 +28,15 @@ export function hexToUnitRgb(hex: string): Rgb {
   return [r / 255, g / 255, b / 255];
 }
 
+/** Gamma used to mix in (approximately) linear light; a shader re-encodes with 1 / LINEAR_GAMMA. */
+export const LINEAR_GAMMA = 2.2;
+
+/** sRGB-ish (gamma 2.2) hex colour to linear-light channels in 0..1. */
+export function hexToLinear(hex: string): Rgb {
+  const [r, g, b] = hexToUnitRgb(hex);
+  return [r ** LINEAR_GAMMA, g ** LINEAR_GAMMA, b ** LINEAR_GAMMA];
+}
+
 /**
  * `hexToUnitRgb` for one colour param, remembering the last colour so a steady
  * value costs no parsing or allocation per frame: re-parses only when the string

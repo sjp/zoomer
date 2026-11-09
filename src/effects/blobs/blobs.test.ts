@@ -6,7 +6,6 @@ import {
   updateKeyframes,
   BLOB_PATHS,
   blobAt,
-  hexToLinear,
   KEYFRAME_INTERVAL,
   keyframeMix,
   makeBlobPaths,
@@ -35,16 +34,6 @@ describe("paletteColor", () => {
     expect(paletteColor("nope", [], 1)).toBe(PALETTES.dusk[1]);
     expect(paletteColor("constructor", [], 1)).toBe(PALETTES.dusk[1]);
     expect(paletteColor("custom", [], 1)).toBe(PALETTES.dusk[1]);
-  });
-});
-
-describe("hexToLinear", () => {
-  it("maps endpoints and darkens mid-tones", () => {
-    expect(hexToLinear("#000000")).toEqual([0, 0, 0]);
-    expect(hexToLinear("#ffffff")).toEqual([1, 1, 1]);
-    const [r] = hexToLinear("#808080");
-    expect(r).toBeGreaterThan(0.2);
-    expect(r).toBeLessThan(0.25);
   });
 });
 

@@ -1,4 +1,4 @@
-import { hexToUnitRgb, type Rgb } from "../color";
+import { hexToLinear, LINEAR_GAMMA } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
@@ -18,8 +18,6 @@ import { smoothstep } from "../math";
 const TAU = Math.PI * 2;
 /** Weight of the background colour in the normalised blend; a blob centre weighs 1. */
 const BASE_WEIGHT = 0.3;
-/** Gamma used to mix in (approximately) linear light; the shader re-encodes with 1/GAMMA. */
-const GAMMA = 2.2;
 /** Wall seconds between low-res keyframes (~30 Hz); the blit cross-fades between two. */
 export const KEYFRAME_INTERVAL = 1 / 30;
 /** Low-res divisors: the image has no high frequencies, so even "high" is 1/16 of the pixels. */
@@ -54,12 +52,6 @@ export function paletteColor(palette: string, custom: readonly string[], index: 
         ? PALETTES[palette]
         : PALETTES.dusk;
   return list[((index % list.length) + list.length) % list.length];
-}
-
-/** sRGB-ish (gamma 2.2) hex colour to linear-light channels in 0..1. */
-export function hexToLinear(hex: string): Rgb {
-  const [r, g, b] = hexToUnitRgb(hex);
-  return [r ** GAMMA, g ** GAMMA, b ** GAMMA];
 }
 
 // ---------------------------------------------------------------------------
@@ -290,7 +282,7 @@ out vec4 outColor;
 
 const int MAX_BLOBS = ${String(MAX_BLOBS)};
 const float BASE_WEIGHT = ${glslFloat(BASE_WEIGHT)};
-const float INV_GAMMA = ${glslFloat(1 / GAMMA)};
+const float INV_GAMMA = ${glslFloat(1 / LINEAR_GAMMA)};
 
 void main() {
   vec2 p = gl_FragCoord.xy * uToUnits;

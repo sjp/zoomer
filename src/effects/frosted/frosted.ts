@@ -1,4 +1,3 @@
-import { hexToLinear } from "../blobs/blobs";
 import { growLive, stepLife, trimLive } from "../fade";
 import {
   blurWidth,
@@ -24,9 +23,8 @@ import { createLowResTarget, qualityDivisor } from "../lowres";
 import { smoothstep } from "../math";
 import { frostedMeta, MAX_SHAPES } from "./frosted.meta";
 import { defineEffect } from "../types";
+import { hexToLinear, LINEAR_GAMMA } from "../color";
 
-/** Gamma used to mix in (approximately) linear light; the shader re-encodes with 1/GAMMA. */
-const GAMMA = 2.2;
 /** Low-res divisors: the shapes are heavily blurred, so even "high" is 1/16 of the pixels. */
 const DIVISORS = { high: 4, balanced: 6, low: 8 } as const;
 /** Grain amplitudes (colour units per unit of texel deviation from mid-grey) at `frost` = 1. */
@@ -73,7 +71,7 @@ uniform float uBlur;
 out vec4 outColor;
 
 const int MAX_SHAPES = ${String(MAX_SHAPES)};
-const float INV_GAMMA = ${glslFloat(1 / GAMMA)};
+const float INV_GAMMA = ${glslFloat(1 / LINEAR_GAMMA)};
 
 void main() {
   vec2 p = gl_FragCoord.xy * uToUnits;
