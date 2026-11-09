@@ -1,8 +1,8 @@
 import { defineEffectMeta } from "../types";
 
-export type FireSide = "left" | "right" | "none";
+type FireSide = "left" | "right" | "none";
 
-export const FIRE_OPTIONS = [
+const FIRE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
   { value: "none", label: "None" },

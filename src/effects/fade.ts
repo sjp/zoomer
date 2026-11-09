@@ -55,7 +55,7 @@ export function trimLive(life: Float32Array, live: number, target: number): numb
 }
 
 /** A count fade over a fixed capacity, stepping only while something is fading. */
-export interface CountFade {
+interface CountFade {
   /** Each item's fade factor in [0, 1]; items `live` and above are gone. */
   readonly life: Float32Array;
   /** Items to simulate and draw: the target plus any still fading out. */

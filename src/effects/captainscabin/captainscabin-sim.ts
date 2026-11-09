@@ -52,7 +52,7 @@ export const LANTERN_HALF = 34;
 /** The flame's height above the lantern's foot. */
 export const FLAME_UP = 54;
 
-export interface CabinLayout {
+interface CabinLayout {
   /** Frame width and centre, reference px. */
   readonly width: number;
   readonly cx: number;
@@ -146,13 +146,13 @@ export const ROLL_SWELL = createSwell(48, [
   { cycles: 5, amplitude: 0.45, offset: 0.31 },
   { cycles: 7, amplitude: 0.2, offset: 0.62 },
 ]);
-export const PITCH_SWELL = createSwell(48, [
+const PITCH_SWELL = createSwell(48, [
   { cycles: 5, amplitude: 1, offset: 0.12 },
   { cycles: 6, amplitude: 0.4, offset: 0.71 },
 ]);
 /** How far the lantern swings against the cabin, as a share of the roll, and how far it trails it (s). */
 export const LANTERN_GAIN = 1.25;
-export const LANTERN_LAG = 0.4;
+const LANTERN_LAG = 0.4;
 /** The swell's amount follows its setting at most this fast (per second), so a change never jolts. */
 export const GAIN_RATE = 0.2;
 
@@ -167,7 +167,7 @@ export function easeGain(current: number, target: number, dt: number): number {
   return approach(current, target, Math.max(0, Number.isFinite(dt) ? dt : 0) * GAIN_RATE);
 }
 
-export interface CabinMotion {
+interface CabinMotion {
   /** The cabin's roll (radians, positive to port); the horizon tilts on screen by its negative. */
   roll: number;
   /** The horizon's rise on screen, frame heights. */
@@ -206,7 +206,7 @@ export function flameAt(
 
 /* ----- Weather ----- */
 
-export interface WeatherLook {
+interface WeatherLook {
   /** Weights of the three presets, easing from one to the next. */
   fair: number;
   night: number;
@@ -252,7 +252,7 @@ export function easeWeather(
 }
 
 /** A golden late afternoon: the sun low over the sea, off to the left. */
-export const FAIR_SKY: SeaPreset = {
+const FAIR_SKY: SeaPreset = {
   sky: 17.3,
   lightY: 0.15,
   disc: 0.03,
@@ -278,7 +278,7 @@ export const LIGHT_X: Readonly<Record<CabinWeather, number>> = {
 };
 
 /** Per weather: cloud cover, ripple strength, the cabin's ambient light and the daylight through the windows. */
-export interface WeatherTone {
+interface WeatherTone {
   cover: number;
   wind: number;
   ambient: Rgb;
@@ -295,12 +295,12 @@ export const WEATHER_TONES: Readonly<Record<CabinWeather, Readonly<WeatherTone>>
 
 /** A storm's lightning: a soft brightening of the sky that rises over LIGHTNING_RISE s and fades over LIGHTNING_FALL s. */
 export const LIGHTNING_RISE = 1.2;
-export const LIGHTNING_HOLD = 0.3;
-export const LIGHTNING_FALL = 3;
+const LIGHTNING_HOLD = 0.3;
+const LIGHTNING_FALL = 3;
 export const LIGHTNING_LENGTH = LIGHTNING_RISE + LIGHTNING_HOLD + LIGHTNING_FALL;
 /** Seconds between the starts of two glows: at least the minimum, plus up to the spread. */
-export const LIGHTNING_MIN_GAP = 18;
-export const LIGHTNING_GAP_SPREAD = 40;
+const LIGHTNING_MIN_GAP = 18;
+const LIGHTNING_GAP_SPREAD = 40;
 
 /** The glow's level `t` seconds after it began, 0..1: smooth up, a short hold, smooth down. */
 export function lightningEnvelope(t: number): number {
@@ -316,7 +316,7 @@ export function lightningEnvelope(t: number): number {
   return 1 - smoothstep(0, LIGHTNING_FALL, t - LIGHTNING_RISE - LIGHTNING_HOLD);
 }
 
-export interface Lightning {
+interface Lightning {
   rng: () => number;
   /** Seconds until the next glow may start. */
   wait: number;
@@ -359,16 +359,16 @@ export function stepLightning(l: Lightning, dt: number, storm: number): number {
 /* ----- Distant ships ----- */
 
 /** Seconds between two ships (end of one to the start of the next), and how long one takes to cross the view. */
-export const SHIP_MIN_GAP = 40;
-export const SHIP_GAP_SPREAD = 80;
-export const SHIP_MIN_CROSS = 90;
-export const SHIP_CROSS_SPREAD = 60;
+const SHIP_MIN_GAP = 40;
+const SHIP_GAP_SPREAD = 80;
+const SHIP_MIN_CROSS = 90;
+const SHIP_CROSS_SPREAD = 60;
 /** A ship's height on the horizon, frame heights, at its largest. */
 export const SHIP_H = 0.034;
 /** Share of a crossing over which a ship fades in out of the haze, and out again. */
-export const SHIP_FADE = 0.15;
+const SHIP_FADE = 0.15;
 
-export interface Ships {
+interface Ships {
   rng: () => number;
   /** Seconds until the next ship, while none is crossing. */
   wait: number;

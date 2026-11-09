@@ -1,7 +1,7 @@
 import type { PaletteId } from "./terrain-sim";
 import { defineEffectMeta } from "../types";
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "alpine", label: "Alpine" },
   { value: "desert", label: "Desert" },
   { value: "autumn", label: "Autumn" },

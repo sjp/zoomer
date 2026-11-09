@@ -3,13 +3,13 @@ import { defineEffectMeta } from "../types";
 export type Weather = "calm" | "clouds" | "storm";
 export type LensSide = "left" | "right";
 
-export const WEATHER_OPTIONS = [
+const WEATHER_OPTIONS = [
   { value: "calm", label: "Calm" },
   { value: "clouds", label: "Clouds" },
   { value: "storm", label: "Storm" },
 ] as const satisfies readonly { value: Weather; label: string }[];
 
-export const LENS_OPTIONS = [
+const LENS_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: LensSide; label: string }[];

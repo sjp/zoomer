@@ -30,7 +30,7 @@ export interface SpriteBatch {
 }
 
 /** Options for `createSpriteBatch`. */
-export interface SpriteBatchOptions {
+interface SpriteBatchOptions {
   /**
    * Appends a per-instance `vec2` spin attribute after the caller's ones: in-plane
    * rotation in radians, then a flip scale applied to the corner's x before the

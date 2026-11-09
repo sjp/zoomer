@@ -20,19 +20,19 @@ export function divergence(offsetDeg: number): number {
 }
 
 /** Head rotation in radians per second at `spin` = 1. */
-export const SPIN_RATE = 0.12;
+const SPIN_RATE = 0.12;
 /** Seconds for the shown seed count to ease most of the way to a new `seeds` value. */
-export const COUNT_EASE = 0.5;
+const COUNT_EASE = 0.5;
 /** Ages (in seeds) over which a new seed grows in at the centre. */
-export const FADE_IN = 3;
+const FADE_IN = 3;
 /** Fraction of the count (at least `FADE_OUT_MIN` seeds) over which seeds fade at the rim. */
-export const FADE_OUT = 0.05;
-export const FADE_OUT_MIN = 3;
+const FADE_OUT = 0.05;
+const FADE_OUT_MIN = 3;
 
 /** Petals per row; the sunflower has a front and a back row. */
 export const PETALS = 34;
 /** Petal half-length as a fraction of the disc radius. */
-export const PETAL_LENGTH = 0.34;
+const PETAL_LENGTH = 0.34;
 /** Petal sprites (two rows) plus the backing disc. */
 export const MAX_PETAL_SPRITES = PETALS * 2 + 1;
 
@@ -41,7 +41,7 @@ export const SEED_STRIDE = 10;
 /** Floats per petal instance: x, y, half-length, alpha; r, g, b, kind; angle, flip. */
 export const PETAL_STRIDE = 10;
 
-export interface PhylloStyle {
+interface PhylloStyle {
   /** Shader branch, see `phyllotaxis.ts`. */
   shader: number;
   /** Disc radius relative to the layout's. */
@@ -140,7 +140,7 @@ export function headLayout(
   return out;
 }
 
-export interface Head {
+interface Head {
   /** Growth index s(t), unwrapped float64: seeds born so far. */
   s: number;
   /** s·φ accumulated with the φ of each step, wrapped to [0, 2π). */
@@ -224,7 +224,7 @@ export function spiralHue(birth: number): number {
 }
 
 /** Per-seed variation in [0, 1), from its birth number. */
-export function seedVariation(birth: number): number {
+function seedVariation(birth: number): number {
   return hash32(birth) / 4294967296;
 }
 

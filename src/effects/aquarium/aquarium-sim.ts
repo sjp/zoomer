@@ -23,7 +23,7 @@ const TAU = Math.PI * 2;
 // Tank geometry
 
 /** Mean top of the gravel bed, as a fraction of the height from the top. */
-export const GRAVEL_Y = 0.8;
+const GRAVEL_Y = 0.8;
 /** How much higher the bed rises towards the side walls (aquascapes slope up at the back corners). */
 const GRAVEL_RISE = 0.035;
 /** A gentle undulation along the bed. */
@@ -122,9 +122,9 @@ export const AQUARIUM_SWELL: Swell = createSwell(40, [
 /** Largest tip sway, as a fraction of the plant's height. */
 export const PLANT_SWAY = 0.09;
 /** Seconds the tip of a plant as tall as the frame trails its base. */
-export const LAG_PER_HEIGHT = 2;
+const LAG_PER_HEIGHT = 2;
 /** Seconds the current takes to cross the frame, so neighbours don't move in lockstep. */
-export const SWELL_TRAVEL = 2.5;
+const SWELL_TRAVEL = 2.5;
 
 /** Segments per plant strip, and the strip: (level, side) per vertex. */
 export const PLANT_SEGMENTS = 16;
@@ -138,8 +138,8 @@ export const PLANT_STRIP: readonly number[] = ribbonStrip(PLANT_SEGMENTS);
  */
 export const PLANT_FLOATS = 8;
 
-export const PLANT_RIBBON = 0;
-export const PLANT_BUSHY = 1;
+const PLANT_RIBBON = 0;
+const PLANT_BUSHY = 1;
 
 /** Plants at density 1 behind the fish, and in front of them. */
 export const BACK_PLANTS = 34;
@@ -355,36 +355,36 @@ export const TANK_X = 0.05;
 export const TANK_TOP = 0.08;
 export const TANK_BOTTOM = GRAVEL_Y - 0.1;
 /** Width of the soft zone inside the bounds where the walls push back. */
-export const WALL_ZONE = 0.1;
+const WALL_ZONE = 0.1;
 /** Half width of the soft central band, as a fraction of the width. */
-export const BAND_HALF = 0.14;
+const BAND_HALF = 0.14;
 
 /** Cruising speed range, the top speed of a dart and the slowest a fish ever swims (heights/s). */
-export const CRUISE_MAX = 0.09;
+const CRUISE_MAX = 0.09;
 export const DART_MAX = 0.3;
 export const SPEED_MIN = 0.025;
 /** Speed at which a school heads for a new goal (heights/s). */
-export const GOAL_SPEED = 0.085;
+const GOAL_SPEED = 0.085;
 /** Largest steering acceleration (heights/s^2), darts included. */
 export const FORCE_MAX = 0.6;
 /** Vertical speed at most this share of the speed: fish swim mostly level. */
-export const VERTICAL_SHARE = 0.45;
+const VERTICAL_SHARE = 0.45;
 /** Darts start this often per fish per second, and last this long (s). */
-export const DART_RATE = 1 / 45;
-export const DART_TIME = 0.45;
+const DART_RATE = 1 / 45;
+const DART_TIME = 0.45;
 /** Seconds a fish takes to turn round (flip through edge-on). */
 export const TURN_TIME = 0.3;
 /** A fish turns round once it swims backwards faster than this (heights/s). */
-export const TURN_HYSTERESIS = 0.012;
+const TURN_HYSTERESIS = 0.012;
 /** Separation radius, heights. */
-export const SEPARATION_R = 0.045;
+const SEPARATION_R = 0.045;
 /** Fish length at depth 1 (nearest), heights. */
-export const FISH_LENGTH = 0.036;
+const FISH_LENGTH = 0.036;
 /** Seconds between new goals for a school. */
-export const GOAL_MIN = 25;
-export const GOAL_MAX = 55;
+const GOAL_MIN = 25;
+const GOAL_MAX = 55;
 /** Seconds a newly added fish takes to fade in. */
-export const FISH_FADE_IN = 1.5;
+const FISH_FADE_IN = 1.5;
 /** Simulation steps never exceed this (s), so a long frame can't tunnel through a wall. */
 const MAX_STEP = 1 / 20;
 
@@ -429,7 +429,7 @@ export interface FishEnv {
   speed: number;
 }
 
-export interface FishSim {
+interface FishSim {
   readonly max: number;
   readonly x: Float32Array;
   readonly y: Float32Array;
@@ -737,9 +737,9 @@ function substep(sim: FishSim, dt: number, env: FishEnv, target: number): void {
 }
 
 /** Fog of a fish against the water at depth `z`: far fish fade into the haze. */
-export const fishFog = (z: number): number => 0.6 * (1 - z) * (1 - z);
+const fishFog = (z: number): number => 0.6 * (1 - z) * (1 - z);
 /** Length of fish `i` in heights, given its species. */
-export const fishLength = (size: number, z: number, species: number): number =>
+const fishLength = (size: number, z: number, species: number): number =>
   FISH_LENGTH * size * (0.55 + 0.45 * z) * (species === SPECIES_SILVER ? 1.25 : 1);
 
 /** Sort key: live fish by depth, then the rest by index. */

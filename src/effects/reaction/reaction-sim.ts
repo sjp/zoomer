@@ -34,7 +34,7 @@ export interface Preset {
   driftKill: number;
 }
 
-export type PatternId = (typeof PATTERN_OPTIONS)[number]["value"];
+type PatternId = (typeof PATTERN_OPTIONS)[number]["value"];
 
 /** Pattern families, as (F, k) pairs for DA = 1, DB = 0.5 and the stencil above. */
 export const PRESETS = {
@@ -165,18 +165,18 @@ export function grayScottStep(
  * Progress is counted in simulation steps, so the pace follows the speed param,
  * and coverage comes from occasional GPU readbacks (see `readStats`).
  */
-export type CyclePhase = "grow" | "hold" | "retreat" | "clear";
+type CyclePhase = "grow" | "hold" | "retreat" | "clear";
 
 /** Extra kill rate behind the retreat front: enough to end every preset's pattern. */
 export const RETREAT_KILL = 0.02;
 /** Width of the front's ramp from no extra kill to RETREAT_KILL, in half-widths of the grid. */
 export const FRONT_BAND = 0.15;
 /** Front speed: simulation steps per grid cell of the half-width it sweeps. */
-export const RETREAT_STEPS_PER_CELL = 20;
+const RETREAT_STEPS_PER_CELL = 20;
 /** B above this counts a cell as part of the pattern (the colour ramp starts at 0.06). */
 export const COVER_B = 0.1;
 /** The grid counts as empty when no cell's B is above this. */
-export const EMPTY_B = 0.03;
+const EMPTY_B = 0.03;
 /** Simulation steps between coverage readbacks. */
 export const SAMPLE_STEPS = 250;
 /**
@@ -186,7 +186,7 @@ export const SAMPLE_STEPS = 250;
  * the drift doesn't.
  */
 export const SETTLE_SAMPLES = 4;
-export const SETTLE_TILE_DELTA = 0.07;
+const SETTLE_TILE_DELTA = 0.07;
 /** Consecutive still checks needed, so one quiet moment mid-growth doesn't count. */
 export const SETTLE_CHECKS = 2;
 /**
@@ -195,15 +195,15 @@ export const SETTLE_CHECKS = 2;
  * wide average that out (measured with the CPU twin: growing tiles change by
  * 0.09 to 0.7 per 1000 steps, settled ones by 0.06 at most).
  */
-export const STATS_TILE_CELLS = 40;
+const STATS_TILE_CELLS = 40;
 /** Less coverage than this is not a finished pattern, however still. */
-export const MIN_COVERAGE = 0.03;
+const MIN_COVERAGE = 0.03;
 /**
  * Tiles allowed to still be changing in a settled pattern, as a fraction of the
  * tiles (at least one): a lone noisy tile, or the last corner filling in, doesn't
  * hold the whole cycle up. Early growth moves many more (one per seed cluster).
  */
-export const SETTLE_MOVING_FRACTION = 0.02;
+const SETTLE_MOVING_FRACTION = 0.02;
 /**
  * Fallbacks for when readback is unavailable or a pattern never settles: the
  * longest growth (seconds of running simulation, so the wait doesn't depend on
@@ -216,7 +216,7 @@ export const CLEAR_FALLBACK_STEPS = 3000;
 export const STATS_SIZE = 32;
 const STATS_TILES = STATS_SIZE * STATS_SIZE;
 
-export interface Cycle {
+interface Cycle {
   phase: CyclePhase;
   /** Steps run in this phase. */
   steps: number;
@@ -358,7 +358,7 @@ export const wantsSample = (c: Cycle) =>
   (c.phase === "grow" || c.phase === "clear") && c.sinceSample >= SAMPLE_STEPS;
 
 /** One coverage readback, from `readStats`. */
-export interface Stats {
+interface Stats {
   /** Fraction of the grid's cells above COVER_B. */
   coverage: number;
   /** Largest B anywhere. */

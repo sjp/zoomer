@@ -17,7 +17,7 @@ export const SHIP_DISTANCE = 4;
 /** Radius of the sphere every ship (at scale 1) fits inside. */
 export const SHIP_RADIUS = 0.75;
 /** Tilt (radians) towards the eye, so it looks down on each ship a little. */
-export const SHIP_TILT = 0.28;
+const SHIP_TILT = 0.28;
 
 /** Signed-distance primitives and small helpers for building ship shapes. */
 export const SDF_GLSL = /* glsl */ `
@@ -51,7 +51,7 @@ mat2 rot2(float a) {
 `;
 
 /** How `shipMarchGlsl` builds a ray-marcher for one family of ship shapes. */
-export interface ShipMarch {
+interface ShipMarch {
   /** The GLSL function's name. */
   name: string;
   /** Extra leading parameters, such as "int kind", or "". */

@@ -15,13 +15,6 @@ export function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-/** ToInt32, as `v | 0`: truncates, and NaN and infinities become 0. */
-const int32 = (v: number) => Math.imul(v, 1);
-
-export function rgba([r, g, b]: Rgb, alpha: number): string {
-  return `rgba(${String(int32(r))},${String(int32(g))},${String(int32(b))},${String(alpha)})`;
-}
-
 /** Colour channels in 0..1, e.g. for a WebGL `vec3` uniform. */
 export function hexToUnitRgb(hex: string): Rgb {
   const [r, g, b] = hexToRgb(hex);
@@ -55,7 +48,7 @@ export function unitRgbMemo(): (hex: string) => Rgb {
 }
 
 /** A gradient stop: position in 0..1 and a `#rrggbb` colour. Stops ascend in position. */
-export type GradientStop = readonly [number, string];
+type GradientStop = readonly [number, string];
 
 /**
  * Fills `out` with an RGBA8 lookup table of `out.length / 4` texels across the
@@ -84,7 +77,7 @@ export function buildGradientLut(stops: readonly GradientStop[], out: Uint8Array
 }
 
 /** A block of floats (colours, typically) that eases towards a target; see `createColorEase`. */
-export interface ColorEase {
+interface ColorEase {
   /** The eased values, ready to upload as uniforms. Don't modify. */
   readonly value: Float32Array;
   /**

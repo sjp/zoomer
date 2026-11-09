@@ -9,7 +9,7 @@ import { wrap } from "../math";
 /** Off-screen margin before a light wraps, relative to its radius. */
 export const SPRITE_PAD = 1.25;
 /** Reference drift speed in px/s at 1080p for a speed of 1. */
-export const DRIFT_PX = 18;
+const DRIFT_PX = 18;
 /** Seconds a light takes to fade in after (re)appearing. */
 export const FADE_IN = 2;
 /** Floats per light instance: centre x, centre y, radius (device px), opacity, colour index. */
@@ -33,7 +33,7 @@ export interface LightFrame {
   brightness: number;
 }
 
-export interface Lights {
+interface Lights {
   readonly xs: Float32Array;
   readonly ys: Float32Array;
   readonly life: Float32Array;

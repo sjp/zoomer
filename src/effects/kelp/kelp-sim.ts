@@ -27,9 +27,9 @@ export const KELP_SWELL: Swell = createSwell(60, [
 /** Largest tip sway (fraction of the frond's height) at `swell` = 1, before the layer's scale. */
 export const SWAY_MAX = 0.14;
 /** Seconds the tip of a frond as tall as the frame trails its base. */
-export const LAG_PER_HEIGHT = 2.6;
+const LAG_PER_HEIGHT = 2.6;
 /** Seconds the swell takes to travel across the frame, so neighbours don't move in lockstep. */
-export const SWELL_TRAVEL = 3;
+const SWELL_TRAVEL = 3;
 
 /** Segments per frond strip, and the strip itself: (level, side) per vertex. */
 export const SEGMENTS = 20;
@@ -38,7 +38,7 @@ export const FROND_STRIP: readonly number[] = ribbonStrip(SEGMENTS);
 /** Floats per frond instance: (x, height, half width, profile row) and (phase, lag, lean, tone). */
 export const FROND_FLOATS = 8;
 
-export interface KelpLayer {
+interface KelpLayer {
   /** Fronds at density 1. */
   readonly count: number;
   /** Sea-floor y of the bases, as a fraction of the height from the top. */
@@ -261,7 +261,7 @@ export function frondSway(
 export const MAX_SHAFTS = 6;
 
 /** Shafts: top x (fraction of the width), slope (dx per dy), top width (heights), strength, drift. */
-export interface Shaft {
+interface Shaft {
   readonly x: number;
   readonly slope: number;
   readonly width: number;
@@ -272,7 +272,7 @@ export interface Shaft {
   readonly offset: number;
 }
 
-export const SHAFTS: readonly Shaft[] = [
+const SHAFTS: readonly Shaft[] = [
   { x: 0.12, slope: 0.22, width: 0.05, strength: 0.9, drift: 0.03, cycles: 1, offset: 0 },
   { x: 0.3, slope: 0.18, width: 0.035, strength: 0.6, drift: 0.025, cycles: 2, offset: 0.4 },
   { x: 0.52, slope: 0.25, width: 0.06, strength: 0.7, drift: 0.035, cycles: 1, offset: 0.7 },
@@ -311,18 +311,18 @@ export const SCHOOL_INTERVAL_MIN = 60;
 export const SCHOOL_INTERVAL_MAX = 120;
 export const FIRST_SCHOOL = 20;
 /** School speed, heights per second. */
-export const SCHOOL_SPEED_MIN = 0.045;
-export const SCHOOL_SPEED_MAX = 0.07;
+const SCHOOL_SPEED_MIN = 0.045;
+const SCHOOL_SPEED_MAX = 0.07;
 /** Fish length (heights) and the school's spread around its centre (heights). */
 export const FISH_LENGTH = 0.022;
-export const SCHOOL_SPREAD_X = 0.12;
-export const SCHOOL_SPREAD_Y = 0.05;
+const SCHOOL_SPREAD_X = 0.12;
+const SCHOOL_SPREAD_Y = 0.05;
 /** Schools start and end this far outside the frame (heights), past the furthest fish. */
-export const SCHOOL_MARGIN = SCHOOL_SPREAD_X + 2 * FISH_LENGTH;
+const SCHOOL_MARGIN = SCHOOL_SPREAD_X + 2 * FISH_LENGTH;
 /** Floats per fish instance: (x, y, length, dir), (wiggle phase, alpha). */
 export const FISH_FLOATS = 6;
 
-export interface Fish {
+interface Fish {
   /** Seconds until the next school may spawn (counts down from the last spawn). */
   timer: number;
   active: boolean;
@@ -376,7 +376,7 @@ function spawnSchool(f: Fish, aspect: number): void {
 }
 
 /** True once every fish of the school is past the far edge of a frame `aspect` wide. */
-export function schoolGone(f: Fish, aspect: number): boolean {
+function schoolGone(f: Fish, aspect: number): boolean {
   return f.dir > 0 ? f.x > aspect + SCHOOL_MARGIN : f.x < -SCHOOL_MARGIN;
 }
 
@@ -428,12 +428,12 @@ export function fishInstances(f: Fish, aspect: number, out: Float32Array): numbe
 
 export const SNOW_COUNT = 140;
 /** Sinking speed range, heights per second. */
-export const SNOW_SINK_MIN = 0.006;
-export const SNOW_SINK_MAX = 0.018;
+const SNOW_SINK_MIN = 0.006;
+const SNOW_SINK_MAX = 0.018;
 /** Floats per snow instance: (x, y, radius px at 1080p, alpha). */
 export const SNOW_FLOATS = 4;
 
-export interface Snow {
+interface Snow {
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly sink: Float32Array;
@@ -503,7 +503,7 @@ export function snowInstances(s: Snow, aspect: number, out: Float32Array): numbe
 
 export type PaletteId = "temperate" | "tropical" | "dusk";
 
-export interface KelpPalette {
+interface KelpPalette {
   /** Water: bright surface glow, mid water, deep water. */
   readonly surface: Rgb;
   readonly mid: Rgb;

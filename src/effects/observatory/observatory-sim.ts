@@ -43,7 +43,7 @@ export const RING_STEP = 15 * DEG;
 export const CAM_X = 3;
 export const CAM_Y = 1.35;
 export const CAM_Z = 4.6;
-export const PITCH = 15 * DEG;
+const PITCH = 15 * DEG;
 export const FOCAL = 0.8;
 
 /** Camera basis: right, up and forward (unit vectors). */
@@ -80,7 +80,7 @@ export function project(
 }
 
 /** Point on the dome at azimuth `az` (from -z towards +x) and dome elevation `el`. */
-export function domePoint(az: number, el: number, out: number[]): number[] {
+function domePoint(az: number, el: number, out: number[]): number[] {
   out[0] = DOME_R * Math.sin(az) * Math.cos(el);
   out[1] = WALL_H + DOME_R * Math.sin(el);
   out[2] = -DOME_R * Math.cos(az) * Math.cos(el);
@@ -107,7 +107,7 @@ export const SCREEN_HALF = [0.21, 0.14] as const;
 // ---------------------------------------------------------------------------
 
 /** Latitude: the polar axis's elevation, pointing north. */
-export const LATITUDE = 40 * DEG;
+const LATITUDE = 40 * DEG;
 /** Pier radius and height, and where the two axes cross. */
 export const PIER_R = 0.26;
 export const PIER_H = 1.2;
@@ -198,9 +198,6 @@ export const AZ_RANGE = [6 * DEG, 40 * DEG] as const;
 export const ALT_RANGE = [50 * DEG, 74 * DEG] as const;
 /** Kinds of target the desk screen shows. */
 export const TARGET_KINDS = 3;
-export const GALAXY = 0;
-export const NEBULA = 1;
-export const CLUSTER = 2;
 
 /** A slew starts at a random point in the first `SLEW_JITTER` of its slot of `slewGap` seconds. */
 export const SLEW_JITTER = 0.3;
@@ -214,7 +211,7 @@ export const DOME_SETTLE = 5;
 export const SIDEREAL = TAU / 86164;
 
 /** One target: where it is in the sky (when its slew starts) and how its image looks. */
-export interface Target {
+interface Target {
   az: number;
   alt: number;
   /** GALAXY, NEBULA or CLUSTER. */
@@ -280,7 +277,7 @@ export function ease(u: number): number {
 }
 
 /** The telescope's two axes, the dome's azimuth and the desk screen's images at one time. */
-export interface ScopePose {
+interface ScopePose {
   ha: number;
   dec: number;
   /** Azimuth the dome's slit faces. */
@@ -347,19 +344,6 @@ export function poseAt(seed: number, slewGap: number, time: number, out: ScopePo
   return out;
 }
 
-/** Blends pose `b` into `a` by `w` (0..1), angles the short way round, into `out`. */
-export function blendPose(a: ScopePose, b: ScopePose, w: number, out: ScopePose): ScopePose {
-  const k = clamp(w, 0, 1);
-  out.ha = a.ha + angleDiff(a.ha, b.ha) * k;
-  out.dec = a.dec + (b.dec - a.dec) * k;
-  out.dome = a.dome + angleDiff(a.dome, b.dome) * k;
-  out.from = b.from;
-  out.to = b.to;
-  out.image = b.image;
-  out.slew = b.slew;
-  return out;
-}
-
 /** Seconds a change of seed or slew gap takes to swing over to the new schedule. */
 export const RESCHEDULE_TIME = 12;
 
@@ -377,14 +361,14 @@ export function easeLights(current: number, target: number, dt: number): number 
 // ---------------------------------------------------------------------------
 
 /** Duration (s), length (reference px) and peak brightness ranges: slow and soft. */
-export const METEOR_DURATION = [1.4, 2.4] as const;
-export const METEOR_LENGTH = [150, 280] as const;
-export const METEOR_BRIGHT = [0.3, 0.55] as const;
+const METEOR_DURATION = [1.4, 2.4] as const;
+const METEOR_LENGTH = [150, 280] as const;
+const METEOR_BRIGHT = [0.3, 0.55] as const;
 /** Dome elevation at which a meteor starts, in the slit, and its spread across it (reference px). */
-export const METEOR_EL = 62 * DEG;
-export const METEOR_SPREAD = 90;
+const METEOR_EL = 62 * DEG;
+const METEOR_SPREAD = 90;
 
-export interface SlitMeteors {
+interface SlitMeteors {
   /** The latest meteor (at most one at a time). */
   current: Meteor;
   /** Time of the next start, s. */
@@ -455,7 +439,7 @@ export function stepSlitMeteors(
  * gap), so the telescope and dome swing over to the new schedule's pose
  * instead of jumping to it.
  */
-export interface Reschedule {
+interface Reschedule {
   ha: number;
   dec: number;
   dome: number;
@@ -502,7 +486,7 @@ export function applyReschedule(
 
 /** Points sampled along each edge of the slit, and the margin added round them (reference px). */
 const SLIT_SAMPLES = 12;
-export const SLIT_MARGIN = 24;
+const SLIT_MARGIN = 24;
 
 const boundPoint = [0, 0, 0];
 const boundScreen: [number, number] = [0, 0];

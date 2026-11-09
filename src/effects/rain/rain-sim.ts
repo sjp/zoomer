@@ -54,7 +54,7 @@ export function dropRows(
   out[1] = Math.min(rows, Math.floor(head) + 1);
 }
 
-export interface RainSim {
+interface RainSim {
   readonly cols: number;
   readonly rows: number;
   /** Current and previous drop per column: head row, pace, glyph seed, active flag. */

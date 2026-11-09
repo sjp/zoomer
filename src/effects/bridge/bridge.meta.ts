@@ -1,24 +1,24 @@
 import { defineEffectMeta } from "../types";
 
 export type AlertId = "normal" | "yellow" | "red";
-export type ExteriorId = "stars" | "planet" | "warp" | "off";
-export type ShiftId = "day" | "night";
+type ExteriorId = "stars" | "planet" | "warp" | "off";
+type ShiftId = "day" | "night";
 export type DisplaySide = "left" | "right";
 
-export const ALERT_OPTIONS = [
+const ALERT_OPTIONS = [
   { value: "normal", label: "Normal" },
   { value: "yellow", label: "Yellow alert" },
   { value: "red", label: "Red alert" },
 ] as const satisfies readonly { value: AlertId; label: string }[];
 
-export const EXTERIOR_OPTIONS = [
+const EXTERIOR_OPTIONS = [
   { value: "stars", label: "Stars" },
   { value: "planet", label: "Planet in orbit" },
   { value: "warp", label: "Warp" },
   { value: "off", label: "Off" },
 ] as const satisfies readonly { value: ExteriorId; label: string }[];
 
-export type ShipId =
+type ShipId =
   | "cycle"
   | "none"
   | "borg"
@@ -42,12 +42,12 @@ export const SHIP_OPTIONS = [
   { value: "shuttle", label: "Shuttlecraft" },
 ] as const satisfies readonly { value: ShipId; label: string }[];
 
-export const SHIFT_OPTIONS = [
+const SHIFT_OPTIONS = [
   { value: "day", label: "Day shift" },
   { value: "night", label: "Night shift" },
 ] as const satisfies readonly { value: ShiftId; label: string }[];
 
-export const DISPLAY_OPTIONS = [
+const DISPLAY_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: DisplaySide; label: string }[];

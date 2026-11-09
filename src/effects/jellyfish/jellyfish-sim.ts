@@ -11,8 +11,8 @@ import { clamp, wrap } from "../math";
 import { createNoise } from "../noise";
 import { MAX_JELLIES } from "./jellyfish.meta";
 
-export const MAX_TENTACLES = 8;
-export const MAX_ARMS = 4;
+const MAX_TENTACLES = 8;
+const MAX_ARMS = 4;
 export const CHAINS_PER_JELLY = MAX_TENTACLES + MAX_ARMS;
 /** Points per chain, the anchor included. */
 export const CHAIN_POINTS = 14;
@@ -23,7 +23,7 @@ export const STRIP_VERTS = 2 * CHAIN_POINTS + 2;
 /** Floats per bell instance: x, y, quad half-width, half-height (device px); r, g, b, contraction. */
 export const BELL_FLOATS = 8;
 /** Seconds a jellyfish takes to fade in when the count is raised. */
-export const FADE_IN = 1.5;
+const FADE_IN = 1.5;
 const TAU = Math.PI * 2;
 
 // --- Bell geometry, in quad-local units (corners at ±1, y down) --------------
@@ -43,9 +43,9 @@ export const QUAD_BOTTOM = 0.7;
 // --- Pulse ---------------------------------------------------------------------
 
 /** Fraction of the cycle spent contracting; the bell relaxes for the rest. */
-export const CONTRACT = 0.3;
+const CONTRACT = 0.3;
 /** Fraction of the cycle with thrust: the contraction and the start of the relaxation. */
-export const THRUST_SPAN = 0.45;
+const THRUST_SPAN = 0.45;
 
 /**
  * Bell contraction for pulse `phase` (any real; period 1): 0 relaxed, 1 fully

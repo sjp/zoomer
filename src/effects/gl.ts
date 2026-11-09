@@ -171,11 +171,7 @@ const numbered = (source: string) =>
     .map((line, i) => `${String(i + 1).padStart(4)}: ${line}`)
     .join("\n");
 
-export function compileShader(
-  gl: WebGL2RenderingContext,
-  type: GLenum,
-  source: string,
-): WebGLShader {
+function compileShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
   const shader = gl.createShader(type);
   if (!shader) {
     throw new Error("WebGL: could not create shader (is the context lost?)");
@@ -196,7 +192,7 @@ export function compileShader(
  * `feedbackVaryings`, if given, are captured with transform feedback
  * (interleaved), declared before linking.
  */
-export function createProgram(
+function createProgram(
   gl: WebGL2RenderingContext,
   vertexSource: string,
   fragmentSource: string,
@@ -245,7 +241,7 @@ export function scopedProgram(
  * Looks up uniform locations by name. Locations are null for uniforms the compiler
  * optimised away; `gl.uniform*` ignores null, so callers need not check.
  */
-export function getUniforms<const N extends string>(
+function getUniforms<const N extends string>(
   gl: WebGL2RenderingContext,
   program: WebGLProgram,
   names: readonly N[],
@@ -453,7 +449,7 @@ void main() {
 }
 `;
 
-export interface GradientBackground {
+interface GradientBackground {
   /**
    * Fills the viewport, top to bottom, with blending disabled and sub-LSB dither.
    * Colours are 0..1. When top and bottom are equal it clears instead, which
@@ -492,7 +488,7 @@ function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): Grad
   };
 }
 
-export interface DataTextureOptions {
+interface DataTextureOptions {
   width: number;
   height: number;
   /** Sized internal format, e.g. `gl.R16F` or `gl.RGBA8`. */
@@ -572,9 +568,9 @@ export function updateDataTexture(
 }
 
 /** Channels per texel of a `ColumnTable`: R, RG or RGBA. */
-export type ColumnTableChannels = 1 | 2 | 4;
+type ColumnTableChannels = 1 | 2 | 4;
 
-export interface ColumnTableOptions {
+interface ColumnTableOptions {
   /** Rows of the table (texture height). Defaults to 1. */
   rows?: number;
   /** Defaults to `gl.CLAMP_TO_EDGE`; `gl.REPEAT` for tables that tile across. */
@@ -677,7 +673,7 @@ export interface RenderTarget {
  * `gl.getParameter` with the result types the WebGL2 spec gives for the parameters
  * read here (the DOM typings return `any`).
  */
-export interface TypedParameters {
+interface TypedParameters {
   getParameter: {
     (pname: WebGL2RenderingContext["FRAMEBUFFER_BINDING"]): WebGLFramebuffer | null;
     (pname: WebGL2RenderingContext["TEXTURE_BINDING_2D"]): WebGLTexture | null;

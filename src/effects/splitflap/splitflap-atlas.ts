@@ -9,9 +9,9 @@ import { GLYPH_COUNT, GLYPHS } from "./splitflap-sim";
 import { SANS_FONT_STACK } from "../canvas-texture";
 
 /** Glyph tiles per row of the atlas. */
-export const ATLAS_COLS = 8;
+const ATLAS_COLS = 8;
 /** Blank texels around each atlas tile, so linear filtering never reads a neighbour. */
-export const ATLAS_PAD = 2;
+const ATLAS_PAD = 2;
 /** A system font stack for the glyphs: a bold grotesque, as on real boards. */
 const FONT_FAMILY = SANS_FONT_STACK;
 /** Cap height as a fraction of the cell height, and the widest a glyph may be. */
@@ -23,7 +23,7 @@ const metricOr = (value: number | undefined, fallback: number) =>
   value === undefined || value === 0 || Number.isNaN(value) ? fallback : value;
 
 /** Where the glyphs sit in the atlas, as fractions of its size (u, v pairs). */
-export interface GlyphAtlasMetrics {
+interface GlyphAtlasMetrics {
   /** The pitch between tiles. */
   tile: [number, number];
   /** The blank pad before a tile's glyph area. */

@@ -1,13 +1,13 @@
 import type { LightId, OpeningId } from "./bamboo-sim";
 import { defineEffectMeta } from "../types";
 
-export const LIGHT_OPTIONS = [
+const LIGHT_OPTIONS = [
   { value: "morning", label: "Morning" },
   { value: "midday", label: "Midday" },
   { value: "misty", label: "Misty" },
 ] as const satisfies readonly { value: LightId; label: string }[];
 
-export const OPENING_OPTIONS = [
+const OPENING_OPTIONS = [
   { value: "centre", label: "Centre" },
   { value: "none", label: "None" },
 ] as const satisfies readonly { value: OpeningId; label: string }[];

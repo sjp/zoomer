@@ -1,8 +1,8 @@
 import { defineEffectMeta } from "../types";
 
-export type ViewId = "cycle" | "sublight" | "hyperspace";
+type ViewId = "cycle" | "sublight" | "hyperspace";
 
-export const VIEW_OPTIONS = [
+const VIEW_OPTIONS = [
   { value: "cycle", label: "Cycle" },
   { value: "sublight", label: "Sublight only" },
   { value: "hyperspace", label: "Hyperspace only" },

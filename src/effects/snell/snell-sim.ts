@@ -171,7 +171,7 @@ export const SLOPE_MAX = 0.3;
 // ---------------------------------------------------------------------------
 // Palettes
 
-export interface WaterPalette {
+interface WaterPalette {
   /** Reflected deep water, looking steeply down. */
   deep: Rgb;
   /** In-water haze, which far, slanting views fade to. */
@@ -203,7 +203,7 @@ export const WATER: Readonly<Record<WaterId, WaterPalette>> = {
   },
 };
 
-export interface SkyPalette {
+interface SkyPalette {
   zenith: Rgb;
   horizon: Rgb;
   /** Sun colour (intensity may exceed 1), elevation and azimuth in degrees (0 = up the frame). */
@@ -291,7 +291,7 @@ export const MOTE_MARGIN = 12;
 const REF_HEIGHT = 1080;
 
 /** Structure-of-arrays mote state, positions in reference px (y down). */
-export interface MoteState {
+interface MoteState {
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly vx: Float32Array;
@@ -368,13 +368,13 @@ export function moteBrightness(
 
 /** Seconds a leaf takes to cross the frame, and the pause before the next one. */
 export const LEAF_CROSS = 100;
-export const LEAF_GAP = 50;
+const LEAF_GAP = 50;
 export const LEAF_CYCLE = LEAF_CROSS + LEAF_GAP;
 /** Leaf half-length and half-width in reference px. */
 export const LEAF_LENGTH = 34;
 export const LEAF_WIDTH = 14;
 /** Largest sideways offset of a leaf's track from the window centre, in reference px. */
-export const LEAF_OFFSET = 180;
+const LEAF_OFFSET = 180;
 
 /** A leaf's pose on the surface, relative to the window centre (reference px, y down). */
 export interface LeafPose {

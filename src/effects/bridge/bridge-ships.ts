@@ -19,7 +19,7 @@ export const SHIP_KINDS = [
   "galor",
   "shuttlecraft",
 ] as const;
-export type ShipKind = (typeof SHIP_KINDS)[number];
+type ShipKind = (typeof SHIP_KINDS)[number];
 
 /** Seconds of each part of a visit: cruising in, turning, holding, turning, cruising out. */
 export const CRUISE = 14;
@@ -45,7 +45,7 @@ export const SHIP_SCALE: Readonly<Record<ShipKind, number>> = {
 };
 
 /** Where a visiting ship is. `kind` is -1 when none is in view. */
-export interface ShipPose {
+interface ShipPose {
   kind: number;
   /** -1 to 1 across: at ±1 the ship is just out of view on that side. */
   across: number;

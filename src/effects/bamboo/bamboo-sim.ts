@@ -28,18 +28,18 @@ export const BAMBOO_SWELL: Swell = createSwell(60, [
 /** Largest sway at the top of a stem (t = 1), heights, at wind 1 before the layer's scale. */
 export const SWAY_MAX = 0.12;
 /** Seconds the top of a stem (t = 1) trails its base. */
-export const LAG = 1.8;
+const LAG = 1.8;
 /** Seconds the swell takes to travel across the frame, so neighbours don't move in lockstep. */
-export const SWELL_TRAVEL = 2.5;
+const SWELL_TRAVEL = 2.5;
 /** Share of the sway driven by gusts rather than the swell. */
-export const GUST_SHARE = 0.45;
+const GUST_SHARE = 0.45;
 
 /**
  * Gust waves: whole cycles per swell period (so the phase wraps seamlessly),
  * spatial waves across the frame width (the gust travels sideways, left to right)
  * and weight. Each wave is sharpened to a pulse; the sum is in [0, 1].
  */
-export const GUSTS = [
+const GUSTS = [
   { cycles: 4, waves: 0.55, offset: 0.1, weight: 0.65 },
   { cycles: 7, waves: 0.9, offset: 0.55, weight: 0.35 },
 ] as const;
@@ -120,7 +120,7 @@ export const STEM_STRIP: readonly number[] = ribbonStrip(SEGMENTS);
 export const STRIP_BOTTOM = 1.03;
 export const STRIP_TOP = -0.04;
 
-export interface BambooLayer {
+interface BambooLayer {
   /** Stems at density 1. */
   readonly count: number;
   /** Root y range (fraction of the height; below 1 is inside the frame) and virtual length (heights). */
@@ -214,7 +214,7 @@ export const LAYERS: readonly BambooLayer[] = [
   },
 ];
 
-export const DENSITY_MIN = 0.3;
+const DENSITY_MIN = 0.3;
 export const DENSITY_MAX = 2;
 export const MAX_STEMS = LAYERS.reduce((n, l) => n + Math.round(l.count * DENSITY_MAX), 0);
 
@@ -242,7 +242,7 @@ export function layerCount(layer: BambooLayer, density: number): number {
  * its strip at wind 1, for a stem rooted at `ground` with `length` and sway
  * multiplier `sway` (the sway driver is within [-1, 1]).
  */
-export function maxReach(ground: number, length: number, sway: number): number {
+function maxReach(ground: number, length: number, sway: number): number {
   const t = clamp((ground - STRIP_TOP) / length, 0, 1);
   return SWAY_MAX * sway * t * t;
 }
@@ -262,7 +262,7 @@ export function stemClearance(
 }
 
 /** Relative stem density at `x`: highest at the edges. */
-export function edgeWeight(x: number): number {
+function edgeWeight(x: number): number {
   return 0.25 + 0.75 * Math.abs(2 * x - 1);
 }
 
@@ -354,11 +354,11 @@ export function buildStems(
 // ---- Leaves ----
 
 /** Clusters: one twig plus this many leaves. */
-export const LEAVES_MIN = 4;
-export const LEAVES_MAX = 7;
+const LEAVES_MIN = 4;
+const LEAVES_MAX = 7;
 /** Cluster heights in the frame (fraction of the height from the top). */
 export const CLUSTER_TOP = -0.04;
-export const CLUSTER_BOTTOM = 0.48;
+const CLUSTER_BOTTOM = 0.48;
 export const MAX_LEAVES = LAYERS.reduce(
   (n, l) => n + Math.round(l.count * DENSITY_MAX) * l.clustersMax * (LEAVES_MAX + 1),
   0,
@@ -488,7 +488,7 @@ export function flutterStrength(wind: number, g: number): number {
 
 export type LightId = "morning" | "midday" | "misty";
 
-export interface BambooLight {
+interface BambooLight {
   /** Haze: top of the frame, middle, ground. */
   readonly top: Rgb;
   readonly mid: Rgb;

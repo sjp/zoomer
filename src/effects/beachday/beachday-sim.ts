@@ -76,7 +76,7 @@ export function rowFresnel(y: number): number {
 // Time presets
 // ---------------------------------------------------------------------------
 
-export interface BeachPreset {
+interface BeachPreset {
   /** Hour to sample the shared sky keys at. */
   hour: number;
   /** Sun centre above the horizon, frame heights. */
@@ -209,22 +209,22 @@ export const BREAK = 4.5;
 /** Distance seaward where a swell line starts its approach. */
 export const APPROACH_DIST = 25;
 /** Run-up (m) at `waves` = 0 and 1, before each wave's own factor. */
-export const REACH_LOW = 0.85;
+const REACH_LOW = 0.85;
 export const REACH_HIGH = 1.6;
 /** Each wave's run-up is the base times a factor in [REACH_MIN, REACH_MAX). */
-export const REACH_MIN = 0.75;
+const REACH_MIN = 0.75;
 export const REACH_MAX = 1.25;
 /** Average seconds between waves at `waves` = 0 and 1. */
-export const INTERVAL_LOW = 12;
+const INTERVAL_LOW = 12;
 export const INTERVAL_HIGH = 7;
 /** Each spacing is the interval times a factor in [SPACING_MIN, SPACING_MAX). */
 export const SPACING_MIN = 0.85;
-export const SPACING_MAX = 1.15;
+const SPACING_MAX = 1.15;
 /** Seconds the break takes to peel from one side of the frame to the other. */
-export const PEEL_MIN = 0.8;
+const PEEL_MIN = 0.8;
 export const PEEL_MAX = 1.8;
 /** Seconds a wave stays in flight after draining, while its wet sand dries. */
-export const WET_TAIL = 8;
+const WET_TAIL = 8;
 /** Seconds over which a wave's wet sand fades at the end of its life (local clock). */
 export const WET_FADE = 3;
 /** A wave's whole life on the scheduler clock, the latest-peeling side included. */
@@ -244,13 +244,13 @@ export const waveReach = (waves: number): number =>
 export const foamLevel = (waves: number): number => 0.7 + 0.3 * clamp(waves, 0, 1);
 
 /** Wave height (m) at the break at `waves` = 0 and 1, before each wave's own factor: knee high. */
-export const HEIGHT_LOW = 0.22;
-export const HEIGHT_HIGH = 0.55;
+const HEIGHT_LOW = 0.22;
+const HEIGHT_HIGH = 0.55;
 /** Each wave's height is the base times a factor in [HEIGHT_MIN, HEIGHT_MAX). */
-export const HEIGHT_MIN = 0.85;
+const HEIGHT_MIN = 0.85;
 export const HEIGHT_MAX = 1.15;
 /** Share of its height a wave keeps as a foaming bore just after breaking. */
-export const BORE = 0.3;
+const BORE = 0.3;
 
 /** Base wave height (m) for a `waves` setting. */
 export const waveHeight = (waves: number): number =>
@@ -280,19 +280,14 @@ export function beachFront(tau: number, reach: number): number {
 }
 
 /** Width (m) of the foam band trailing a front: a crest line that spreads as it ages. */
-export function foamWidth(tau: number): number {
+function foamWidth(tau: number): number {
   return 0.35 + 1.4 * smoothstep(T_APPROACH, T_ACTIVE, tau);
 }
 
 /** Seconds after its run-up stops at which a wave's wet sand is gone (local clock). */
 export const WET_END = T_ACTIVE - T_STOP + WET_TAIL;
 
-/** Fade of a wave's wet sand over the end of its life, from seconds since its run-up stopped. */
-export function wetFade(sinceStop: number): number {
-  return 1 - smoothstep(WET_END - WET_FADE, WET_END, sinceStop);
-}
-
-export interface BeachWave {
+interface BeachWave {
   /** Start time on the scheduler clock (s), at the side the break starts from. */
   start: number;
   /** Run-up (m). */
@@ -308,7 +303,7 @@ export interface BeachWave {
   height: number;
 }
 
-export interface BeachScheduler {
+interface BeachScheduler {
   /** Live waves, oldest first; only the first `count` are in flight. */
   readonly waves: readonly BeachWave[];
   readonly count: number;
@@ -398,7 +393,7 @@ export const WAVE_COLUMNS = 64;
 export const WAVE_ROWS = MAX_WAVES * 2;
 
 /** Seconds before the first break over which the later-breaking stretches of a crest slow down. */
-export const PEEL_LEAD = 1;
+const PEEL_LEAD = 1;
 /** Share of its break delay a stretch still lags by once its wash has drained. */
 export const PEEL_KEEP = 0.25;
 
@@ -472,14 +467,6 @@ export function packWavePhases(sched: BeachScheduler, out: Float32Array): void {
   }
 }
 
-/**
- * Sand that stays damp (0..1) whatever the waves do: dark and glossy just above
- * the waterline, lightly damp up to where the bigger waves reach.
- */
-export function staticDamp(n: number): number {
-  return 0.8 * (1 - smoothstep(0, 0.45, n)) + 0.25 * (1 - smoothstep(0.45, 2.2, n));
-}
-
 // ---------------------------------------------------------------------------
 // Sand details
 // ---------------------------------------------------------------------------
@@ -494,26 +481,26 @@ export const STONE_FLOATS = 8;
 export const PRINT_FLOATS = 4;
 /** Shells and pebbles lie between these shore normals (m): above the usual run-up. */
 export const STONE_N_MIN = 1.7;
-export const STONE_N_MAX = N_BOTTOM - 0.05;
+const STONE_N_MAX = N_BOTTOM - 0.05;
 /** The trail runs from below the frame down to here, fading where the waves wash over it. */
-export const PRINT_N_END = 1.1;
+const PRINT_N_END = 1.1;
 /** Length of one stride (m) and the feet's spacing either side of the path. */
-export const STRIDE = 0.36;
-export const FOOT_SPACING = 0.09;
+const STRIDE = 0.36;
+const FOOT_SPACING = 0.09;
 /** The towel's far edge (m from the waterline): clear of the biggest waves' reach. */
 export const TOWEL_N = 2.75;
-export const TOWEL_HALF_WIDTH = 0.45;
-export const TOWEL_HALF_LENGTH = 0.9;
+const TOWEL_HALF_WIDTH = 0.45;
+const TOWEL_HALF_LENGTH = 0.9;
 
 /** Stripe colours for the towel, chosen by the seed. */
-export const TOWEL_PALETTES: readonly (readonly [string, string, string])[] = [
+const TOWEL_PALETTES: readonly (readonly [string, string, string])[] = [
   ["#f4f1e8", "#1f8fb3", "#f2a33a"],
   ["#f6efe2", "#e2574c", "#2b5f8f"],
   ["#fff4dc", "#3aa88f", "#f0c23b"],
   ["#f3ece6", "#d9658a", "#5ab7c9"],
 ];
 
-export interface SandLayout {
+interface SandLayout {
   /** MAX_STONES * STONE_FLOATS; unused stones have radius 0. */
   stones: Float32Array;
   /** MAX_PRINTS * PRINT_FLOATS; unused prints have depth 0. */
@@ -525,7 +512,7 @@ export interface SandLayout {
 }
 
 /** Half the frame's width (m) at shore normal `n` for `aspect` (width / height). */
-export function halfWidthAt(n: number, aspect: number): number {
+function halfWidthAt(n: number, aspect: number): number {
   return (0.5 * aspect * (Z_SHORE - n)) / FOCAL;
 }
 
@@ -637,7 +624,7 @@ export const CLOUD_TOP = 0.44;
 /** Drift speed, frame heights per second: about four minutes to cross a 16:9 frame. */
 export const CLOUD_SPEED = 0.0075;
 
-export interface CloudPuff {
+interface CloudPuff {
   /** Centre along the strip and height above the horizon, frame heights. */
   u: number;
   h: number;
@@ -754,18 +741,18 @@ export function buildClouds(
 
 export const MAX_BIRDS = 2;
 /** Each gull gets one chance to fly by per period (s); the two are offset. */
-export const BIRD_PERIOD = 53;
+const BIRD_PERIOD = 53;
 /** Share of periods with a gull in them. */
-export const BIRD_CHANCE = 0.55;
+const BIRD_CHANCE = 0.55;
 /** Seconds a flight lasts, and the fade in and out at each end. */
 export const BIRD_FLIGHT = 36;
 export const BIRD_FADE = 3;
 /** Glide speed range, frame heights per second (a 1080p frame is crossed in a minute or more). */
-export const BIRD_SPEED_MIN = 0.012;
+const BIRD_SPEED_MIN = 0.012;
 export const BIRD_SPEED_MAX = 0.022;
 /** Wingspan range, frame heights: a few pixels at 1080p. */
-export const BIRD_SPAN_MIN = 0.007;
-export const BIRD_SPAN_MAX = 0.011;
+const BIRD_SPAN_MIN = 0.007;
+const BIRD_SPAN_MAX = 0.011;
 /** Wingbeats per second while flapping: slow and lazy. */
 export const FLAP_HZ = 1.2;
 /** Floats per gull: x, y (frame heights), half span, alpha; wing lift, -, -, -. */

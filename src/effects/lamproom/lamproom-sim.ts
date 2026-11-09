@@ -101,7 +101,7 @@ export function lensProfile(y: number): number {
 /** Where the lens's axis falls, as a fraction of the frame width in from its side. */
 export const LENS_AT = 0.18;
 /** The camera's furthest reach across from the lens, its eye height, and how far back from the lens it stands. */
-export const CAM_X_MAX = 0.55;
+const CAM_X_MAX = 0.55;
 export const CAM_Y = 0.68;
 export const CAM_Z = -0.7;
 /** Focal length in frame heights (a wide lens: about 67° vertically). */
@@ -156,7 +156,7 @@ export function towardCamera(side: LensSide, aspect: number, out: { x: number; z
 }
 
 /** Screen box round the lens and its crown, in frame heights: left, right, bottom, top. */
-export interface LensBox {
+interface LensBox {
   x0: number;
   x1: number;
   y0: number;
@@ -249,8 +249,8 @@ export function riseSeconds(period: number): number {
 /** Texels in the band table, over half a turn of lens angle (the pattern repeats per beam). */
 export const BAND_SIZE = 512;
 /** Width (radians) of a beam's own patch of light on the walls, and of the thin bands from the prisms. */
-export const BAND_BEAM_SIGMA = 0.2;
-export const BAND_STRIPE_SIGMA = 0.025;
+const BAND_BEAM_SIGMA = 0.2;
+const BAND_STRIPE_SIGMA = 0.025;
 
 /**
  * The light the turning lens throws round the room, as a function of angle
@@ -291,7 +291,7 @@ export function buildBandTable(size = BAND_SIZE): Uint8Array {
 
 /* ----- Weather ----- */
 
-export interface WeatherLook {
+interface WeatherLook {
   /** Cloud cover, 0..1. */
   cover: number;
   /** Swell height and ripple strength (1 = the Calm Sea's calm). */
@@ -397,7 +397,7 @@ export function cloudUv(qx: number, qy: number, out: { u: number; v: number }) {
 /* ----- Moon ----- */
 
 /** The moon: across the frame from the lens (fraction of the width), and its height above the horizon (frame heights). */
-export const MOON_X = 0.8;
+const MOON_X = 0.8;
 export const MOON_Y = 0.26;
 
 /** The moon's x as a fraction of the frame width, opposite the lens. */

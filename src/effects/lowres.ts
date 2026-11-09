@@ -44,10 +44,10 @@ import {
   floatRenderable,
 } from "./gl";
 
-export type LowResQuality = "high" | "balanced" | "low";
+type LowResQuality = "high" | "balanced" | "low";
 
 /** Default divisors for each quality label. */
-export const QUALITY_DIVISORS: Readonly<Record<LowResQuality, number>> = {
+const QUALITY_DIVISORS: Readonly<Record<LowResQuality, number>> = {
   high: 1,
   balanced: 2,
   low: 3,
@@ -91,7 +91,7 @@ export function rendersDirect(
   return !hasComposite && !wantFloat && lowWidth === fullWidth && lowHeight === fullHeight;
 }
 
-export interface LowResTarget {
+interface LowResTarget {
   /**
    * Sets the full (canvas) size and divisor. Recreates the texture (cleared to
    * black) when the low-res size changes; no-op otherwise. Leaves the GL state
@@ -148,7 +148,7 @@ export interface LowResTarget {
   dispose: () => void;
 }
 
-export interface LowResOptions {
+interface LowResOptions {
   /** Defaults to "rgba8". "rgba16f" falls back to RGBA8 if not renderable. */
   format?: "rgba8" | "rgba16f";
   /**

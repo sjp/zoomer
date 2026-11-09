@@ -43,10 +43,10 @@ export const ARRIVAL_FILL = 0.9;
 /** Arrival time a branch takes to widen from a line to its full width. */
 export const THICKEN = 0.06;
 /** Arrival per texel beyond a branch's full width: the steep outer edge. */
-export const FALLOFF = 1;
+const FALLOFF = 1;
 
 /** Exponent of the superellipse edge metric. */
-export const METRIC_POWER = 2.5;
+const METRIC_POWER = 2.5;
 /** Largest edge metric, in the corners: 2^(1/p). */
 export const METRIC_MAX = Math.pow(2, 1 / METRIC_POWER);
 /**
@@ -55,7 +55,7 @@ export const METRIC_MAX = Math.pow(2, 1 / METRIC_POWER);
  */
 export const REACH_MIN = 0.5;
 /** The frost's reach at coverage 0: a thin rim along the edges. */
-export const REACH_MAX = 0.96;
+const REACH_MAX = 0.96;
 /** Arrival added per unit of edge metric past the coverage limit (tapers branches out). */
 export const REACH_PENALTY = 8;
 /** Melt bias per unit of edge metric: the centre melts first. */
@@ -99,11 +99,11 @@ export function cycleSeed(seed: number, cycle: number): number {
 // --- Growth -----------------------------------------------------------------
 
 /** Branch depths: fronds, side branches, needles. */
-export const MAX_DEPTH = 2;
+const MAX_DEPTH = 2;
 /** Step length in texels. */
 const STEP = 1;
 /** Full half-width in texels by depth (at a branch's base; tips taper to half). */
-export const HALF_WIDTH = [1.25, 0.7, 0.42] as const;
+const HALF_WIDTH = [1.25, 0.7, 0.42] as const;
 /** Clearance in texels: a tip stops when other ice is this close. */
 const CLEARANCE = [3, 2.4, 1.8] as const;
 /** Steps a new tip takes before it checks for other ice (it starts on its parent). */
@@ -129,7 +129,7 @@ const MAX_BRANCHES = 40000;
 const MAX_STEPS = 400000;
 
 /** One branch of the skeleton: a polyline with an arrival time at each point. */
-export interface FrostBranch {
+interface FrostBranch {
   /** Index of the parent branch, or -1 for a root frond. */
   parent: number;
   depth: number;
@@ -139,7 +139,7 @@ export interface FrostBranch {
   points: number[];
 }
 
-export interface FrostSkeleton {
+interface FrostSkeleton {
   width: number;
   height: number;
   branches: FrostBranch[];
@@ -225,11 +225,7 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
 const GROW_CHUNK = 128;
 
 /** `growFrost` as build steps, yielding every `GROW_CHUNK` tip steps. */
-export function* growFrostSteps(
-  seed: number,
-  width: number,
-  height: number,
-): BuildSteps<FrostSkeleton> {
+function* growFrostSteps(seed: number, width: number, height: number): BuildSteps<FrostSkeleton> {
   const rng = createRng(seed);
   const H = height;
   const owner = new Int32Array(width * height).fill(-1);
@@ -482,7 +478,7 @@ export function stampSegment(
 }
 
 /** Half-width at arc length `s` of a branch `len` long: full at the base, half at the tip. */
-export function branchHalfWidth(depth: number, s: number, len: number): number {
+function branchHalfWidth(depth: number, s: number, len: number): number {
   const f = len > 0 ? clamp(s / len, 0, 1) : 0;
   return HALF_WIDTH[Math.min(MAX_DEPTH, depth)] * (1 - 0.5 * f);
 }
@@ -601,7 +597,7 @@ export const MAX_TREES = 10;
 const WARM = ["#ffb35c", "#ffcf7a", "#ff9447", "#ffd9a0", "#ffc069"] as const;
 const COOL = "#cfe0ff";
 
-export interface SceneLayout {
+interface SceneLayout {
   /** Per light: x (0..1 across), y (0..1 up), radius (frame heights), intensity. */
   lights: Float32Array;
   /** Per light: sRGB colour, 0..1. */

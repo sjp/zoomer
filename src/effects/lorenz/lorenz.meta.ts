@@ -16,7 +16,7 @@ export const PALETTE_OPTIONS = [
   { value: "rainbow", label: "Rainbow" },
 ] as const;
 
-export const POSITION_OPTIONS = [
+const POSITION_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
   { value: "centre", label: "Centre" },

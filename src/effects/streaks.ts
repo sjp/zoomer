@@ -141,7 +141,7 @@ void main() {
 }
 `;
 
-export interface StreakRendererOptions {
+interface StreakRendererOptions {
   /** Also build the per-channel zoom (chromatic aberration) program. */
   chromatic?: boolean;
   /**
@@ -160,7 +160,7 @@ export interface StreakRendererOptions {
   blend?: "additive" | "alpha" | "max";
 }
 
-export interface StreakRenderer {
+interface StreakRenderer {
   /** Per-streak data, `STREAK_FLOATS` floats each; fill it, then call `upload`. */
   data: Float32Array;
   /** Uploads the first `count` streaks of `data`. */

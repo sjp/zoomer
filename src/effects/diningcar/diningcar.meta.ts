@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type Drink = "red" | "white" | "tea";
 
-export const DRINK_OPTIONS = [
+const DRINK_OPTIONS = [
   { value: "red", label: "Red wine" },
   { value: "white", label: "White wine" },
   { value: "tea", label: "Tea" },

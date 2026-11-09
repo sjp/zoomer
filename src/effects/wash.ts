@@ -63,12 +63,12 @@ export function washSinceUncovered(n: number, tau: number, m: number): number {
 }
 
 /** A wave in a `WaveSlots` schedule. */
-export interface ScheduledWave {
+interface ScheduledWave {
   /** Start time on the schedule's clock (s). */
   start: number;
 }
 
-export interface WaveSlots<W extends ScheduledWave> {
+interface WaveSlots<W extends ScheduledWave> {
   /** Live waves, oldest first; only the first `count` are in flight. */
   readonly waves: readonly W[];
   readonly count: number;

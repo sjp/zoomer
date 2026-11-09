@@ -1,21 +1,21 @@
 import { defineEffectMeta } from "../types";
 
-export type Lighting = "day" | "night";
-export type MonitorSide = "left" | "right";
+type Lighting = "day" | "night";
+type MonitorSide = "left" | "right";
 
-export const LIGHTING_OPTIONS = [
+const LIGHTING_OPTIONS = [
   { value: "day", label: "Day" },
   { value: "night", label: "Night" },
 ] as const satisfies readonly { value: Lighting; label: string }[];
 
-export const MONITOR_OPTIONS = [
+const MONITOR_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: MonitorSide; label: string }[];
 
 /** The care board's text: a few short handwritten lines. */
-export const BOARD_MAX_LENGTH = 16;
-export const BOARD_MAX_LINES = 4;
+const BOARD_MAX_LENGTH = 16;
+const BOARD_MAX_LINES = 4;
 
 export const hospitalMeta = defineEffectMeta({
   id: "hospital",

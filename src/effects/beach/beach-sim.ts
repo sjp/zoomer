@@ -18,14 +18,14 @@ import {
   createWaveSlots,
 } from "../wash";
 
-export { T_ACTIVE, T_APPROACH, T_DRAIN, T_DRY, T_RUNUP, T_STOP } from "../wash";
+export { T_ACTIVE, T_APPROACH, T_DRAIN, T_DRY, T_STOP } from "../wash";
 
 /** Seconds a wave stays in flight after draining, while its wet band dries. */
-export const WET_TAIL = 10;
+const WET_TAIL = 10;
 /** A wave's whole life; it is retired after this. */
 export const LIFETIME = T_ACTIVE + WET_TAIL;
 /** The last seconds of its life over which a wave's wet band fades to nothing. */
-export const WET_FADE = 3;
+const WET_FADE = 3;
 /** Distance seaward of the shoreline (height units) where waves break. */
 export const BREAK = 0.06;
 /** Distance seaward where a swell line starts its approach. */
@@ -35,14 +35,14 @@ export const APPROACH_DIST = 0.7;
 export const MAX_WAVES = 4;
 /** Each spacing is waveTime times a factor in [SPACING_MIN, SPACING_MAX). */
 export const SPACING_MIN = 0.85;
-export const SPACING_MAX = 1.15;
+const SPACING_MAX = 1.15;
 /** Each wave's reach is the reach param times a factor in [REACH_MIN, REACH_MAX). */
-export const REACH_MIN = 0.75;
-export const REACH_MAX = 1.2;
+const REACH_MIN = 0.75;
+const REACH_MAX = 1.2;
 
 /** Along-shore wiggle of a front: SHAPE_BASE plus SHAPE_GAIN times its run-up so far. */
-export const SHAPE_BASE = 0.012;
-export const SHAPE_GAIN = 0.3;
+const SHAPE_BASE = 0.012;
+const SHAPE_GAIN = 0.3;
 
 /** Floats per wave in the packed uniform array (four vec4s). */
 export const WAVE_FLOATS = 16;
@@ -64,7 +64,7 @@ export function maxReach(tau: number, reach: number): number {
 }
 
 /** Fade of a wave's wet band over the end of its life: 1, then down to 0 at LIFETIME. */
-export function wetFade(tau: number): number {
+function wetFade(tau: number): number {
   return 1 - smoothstep(LIFETIME - WET_FADE, LIFETIME, tau);
 }
 
@@ -96,7 +96,7 @@ export function foamStrength(tau: number): number {
 }
 
 /** Width (height units) of the foam band trailing the front: it spreads as it ages. */
-export function foamWidth(tau: number): number {
+function foamWidth(tau: number): number {
   return 0.012 + 0.05 * smoothstep(T_APPROACH, T_ACTIVE, tau);
 }
 
@@ -115,16 +115,16 @@ export function swashMark(tau: number): number {
 }
 
 /** Strength of a swell line's light ridge: fades in, then gives way to foam at the break. */
-export function swellStrength(tau: number): number {
+function swellStrength(tau: number): number {
   return smoothstep(0, 1.5, tau) * (1 - smoothstep(T_APPROACH - 0.3, T_APPROACH + 0.3, tau));
 }
 
 /** Strength of the thin water sheet over the sand: full while running up, fading as it drains. */
-export function sheetStrength(tau: number): number {
+function sheetStrength(tau: number): number {
   return 1 - 0.6 * smoothstep(T_STOP, T_ACTIVE, tau);
 }
 
-export interface Wave {
+interface Wave {
   /** Start time on the scheduler clock (s). */
   start: number;
   reach: number;
@@ -135,7 +135,7 @@ export interface Wave {
   offY: number;
 }
 
-export interface WaveScheduler {
+interface WaveScheduler {
   /** Live waves, oldest first; only the first `count` are in flight. */
   readonly waves: readonly Wave[];
   readonly count: number;
@@ -233,8 +233,6 @@ export function packWaves(
   return n;
 }
 
-export type BeachLayout = "left" | "right" | "bottom" | "diagonal";
-
 /**
  * Shore axes for a layout at `aspect` (width / height): n = dot(p, (x, y)) - c and
  * s = dot(p, (-y, x)), with p in height units (origin bottom-left, y up). Writes
@@ -302,7 +300,7 @@ export function buildShapeTable(seed: number): Float32Array {
 /** Fixed weights of the shape channels for the shoreline itself. */
 export const SHORE_WEIGHTS: readonly [number, number, number, number] = [0.8, -0.4, 0.3, 0.33];
 
-export interface WaterPalette {
+interface WaterPalette {
   deep: string;
   mid: string;
   /** Tint of the seabed seen through shallow water, and of the swash sheet. */

@@ -29,7 +29,7 @@ export const PIVOT_Z = 2.2;
 export const BASE_H = 0.5;
 const BALL_GAP = 0.9;
 /** A resting ball's centre and the pivot axis above it (world y). */
-export const REST_Y = BASE_H + BALL_GAP + BALL_R;
+const REST_Y = BASE_H + BALL_GAP + BALL_R;
 export const PIVOT_Y = REST_Y + STRING_LEN;
 /** Frame posts stand this far beyond the end balls' centres; the base overhangs them. */
 const POST_MARGIN = 2.8;
@@ -48,19 +48,19 @@ export const DECAY = 0.98;
 export const TOPUP_SWINGS = 10;
 /** The middle balls' nudge after an impact: fraction of the amplitude, and of a half period. */
 export const WOBBLE = 0.04;
-export const WOBBLE_TIME = 0.3;
+const WOBBLE_TIME = 0.3;
 
 /** View yaw (towards the outer side) and downward pitch, radians. */
-export const YAW = (28 * Math.PI) / 180;
-export const PITCH = (15 * Math.PI) / 180;
+const YAW = (28 * Math.PI) / 180;
+const PITCH = (15 * Math.PI) / 180;
 
 /** Cradle unit at size 1 (height units): five balls span about a fifth of a 16:9 frame. */
-export const CRADLE_UNIT = 0.02;
+const CRADLE_UNIT = 0.02;
 /** Lowest point of the base on screen, and the gap to the frame edge (height units). */
 export const SEAT_Y = 0.06;
 const EDGE_MARGIN = 0.05;
 /** Widest the cradle may be, as a fraction of the frame width, to keep the speaker clear. */
-export const MAX_WIDTH = 0.25;
+const MAX_WIDTH = 0.25;
 /** Slack around the pass box for the desk shadow and antialiasing (cradle units). */
 const BOX_PAD = 1.5;
 
@@ -192,7 +192,7 @@ export function onPlane(v: CradleView, vx: number, vy: number, h: number, out: F
   out[1] = vx * v.sy + z1 * v.cy;
 }
 
-export interface CradleLayout {
+interface CradleLayout {
   side: 1 | -1;
   /** Height units per cradle unit. */
   unit: number;
@@ -217,7 +217,7 @@ const corner3 = new Float64Array(3);
  * The view bounds [minX, minY, maxX, maxY] (cradle units) of everything the
  * cradle draws for `count` balls: the base, the frame and the full swing.
  */
-export function viewBounds(v: CradleView, count: number, out: Float64Array): void {
+function viewBounds(v: CradleView, count: number, out: Float64Array): void {
   const [bx, bz] = baseHalf(count);
   out[0] = out[1] = Infinity;
   out[2] = out[3] = -Infinity;
@@ -274,7 +274,7 @@ export function sortByDepth(depth: ArrayLike<number>, count: number, order: Int3
 }
 
 /** One environment light: a soft rectangle seen in reflections. */
-export interface EnvLight {
+interface EnvLight {
   /** World direction towards it, for the right-hand corner (x mirrors on the left). */
   dir: readonly [number, number, number];
   /** Half-width and half-height (tangent of the half-angle) and edge softness. */
@@ -392,7 +392,7 @@ export function sceneOf(id: string): ScenePalette {
 }
 
 /** Ball material: reflectance tint at normal incidence, diffuse base colour, extra glint. */
-export interface Finish {
+interface Finish {
   f0: readonly [number, number, number];
   base: readonly [number, number, number];
   glint: number;

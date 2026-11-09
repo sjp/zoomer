@@ -1,7 +1,7 @@
 import { QUALITY_OPTIONS } from "../param-options";
 import { defineEffectMeta } from "../types";
 
-export const MODE_OPTIONS = [
+const MODE_OPTIONS = [
   { value: "soap", label: "Soap film" },
   { value: "oil", label: "Oil slick" },
   { value: "pearl", label: "Pearl" },

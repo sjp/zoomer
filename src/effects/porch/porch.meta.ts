@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type LampSide = "left" | "right";
 
-export const LAMP_OPTIONS = [
+const LAMP_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: LampSide; label: string }[];

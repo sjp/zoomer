@@ -22,7 +22,7 @@ export const FRONT_HEIGHT = 0.09;
 export const EDGE_WIDTH = 1.5;
 export const SUN_STRIPES = 7;
 /** Grid scroll in world units per second at speed 1. */
-export const SCROLL_PER_SPEED = 1.2;
+const SCROLL_PER_SPEED = 1.2;
 
 /**
  * Grid scroll speed (world units per second) for the speed and cell size params.
@@ -82,7 +82,7 @@ export const ridgeEnvelope = (x: number) => 0.2 + 0.8 * smoothstep(0.08, 0.42, M
  * texels gives the straight segments of the old 2D polyline; the shader reads
  * each segment's endpoints with texelFetch and interpolates them itself.
  */
-export const buildRidgeData = () => {
+const buildRidgeData = () => {
   const data = new Float32Array(RIDGE_POINTS * 2);
   const ridge = new Float32Array(RIDGE_POINTS);
   const last = RIDGE_POINTS - 1;
@@ -109,7 +109,7 @@ export const getRidgeData = () => {
 
 let ridgeMaxStep: [number, number] | undefined;
 /** Largest height change between neighbouring ridge points, per row (0..1 units). */
-export const getRidgeMaxStep = (): [number, number] => {
+const getRidgeMaxStep = (): [number, number] => {
   const rowMaxStep = (row: number) => {
     const data = getRidgeData();
     let max = 0;
@@ -151,7 +151,7 @@ export function sunGaps(
 }
 
 /** Everything `fillRows` reads besides the palette, in canvas pixels (y down). */
-export interface RowScene {
+interface RowScene {
   height: number;
   /** Horizon y. */
   hy: number;

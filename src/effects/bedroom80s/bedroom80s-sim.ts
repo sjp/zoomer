@@ -182,9 +182,9 @@ export const PROMPT_LINES: readonly string[] = [
 export const LOADING_LINE = "LOADING";
 
 /** The cursor's pulse: its period (s), middle and swing (shares of the text's brightness). */
-export const CURSOR_PERIOD = 3;
-export const CURSOR_MID = 0.72;
-export const CURSOR_SWING = 0.16;
+const CURSOR_PERIOD = 3;
+const CURSOR_MID = 0.72;
+const CURSOR_SWING = 0.16;
 
 /**
  * The prompt cursor's brightness at `t` seconds, as a share of the text's: a
@@ -246,12 +246,12 @@ export function stripeColor(v: number, phase: number, out: Rgb): Rgb {
 // ---------------------------------------------------------------------------
 
 /** The screen modes, in the order of their crossfade weights. */
-export const MODES = ["demo", "stripes", "prompt"] as const;
+const MODES = ["demo", "stripes", "prompt"] as const;
 /** Seconds for one mode to fade into another. */
 export const MODE_FADE = 1.2;
 
 /** The mode's index in `MODES` (the demo for unknown modes). */
-export function modeIndex(mode: string): number {
+function modeIndex(mode: string): number {
   const i = (MODES as readonly string[]).indexOf(mode);
   return i < 0 ? 0 : i;
 }
@@ -271,8 +271,8 @@ export function stepModes(weights: Float64Array, mode: string, dt: number): Floa
 }
 
 /** The average colour of the demo, and of the prompt's screen, as they light the room. */
-export const DEMO_GLOW: Rgb = [0.3, 0.24, 0.5];
-export const PROMPT_GLOW: Rgb = [0.24, 0.26, 0.62];
+const DEMO_GLOW: Rgb = [0.3, 0.24, 0.5];
+const PROMPT_GLOW: Rgb = [0.24, 0.26, 0.62];
 /** The loading screen's dark paper. */
 export const LOADING_PAPER: Rgb = [0.05, 0.05, 0.07];
 const PAPER_SHARE = (PAPER[2] * PAPER[3]) / (DEMO_W * DEMO_H);
@@ -321,14 +321,14 @@ export function slewColor(current: Rgb, target: Readonly<Rgb>, rate: number, dt:
 /** One car in every slot of this many seconds… */
 export const SWEEP_SLOT = 90;
 /** …passing somewhere in this middle share of its slot, so they come every minute or two. */
-export const SWEEP_SPREAD = 0.6;
+const SWEEP_SPREAD = 0.6;
 /** The first car passes this soon. */
 export const FIRST_SWEEP = 20;
 /** Seconds a sweep takes to cross the ceiling. */
 export const SWEEP_TIME = 9;
 /** Where the light starts (above the window) and ends (past the room's far side), in design x. */
-export const SWEEP_FROM = 0.75;
-export const SWEEP_TO = -1.15;
+const SWEEP_FROM = 0.75;
+const SWEEP_TO = -1.15;
 /** The patch of light's half width (design units) and its brightest. */
 export const HEADLIGHT_WIDTH = 0.35;
 export const HEADLIGHT_PEAK = 0.22;
@@ -363,7 +363,7 @@ export function sweepPos(s: number): number {
 }
 
 /** How bright the whole sweep is `s` seconds in: easing in and out over its whole length. */
-export function sweepEnvelope(s: number): number {
+function sweepEnvelope(s: number): number {
   if (!(s >= 0 && s <= SWEEP_TIME)) {
     return 0;
   }
@@ -402,9 +402,9 @@ export function stepFade(level: number, on: boolean, dt: number, seconds: number
 
 /** The reels' turning speed while playing (radians a second), and seconds to get up to speed or stop. */
 export const REEL_SPEED = 2.4;
-export const REEL_SPIN_UP = 0.6;
+const REEL_SPIN_UP = 0.6;
 
-export interface Reels {
+interface Reels {
   /** The reels' angle (radians, counter-clockwise), wrapped to 0..2π. */
   angle: number;
   /** Share of full speed, 0..1. */

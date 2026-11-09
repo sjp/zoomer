@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export type GlobePosition = "left" | "right";
+type GlobePosition = "left" | "right";
 export type GlobeSceneId = "cabin" | "village" | "lighthouse";
 
 export const POSITION_OPTIONS = [

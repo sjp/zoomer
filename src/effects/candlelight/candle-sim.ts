@@ -18,7 +18,7 @@ export const SURFACE_Y = 240;
 const HALF_W_MIN = 24;
 const HALF_W_MAX = 44;
 /** Tallest candle, reference px. */
-export const MAX_HEIGHT = 300;
+const MAX_HEIGHT = 300;
 /** Shortest candle as a fraction of `MAX_HEIGHT` (in a cluster). */
 const HEIGHT_MIN = 0.32;
 /** Frame margin and gap to the centre third, as fractions of the frame width. */
@@ -37,7 +37,7 @@ const ROW_BASE_Y = 186;
 
 /** Wick height, reference px. The flame starts `FLAME_START` of the way up it. */
 export const WICK = 7;
-export const FLAME_START = 0.35;
+const FLAME_START = 0.35;
 /** Flame half-width and length at rest, reference px. */
 export const FLAME_W = 7.5;
 export const FLAME_L = 36;
@@ -45,7 +45,7 @@ export const FLAME_L = 36;
 export const FLAME_CENTRE = 0.4;
 
 /** Candle positions and sizes, `count` used of `MAX_CANDLES` slots. */
-export interface CandleLayout {
+interface CandleLayout {
   count: number;
   refWidth: number;
   /** Centre x. */
@@ -179,11 +179,11 @@ export function createFlameMotion(): FlameMotion {
 }
 
 /** Sway at rest, radians, at a flicker of 1 (half at 0). */
-export const SWAY_BASE = 0.07;
+const SWAY_BASE = 0.07;
 /** Extra lean in a full draft, radians. */
-export const LEAN_MAX = 0.32;
+const LEAN_MAX = 0.32;
 /** Brightness flicker amplitude at a flicker of 1. */
-export const FLICKER_AMP = 0.05;
+const FLICKER_AMP = 0.05;
 const STRETCH_AMP = 0.07;
 const LEAN_STRETCH = 0.12;
 const LEAN_DIM = 0.04;
@@ -257,13 +257,13 @@ export const AMBIENT = 0.16;
 export const LIGHT_TINT = [1, 0.64, 0.34] as const;
 
 /** One flame's light at offset (dx, dy): a soft inverse-square-like falloff. */
-export function falloff(dx: number, dy: number): number {
+function falloff(dx: number, dy: number): number {
   const q = 1 + (dx * dx + dy * dy) / (LIGHT_R * LIGHT_R);
   return 1 / (q * q);
 }
 
 /** Light on the wall at (x, y), every flame at brightness 1. */
-export function wallLightAt(l: CandleLayout, x: number, y: number): number {
+function wallLightAt(l: CandleLayout, x: number, y: number): number {
   let sum = 0;
   for (let i = 0; i < l.count; i++) {
     sum += falloff(x - l.x[i], y - lightY(l, i));
@@ -272,7 +272,7 @@ export function wallLightAt(l: CandleLayout, x: number, y: number): number {
 }
 
 /** Light on the table at (x, y), every flame at brightness 1 (before `SURF_GAIN`). */
-export function surfaceLightAt(l: CandleLayout, x: number, y: number): number {
+function surfaceLightAt(l: CandleLayout, x: number, y: number): number {
   let sum = 0;
   for (let i = 0; i < l.count; i++) {
     sum += falloff(x - l.x[i], (y - l.baseY[i]) * SURF_SQUASH);
@@ -286,7 +286,7 @@ export function lightAt(l: CandleLayout, x: number, y: number): number {
 }
 
 /** Largest `lightAt` over a `step`-px grid and at every flame and candle base. */
-export function peakLight(l: CandleLayout, step = 16): number {
+function peakLight(l: CandleLayout, step = 16): number {
   let peak = 0;
   for (let y = 0; y <= REF_HEIGHT; y += step) {
     for (let x = 0; x <= l.refWidth; x += step) {

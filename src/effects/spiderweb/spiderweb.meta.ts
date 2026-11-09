@@ -7,7 +7,7 @@ export const CORNER_OPTIONS = [
   { value: "bottomRight", label: "Bottom right" },
 ] as const;
 
-export const LIGHT_OPTIONS = [
+const LIGHT_OPTIONS = [
   { value: "dawn", label: "Dawn gold" },
   { value: "misty", label: "Misty" },
   { value: "cool", label: "Cool morning" },

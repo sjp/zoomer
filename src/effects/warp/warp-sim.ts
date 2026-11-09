@@ -17,7 +17,7 @@ export const FADE_IN = 0.8;
 /** Depth at which a star has passed the camera and respawns. */
 export const NEAR_Z = 0.01;
 /** Nearest and farthest depth at which a receding star comes in at the edge. */
-export const EDGE_NEAR = 0.1;
+const EDGE_NEAR = 0.1;
 export const EDGE_FAR = 0.7;
 
 /** Per-frame inputs to `step`; reuse one object rather than allocating per frame. */
@@ -35,7 +35,7 @@ export interface StarFrame {
   tint: Rgb;
 }
 
-export interface Starfield {
+interface Starfield {
   /**
    * Star positions (x, y, in units of the focal length at depth 1) and depth
    * (0, 1]; colour mix and count-fade life. Filled on the first step.

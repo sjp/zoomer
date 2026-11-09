@@ -15,7 +15,7 @@ export class FakeOffscreenCanvas {
 }
 
 /** A 2D context method call recorded by `MeasuringCanvas`, with the font and fill set at the time. */
-export interface CanvasCall {
+interface CanvasCall {
   method: string;
   args: unknown[];
   font: string;

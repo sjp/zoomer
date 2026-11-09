@@ -7,7 +7,7 @@
 import { createRenderTarget, type RenderTarget, type RenderTargetOptions, withScope } from "./gl";
 
 /** A pair of same-sized render targets that a simulation steps between. */
-export interface PingPong {
+interface PingPong {
   /** The size last passed to `resize` (0 before the first), allocated or not. */
   readonly width: number;
   readonly height: number;
@@ -112,7 +112,7 @@ export function createPingPong(
 }
 
 /** A float vertex attribute of each item in a `FeedbackPair`. */
-export interface FeedbackAttrib {
+interface FeedbackAttrib {
   location: number;
   /** Floats in the attribute, 1 to 4. */
   size: number;
@@ -124,7 +124,7 @@ export interface FeedbackAttrib {
  * Two vertex buffers of interleaved float items that a transform-feedback
  * program steps between, each with a vertex array reading it.
  */
-export interface FeedbackPair {
+interface FeedbackPair {
   readonly buffers: readonly [WebGLBuffer, WebGLBuffer];
   /** Index of the buffer holding the latest items. */
   readonly current: 0 | 1;

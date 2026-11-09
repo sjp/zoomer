@@ -74,7 +74,7 @@ void main() {
 }
 `;
 
-export interface FlakeRenderer {
+interface FlakeRenderer {
   /** Instance data for `Flakes.step`: write `stride` floats per flake, then `upload`. */
   readonly data: Float32Array;
   readonly stride: number;
@@ -100,7 +100,7 @@ export interface FlakeRenderer {
   dispose: () => void;
 }
 
-export interface FlakeRendererOptions {
+interface FlakeRendererOptions {
   /** Opt in to fading flakes by a mask texture passed to `draw` (default false). */
   fadeMask?: boolean;
 }

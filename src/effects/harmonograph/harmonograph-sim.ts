@@ -26,16 +26,16 @@ export const MIN_SEG = 0.003;
 export const MAX_SEG = 0.02;
 
 /** Fewest normalised arc-length units a figure may have before it counts as too sparse. */
-export const MIN_ARC = 12;
+const MIN_ARC = 12;
 
 /** Seconds between one figure finishing and the next starting. */
-export const FIGURE_GAP = 2;
+const FIGURE_GAP = 2;
 
 /** Segment ages fade from `FADE_HOLD * fadeAge` to `fadeAge`. */
 export const FADE_HOLD = 0.2;
 
 /** Fade age as a multiple of the draw time: the previous figure fades while the next draws. */
-export const FADE_FIGURES = 1.75;
+const FADE_FIGURES = 1.75;
 
 /** Palette cycles along one figure. */
 const COLOR_CYCLES = 1.5;
@@ -100,7 +100,7 @@ export function createFigure(): Figure {
 }
 
 /** Raw (unnormalised) curve position and velocity at curve time `t`, written to `out`. */
-export function evalCurve(f: Figure, t: number, out: Float64Array): void {
+function evalCurve(f: Figure, t: number, out: Float64Array): void {
   let x = 0;
   let y = 0;
   let vx = 0;
@@ -126,7 +126,7 @@ export function evalCurve(f: Figure, t: number, out: Float64Array): void {
 }
 
 /** Why `measureFigure` rejected a figure, or null if it is fine. */
-export type Rejection = "collapsed" | "line" | "sparse" | "dense" | null;
+type Rejection = "collapsed" | "line" | "sparse" | "dense" | null;
 
 const scratch = new Float64Array(4);
 /** Raw sample positions from `measureFigure`'s first pass, reused by its second. */
@@ -246,14 +246,14 @@ export function fadeAlpha(age: number, fadeAge: number): number {
   return 1 - smoothstep(FADE_HOLD * fadeAge, fadeAge, age);
 }
 
-export interface PenSettings {
+interface PenSettings {
   /** Seconds to draw one figure. */
   drawTime: number;
   /** 0..1, used when the next figure is chosen. */
   complexity: number;
 }
 
-export interface Harmonograph {
+interface Harmonograph {
   /** Ring of `capacity` segments, `SEG_FLOATS` floats each. */
   readonly data: Float32Array;
   readonly capacity: number;

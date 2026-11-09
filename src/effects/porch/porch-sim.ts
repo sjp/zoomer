@@ -18,10 +18,10 @@ export const GUTTER_TOP = 74;
 export const GUTTER_BOTTOM = 100;
 
 /** Lamp centre: distance in from the side, and height. */
-export const LAMP_INSET = 120;
-export const LAMP_Y = 168;
+const LAMP_INSET = 120;
+const LAMP_Y = 168;
 /** The cone axis leans this far (radians) from straight down, towards the middle. */
-export const CONE_TILT = 0.42;
+const CONE_TILT = 0.42;
 /** Tangent of the cone's half-angle (about 40 degrees). */
 export const CONE_TAN = 0.84;
 /** Fraction of the half-angle that is fully lit before the soft edge. */
@@ -34,7 +34,7 @@ export const LAWN_Y = 790;
 export const STEP_Y = 935;
 
 /** Lamp position and unit cone axis, reference px. */
-export interface LampGeometry {
+interface LampGeometry {
   x: number;
   y: number;
   ax: number;
@@ -86,15 +86,15 @@ export const MAX_RAIN = 520;
 /** Rain enters from just under the roof, so the gutter (drawn later) hides its start. */
 export const RAIN_TOP = GUTTER_BOTTOM - 60;
 /** Far drops stop at the lawn's far edge, the nearest at the frame's bottom. */
-export const RAIN_FLOOR: readonly [number, number] = [LAWN_Y, REF_HEIGHT + 40];
+const RAIN_FLOOR: readonly [number, number] = [LAWN_Y, REF_HEIGHT + 40];
 /** Fall speed (reference px/s) of the farthest and nearest drops. */
-export const RAIN_SPEED: readonly [number, number] = [820, 1350];
+const RAIN_SPEED: readonly [number, number] = [820, 1350];
 /** Horizontal drift per unit fall at wind = ±1. */
 export const RAIN_SLANT = 0.32;
 /** Streaks run past the frame's sides by this much, so slanted rain enters from off-screen. */
 export const RAIN_MARGIN = 200;
 
-export interface Rain {
+interface Rain {
   readonly count: number;
   /** Position across the frame plus margins, 0..1. */
   readonly u: Float32Array;
@@ -157,16 +157,16 @@ export const DRIP_COUNT = 7;
 /** Seconds a drip takes to swell before it lets go, at the slowest rate. */
 export const GROW_RANGE: readonly [number, number] = [1.6, 5.5];
 /** Gravity for falling drips, reference px/s^2 (slow enough to read as big, heavy drops). */
-export const DRIP_GRAVITY = 760;
+const DRIP_GRAVITY = 760;
 /** Where drips land: the wet step, a little apart in depth. */
-export const LAND_RANGE: readonly [number, number] = [STEP_Y + 25, STEP_Y + 115];
+const LAND_RANGE: readonly [number, number] = [STEP_Y + 25, STEP_Y + 115];
 /** Longest step the drips take; a longer frame (a tab coming back) is clipped. */
 export const MAX_DRIP_DT = 0.25;
 
 export const GROWING = 0;
 export const FALLING = 1;
 
-export interface Drips {
+interface Drips {
   readonly count: number;
   /** Position along the gutter, 0..1 of the frame width. */
   readonly u: Float32Array;
@@ -217,7 +217,7 @@ export function createDrips(seed: number, count = DRIP_COUNT): Drips {
   return d;
 }
 
-export interface Splashes {
+interface Splashes {
   readonly max: number;
   readonly u: Float32Array;
   readonly y: Float32Array;
@@ -247,7 +247,7 @@ export function createSplashes(max = MAX_SPLASHES): Splashes {
   };
 }
 
-export function spawnSplash(s: Splashes, u: number, y: number, seed: number): void {
+function spawnSplash(s: Splashes, u: number, y: number, seed: number): void {
   const k = s.next;
   s.u[k] = u;
   s.y[k] = y;

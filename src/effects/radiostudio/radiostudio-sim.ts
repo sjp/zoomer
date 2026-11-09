@@ -22,11 +22,11 @@ const TAU = Math.PI * 2;
 export const DESIGN_ASPECT = 16 / 9;
 
 /** A box: centre x, y and half width, half height. */
-export type Box = [number, number, number, number];
+type Box = [number, number, number, number];
 /** A disc: centre x, y and radius. */
-export type Disc = [number, number, number];
+type Disc = [number, number, number];
 
-export interface StudioLayout {
+interface StudioLayout {
   aspect: number;
   /** The ON AIR sign's lit face; its housing is `SIGN_RIM` bigger all round. */
   sign: Box;
@@ -164,7 +164,7 @@ export function studioLayout(aspect: number): StudioLayout {
 export const BREAK_GAP = 240;
 /** …this long, and starting somewhere in this middle share of the slot, so breaks never bunch up. */
 export const BREAK_LENGTH = 9;
-export const BREAK_SPREAD = 0.7;
+const BREAK_SPREAD = 0.7;
 /** Seconds for the light to fade fully on or off. */
 export const LIGHT_FADE = 0.3;
 
@@ -215,8 +215,8 @@ export function stepLight(light: number, target: number, dt: number): number {
 /** Random-walk samples averaged for the meters' envelope: a quarter second, so it bounces. */
 export const MUSIC_SAMPLES = 4;
 /** The envelope's middle and swing, as a share of the meters' scale. */
-export const MUSIC_BASE = 0.58;
-export const MUSIC_SWING = 0.55;
+const MUSIC_BASE = 0.58;
+const MUSIC_SWING = 0.55;
 
 /**
  * The meters' target reading (0..1) for the walk's wander (about -1..1) and how
@@ -229,12 +229,12 @@ export function musicLevel(wander: number, loud: number): number {
 }
 
 /** A VU needle's natural frequency (Hz) and damping: a little overshoot, settling in about half a second. */
-export const NEEDLE_FREQ = 1.8;
-export const NEEDLE_DAMPING = 0.62;
+const NEEDLE_FREQ = 1.8;
+const NEEDLE_DAMPING = 0.62;
 /** The longest step the needle model takes at once. */
 const NEEDLE_STEP = 1 / 240;
 
-export interface Needle {
+interface Needle {
   /** Reading, 0..1 across the scale. */
   pos: number;
   /** Reading per second. */
@@ -274,8 +274,8 @@ export function stepNeedle(n: Needle, target: number, dt: number): Needle {
 }
 
 /** The LED bars rise quickly and fall back slowly (time constants, s). */
-export const BAR_ATTACK = 0.05;
-export const BAR_RELEASE = 0.4;
+const BAR_ATTACK = 0.05;
+const BAR_RELEASE = 0.4;
 /** Segments in each LED bar. */
 export const BAR_SEGMENTS = 16;
 
@@ -300,12 +300,12 @@ export const TAPE_MIN = 0.08;
 /** Seconds to wind from one end of that range to the other. */
 export const TAPE_RUN = 1500;
 /** Fill within which the machine eases to a stop before reversing, and the slowest it goes there. */
-export const TAPE_EASE = 0.03;
+const TAPE_EASE = 0.03;
 const TAPE_CRAWL = 0.08;
 /** Tape speed, in flange radii per second: a reel's turning speed is this over its pack's radius. */
-export const TAPE_SPEED = 0.45;
+const TAPE_SPEED = 0.45;
 
-export interface Tape {
+interface Tape {
   /** How full the right-hand (take-up) reel is, `TAPE_MIN`..1 - `TAPE_MIN`. */
   fill: number;
   /** +1 winding onto the right-hand reel, -1 back onto the left. */

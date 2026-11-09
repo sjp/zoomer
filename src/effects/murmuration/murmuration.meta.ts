@@ -10,7 +10,7 @@ export const SKY_OPTIONS = [
   { value: "wintergold", label: "Winter gold" },
 ] as const;
 
-export const HORIZON_OPTIONS = [
+const HORIZON_OPTIONS = [
   { value: "reeds", label: "Reeds" },
   { value: "trees", label: "Trees" },
   { value: "none", label: "None" },

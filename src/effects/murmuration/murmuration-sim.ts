@@ -19,7 +19,7 @@
 import { glslFloat as f } from "../gl";
 import { clamp, smoothstep } from "../math";
 import { createRng, hash32 } from "../noise";
-import { MAX_BIRDS, type HORIZON_OPTIONS, type SKY_OPTIONS } from "./murmuration.meta";
+import { MAX_BIRDS, type SKY_OPTIONS } from "./murmuration.meta";
 import { lookup } from "../lookup";
 
 export { type StepClock, takeSteps } from "../step-clock";
@@ -61,11 +61,11 @@ const BREATH_PERIOD = 37;
 const BREATH_DEPTH = 0.6;
 
 /** Edge push: margin (heights) and peak acceleration. */
-export const EDGE_MARGIN = 0.08;
-export const EDGE_ACCEL = 0.8;
+const EDGE_MARGIN = 0.08;
+const EDGE_ACCEL = 0.8;
 /** Below this height birds are pushed up, fully by LOW_Y - LOW_RAMP. */
-export const LOW_Y = 0.38;
-export const LOW_RAMP = 0.2;
+const LOW_Y = 0.38;
+const LOW_RAMP = 0.2;
 /**
  * Soft exclusion ellipse over the speaker: centred at (aspect / 2, EX_Y) with
  * half-axes EX_RX and EX_RY, pushing outwards at up to EX_ACCEL, fading from
@@ -74,15 +74,15 @@ export const LOW_RAMP = 0.2;
  * crosses y = 0.5 about a sixth of the width either side of the centre.
  */
 export const EX_Y = -0.1;
-export const EX_RX = 0.4;
-export const EX_RY = 0.88;
-export const EX_INNER = 0.6;
-export const EX_ACCEL = 0.9;
+const EX_RX = 0.4;
+const EX_RY = 0.88;
+const EX_INNER = 0.6;
+const EX_ACCEL = 0.9;
 /** Bound on |boundaryForce|: the edge terms on both axes plus the exclusion. */
 export const BOUNDARY_MAX = Math.hypot(EDGE_ACCEL, EDGE_ACCEL * 2) + EX_ACCEL;
 
 /** Predator passes: one per slot, starting 10-20 s into it, so 20-40 s apart. */
-export const PRED_SLOT = 30;
+const PRED_SLOT = 30;
 export const PRED_DURATION = 6;
 /** Peak repulsion and its Gaussian radius (heights). */
 export const PRED_ACCEL = 2.5;
@@ -91,7 +91,7 @@ export const PRED_RADIUS = 0.13;
 // --- Bird counts -----------------------------------------------------------
 
 /** Fraction of the `birds` param drawn at each quality. */
-export const QUALITY_BIRDS = { high: 1, balanced: 0.7, low: 0.4 } as const;
+const QUALITY_BIRDS = { high: 1, balanced: 0.7, low: 0.4 } as const;
 
 export interface BirdCounts {
   /** Birds drawn and splatted into the field. */
@@ -351,9 +351,9 @@ export function seedBirds(
 
 // --- Look -------------------------------------------------------------------
 
-export type SkyId = (typeof SKY_OPTIONS)[number]["value"];
+type SkyId = (typeof SKY_OPTIONS)[number]["value"];
 
-export interface Sky {
+interface Sky {
   /** Gradient stops: at the horizon, a third of the way up, and at the top. */
   low: string;
   mid: string;
@@ -374,8 +374,6 @@ export const SKIES = {
 export function skyFor(id: string): Sky {
   return lookup(SKIES, id, "dusk");
 }
-
-export type HorizonId = (typeof HORIZON_OPTIONS)[number]["value"];
 
 /** Columns in the horizon silhouette table. */
 export const HORIZON_COLUMNS = 1024;

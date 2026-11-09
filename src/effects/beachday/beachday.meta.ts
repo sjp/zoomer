@@ -1,7 +1,7 @@
 import { defineEffectMeta } from "../types";
 
-export type BeachTime = "midday" | "afternoon" | "sunset";
-export type SunSide = "left" | "right";
+type BeachTime = "midday" | "afternoon" | "sunset";
+type SunSide = "left" | "right";
 
 export const TIME_OPTIONS = [
   { value: "midday", label: "Midday" },
@@ -9,7 +9,7 @@ export const TIME_OPTIONS = [
   { value: "sunset", label: "Sunset" },
 ] as const satisfies readonly { value: BeachTime; label: string }[];
 
-export const SUN_OPTIONS = [
+const SUN_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: SunSide; label: string }[];

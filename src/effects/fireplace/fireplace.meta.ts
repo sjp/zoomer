@@ -1,7 +1,7 @@
 import { QUALITY_OPTIONS } from "../param-options";
 import { defineEffectMeta } from "../types";
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "wood", label: "Wood fire" },
   { value: "gas", label: "Gas (blue)" },
   { value: "magic", label: "Magic (green/purple)" },

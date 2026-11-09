@@ -24,7 +24,7 @@ export const FIELD_DZ = 1 / 16;
 
 export type Noise3 = (x: number, y: number, z: number) => number;
 
-export interface FlowField {
+interface FlowField {
   /**
    * Fits the lattice to noise-space `[x0, x1] x [y0, y1]` and the field to noise
    * time `time`, rebuilding what changed. A new `noise` function (a new seed) or

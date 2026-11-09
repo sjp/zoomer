@@ -77,10 +77,10 @@ export function tailProfile(delta: number, length: number, radius: number, comet
 }
 
 /** Radial coverage of a trail of `halfWidth` at `dist` reference px from its centre line. */
-export const radialCoverage = (dist: number, halfWidth: number) =>
+const radialCoverage = (dist: number, halfWidth: number) =>
   1 - smoothstep(halfWidth - EDGE_AA, halfWidth + EDGE_AA, Math.abs(dist));
 
-export interface TrailSettings {
+interface TrailSettings {
   /** Radians. */
   length: number;
   density: number;
@@ -141,14 +141,14 @@ export function trailsAtBruteForce(r: number, phi: number, s: TrailSettings): nu
 // Pole
 // ---------------------------------------------------------------------------
 
-export const POLES = {
+const POLES = {
   topLeft: [0.14, 0.86],
   topRight: [0.86, 0.86],
   above: [0.5, 1.2],
   centre: [0.5, 0.6],
 } as const satisfies Record<string, readonly [number, number]>;
 
-export type PoleId = keyof typeof POLES;
+type PoleId = keyof typeof POLES;
 
 const isPoleId = (v: string): v is PoleId => Object.hasOwn(POLES, v);
 
@@ -164,7 +164,7 @@ export function polePosition(pole: string, refWidth: number, out: [number, numbe
 // Foreground
 // ---------------------------------------------------------------------------
 
-export type ForegroundKind = "treeline" | "mountains" | "tree" | "none";
+type ForegroundKind = "treeline" | "mountains" | "tree" | "none";
 export const FOREGROUND_KINDS: readonly ForegroundKind[] = [
   "treeline",
   "mountains",
@@ -192,7 +192,7 @@ const GROUND: Record<Exclude<ForegroundKind, "none">, GroundStyle> = {
 const isGroundKind = (v: string): v is keyof typeof GROUND => Object.hasOwn(GROUND, v);
 
 /** The lone tree, in reference px (y up). */
-export interface LoneTree {
+interface LoneTree {
   /** x, y, radius per crown circle. */
   blobs: Float32Array;
   /** Trunk centre x, bottom y, top y, half-width. */

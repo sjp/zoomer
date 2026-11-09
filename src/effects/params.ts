@@ -144,7 +144,7 @@ function serialize(def: ParamDef, value: ParamValue): string {
 export const RESERVED_KEYS: readonly string[] = ["effect", "panel"];
 
 /** State the hash carries besides the effect's params. */
-export interface HashOptions {
+interface HashOptions {
   /** Whether the control panel is hidden. */
   panelHidden?: boolean;
   /**

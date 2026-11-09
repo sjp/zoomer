@@ -52,7 +52,7 @@ void main() {
 `;
 }
 
-export interface CausticTileOptions {
+interface CausticTileOptions {
   /** Seconds between re-renders while moving (at least 0.9 of it passes first). */
   interval: number;
   /** Phase units per second of `advance`'s `dt`, before each iteration's rate. */
@@ -65,7 +65,7 @@ export interface CausticTileOptions {
   rates?: readonly number[];
 }
 
-export interface CausticTile {
+interface CausticTile {
   /** The tile texture (R8, REPEAT); null until `resize`, or if that failed. */
   readonly texture: WebGLTexture | null;
   /** Layer offsets in tile periods, wrapped to 0..1: A's x and y, then B's. */

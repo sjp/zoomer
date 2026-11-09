@@ -26,7 +26,7 @@ export interface Graphic {
 }
 
 /** The ticker's strip: rows of `TICKER_ROW` texels, `rowH` tall, holding one `period` of text. */
-export interface TickerStrip extends Graphic {
+interface TickerStrip extends Graphic {
   period: number;
   rowH: number;
 }

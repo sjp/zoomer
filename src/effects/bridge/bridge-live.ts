@@ -9,7 +9,7 @@ import { hash32 } from "../noise";
 export type LiveKey = "stardate" | "time" | "date" | "status" | "location";
 
 /** Year the stardate convention counts from: 1000 units a year, 0 at its start. */
-export const STARDATE_EPOCH_YEAR = 2323;
+const STARDATE_EPOCH_YEAR = 2323;
 
 /**
  * The stardate for a moment, in the later-era convention: 1000 units per year,

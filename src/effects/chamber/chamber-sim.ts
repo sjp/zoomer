@@ -26,7 +26,7 @@ export const SCHEDULE_MAX_LAG = 2;
  * rate redraws the pending gap from "now", which is exact for a Poisson
  * process (it has no memory), so a slider never leaves a long wait behind.
  */
-export interface EventSchedule {
+interface EventSchedule {
   /** Time (s) of the pending event; NaN before the first `takeEvent`. */
   next: number;
   /** Rate (events per s) `next` was drawn at; NaN before the first `takeEvent`. */
@@ -41,7 +41,7 @@ export const createEventSchedule = (seed: number): EventSchedule => ({
 });
 
 /** An exponential gap (s) with mean `1 / rate`. */
-export const eventGap = (rand: () => number, rate: number) => -Math.log(1 - rand()) / rate;
+const eventGap = (rand: () => number, rate: number) => -Math.log(1 - rand()) / rate;
 
 /**
  * Returns the time (s) of the next event due at or before `t` (s, float64,
@@ -127,36 +127,36 @@ export const CENTRE_KEEP = 0.35;
 export const ALPHA_LENGTH = [110, 220] as const;
 /** Muon tracks span at least this much (reference px), and arc this gently (radius) in the field. */
 export const MUON_MIN = 0.55 * REF_HEIGHT;
-export const MUON_RADIUS = [1600, 3200] as const;
+const MUON_RADIUS = [1600, 3200] as const;
 const MUON_STEPS = 16;
 /** Scattering electrons: path length, step (reference px), and the heading kick's sd (radians) at the start and the end. */
-export const ELECTRON_LENGTH = [200, 520] as const;
-export const ELECTRON_STEP = 9;
+const ELECTRON_LENGTH = [200, 520] as const;
+const ELECTRON_STEP = 9;
 const SCATTER = [0.12, 0.6] as const;
 /** Spiralling electrons: starting radius and path length as a multiple of it, smallest radius, reference px. */
-export const SPIRAL_RADIUS = [40, 180] as const;
-export const SPIRAL_LENGTH = [3, 5] as const;
+const SPIRAL_RADIUS = [40, 180] as const;
+const SPIRAL_LENGTH = [3, 5] as const;
 export const SPIRAL_MIN_RADIUS = 5;
 /** Spiral steps turn by about this much (radians), within these lengths (reference px). */
 const SPIRAL_TURN = 0.3;
 const SPIRAL_STEP = [1.2, 14] as const;
 
 /** Time (s) a track takes to appear along its path, and its whole life, by kind. */
-export const GROW = [
+const GROW = [
   [0.12, 0.25],
   [0.2, 0.45],
   [0.15, 0.3],
 ] as const;
-export const LIFE = [
+const LIFE = [
   [2.5, 4.5],
   [2, 4],
   [2, 3.5],
 ] as const;
 /** Peak brightness and core half width (reference px), by kind. */
-export const PEAK = [1, 0.62, 0.42] as const;
-export const HALF_WIDTH = [2.6, 0.9, 0.7] as const;
+const PEAK = [1, 0.62, 0.42] as const;
+const HALF_WIDTH = [2.6, 0.9, 0.7] as const;
 /** By the end of its life a trail is this many times wider. */
-export const WIDEN = 3;
+const WIDEN = 3;
 /** Mist and trails drift together, reference px per s. */
 export const DRIFT_X = 5;
 export const DRIFT_Y = -2.5;
@@ -202,7 +202,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const gauss = (rand: () => number) => (rand() + rand() + rand() - 1.5) * 2;
 
 /** Whether (x, y) is inside the frame `w` wide, less the margin. */
-export const inFrame = (x: number, y: number, w: number) =>
+const inFrame = (x: number, y: number, w: number) =>
   x >= FRAME_MARGIN && x <= w - FRAME_MARGIN && y >= FRAME_MARGIN && y <= REF_HEIGHT - FRAME_MARGIN;
 
 function resetPath(tr: Track, x: number, y: number) {
@@ -406,11 +406,11 @@ export function trackEnvelope(age: number, grow: number, life: number): number {
 }
 
 /** How far a track has diffused: 0 until it has appeared, 1 at the end of its life. */
-export const trackSpread = (age: number, grow: number, life: number) =>
+const trackSpread = (age: number, grow: number, life: number) =>
   clamp((age - grow) / Math.max(1e-6, life - grow), 0, 1);
 
 /** A track's look at one time. */
-export interface TrackPose {
+interface TrackPose {
   /** Path length revealed so far, reference px. */
   reveal: number;
   /** Brightness (peak times `trackEnvelope`). */
@@ -451,7 +451,7 @@ export function trackAt(tr: Track, t: number, out: TrackPose): TrackPose {
 }
 
 /** The live tracks (the first `count` of `list`), the schedule and the spawn RNG. */
-export interface Chamber {
+interface Chamber {
   list: Track[];
   count: number;
   schedule: EventSchedule;

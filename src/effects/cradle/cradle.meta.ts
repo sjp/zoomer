@@ -1,10 +1,10 @@
 import { defineEffectMeta } from "../types";
 
-export type CradleCorner = "left" | "right";
+type CradleCorner = "left" | "right";
 export type CradleScene = "studio" | "lamp" | "office";
 export type CradleFinish = "chrome" | "brass" | "glass";
 
-export const CORNER_OPTIONS = [
+const CORNER_OPTIONS = [
   { value: "left", label: "Bottom left" },
   { value: "right", label: "Bottom right" },
 ] as const satisfies readonly { value: CradleCorner; label: string }[];

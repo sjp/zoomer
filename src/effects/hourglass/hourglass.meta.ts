@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export type HourglassPosition = "left" | "right";
+type HourglassPosition = "left" | "right";
 export type HourglassFrame = "walnut" | "brass" | "none";
 
 export const POSITION_OPTIONS = [

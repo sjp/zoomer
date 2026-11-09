@@ -28,9 +28,9 @@ export const BASE_SPEED = 55;
 /** Ring wavelength in reference px at birth, at `ringSize` 1. */
 export const BASE_WAVELENGTH = 20;
 /** Packet half-width in wavelengths: 2.5 wavelengths across, so 2–3 crests. */
-export const PACKET_HALF = 1.25;
+const PACKET_HALF = 1.25;
 /** Relative wavelength growth per second of age: rings widen as they spread. */
-export const SPREAD = 0.3;
+const SPREAD = 0.3;
 /** Longest a ring lives, in seconds (at low rates). */
 export const MAX_LIFE = 4;
 /** Shortest a ring lives, so a heavy shower still shows rings, not blips. */
@@ -40,11 +40,11 @@ const FILL = 0.85;
 /** How fast the lifespan follows the rate, in seconds per second. */
 const LIFE_RATE = 0.75;
 /** Seconds a ring takes to fade in after the drop lands. */
-export const FADE_IN = 0.2;
+const FADE_IN = 0.2;
 /** Peak slope of a fresh ring at full drop strength. */
-export const RING_AMP = 0.35;
+const RING_AMP = 0.35;
 /** Rate swing at `variation` 1: the rate varies by ±85 %. */
-export const RATE_SWING = 0.85;
+const RATE_SWING = 0.85;
 
 // ---------------------------------------------------------------------------
 // Ring profile
@@ -96,7 +96,7 @@ export function ringAmplitude(age: number, life: number): number {
 // ---------------------------------------------------------------------------
 // Drop ring buffer
 
-export interface DropBuffer {
+interface DropBuffer {
   /** Position as a fraction of the frame width and height (y up, as gl_FragCoord). */
   readonly x: Float32Array;
   readonly y: Float32Array;
@@ -152,7 +152,7 @@ export function addDrop(
 // Rain
 
 /** Slow rate wobble in [-1, 1] with zero mean: two incommensurate sines. */
-export function rateWobble(t: number): number {
+function rateWobble(t: number): number {
   return 0.6 * Math.sin(t * 0.21 + 1.3) + 0.4 * Math.sin(t * 0.083 + 4.1);
 }
 
@@ -170,7 +170,7 @@ export function targetLife(rate: number, cap = MAX_DROPS): number {
   return Math.min(MAX_LIFE, Math.max(MIN_LIFE, (FILL * cap) / rate));
 }
 
-export interface RainState {
+interface RainState {
   readonly drops: DropBuffer;
   /** Sim seconds, float64. */
   time: number;

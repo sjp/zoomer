@@ -20,7 +20,7 @@ export const Z_FAR = 8;
 /** 1 / Z_FAR: beyond this depth (smaller d) only the distance band is drawn. */
 export const D_MIN = 1 / Z_FAR;
 /** Blades at density 1 on a 16:9 frame. About 2.6x screen coverage of the grass band. */
-export const BASE_COUNT = 18000;
+const BASE_COUNT = 18000;
 /** Upper bound on blades (density 2 on a wide 32:9 frame). */
 export const MAX_BLADES = 72000;
 /** Floats per blade instance: x, z, height, width; tone, sway cycles, flex, lean. */
@@ -37,7 +37,7 @@ export const WIDTH_MAX = 0.02;
 export const SWAY_CYCLES_MIN = 300;
 export const SWAY_CYCLES_MAX = 540;
 /** Random rest lean, radians either side of upright. */
-export const LEAN = 0.18;
+const LEAN = 0.18;
 
 /**
  * The blade strip: `(level, side)` per vertex, three segments of two vertices
@@ -64,7 +64,7 @@ function unit(seed: number, i: number, k: number): number {
  * Every blade up to some count, sorted back to front once, so any smaller count
  * can be picked out without sorting again (`selectBlades`).
  */
-export interface BladeField {
+interface BladeField {
   /** Blades in the field. */
   count: number;
   /** BLADE_FLOATS per blade, back to front (decreasing z). */
@@ -165,7 +165,7 @@ export function buildBlades(seed: number, count: number, out: Float32Array): num
  * Seconds of one wind period at rate 1. Every phase in the shader is a whole
  * number of cycles per period, so the CPU wraps the phase to [0, 1) without a jump.
  */
-export const WIND_PERIOD = 600;
+const WIND_PERIOD = 600;
 /** Wind phase advance per second, in periods: slow drift at rest, faster in strong wind. */
 export const windRate = (wind: number) => (0.4 + 1.2 * Math.max(0, wind)) / WIND_PERIOD;
 
@@ -295,7 +295,7 @@ export function bendPoints(angle: number, length: number, out: Float64Array): Fl
 export type FieldId = "meadow" | "wheat" | "dry" | "lavender";
 export type SunId = "midday" | "golden" | "overcast";
 
-export interface FieldPalette {
+interface FieldPalette {
   /** Shadowed root and ground colour. */
   root: Rgb;
   /** Blade colour range. */
@@ -335,7 +335,7 @@ export const FIELDS: Record<FieldId, FieldPalette> = {
   lavender: field("#22311d", "#4b673c", "#788a55", "#adbb95", "#8a6dc0", 0.7, 1.6),
 };
 
-export interface SunPalette {
+interface SunPalette {
   zenith: Rgb;
   horizon: Rgb;
   /** Light on the field (multiplies blade colours). */

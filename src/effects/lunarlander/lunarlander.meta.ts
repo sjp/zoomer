@@ -1,8 +1,8 @@
 import { defineEffectMeta } from "../types";
 
-export type EarthWindow = "left" | "right" | "none";
+type EarthWindow = "left" | "right" | "none";
 
-export const EARTH_OPTIONS = [
+const EARTH_OPTIONS = [
   { value: "left", label: "Left window" },
   { value: "right", label: "Right window" },
   { value: "none", label: "None" },

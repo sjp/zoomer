@@ -20,7 +20,7 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import { clamp } from "../math";
 
 /** Panel colours in each alert condition, in `bridge-panels.ts` colour order. */
-export const PALETTES: Readonly<Record<AlertId, readonly Rgb[]>> = {
+const PALETTES: Readonly<Record<AlertId, readonly Rgb[]>> = {
   normal: [
     "#ff9966",
     "#ffcc99",
@@ -47,14 +47,14 @@ export const PALETTES: Readonly<Record<AlertId, readonly Rgb[]>> = {
 };
 
 /** The colour a block flashes to: a warm white. */
-export const FLASH: Rgb = hexToUnitRgb("#fff4e8");
+const FLASH: Rgb = hexToUnitRgb("#fff4e8");
 
 /** Seconds the alert colours take to fade in or out. */
 export const ALERT_FADE = 1;
 /** Alert light pulse period (s): slow and smooth, never a hard flash. */
 export const PULSE_PERIOD = 1.8;
 
-export interface AlertMix {
+interface AlertMix {
   normal: number;
   yellow: number;
   red: number;
@@ -87,7 +87,7 @@ export function alertPulse(t: number): number {
 /**
  * Writes palette colour `colour` under `mix` into `out` at `o`. Allocates nothing.
  */
-export function mixedColour(colour: number, mix: AlertMix, out: Float32Array, o: number): void {
+function mixedColour(colour: number, mix: AlertMix, out: Float32Array, o: number): void {
   const c = ((colour % COLOUR_COUNT) + COLOUR_COUNT) % COLOUR_COUNT;
   const n = PALETTES.normal[c];
   const y = PALETTES.yellow[c];

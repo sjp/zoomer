@@ -11,21 +11,21 @@ import { approach, clamp, wrap } from "../math";
 import { createRng } from "../noise";
 
 /** Reference rise speed in px/s at 1080p for the nearest lanterns at a rise of 1. */
-export const RISE_PX = 38;
+const RISE_PX = 38;
 /** Reference horizontal drift in px/s at 1080p for the nearest lanterns at a wind of 1. */
-export const WIND_PX = 45;
+const WIND_PX = 45;
 /** Reference sway amplitude in px at 1080p for the nearest lanterns. */
-export const SWAY_PX = 16;
+const SWAY_PX = 16;
 /** Most sway tilt, in radians (about 4.6 degrees). */
-export const TILT = 0.08;
+const TILT = 0.08;
 /** Extra lean into the wind at a wind of ±1, in radians. */
-export const WIND_LEAN = 0.07;
+const WIND_LEAN = 0.07;
 /** Most the flame dims at a flicker of 1: a few percent. */
 export const FLICKER_DEPTH = 0.07;
 /** Fastest flicker component, in Hz: well under the 2 Hz cap. */
 export const FLICKER_MAX_HZ = 1.6;
 /** Seconds a lantern takes to fade in or out when the count changes. */
-export const FADE_TIME = 1.5;
+const FADE_TIME = 1.5;
 /** Halo radius relative to the lantern's half-width. */
 export const HALO_RADIUS = 3.2;
 /** Lanterns nearer than this depth draw a halo; fainter far ones skip it. */
@@ -99,13 +99,13 @@ export function reflectY(y: number, horizon: number): number {
 // --- Lanterns -----------------------------------------------------------------
 
 /** Lantern size relative to the nearest, by depth (0 far, 1 near). */
-export const depthScale = (d: number) => 0.2 + 0.8 * d ** 1.3;
+const depthScale = (d: number) => 0.2 + 0.8 * d ** 1.3;
 /** Rise and wind pace relative to the nearest, by depth. */
-export const depthPace = (d: number) => 0.3 + 0.7 * d;
+const depthPace = (d: number) => 0.3 + 0.7 * d;
 /** How far a lantern's colour fades towards the sky behind it, by depth. */
-export const depthHaze = (d: number) => 0.65 * (1 - d) ** 2;
+const depthHaze = (d: number) => 0.65 * (1 - d) ** 2;
 /** Brightness by depth. */
-export const depthBright = (d: number) => 0.5 + 0.5 * d;
+const depthBright = (d: number) => 0.5 + 0.5 * d;
 
 export interface LanternFrame {
   /** Screen width in reference px. */
@@ -128,7 +128,7 @@ export interface LanternFrame {
   skyBottom: Rgb;
 }
 
-export interface Lanterns {
+interface Lanterns {
   readonly max: number;
   /** Depth per lantern, 0 (far) to 1 (near): sorted ascending and never changed. */
   readonly depth: Float32Array;

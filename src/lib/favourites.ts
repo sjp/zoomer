@@ -29,7 +29,7 @@ export function parseFavourites(value: string | null): string[] {
   }
 }
 
-export interface Favourites {
+interface Favourites {
   /** Every starred id, including ones no effect has any more. A new set on each change. */
   get: () => ReadonlySet<string>;
   /** Stars `id`, or unstars it if it's starred, and saves the result. */

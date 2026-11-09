@@ -18,44 +18,44 @@ export type WebCorner = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 export type WebLight = "dawn" | "misty" | "cool";
 
 /** The web stays inside this fraction of the frame width from its side edge (the speaker fills the middle third). */
-export const BOX_WIDTH_FRACTION = 1 / 3;
+const BOX_WIDTH_FRACTION = 1 / 3;
 /** ...and within this many reference px of its top or bottom edge. */
-export const BOX_HEIGHT = 0.64 * REF_HEIGHT;
+const BOX_HEIGHT = 0.64 * REF_HEIGHT;
 /** Frame vertices keep this far from the frame edges, so their anchor threads show. */
-export const EDGE_MARGIN = 18;
+const EDGE_MARGIN = 18;
 /** Frame vertices keep this far inside the box's inner sides, leaving room for sag and sway. */
-export const INNER_MARGIN_X = 14;
-export const INNER_MARGIN_Y = 34;
+const INNER_MARGIN_X = 14;
+const INNER_MARGIN_Y = 34;
 /** Anchor threads end this far past the frame edge, so their caps never show. */
-export const ANCHOR_OVERSHOOT = 6;
+const ANCHOR_OVERSHOOT = 6;
 
 /** Web radius (reference px) at size 0 and 1, before fitting the box. */
-export const RADIUS_MIN = 190;
-export const RADIUS_MAX = 330;
+const RADIUS_MIN = 190;
+const RADIUS_MAX = 330;
 
 /** Thread kinds, for width and drop spacing. */
 export const KIND_SPIRAL = 0;
-export const KIND_SPOKE = 1;
-export const KIND_FRAME = 2;
+const KIND_SPOKE = 1;
+const KIND_FRAME = 2;
 export const KIND_ANCHOR = 3;
 export const KIND_HUB = 4;
 
 /** Sag at the middle of a thread, as a fraction of its length (the horizontal-thread maximum). */
-export const SAG = [0.1, 0.015, 0.03, 0.02, 0.04] as const;
+const SAG = [0.1, 0.015, 0.03, 0.02, 0.04] as const;
 /** Straight pieces each thread is drawn with. */
 const SUBDIVISIONS = [3, 6, 8, 4, 1] as const;
 /** Drop spacing along each kind at full dew, reference px; 0 for none. */
 const DROP_SPACING = [5, 12, 14, 16, 0] as const;
 /** Weight (sway displacement fraction) at the frame threads; the hub is 1, the anchor ends 0. */
-export const FRAME_WEIGHT = 0.3;
+const FRAME_WEIGHT = 0.3;
 /** Capture spiral: free zone inside this fraction of R, and how far along each spoke it reaches. */
 const SPIRAL_START = 0.2;
 const SPIRAL_REACH = 0.93;
 
 /** Sway: displacement at the hub (reference px) at sway 1. */
-export const SWAY_AMP = 14;
+const SWAY_AMP = 14;
 /** Glints: how strongly the web's tilt shifts each drop's glint phase. */
-export const GLINT_PHASE_GAIN = 4;
+const GLINT_PHASE_GAIN = 4;
 /** Light angle drift with no sway (radians of tilt), so the glints still change slowly. */
 const LIGHT_DRIFT = 0.15;
 
@@ -67,7 +67,7 @@ export const THREAD_FLOATS = 8;
 /** Thread half widths (reference px) per kind; sub-pixel, so they draw faint. */
 const HALF_WIDTH = [0.2, 0.25, 0.32, 0.32, 0.2] as const;
 
-export interface LightPreset {
+interface LightPreset {
   /** Backdrop gradient, top and bottom. */
   top: Rgb;
   bottom: Rgb;
@@ -146,7 +146,7 @@ export const LIGHTS: Readonly<Record<WebLight, LightPreset>> = {
   },
 };
 
-export interface WebOptions {
+interface WebOptions {
   corner: WebCorner;
   /** 0–1. */
   size: number;
@@ -193,7 +193,7 @@ export interface WebGeometry {
 }
 
 /** Whether a corner is on the right side, and whether it's at the bottom. */
-export const cornerFlips = (corner: WebCorner): [boolean, boolean] => [
+const cornerFlips = (corner: WebCorner): [boolean, boolean] => [
   corner === "topRight" || corner === "bottomRight",
   corner === "bottomLeft" || corner === "bottomRight",
 ];
@@ -627,7 +627,7 @@ export function dropGlint(phase: number, tilt: number): number {
 }
 
 /** How much a thread with unit normal (nx, ny) faces the sun (0–1): lit where it runs across the light. */
-export function threadFacing(nx: number, ny: number, sunX: number, sunY: number): number {
+function threadFacing(nx: number, ny: number, sunX: number, sunY: number): number {
   const d = Math.abs(nx * sunX + ny * sunY);
   const d2 = d * d;
   return d2 * d2 * d2;

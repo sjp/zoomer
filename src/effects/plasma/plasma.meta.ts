@@ -1,7 +1,7 @@
 import { defineEffectMeta } from "../types";
 
-export type PlasmaCorner = "left" | "right";
-export type PlasmaColourId = "violet" | "blue" | "green" | "rainbow";
+type PlasmaCorner = "left" | "right";
+type PlasmaColourId = "violet" | "blue" | "green" | "rainbow";
 
 export const COLOUR_OPTIONS = [
   { value: "violet", label: "Violet" },

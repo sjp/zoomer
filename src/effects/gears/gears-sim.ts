@@ -14,9 +14,9 @@ import { type GearLayoutId, MAX_GEARS } from "./gears.meta";
 const TAU = Math.PI * 2;
 
 /** Gear body styles, as the shader's `vStyle`. */
-export const STYLE_SOLID = 0;
-export const STYLE_SPOKES = 1;
-export const STYLE_HOLES = 2;
+const STYLE_SOLID = 0;
+const STYLE_SPOKES = 1;
+const STYLE_HOLES = 2;
 export const STYLE_BALANCE = 3;
 
 /** Metals, as indices into the effect's colour table. */
@@ -39,7 +39,7 @@ export const CLEARANCE = 0.01;
 /** Largest drive ratio any gear may turn at, so small gears never spin fast. */
 export const MAX_RATIO = 6;
 /** Tooth counts the train picks from. */
-export const TEETH = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64] as const;
+const TEETH = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64] as const;
 
 /** Escapement: seconds per tick, and the tick's kick-and-settle shape. */
 export const TICK_PERIOD = 1;
@@ -49,7 +49,7 @@ const EASE_NORM = 1 - Math.exp(-EASE_DAMP) * Math.cos(EASE_FREQ);
 /** How fast the tick blends in or out when toggled (per second). */
 const TICK_BLEND_RATE = 2.5;
 /** Balance wheel swing amplitude (radians). */
-export const BALANCE_AMPLITUDE = 1.5;
+const BALANCE_AMPLITUDE = 1.5;
 
 export interface Gear {
   /** Centre (frame heights, y up). */
@@ -82,7 +82,7 @@ export interface Gear {
   axle: boolean;
 }
 
-export interface LayoutSpec {
+interface LayoutSpec {
   /** Module for every gear (frame heights). */
   module: number;
   /** Gears to grow, before the balance wheel. */
@@ -100,17 +100,17 @@ export const LAYOUT_SPECS: Readonly<Record<GearLayoutId, LayoutSpec>> = {
 };
 
 /** Corner layout: the gears stay within this radius of the top-right corner. */
-export function cornerRadius(aspect: number): number {
+function cornerRadius(aspect: number): number {
   return Math.min(0.7, 0.42 * aspect);
 }
 
 /** Side layout: the strip's width at the right edge. */
-export function sideWidth(aspect: number): number {
+function sideWidth(aspect: number): number {
   return Math.min(0.5, 0.3 * aspect);
 }
 
 /** Frame layout: the band's width round the edges. */
-export const FRAME_BAND = 0.24;
+const FRAME_BAND = 0.24;
 
 /** Outer radius: the tooth tips, or the balance wheel's rim. */
 export function tipRadius(g: Gear): number {
@@ -463,7 +463,7 @@ export function tickEase(u: number): number {
  * when the tick is switched on or off. Float64 and unwrapped: gear angles are
  * wrapped only when uploaded.
  */
-export interface Drive {
+interface Drive {
   smooth: number;
   base: number;
   step: number;

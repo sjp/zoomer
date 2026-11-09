@@ -27,7 +27,7 @@ export const VERTEX_SHORTS = 4;
 /** Cells per second at speed 1: hills are about 13 cells apart, so one every ~15 s. */
 export const CELLS_PER_SECOND = 0.85;
 /** Lattice cells of each octave across the octave texture (see `buildOctaves`). */
-export const OCTAVE_PERIODS = [20, 40, 80, 160] as const;
+const OCTAVE_PERIODS = [20, 40, 80, 160] as const;
 
 /**
  * Columns either side of the camera's column in row `r`: column c spans x in
@@ -39,7 +39,7 @@ export function rowHalfWidth(r: number): number {
 }
 
 /** Corner offset (dx, dz in -1..1) as the 0..8 code the vertex shader decodes. */
-export const cornerCode = (dx: number, dz: number) => dx + 1 + 3 * (dz + 1);
+const cornerCode = (dx: number, dz: number) => dx + 1 + 3 * (dz + 1);
 
 /** Triangles in the mesh. */
 export function triangleCount(): number {
@@ -100,7 +100,7 @@ export function buildMesh(): Int16Array {
 }
 
 /** Where the camera is and how it is turned, in mesh space (y up, z forward). */
-export interface CameraPose {
+interface CameraPose {
   /** Lateral position, kept inside column 0 (x in [0, 1]) as `buildMesh` needs. */
   x: number;
   /** Height above the terrain's zero level. */
@@ -224,7 +224,7 @@ export function octaveWeights(roughness: number, out: Float64Array): number {
 }
 
 /** One stop of a height colour ramp. */
-export interface RampStop {
+interface RampStop {
   /** Normalised height, 0 (shore) to 1 (highest peaks). */
   at: number;
   color: string;
@@ -232,7 +232,7 @@ export interface RampStop {
   rock: number;
 }
 
-export interface TerrainPalette {
+interface TerrainPalette {
   /** Ascending `at`. */
   stops: readonly RampStop[];
   rock: string;

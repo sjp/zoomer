@@ -4,26 +4,26 @@ export type CornerId = "topLeft" | "topRight" | "both";
 export type SkyId = "morning" | "haze" | "dusk";
 export type BlossomId = "pink" | "white" | "deep";
 
-export const CORNER_OPTIONS = [
+const CORNER_OPTIONS = [
   { value: "topLeft", label: "Top left" },
   { value: "topRight", label: "Top right" },
   { value: "both", label: "Both" },
 ] as const satisfies readonly { value: CornerId; label: string }[];
 
-export const SKY_OPTIONS = [
+const SKY_OPTIONS = [
   { value: "morning", label: "Morning" },
   { value: "haze", label: "Haze" },
   { value: "dusk", label: "Dusk" },
 ] as const satisfies readonly { value: SkyId; label: string }[];
 
-export const BLOSSOM_OPTIONS = [
+const BLOSSOM_OPTIONS = [
   { value: "pink", label: "Pink" },
   { value: "white", label: "White" },
   { value: "deep", label: "Deep pink" },
 ] as const satisfies readonly { value: BlossomId; label: string }[];
 
 /** Highest shed rate, petals per second. */
-export const MAX_SHED_RATE = 4;
+const MAX_SHED_RATE = 4;
 
 export const blossomMeta = defineEffectMeta({
   id: "blossom",

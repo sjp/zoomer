@@ -9,7 +9,7 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import { clamp } from "../math";
 import { hash32 } from "../noise";
 
-export interface PlanetStyle {
+interface PlanetStyle {
   ocean: Rgb;
   /** Low and high land colours. */
   landLow: Rgb;

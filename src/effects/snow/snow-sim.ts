@@ -8,9 +8,9 @@ import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import { createNoise, createRng } from "../noise";
 
 /** Reference fall speed in px/s at 1080p for the middle layer at a speed of 1. */
-export const FALL_PX = 70;
+const FALL_PX = 70;
 /** Reference horizontal drift in px/s at 1080p for a wind (or gust) of 1. */
-export const WIND_PX = 120;
+const WIND_PX = 120;
 /** Reference sway amplitude in px at 1080p for a sway of 1. */
 export const SWAY_PX = 28;
 /** Seconds a flake takes to fade in when the flake count is raised. */
@@ -58,7 +58,7 @@ export interface FlakeFrame {
   brightness: number;
 }
 
-export interface Flakes {
+interface Flakes {
   readonly xs: Float32Array;
   readonly ys: Float32Array;
   readonly layer: Uint8Array;

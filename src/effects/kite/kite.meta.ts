@@ -13,7 +13,7 @@ export const COLOUR_OPTIONS = [
   { value: "blueyellow", label: "Blue and yellow" },
 ] as const;
 
-export const CORNER_OPTIONS = [
+const CORNER_OPTIONS = [
   { value: "left", label: "Top left" },
   { value: "right", label: "Top right" },
 ] as const;

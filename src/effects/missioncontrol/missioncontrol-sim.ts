@@ -130,7 +130,7 @@ export const NO_TRACK = 1000;
  * span must cover less than a full turn of longitude, which holds for up to one
  * orbit, since the Earth turns under it. Writes `out[offset + i * stride]`.
  */
-export function fillTrackEdges(
+function fillTrackEdges(
   o: Orbit,
   u0: number,
   u1: number,
@@ -164,9 +164,6 @@ export function fillTrackEdges(
     out[offset + i * stride] = lat;
   }
 }
-
-/** Texels per craft row of the track texture, and floats per texel. */
-export const TRACK_TEXELS = TRACK_BINS;
 
 /**
  * Builds one craft's row of the track texture: RGBA per bin, the latitude at
@@ -212,13 +209,13 @@ export const COUNTDOWN = 30;
 /** Seconds from the start (or turning launches on) to the first liftoff. */
 export const FIRST_LIFTOFF = COUNTDOWN + 20;
 /** Seconds after liftoff when the launch screen cuts back to a new rocket on the pad, at most. */
-export const PAD_RESET = 120;
+const PAD_RESET = 120;
 /** Seconds the cut to the pad takes, fading through black. */
 export const PAD_CUT = 1;
 
-export type LaunchPhase = "idle" | "countdown" | "flight";
+type LaunchPhase = "idle" | "countdown" | "flight";
 
-export interface LaunchState {
+interface LaunchState {
   phase: LaunchPhase;
   /** Which launch this is (0 is the first), or the last one when idle after a flight. -1 before any. */
   index: number;
@@ -467,7 +464,7 @@ export function rocketClimb(s: number): number {
 }
 
 /** Seconds from liftoff (engine start) until the rocket moves. */
-export const IGNITION = 3;
+const IGNITION = 3;
 
 /* ----- The shaders' clock ----- */
 

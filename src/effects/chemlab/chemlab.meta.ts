@@ -1,16 +1,16 @@
 import { defineEffectMeta } from "../types";
 
 export type LabPalette = "mixed" | "toxic" | "neon" | "warm";
-export type LabLighting = "dim" | "lab";
+type LabLighting = "dim" | "lab";
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "mixed", label: "Mixed" },
   { value: "toxic", label: "Toxic green" },
   { value: "neon", label: "Neon" },
   { value: "warm", label: "Warm" },
 ] as const satisfies readonly { value: LabPalette; label: string }[];
 
-export const LIGHTING_OPTIONS = [
+const LIGHTING_OPTIONS = [
   { value: "dim", label: "Dim (glow-lit)" },
   { value: "lab", label: "Lab lights" },
 ] as const satisfies readonly { value: LabLighting; label: string }[];

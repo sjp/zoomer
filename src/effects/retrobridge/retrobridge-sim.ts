@@ -82,7 +82,7 @@ export const DOOR = 2;
 /** Plain wall past the stations: a bare black console stretch and pale panels, no lamps or screens. */
 export const PLAIN = 3;
 
-export interface Segment {
+interface Segment {
   /** Azimuths (radians) of the segment's edges, a0 < a1. */
   a0: number;
   a1: number;
@@ -93,10 +93,10 @@ export interface Segment {
 export const CALM_HALF = 18 * DEG;
 /** Width (radians) of a station, and of the lift door's bay. */
 export const STATION_W = 15 * DEG;
-export const DOOR_W = 14 * DEG;
+const DOOR_W = 14 * DEG;
 /** Stations on the side away from the door, and on the door's side. */
-export const STATIONS_FAR = 2;
-export const STATIONS_NEAR = 1;
+const STATIONS_FAR = 2;
+const STATIONS_NEAR = 1;
 /** Where the plain wall past the stations ends, either side: well past the edges of a 32:9 frame. */
 const PLAIN_END = 90 * DEG;
 
@@ -138,7 +138,7 @@ export const PLOT = 1;
 export const PLANET = 2;
 
 /** A station's viewscreen: its centre's azimuth and height, half sizes (m), picture type and variant. */
-export interface Viewscreen {
+interface Viewscreen {
   theta: number;
   y: number;
   halfW: number;
@@ -212,12 +212,12 @@ export const CALM_RAMP = 1.2;
 /** Blink rates (Hz) of busy slots at full activity; at zero activity they run at `IDLE_RATE` of this. */
 export const MIN_RATE = 0.22;
 export const MAX_RATE = 0.6;
-export const IDLE_RATE = 0.45;
+const IDLE_RATE = 0.45;
 /** Blink rates (Hz) of calm slots, whatever the activity. */
-export const CALM_MIN_RATE = 0.05;
+const CALM_MIN_RATE = 0.05;
 export const CALM_MAX_RATE = 0.1;
 /** How fast (per second) the eased activity follows the setting. */
-export const ACTIVITY_RATE = 0.2;
+const ACTIVITY_RATE = 0.2;
 /** Share of busy slots that blink at zero and at full activity; the rest hold steady. */
 const BLINK_SHARE_IDLE = 0.3;
 const BLINK_SHARE_BUSY = 0.95;
@@ -325,7 +325,7 @@ export function slotRate(rate: number, a: number): number {
 }
 
 /** How much a busy slot with `threshold` blinks (rather than holds steady) at eased activity `a`. */
-export function blinkWeight(threshold: number, a: number): number {
+function blinkWeight(threshold: number, a: number): number {
   const share = BLINK_SHARE_IDLE + (BLINK_SHARE_BUSY - BLINK_SHARE_IDLE) * a;
   return smoothstep(threshold - BLINK_SOFT, threshold + BLINK_SOFT, share);
 }
@@ -370,7 +370,7 @@ export const ALERT_EASE = 2;
 export const PULSE_PERIOD = 3.2;
 export const BEACON_PERIOD = 2.8;
 /** Share of the red wash that pulses; the rest holds while the alert is on. */
-export const PULSE_DEPTH = 0.4;
+const PULSE_DEPTH = 0.4;
 
 /** The alert level after `dt` seconds heading for `on`, never faster than `ALERT_EASE` allows. */
 export function stepAlert(level: number, on: boolean, dt: number): number {

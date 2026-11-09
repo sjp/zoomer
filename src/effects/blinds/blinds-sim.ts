@@ -9,7 +9,7 @@ import type { Noise } from "../noise";
 import { lookup } from "../lookup";
 
 /** Lit fraction of each stripe period (the gap between two slats). */
-export const DUTY = 0.56;
+const DUTY = 0.56;
 /** Half the duty cycle, in stripe periods: the lit gap reaches this far from its centre. */
 export const HALF_DUTY = DUTY / 2;
 /** Soft side-edge half-width of the window mask (in `xn` units) at the window end and its growth to the far end. */
@@ -34,7 +34,7 @@ export const BOX_W = 0.5 + EDGE_Y0 + EDGE_YK + 0.05;
  * top and bottom run parallel to the stripes, `bandH / 2` above and below the
  * centre line `y = cy + slope * (x - cx)`.
  */
-export interface BlindsShape {
+interface BlindsShape {
   cx: number;
   cy: number;
   halfW: number;
@@ -55,7 +55,6 @@ export const POSITIONS = {
   right: { x: 0.76, y: 0.56, side: 1 },
   left: { x: 0.24, y: 0.56, side: -1 },
 } as const;
-export type Position = keyof typeof POSITIONS;
 
 /** Footprint half-width as a fraction of the reference width, and band height in reference px. */
 const HALF_W = 0.19;
@@ -111,7 +110,7 @@ export function bandT(xn: number, side: number): number {
  * half-integers) with penumbra `pen` (in periods), when each gap reaches
  * `halfGap` periods either side of its centre. 1 in the gap, 0 behind a slat.
  */
-export function slatGap(n: number, pen: number, halfGap: number): number {
+function slatGap(n: number, pen: number, halfGap: number): number {
   const g = Math.abs(fract(n) - 0.5);
   return 1 - smoothstep(halfGap - 0.5 * pen, halfGap + 0.5 * pen, g);
 }
@@ -153,7 +152,7 @@ export function blindsLight(x: number, y: number, s: BlindsShape): number {
 }
 
 /** Cloud noise frequency in 1/s: features about 30 s apart, so dips come every 20–60 s. */
-export const CLOUD_FREQ = 1 / 30;
+const CLOUD_FREQ = 1 / 30;
 /** Deepest dip: the sun loses up to half its light. */
 export const MAX_DIP = 0.5;
 

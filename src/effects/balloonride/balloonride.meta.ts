@@ -3,13 +3,13 @@ import { defineEffectMeta } from "../types";
 export type RideTime = "sunrise" | "midday" | "sunset";
 export type EnvelopeScheme = "rainbow" | "redyellow" | "bluewhite" | "patchwork";
 
-export const RIDE_TIME_OPTIONS = [
+const RIDE_TIME_OPTIONS = [
   { value: "sunrise", label: "Sunrise" },
   { value: "midday", label: "Midday" },
   { value: "sunset", label: "Sunset" },
 ] as const satisfies readonly { value: RideTime; label: string }[];
 
-export const ENVELOPE_OPTIONS = [
+const ENVELOPE_OPTIONS = [
   { value: "rainbow", label: "Rainbow" },
   { value: "redyellow", label: "Red and yellow" },
   { value: "bluewhite", label: "Blue and white" },

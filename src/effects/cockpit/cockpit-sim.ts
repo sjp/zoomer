@@ -39,7 +39,7 @@ export const LEAVE_SECONDS = 1.2;
 export const TUNNEL_MIN = 20;
 export const TUNNEL_MAX = 40;
 /** Seconds the tunnel's glow takes to fade in at its start, and out at its end. */
-export const TUNNEL_FADE = 1.5;
+const TUNNEL_FADE = 1.5;
 /** The longest jump, from the first stretch to stars again. */
 const JUMP_MAX = ENTER_SECONDS + TUNNEL_MAX + LEAVE_SECONDS;
 /** A jump starts this far into its slot, as a fraction of the gap, plus up to `JITTER`. */
@@ -48,7 +48,7 @@ const JITTER = 0.3;
 
 export type JumpPhase = "sublight" | "entering" | "tunnel" | "leaving";
 
-export interface JumpState {
+interface JumpState {
   phase: JumpPhase;
   /** 0..1 through the current phase. */
   progress: number;
@@ -169,7 +169,7 @@ const ASTEROID_MAX = 26;
 /** Seconds an asteroid takes to fade in and out at the ends of its pass. */
 const ASTEROID_FADE = 1.5;
 
-export interface Asteroid {
+interface Asteroid {
   /** Whether one is in view. */
   visible: boolean;
   /** Centre (frame heights from the frame centre, y up) and radius (frame heights). */
@@ -228,7 +228,7 @@ export function asteroidAt(t: number, seed: number, rate: number, out: Asteroid)
 }
 
 /** The asteroid rate each slot was decided with; see `slotRate`. */
-export interface RateLatch {
+interface RateLatch {
   slot: number;
   rate: number;
 }
@@ -254,7 +254,7 @@ export function slotRate(latch: RateLatch, t: number, rate: number): number {
 /* ----- Console lamps ----- */
 
 /** Lamp colours, in `cockpit-layout.ts` colour order: red, amber, white and green. */
-export const LAMP_COLOURS: readonly Rgb[] = ["#ff3b26", "#ffa020", "#fff1dc", "#5dff7a"].map((h) =>
+const LAMP_COLOURS: readonly Rgb[] = ["#ff3b26", "#ffa020", "#fff1dc", "#5dff7a"].map((h) =>
   hexToUnitRgb(h),
 );
 
@@ -281,7 +281,7 @@ export function createLampScratch(groups: number): LampScratch {
 }
 
 /** 0..1: a lamp's blink at `t`, on for `duty` of each period with soft edges. */
-export function blinkWeight(lamp: Lamp, t: number): number {
+function blinkWeight(lamp: Lamp, t: number): number {
   const u = (((t / lamp.period + lamp.phase) % 1) + 1) % 1;
   const on = lamp.duty;
   const edge = Math.min(0.25 * on, BLINK_FADE / lamp.period);
@@ -377,7 +377,7 @@ const NEBULA_COLOURS: readonly (readonly [Rgb, Rgb])[] = [
   ["#8a3a1e", "#6a1a3a"],
 ].map(([a, b]) => [hexToUnitRgb(a), hexToUnitRgb(b)] as const);
 
-export interface Scenery {
+interface Scenery {
   /** Planet centre and radius (frame heights; radius 0 for none), band count and tilt. */
   planetX: number;
   planetY: number;

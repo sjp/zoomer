@@ -18,7 +18,7 @@ import { MIN_FOLDS, MAX_FOLDS } from "./silk.meta";
 const TAU = Math.PI * 2;
 
 export const SILK_LAYOUTS = ["hanging", "flowing", "billowing"] as const;
-export type SilkLayout = (typeof SILK_LAYOUTS)[number];
+type SilkLayout = (typeof SILK_LAYOUTS)[number];
 
 /** Waves in the height sum, and warp waves. The shader's arrays have these sizes. */
 export const WAVES = 6;
@@ -36,7 +36,7 @@ export const REF_ASPECT = 16 / 9;
  */
 export const WARP_K = 0.25;
 
-export interface WaveSpec {
+interface WaveSpec {
   /** Direction of the wave vector, degrees (0 = varies along x, so folds run vertically; y up). */
   angle: number;
   /** Wavelength as a multiple of the base wavelength (`baseWavelength`). */
@@ -49,7 +49,7 @@ export interface WaveSpec {
   phase: number;
 }
 
-export interface WarpSpec {
+interface WarpSpec {
   angle: number;
   /** Wavelength in frame-height units (absolute, so the bend is the same at every fold count). */
   length: number;
@@ -175,7 +175,7 @@ export function fillWarpUniforms(out: Float32Array, folds: number, phases: Float
  * Gradient-to-slope factor for `depth`: the slope is grad h times this, so a
  * lone base wave of amplitude 1 has a peak slope of `SLOPE_GAIN * depth`.
  */
-export const SLOPE_GAIN = 1.6;
+const SLOPE_GAIN = 1.6;
 export function slopeScale(folds: number, depth: number): number {
   return (Math.max(0, depth) * SLOPE_GAIN * baseWavelength(folds)) / TAU;
 }
@@ -223,7 +223,7 @@ export function silkField(
 }
 
 /** Light elevation above the cloth, radians. */
-export const LIGHT_ELEVATION = (40 * Math.PI) / 180;
+const LIGHT_ELEVATION = (40 * Math.PI) / 180;
 
 /**
  * Light direction L and Blinn half vector H (view straight on, V = +z) for a

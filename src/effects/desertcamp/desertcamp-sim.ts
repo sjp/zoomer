@@ -56,10 +56,10 @@ export const DUNE_COLUMNS = 1024;
 /** Floats per column: near, mid and far height (height units), and the near dune's slope. */
 export const DUNE_CHANNELS = 4;
 /** Dune layers, nearest first. */
-export const DUNE_LAYERS = 3;
+const DUNE_LAYERS = 3;
 /** Each layer's trough height and dune height, height units, nearest first. */
-export const DUNE_BASE = [0.055, 0.15, 0.235] as const;
-export const DUNE_AMP = [0.2, 0.11, 0.065] as const;
+const DUNE_BASE = [0.055, 0.15, 0.235] as const;
+const DUNE_AMP = [0.2, 0.11, 0.065] as const;
 /** Crest rounding (see `duneShape`): soft night silhouettes. */
 const DUNE_SOFTNESS = 1.6;
 
@@ -107,19 +107,19 @@ export function duneHeightAt(table: Float32Array, layer: number, u: number): num
 // ---------------------------------------------------------------------------
 
 /** Fire distance from its edge, fraction of the width. */
-export const FIRE_EDGE = 0.085;
+const FIRE_EDGE = 0.085;
 /** The fire sits on the near dune's face, this far (reference px) below its crest line, and no lower than `FIRE_MIN_Y`. */
-export const FIRE_BELOW_CREST = 36;
-export const FIRE_MIN_Y = 42;
+const FIRE_BELOW_CREST = 36;
+const FIRE_MIN_Y = 42;
 /** Tent centre's distance from the fire, towards the frame centre, fraction of the width. */
-export const TENT_OFFSET = 0.11;
+const TENT_OFFSET = 0.11;
 /** Tent half-width and height, reference px. */
 export const TENT_HALF_W = 70;
 export const TENT_H = 92;
 /** The tent stands this far below the crest line, reference px. */
 const TENT_BELOW_CREST = 22;
 
-export interface CampLayout {
+interface CampLayout {
   /** Whether there is a fire. */
   fire: boolean;
   /** -1 for a fire at the left edge, 1 at the right. The tent's side when there is no fire. */
@@ -179,7 +179,7 @@ const DRAFT = 0.25;
 /** Largest |brightness - 1| of the fire's light. */
 export const FIRE_FLICKER_RANGE = CANDLE_BRIGHT_RANGE;
 
-export interface FireState {
+interface FireState {
   motion: FlameMotion;
   /** Shared lean, -1..1. */
   lean: number;
@@ -236,11 +236,11 @@ export function sandLight(dx: number, dy: number, slope: number): number {
 
 export const MAX_SPARKS = 24;
 /** New sparks per second. */
-export const SPARK_RATE = 5;
+const SPARK_RATE = 5;
 /** Lifetime range, s. */
-export const SPARK_LIFE = [1.2, 2.8] as const;
+const SPARK_LIFE = [1.2, 2.8] as const;
 /** Launch speed range (reference px / s), upward. */
-export const SPARK_SPEED = [45, 95] as const;
+const SPARK_SPEED = [45, 95] as const;
 /** Upward speed lost per second (drag on the launch speed). */
 const SPARK_DRAG = 0.6;
 /** Slowest rise the hot air keeps up, reference px / s. */
@@ -249,7 +249,7 @@ const SPARK_BUOYANCY = 22;
 const SPARK_WOBBLE = 9;
 const SPARK_LEAN_DRIFT = 30;
 
-export interface Sparks {
+interface Sparks {
   count: number;
   x: Float64Array;
   y: Float64Array;
@@ -342,13 +342,13 @@ export function sparkGlow(s: Sparks, i: number): number {
 
 /** Shortest gap between meteors and the mean extra gap (exponential), s: one every few minutes. */
 export const METEOR_MIN_GAP = 40;
-export const METEOR_MEAN_EXTRA = 110;
+const METEOR_MEAN_EXTRA = 110;
 /** Mean gap, s. */
 export const METEOR_MEAN_GAP = METEOR_MIN_GAP + METEOR_MEAN_EXTRA;
 /** Duration (s), length (reference px) and peak brightness ranges: short and soft. */
-export const METEOR_DURATION = [0.5, 0.9] as const;
-export const METEOR_LENGTH = [110, 220] as const;
-export const METEOR_BRIGHT = [0.3, 0.55] as const;
+const METEOR_DURATION = [0.5, 0.9] as const;
+const METEOR_LENGTH = [110, 220] as const;
+const METEOR_BRIGHT = [0.3, 0.55] as const;
 
 export interface Meteor {
   /** Start time, s; -Infinity before the first. */
@@ -363,7 +363,7 @@ export interface Meteor {
   bright: number;
 }
 
-export interface Meteors {
+interface Meteors {
   /** The latest meteor (at most one at a time, since the gap dwarfs a meteor's life). */
   current: Meteor;
   /** Time of the next start, s. */
@@ -421,7 +421,7 @@ export function stepMeteors(m: Meteors, t: number, on: boolean, refWidth: number
 }
 
 /** A meteor's head and tail (reference px) and brightness at one time. */
-export interface MeteorPose {
+interface MeteorPose {
   headX: number;
   headY: number;
   tailX: number;

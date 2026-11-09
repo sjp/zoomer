@@ -15,7 +15,7 @@ import { createRng, hash32 } from "../noise";
 import { lookup } from "../lookup";
 
 export type PaletteId = "reef" | "sunset" | "deep" | "bleached";
-export type ColonyKind = "branching" | "fan" | "mound";
+type ColonyKind = "branching" | "fan" | "mound";
 
 /**
  * Floats per instance: segment (x0, y0, x1, y1), shape (r0, r1, t0, t1), style
@@ -27,13 +27,13 @@ export const INSTANCE_ATTRIBUTES: readonly number[] = [4, 4, 4, 1];
 /** Instance budget for the whole reef. */
 export const MAX_INSTANCES = 9000;
 /** Colonies along the bottom at density 1 on a 16:9 frame. */
-export const BASE_COLONIES = 14;
-export const MAX_DENSITY = 2;
+const BASE_COLONIES = 14;
+const MAX_DENSITY = 2;
 /** Reef height limit at the very centre of the frame, in frame heights. */
 export const CENTER_HEIGHT = 0.08;
 /** The `height` param's range: the reef's limit at the edges, in frame heights. */
-export const MIN_HEIGHT = 0.25;
-export const MAX_HEIGHT = 0.6;
+const MIN_HEIGHT = 0.25;
+const MAX_HEIGHT = 0.6;
 /** Every part has arrived by this level, so the hold shows the whole reef. */
 export const LAST_ARRIVAL = 0.97;
 /** Colour slots in each palette. */
@@ -59,7 +59,7 @@ export function cycleSeed(seed: number, cycle: number): number {
   return hash32(Math.imul(Math.floor(seed), 0x9e3779b1) ^ hash32(cycle + 0x3c0a1));
 }
 
-export interface Colony {
+interface Colony {
   kind: ColonyKind;
   /** Base x, frame heights. */
   x: number;
@@ -552,7 +552,7 @@ export function buildReef(
   return reef;
 }
 
-export interface CoralPalette {
+interface CoralPalette {
   /** Water near the surface (top of frame), mid-depth and at the bottom. */
   top: Rgb;
   mid: Rgb;

@@ -13,24 +13,24 @@ import { createNoise, createRng, fbm2, type Noise } from "../noise";
 export type Rect = readonly [x0: number, y0: number, x1: number, y1: number];
 
 /** Frame width at the sides and the top. */
-export const FRAME_SIDE = 0.05;
-export const FRAME_TOP = 0.05;
+const FRAME_SIDE = 0.05;
+const FRAME_TOP = 0.05;
 /** Bottom rail and sill, together. */
-export const FRAME_BOTTOM = 0.11;
+const FRAME_BOTTOM = 0.11;
 /** Glazing bar width. */
-export const BAR = 0.03;
+const BAR = 0.03;
 /** Height of the top row of panes in the four-pane layout. */
-export const TOP_BAND = 0.15;
+const TOP_BAND = 0.15;
 /** Most panes in any layout. */
 export const MAX_PANES = 6;
 
-export type LayoutId = "four" | "six" | "frame";
+type LayoutId = "four" | "six" | "frame";
 
 /** The layout for a select value; unknown values fall back to four panes. */
 export const layoutId = (value: string): LayoutId =>
   value === "six" || value === "frame" ? value : "four";
 
-export type SceneId = "pines" | "village" | "plain";
+type SceneId = "pines" | "village" | "plain";
 const SCENES: readonly SceneId[] = ["pines", "village", "plain"];
 
 /** The shader's index for a scene select value; unknown values fall back to pines. */
@@ -112,7 +112,7 @@ export function paneAt(panes: readonly Rect[], x: number, y: number): number {
 // ---------------------------------------------------------------------------
 
 /** Rows of the condensation mask; its columns follow the aspect ratio. */
-export const COND_ROWS = 360;
+const COND_ROWS = 360;
 /** Most columns, for very wide canvases. */
 const COND_MAX_COLS = 2048;
 
@@ -127,7 +127,7 @@ export function condensationSize(aspect: number): { width: number; height: numbe
  * a lighter band along its bottom edge and smaller patches in its top corners,
  * the edge broken up by noise.
  */
-export function fogDensity(p: Rect, x: number, y: number, noise: Noise): number {
+function fogDensity(p: Rect, x: number, y: number, noise: Noise): number {
   const x0 = p[0];
   const y0 = p[1];
   const x1 = p[2];
@@ -162,7 +162,7 @@ const DROP_FOG = 0.55;
  * Droplet edge encoding: G = 0.5 + (radius - distance) * texels * DROP_RAMP, so
  * one texel moves G by DROP_RAMP and the shader can find a sharp edge at 0.5.
  */
-export const DROP_RAMP = 0.25;
+const DROP_RAMP = 0.25;
 
 /**
  * Builds the condensation mask for `panes` on a canvas `aspect` wide into `out`

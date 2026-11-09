@@ -137,7 +137,7 @@ export interface SkylineStyle {
   tv: Rgb;
 }
 
-export interface Skyline {
+interface Skyline {
   readonly windows: WindowState;
   /** Uploads a new layout's quads and resets every window for it. */
   setLayout: (layout: CityLayout, seed: number, litFraction: number) => void;

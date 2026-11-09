@@ -10,12 +10,12 @@ import { glslFloat, TO_CLIP_GLSL } from "../gl";
  * minified by this factor (a ball lens's wide, flipped view), so the defocused
  * lights read smaller and crisper through the drop.
  */
-export const LENS = 2;
+const LENS = 2;
 /** Refraction offsets are stored in the drop map as +-OFFSET_RANGE reference px. */
 export const OFFSET_RANGE = 128;
 /** 8-bit value meaning "no offset", and the scale from [-1, 1] to stored units. */
 export const ENC_MID = 128 / 255;
-export const ENC_SCALE = 127 / 255;
+const ENC_SCALE = 127 / 255;
 /** The drop map's clear value: no offset, no dome, no coverage. */
 export const DROP_CLEAR = new Float32Array([ENC_MID, ENC_MID, 0, 0]);
 

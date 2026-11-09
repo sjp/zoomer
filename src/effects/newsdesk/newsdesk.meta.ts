@@ -1,18 +1,18 @@
 import { defineEffectMeta } from "../types";
 
-export type SkylineMode = "cycle" | "day" | "night";
+type SkylineMode = "cycle" | "day" | "night";
 
-export const SKYLINE_OPTIONS = [
+const SKYLINE_OPTIONS = [
   { value: "cycle", label: "Dusk cycle" },
   { value: "day", label: "Day" },
   { value: "night", label: "Night" },
 ] as const satisfies readonly { value: SkylineMode; label: string }[];
 
 /** Code points in the lower third's name and title lines. */
-export const NAME_MAX_LENGTH = 40;
-export const TITLE_MAX_LENGTH = 60;
+const NAME_MAX_LENGTH = 40;
+const TITLE_MAX_LENGTH = 60;
 /** Code points in the ticker's one line. */
-export const TICKER_MAX_LENGTH = 160;
+const TICKER_MAX_LENGTH = 160;
 
 export const newsdeskMeta = defineEffectMeta({
   id: "newsdesk",

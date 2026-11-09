@@ -13,26 +13,26 @@ import { createRng } from "../noise";
 const TAU = Math.PI * 2;
 
 /** Slowest and fastest rise in px/s at 1080p for a speed of 1. */
-export const RISE_MIN = 30;
+const RISE_MIN = 30;
 export const RISE_MAX = 150;
 /** Radius (px at 1080p) at which the rise is halfway between the two. */
-export const RISE_HALF_R = 10;
+const RISE_HALF_R = 10;
 
 /** Below this radius (px at 1080p) a bubble rises straight; zigzag is full at ZIG_FULL_R. */
 export const ZIG_MIN_R = 5;
-export const ZIG_FULL_R = 12;
+const ZIG_FULL_R = 12;
 /** Largest zigzag half-amplitude in px at 1080p. */
 export const ZIG_PX = 14;
 /** Below this radius a bubble stays round; the flattening is full at WOBBLE_FULL_R. */
 export const WOBBLE_MIN_R = 14;
-export const WOBBLE_FULL_R = 30;
+const WOBBLE_FULL_R = 30;
 /** Largest flattening (semi-major axis = r(1 + k), semi-minor = r / (1 + k)). */
 export const WOBBLE_MAX = 0.28;
 /** Largest tilt of a wobbling bubble's flattened axis away from horizontal, in radians. */
-export const WOBBLE_TILT = 0.35;
+const WOBBLE_TILT = 0.35;
 
 /** Seconds a bubble takes to fade in when the count is raised. */
-export const FADE_IN = 1.2;
+const FADE_IN = 1.2;
 /** Stream emitters per mode at most. */
 export const MAX_EMITTERS = 6;
 /**
@@ -155,7 +155,7 @@ export interface BubbleFrame {
   streams: boolean;
 }
 
-export interface Bubbles {
+interface Bubbles {
   readonly xs: Float32Array;
   readonly ys: Float32Array;
   /** 1 while a stream bubble waits off-screen for its emitter. */

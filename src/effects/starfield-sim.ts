@@ -52,7 +52,7 @@ export const seedSalt = (seed: number) =>
   hash32((Math.floor(seed) * 0x9e3779b1 + 0x5bd1e995) >>> 0);
 
 /** Hash of a ring, shared by all its cells (once per pixel in the shader). */
-export const ringHash = (ring: number, salt: number) => hash32((ring ^ salt) >>> 0);
+const ringHash = (ring: number, salt: number) => hash32((ring ^ salt) >>> 0);
 
 export interface Star {
   occupied: boolean;

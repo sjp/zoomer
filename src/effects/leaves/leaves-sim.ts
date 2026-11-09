@@ -11,13 +11,13 @@ import { clamp, smoothstep } from "../math";
 import { createNoise, createRng, type Noise } from "../noise";
 
 /** Reference fall speed in px/s at 1080p for the middle layer at a speed of 1. */
-export const FALL_PX = 55;
+const FALL_PX = 55;
 /** Reference horizontal drift in px/s at 1080p for a wind (or full gust) of 1. */
-export const WIND_PX = 110;
+const WIND_PX = 110;
 /** Reference sway amplitude in px at 1080p for the middle layer. */
-export const SWAY_PX = 38;
+const SWAY_PX = 38;
 /** Seconds a piece takes to fade in when the count is raised. */
-export const FADE_IN = 1.5;
+const FADE_IN = 1.5;
 /** Floats per piece instance: x, y, radius, opacity; r, g, b, softness; angle, flip. */
 export const PIECE_FLOATS = 10;
 const TAU = Math.PI * 2;
@@ -27,7 +27,7 @@ const TAU = Math.PI * 2;
  * colour fades towards the background), edge softness in radii (the far blur),
  * how much the wind moves it, and its share of the count.
  */
-export const LAYERS = [
+const LAYERS = [
   { size: 0.55, pace: 0.6, alpha: 0.75, haze: 0.45, soft: 0.35, wind: 0.6, share: 0.45 },
   { size: 1, pace: 0.85, alpha: 0.95, haze: 0.15, soft: 0.08, wind: 0.8, share: 0.35 },
   { size: 1.7, pace: 1.2, alpha: 1, haze: 0, soft: 0.03, wind: 1, share: 0.2 },
@@ -37,7 +37,7 @@ export const LAYERS = [
 
 /** Indices into `SHAPES`. */
 export const SHAPE_OVAL = 0;
-export const SHAPE_MAPLE = 1;
+const SHAPE_MAPLE = 1;
 export const SHAPE_PETAL = 2;
 export const SHAPE_ROUND_PETAL = 3;
 
@@ -253,7 +253,7 @@ export interface PieceFrame {
   hazeBottom: Rgb;
 }
 
-export interface Pieces {
+interface Pieces {
   readonly xs: Float32Array;
   readonly ys: Float32Array;
   readonly layer: Uint8Array;
@@ -287,7 +287,7 @@ export interface SpawnPoint {
   y: number;
 }
 
-export interface PieceOptions {
+interface PieceOptions {
   /**
    * Gives pieces a source. Called for a piece that needs a start: every piece at
    * first, and each one that falls off the bottom. Write a position (reference

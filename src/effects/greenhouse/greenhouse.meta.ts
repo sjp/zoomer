@@ -3,13 +3,13 @@ import { defineEffectMeta } from "../types";
 export type PaletteId = "jungle" | "fern" | "evening";
 export type RoofId = "arched" | "pitched" | "hidden";
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "jungle", label: "Jungle" },
   { value: "fern", label: "Fern house" },
   { value: "evening", label: "Evening" },
 ] as const satisfies readonly { value: PaletteId; label: string }[];
 
-export const ROOF_OPTIONS = [
+const ROOF_OPTIONS = [
   { value: "arched", label: "Arched" },
   { value: "pitched", label: "Pitched" },
   { value: "hidden", label: "Hidden" },

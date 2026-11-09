@@ -3,20 +3,20 @@ import { defineEffectMeta } from "../types";
 export type MixId = "natural" | "alpha" | "muon";
 export type LightId = "white" | "blue" | "warm";
 
-export const MIX_OPTIONS = [
+const MIX_OPTIONS = [
   { value: "natural", label: "Natural" },
   { value: "alpha", label: "Alpha-rich" },
   { value: "muon", label: "Muon-rich" },
 ] as const satisfies readonly { value: MixId; label: string }[];
 
-export const LIGHT_OPTIONS = [
+const LIGHT_OPTIONS = [
   { value: "white", label: "Side white" },
   { value: "blue", label: "Blue" },
   { value: "warm", label: "Warm" },
 ] as const satisfies readonly { value: LightId; label: string }[];
 
 /** Most tracks per second. */
-export const RATE_MAX = 6;
+const RATE_MAX = 6;
 
 export const chamberMeta = defineEffectMeta({
   id: "chamber",

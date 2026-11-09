@@ -13,19 +13,19 @@ export interface NumberParam {
   default: number;
 }
 
-export interface ColorParam {
+interface ColorParam {
   kind: "color";
   label: string;
   default: string;
 }
 
-export interface BooleanParam {
+interface BooleanParam {
   kind: "boolean";
   label: string;
   default: boolean;
 }
 
-export interface SelectParam {
+interface SelectParam {
   kind: "select";
   label: string;
   options: readonly { value: string; label: string }[];
@@ -91,11 +91,11 @@ export interface EffectInstance<V> {
 }
 
 /** Rendering context types an effect can draw with, keyed by `getContext` name. */
-export interface ContextMap {
+interface ContextMap {
   "2d": CanvasRenderingContext2D;
   webgl2: WebGL2RenderingContext;
 }
-export type ContextKind = keyof ContextMap;
+type ContextKind = keyof ContextMap;
 
 /**
  * The categories the effect list groups by, in display order. Add one only when
@@ -113,14 +113,14 @@ export const EFFECT_CATEGORIES = [
   "Retro",
   "Scenes",
 ] as const;
-export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
+type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 
 /**
  * Rough GPU cost at 4K with default params, lightest first, for the "Lightest first"
  * sort, judged from the effect's per-pixel work.
  */
 export const EFFECT_COSTS = ["very low", "low", "medium"] as const;
-export type EffectCost = (typeof EFFECT_COSTS)[number];
+type EffectCost = (typeof EFFECT_COSTS)[number];
 
 /**
  * What the app knows about an effect before its code loads: enough to list it, build
@@ -141,18 +141,18 @@ interface EffectMetaBase<S extends ParamSchema> {
   params: S;
 }
 
-export interface EffectMeta2D<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
+interface EffectMeta2D<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
   /** Defaults to "2d". */
   context?: "2d";
 }
 
-export interface EffectMetaWebGL2<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
+interface EffectMetaWebGL2<S extends ParamSchema = ParamSchema> extends EffectMetaBase<S> {
   context: "webgl2";
 }
 
 export type EffectMeta<S extends ParamSchema = ParamSchema> = EffectMeta2D<S> | EffectMetaWebGL2<S>;
 
-export interface Effect2D<S extends ParamSchema = ParamSchema> extends EffectMeta2D<S> {
+interface Effect2D<S extends ParamSchema = ParamSchema> extends EffectMeta2D<S> {
   create: (ctx: CanvasRenderingContext2D) => EffectInstance<ParamValues<S>>;
 }
 

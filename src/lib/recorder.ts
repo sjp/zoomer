@@ -60,7 +60,7 @@ export function videoBitrate(width: number, height: number): number {
   return Math.round(Math.min(MAX_BITRATE, Math.max(MIN_BITRATE, scaled)));
 }
 
-export interface Recording {
+interface Recording {
   blob: Blob;
   extension: "mp4" | "webm";
 }

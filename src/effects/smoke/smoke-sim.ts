@@ -19,7 +19,7 @@ import { lookup } from "../lookup";
 import { type StepClock, takeSteps } from "../step-clock";
 
 /** Simulation steps per second, and the fixed step length. */
-export const SIM_RATE = 60;
+const SIM_RATE = 60;
 export const SIM_DT = 1 / SIM_RATE;
 /** Most steps in one frame; a longer frame drops the rest (the smoke just slows). */
 export const MAX_STEPS = 4;
@@ -82,8 +82,8 @@ export interface Flow {
 }
 
 /** Full curl strength (multiplying WAVES' speeds) at turbulence 1 and 0. */
-export const CURL_MAX = 1.6;
-export const CURL_MIN = 0.35;
+const CURL_MAX = 1.6;
+const CURL_MIN = 0.35;
 
 /**
  * Turbulence (0..1) to curl strength and onset: more turbulence breaks the
@@ -179,7 +179,7 @@ export function wispFactor(x: number, k: number, phase: number, amount: number):
   return 1 - amount * (0.5 + 0.5 * Math.sin(k * x + phase));
 }
 
-export interface SourcePreset {
+interface SourcePreset {
   /**
    * Emitters as (x offset from `sourceX` in height units, pointing away from the
    * canvas centre; tip height). One or two.
@@ -199,7 +199,7 @@ export interface SourcePreset {
   prop: "sticks" | "cup";
 }
 
-export type SourceId = (typeof SOURCE_OPTIONS)[number]["value"];
+type SourceId = (typeof SOURCE_OPTIONS)[number]["value"];
 
 export const SOURCES = {
   incense: {
@@ -240,7 +240,7 @@ export function sourceFor(id: string): SourcePreset {
 }
 
 /** Margin kept between a source and the canvas sides, as a fraction of the width. */
-export const SOURCE_MARGIN = 0.04;
+const SOURCE_MARGIN = 0.04;
 
 /**
  * Emitter positions in height units, written to `out` as (x, y) pairs (one per

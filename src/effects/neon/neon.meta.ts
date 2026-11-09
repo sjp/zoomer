@@ -1,9 +1,9 @@
 import { defineEffectMeta } from "../types";
 
-export type NeonWall = "brick" | "concrete" | "tile";
+type NeonWall = "brick" | "concrete" | "tile";
 export type NeonPosition = "left" | "centre" | "right";
 
-export const NEON_WALL_OPTIONS = [
+const NEON_WALL_OPTIONS = [
   { value: "brick", label: "Brick" },
   { value: "concrete", label: "Concrete" },
   { value: "tile", label: "Dark tile" },

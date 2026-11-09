@@ -88,7 +88,7 @@ export const CALM_REPEL = 1.5;
 export const CALM_DECAY = 0.15;
 
 /** Agent count tiers, all powers of two so the agent buffers stay tidy. */
-export type AgentTier = (typeof AGENT_OPTIONS)[number]["value"];
+type AgentTier = (typeof AGENT_OPTIONS)[number]["value"];
 export const AGENT_TIERS = {
   low: { count: 65536 },
   medium: { count: 131072 },
@@ -120,7 +120,7 @@ export function depositAmount(decay: number, cells: number, agents: number): num
   return agents > 0 ? (MEAN_TRAIL * decay * cells) / agents : 0;
 }
 
-export type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
+type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
 
 /** Palettes as colour stops from the background (t = 0) to the brightest node (t = 1). */
 export const PALETTES = {
@@ -205,7 +205,7 @@ export function calmMask(x: number, y: number): number {
 }
 
 /** Attraction to the food at uv (x, y), on a frame `aspect` = width / height. */
-export function foodField(x: number, y: number, aspect: number, food: Float32Array): number {
+function foodField(x: number, y: number, aspect: number, food: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < FOOD_COUNT; i++) {
     const dx = (x - food[i * 2]) * aspect;
@@ -232,7 +232,7 @@ export function seedAgents(seed: number, count: number, out: Float32Array): Floa
  */
 export const stepSalt = (step: number) => hash32(step >>> 0);
 /** The random bits agent `i` uses in the step with salt `salt`. */
-export const agentRandom = (i: number, salt: number) => hash32((i + salt) >>> 0);
+const agentRandom = (i: number, salt: number) => hash32((i + salt) >>> 0);
 
 /** Settings for one step, shared by the shaders (as uniforms) and the CPU twin. */
 export interface StepConfig {

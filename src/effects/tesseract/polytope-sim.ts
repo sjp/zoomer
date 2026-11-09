@@ -109,7 +109,7 @@ function generators(shape: PolytopeShape): [number[], boolean][] {
  * Joins every pair of points at the minimum distance between any two of them:
  * for a regular polytope, exactly its edges.
  */
-export function joinNearest(vertices: Float64Array): Uint16Array {
+function joinNearest(vertices: Float64Array): Uint16Array {
   const n = vertices.length / 4;
   const d2 = (i: number, j: number) => {
     let s = 0;
@@ -184,7 +184,7 @@ export function rotationMatrix(out: Float64Array, xw: number, yz: number, xz: nu
 /** Floats per projected vertex in `projectPolytope`'s output: x, y, nearness. */
 export const PROJECTED_FLOATS = 3;
 /** Distance of the 4D eye from the centre along W, in circumradii. */
-export const EYE_W = 2.5;
+const EYE_W = 2.5;
 /** Distance of the 3D eye from the centre along Z, in circumradii. */
 export const EYE_Z = 4;
 

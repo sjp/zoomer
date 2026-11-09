@@ -20,7 +20,7 @@ export const HORIZON = 0.46;
  * Extra profile generated past each side edge (height units), so shadows cast by
  * dunes just off-screen still land on the visible ones.
  */
-export const SHADOW_MARGIN = 0.6;
+const SHADOW_MARGIN = 0.6;
 /** Floats per ridge in the layout: base, face depth, haze, ripple weight. */
 export const LAYOUT_FLOATS = 4;
 /** Fraction of each dune's period taken by the gentle windward slope (the rest is the lee). */
@@ -28,7 +28,7 @@ const WINDWARD = 0.68;
 
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 
-export interface RidgeShape {
+interface RidgeShape {
   /** Height (height units) of the ridge's troughs. */
   base: number;
   /** Height of a full dune above `base`. */
@@ -74,9 +74,9 @@ export function fillLayout(out: Float32Array, count: number, ripples: number): v
  * reach the lee trough, where the two parabolas are only about 2.2 apart, and
  * pull it below the base, so softness beyond it blurs the profile instead.
  */
-export const SMOOTH_MIN_SOFTNESS = 2;
+const SMOOTH_MIN_SOFTNESS = 2;
 /** Profile blur (Gaussian sigma, in dune wavelengths) per unit of softness above SMOOTH_MIN_SOFTNESS. */
-export const BLUR_PER_SOFTNESS = 0.03;
+const BLUR_PER_SOFTNESS = 0.03;
 
 /**
  * One dune: 0 at the troughs, 1 at the crest, with smooth troughs. The crest is
@@ -250,7 +250,7 @@ export function blurProfile(h: Float64Array, tmp: Float64Array, sigma: number): 
 }
 
 /** Reusable buffers for `fillRidgeTable`, so rebuilding allocates only when they grow. */
-export interface TableScratch {
+interface TableScratch {
   h: Float64Array;
   left: Float64Array;
   right: Float64Array;

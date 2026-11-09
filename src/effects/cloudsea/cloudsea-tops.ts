@@ -24,7 +24,7 @@ export const OCTAVES = [
 ] as const;
 
 /** World height of the cloud tops per unit of the summed noise, for the normals. */
-export const RELIEF = 0.18;
+const RELIEF = 0.18;
 
 /** Octave k's matrix rows, world (x, z) to tile uv, as GLSL `mat2` columns. */
 const octaveMatrix = (k: number) => {

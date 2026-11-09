@@ -22,7 +22,7 @@ const TAU = Math.PI * 2;
 // ---------------------------------------------------------------------------
 
 /** A dawn keyframe: the horizon sky's colours plus the cloud sea's and the peaks'. */
-export interface DawnKey extends SkyKey {
+interface DawnKey extends SkyKey {
   /** Band between the horizon and the zenith (the pink of the Belt of Venus). */
   mid: Rgb;
   /** Cloud troughs, in shadow. `light` is the sunlit tops. */
@@ -65,8 +65,6 @@ const key = (
 
 /** Hours of the fixed `timeOfDay` options; "Cycle" swings between the first and last. */
 export const DAWN_HOURS = { predawn: 5.3, sunrise: 6, golden: 6.9 } as const;
-
-export type DawnTime = keyof typeof DAWN_HOURS | "cycle";
 
 /** The dawn, in increasing hour order from pre-dawn to golden light. */
 export const DAWN_KEYS: readonly DawnKey[] = [
@@ -202,7 +200,7 @@ export function sampleDawn(hour: number, out: DawnState, keys: readonly DawnKey[
 // ---------------------------------------------------------------------------
 
 /** Hours per second a fixed time of day eases toward a newly picked one. */
-export const HOUR_EASE = 0.5;
+const HOUR_EASE = 0.5;
 
 /**
  * Hour of the "Cycle" loop at `phase` (cycles; any number): pre-dawn at whole
@@ -223,7 +221,7 @@ export function cyclePhaseFor(hour: number): number {
 /** The fixed hour for a `timeOfDay` value; unknown values fall back to sunrise. */
 export const fixedHour = (time: string): number => lookup(DAWN_HOURS, time, "sunrise");
 
-export interface DawnClock {
+interface DawnClock {
   readonly hour: number;
   /** Advances by `dt` seconds and returns the hour. */
   step: (dt: number, time: string, cycleMins: number) => number;
@@ -305,7 +303,7 @@ export function sunDirection(aspect: number, sunY: number, out: [number, number,
 export const BILLOW_CELLS = 4;
 const BILLOW_OCTAVES = 3;
 
-export interface BillowTexture {
+interface BillowTexture {
   /** RGBA8 texels: height, d/du and d/dv, each mapped from -1..1 to 0..255; alpha 255. */
   data: Uint8Array;
   /** Decoded gradient times this is the gradient of the decoded height, per tile. */
@@ -369,7 +367,7 @@ export const CENTRE_HI = 2 / 3;
 /** Where the side bands fade out, short of the centre third. */
 const BAND_FADE = 0.06;
 
-export interface PeakSpec {
+interface PeakSpec {
   /** Crest across the frame, fraction of the width. */
   x: number;
   /** Summit above the cloud line, height units. */
@@ -476,7 +474,7 @@ export function fillPeakTable(out: Float32Array, peaks: readonly PeakSpec[], asp
 /** Columns of the ledge profile, across its width. */
 export const LEDGE_COLUMNS = 256;
 /** Ledge width (height units, before narrowing on tall screens) and its highest point. */
-export const LEDGE_WIDTH = 0.55;
+const LEDGE_WIDTH = 0.55;
 export const LEDGE_TOP = 0.2;
 
 /** Ledge width on a canvas `aspect` wide: kept within the left 30% of the frame. */

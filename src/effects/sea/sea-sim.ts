@@ -17,21 +17,21 @@ const GRAVITY = 9.81;
 // ---------------------------------------------------------------------------
 
 /** One long swell: wavelength (m), heading (radians off straight towards the viewer) and steepness (a·k). */
-export interface SwellSpec {
+interface SwellSpec {
   length: number;
   heading: number;
   steepness: number;
 }
 
 /** The swells, longest first. Steepness is at `swell` = 1: a calm sea. */
-export const SWELLS: readonly SwellSpec[] = [
+const SWELLS: readonly SwellSpec[] = [
   { length: 70, heading: 0.12, steepness: 0.045 },
   { length: 41, heading: -0.35, steepness: 0.03 },
   { length: 23, heading: 0.6, steepness: 0.02 },
 ];
 
 /** A swell resolved into its wave vector, angular frequency and height amplitude at `swell` = 1. */
-export interface SwellWave {
+interface SwellWave {
   /** Wave vector (rad/m) on the plane: x right, z away from the viewer. */
   kx: number;
   kz: number;
@@ -136,9 +136,9 @@ export function schlick(cosTheta: number, f0 = WATER_F0): number {
 // ---------------------------------------------------------------------------
 
 /** Noise lattice cells across the ripple texture. */
-export const RIPPLE_CELLS = 8;
+const RIPPLE_CELLS = 8;
 
-export interface RippleSlopes {
+interface RippleSlopes {
   /** RG8 texels: 0.5 + 0.5 · slope / max|slope|, per axis. */
   data: Uint8Array;
   /** Root-mean-square of the decoded (−1..1) slope, per component. */
@@ -191,7 +191,7 @@ export function buildRippleSlopes(size: number, seed: number): RippleSlopes {
 // Time presets
 // ---------------------------------------------------------------------------
 
-export type SeaTime = "sunset" | "dusk" | "moonlight" | "overcast";
+type SeaTime = "sunset" | "dusk" | "moonlight" | "overcast";
 
 export interface SeaPreset {
   /** Hour to sample `SKY_KEYS` at, or a sky key table of its own (sampled at noon). */

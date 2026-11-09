@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export const HORIZON_OPTIONS = [
+const HORIZON_OPTIONS = [
   { value: "none", label: "None" },
   { value: "hills", label: "Hills" },
   { value: "pines", label: "Pines" },

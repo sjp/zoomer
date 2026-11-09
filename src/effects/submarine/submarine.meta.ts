@@ -1,16 +1,16 @@
 import { defineEffectMeta } from "../types";
 
 export type DepthMode = "descend" | "shallows" | "twilight" | "abyss";
-export type GaugeSide = "left" | "right";
+type GaugeSide = "left" | "right";
 
-export const DEPTH_OPTIONS = [
+const DEPTH_OPTIONS = [
   { value: "descend", label: "Descend" },
   { value: "shallows", label: "Shallows" },
   { value: "twilight", label: "Twilight" },
   { value: "abyss", label: "Abyss" },
 ] as const satisfies readonly { value: DepthMode; label: string }[];
 
-export const SIDE_OPTIONS = [
+const SIDE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: GaugeSide; label: string }[];

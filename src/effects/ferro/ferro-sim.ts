@@ -9,45 +9,45 @@
  */
 import { approach, clamp, fract, smoothstep, wrap } from "../math";
 
-export const TAU = Math.PI * 2;
+const TAU = Math.PI * 2;
 
 /** Height of the resting dome at the pool's centre. */
 export const DOME_HEIGHT = 0.12;
 /** Extra height of the whole crown at the centre under full magnet. */
-export const MOUND_HEIGHT = 0.16;
+const MOUND_HEIGHT = 0.16;
 /** Spike height over lattice spacing under full magnet (at the pool's centre). */
-export const SPIKE_ASPECT = 1.8;
+const SPIKE_ASPECT = 1.8;
 /**
  * Spikes only appear once the magnet passes a threshold (as in the real Rosensweig
  * instability) and are full grown near full strength; below it the crown is smooth.
  */
-export const SPIKE_ONSET = 0.2;
-export const SPIKE_FULL = 0.9;
+const SPIKE_ONSET = 0.2;
+const SPIKE_FULL = 0.9;
 /** Spike cone base radius, in lattice units (0.5: neighbouring cones just touch). */
 export const CONE_RADIUS = 0.5;
 /** The lattice spacing grows by this fraction as the magnet weakens. */
-export const SPREAD = 0.1;
+const SPREAD = 0.1;
 /** Lattice rotation, radians per second: one turn every two minutes. */
-export const SPIN_RATE = TAU / 120;
+const SPIN_RATE = TAU / 120;
 /** The hexagonal lattice repeats every 60 degrees of rotation. */
 export const LATTICE_PERIOD = Math.PI / 3;
 /** Rows of the rectangular cell pair that makes the hexagonal lattice. */
 export const CELL_Y = Math.sqrt(3);
 /** Most the magnet strength may change per second, so a rhythm switch eases over. */
-export const MAX_AMP_RATE = 1.5;
+const MAX_AMP_RATE = 1.5;
 
 /** Floor contact shadow: outer radius and depth at the pool's rim. */
 export const SHADOW_RADIUS = 1.5;
 export const SHADOW_DEPTH = 0.45;
 
-export const CAMERA_PITCH = (22 * Math.PI) / 180;
-export const CAMERA_DISTANCE = 6;
+const CAMERA_PITCH = (22 * Math.PI) / 180;
+const CAMERA_DISTANCE = 6;
 /** Pool radius on screen, in frame heights, at size 1. */
-export const POOL_RADIUS = 0.28;
+const POOL_RADIUS = 0.28;
 /** Gap between the pool and the frame's bottom (and side) edges, in frame heights. */
-export const MARGIN = 0.05;
+const MARGIN = 0.05;
 /** Extra pixels around the projected bounds, for the silhouette's anti-aliasing. */
-export const BOUNDS_PAD = 2;
+const BOUNDS_PAD = 2;
 
 export type Rhythm = "breathe" | "pulse" | "hold";
 export type PoolPosition = "left" | "centre" | "right";
@@ -107,10 +107,10 @@ export const maxHeight = (f: Field) => DOME_HEIGHT + crownHeight(f) + spikeHeigh
  * Spike profile over c = 1 - d / CONE_RADIUS: 0 with a flat fillet at the cone's foot,
  * 1 with slope 1 at its sharp tip.
  */
-export const spikeProfile = (c: number) => c * c * (2 - c);
+const spikeProfile = (c: number) => c * c * (2 - c);
 
 /** Steepest slope of {@link spikeProfile}, at c = 2/3. */
-export const PROFILE_SLOPE = 4 / 3;
+const PROFILE_SLOPE = 4 / 3;
 
 /**
  * Upper bound of the field over the circle of radius sqrt(r2): every term at its
@@ -146,7 +146,7 @@ const mod = (x: number, y: number) => x - y * Math.floor(x / y);
  * into `out`. The lattice (spacing 1, a point at the origin) is the union of two
  * rectangular grids of cell (1, sqrt 3), the second shifted by half a cell.
  */
-export function latticeOffset(x: number, z: number, f: Field, out: number[]): void {
+function latticeOffset(x: number, z: number, f: Field, out: number[]): void {
   const c = Math.cos(f.angle);
   const s = Math.sin(f.angle);
   const inv = 1 / f.spacing;
@@ -334,7 +334,7 @@ export const BACKDROPS = {
   warm: { top: "#4a3426", bottom: "#b48d6c", light: [9, 8.1, 7] },
 } as const;
 
-export type Backdrop = keyof typeof BACKDROPS;
+type Backdrop = keyof typeof BACKDROPS;
 
 export const backdropOf = (v: string): Backdrop => (v === "dark" || v === "warm" ? v : "grey");
 

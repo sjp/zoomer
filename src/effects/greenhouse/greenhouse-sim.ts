@@ -21,7 +21,7 @@ const TAU = Math.PI * 2;
 
 // --- Palettes ---------------------------------------------------------------
 
-export interface GreenhousePalette {
+interface GreenhousePalette {
   /** Glass overhead: near the top of the frame and down at the eave. */
   readonly glassTop: Rgb;
   readonly glassLow: Rgb;
@@ -109,11 +109,11 @@ export const EAVE_CENTRE: Readonly<Record<Exclude<RoofId, "hidden">, number>> = 
   pitched: 0.13,
 };
 /** The rafters converge on a point this far above the frame (heights), at mid-width. */
-export const VANISH_Y = -0.75;
+const VANISH_Y = -0.75;
 /** Panes across the frame per unit of aspect ratio. */
-export const PANES_PER_ASPECT = 6;
+const PANES_PER_ASPECT = 6;
 /** Purlins (cross bars) per pane, evenly spaced between the eave and the top of the frame. */
-export const PURLINS = 2;
+const PURLINS = 2;
 /** Shader codes for the roof kinds. */
 export const ROOF_CODE: Readonly<Record<RoofId, number>> = { hidden: 0, arched: 1, pitched: 2 };
 
@@ -192,7 +192,7 @@ export function eaveAt(roof: Roof, r: number): number {
 }
 
 /** Height fraction `f` at which rafter coordinate `r` meets y = `y` (the frame top for 0). */
-export function roofTopF(roof: Roof, r: number, y = 0): number {
+function roofTopF(roof: Roof, r: number, y = 0): number {
   const by = eaveAt(roof, r);
   return (by - y) / (by - roof.vanishY);
 }
@@ -200,7 +200,7 @@ export function roofTopF(roof: Roof, r: number, y = 0): number {
 /** Floats per bar instance: (ax, ay, bx, by) in heights, (half width ref px, shade, 0, 0). */
 export const BAR_FLOATS = 8;
 /** Half widths (reference px) of the eave plate, rafters and purlins. */
-export const BAR_WIDTH = { eave: 4, rafter: 2, purlin: 1.2 } as const;
+const BAR_WIDTH = { eave: 4, rafter: 2, purlin: 1.2 } as const;
 /** Bars for the widest supported aspect (4:1). */
 export const MAX_BARS = (Math.round(4 * PANES_PER_ASPECT) + 1) * (2 + PURLINS);
 
@@ -254,15 +254,15 @@ export const TRAIL_SEGS = 6;
 /** Rivulets stay this far (fraction of a pane) inside their pane's rafters. */
 export const PANE_MARGIN = 0.12;
 /** Head speed range down the glass, heights per second. */
-export const RIVULET_SPEED = [0.018, 0.045] as const;
+const RIVULET_SPEED = [0.018, 0.045] as const;
 /** Trail length, as a fraction of the pane's height from eave to frame top. */
-export const TRAIL_LENGTH = [0.18, 0.4] as const;
+const TRAIL_LENGTH = [0.18, 0.4] as const;
 /** Trail half width (reference px) and brightness at the head. */
-export const RIVULET_WIDTH = 1.1;
+const RIVULET_WIDTH = 1.1;
 /** Seconds a new rivulet takes to fade in. */
-export const RIVULET_FADE = 1.5;
+const RIVULET_FADE = 1.5;
 
-export interface Rivulets {
+interface Rivulets {
   readonly rng: () => number;
   /** Per rivulet: alive flag, pane, path amplitude and wiggle (two wave numbers and phases). */
   readonly alive: Uint8Array;
@@ -433,15 +433,15 @@ export function writeRivulets(
 
 export const MAX_DRIPS = 24;
 /** Drips per second at full rain (a trickle remains at rain 0). */
-export const DRIP_RATE = 1.4;
+const DRIP_RATE = 1.4;
 /** Gravity (heights / s²) and how far a drip falls before it has faded (heights). */
-export const DRIP_GRAVITY = 1.2;
-export const DRIP_FALL = 0.45;
+const DRIP_GRAVITY = 1.2;
+const DRIP_FALL = 0.45;
 /** Drip half width (reference px) and the seconds of motion its streak shows. */
-export const DRIP_WIDTH = 1.2;
-export const DRIP_BLUR = 0.035;
+const DRIP_WIDTH = 1.2;
+const DRIP_BLUR = 0.035;
 
-export interface Drips {
+interface Drips {
   readonly rng: () => number;
   readonly alive: Uint8Array;
   readonly x: Float64Array;
@@ -537,7 +537,7 @@ export function writeDrips(
 // --- Leaves -----------------------------------------------------------------
 
 /** Leaf shapes, as the fragment shader knows them. Palms and ferns are both fronds. */
-export const KIND_BROAD = 0;
+const KIND_BROAD = 0;
 export const KIND_MONSTERA = 1;
 export const KIND_FROND = 2;
 
@@ -548,11 +548,11 @@ export const GREENHOUSE_SWELL: Swell = createSwell(80, [
   { cycles: 13, amplitude: 0.25, offset: 0.61 },
 ]);
 /** Seconds a leaf's tip trails its base, per height of leaf length. */
-export const LAG_PER_LENGTH = 2.2;
+const LAG_PER_LENGTH = 2.2;
 /** Seconds the swell takes to cross the frame, so neighbours don't sway in lockstep. */
-export const SWELL_TRAVEL = 4;
+const SWELL_TRAVEL = 4;
 
-export interface LeafLayer {
+interface LeafLayer {
   /** Plants at density 1, and leaves per plant (inclusive range). */
   readonly plants: number;
   readonly leaves: readonly [number, number];
@@ -619,7 +619,7 @@ export const MAX_LEAVES = LEAF_LAYERS.reduce(
 export const LEAF_SEGMENTS = 16;
 export const LEAF_STRIP: readonly number[] = ribbonStrip(LEAF_SEGMENTS);
 
-export interface Leaf {
+interface Leaf {
   readonly layer: number;
   /**
    * Identifies the leaf across rebuilds: its layer, plant and place in the
@@ -867,9 +867,9 @@ export function writeLeaves(layout: LeafLayout, out: Float32Array): number {
 // --- Bob springs --------------------------------------------------------------
 
 /** Damping ratio of a leaf's bob: a few visible wobbles, settled within seconds. */
-export const BOB_DAMPING = 0.16;
+const BOB_DAMPING = 0.16;
 /** Tip velocity a drip adds, as a peak dip (fraction of the leaf's length). */
-export const BOB_KICK = 0.022;
+const BOB_KICK = 0.022;
 /** Hard bound on the dip (fraction of the length). */
 export const BOB_MAX = 0.08;
 /** Kicks per leaf per second at full rain; a quarter of that when dry. */
@@ -877,7 +877,7 @@ export const BOB_RATE = 1 / 18;
 /** Integration substep, seconds. */
 const BOB_STEP = 1 / 60;
 
-export interface Bobs {
+interface Bobs {
   readonly rng: () => number;
   /** Dip (fraction of the length, + = down), its velocity, and the angular frequency. */
   readonly x: Float64Array;

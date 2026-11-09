@@ -91,7 +91,7 @@ export function ease(p: number): number {
 }
 
 /** Eased progress of `op` at sim time `time`. */
-export function progress(op: MarbleOp, time: number): number {
+function progress(op: MarbleOp, time: number): number {
   return op.duration > 0 ? ease((time - op.start) / op.duration) : time >= op.start ? 1 : 0;
 }
 
@@ -101,7 +101,7 @@ export function isDone(op: MarbleOp, time: number): boolean {
 }
 
 /** The operation's strength at eased progress `e`: a drop's radius, a swirl's angle, a comb's shift. */
-export function strength(op: MarbleOp, e: number): number {
+function strength(op: MarbleOp, e: number): number {
   return op.kind === KIND_DROP ? op.amount * Math.sqrt(Math.max(e, 0)) : op.amount * e;
 }
 
@@ -218,11 +218,11 @@ export function packOps(
 }
 
 /** Seconds (sim time) a drop takes to spread. */
-export const DROP_DURATION = 2.5;
+const DROP_DURATION = 2.5;
 /** Width of the initial stripes, in units. */
 export const STRIPE_WIDTH = 64;
 
-export interface MarbleSettings {
+interface MarbleSettings {
   /** Sim seconds per real second. */
   speed: number;
   /** Drop bursts per minute of sim time; 0 for none. */
@@ -254,7 +254,7 @@ export interface MarbleSim {
   commitBake: (k: number) => void;
 }
 
-export interface MarbleOptions {
+interface MarbleOptions {
   seed: number;
   /** Palette size (3 to 6). */
   colours: number;

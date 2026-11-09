@@ -47,13 +47,13 @@
  */
 
 /** Phase durations in seconds at speed 1. */
-export interface GrowthCycle {
+interface GrowthCycle {
   readonly grow: number;
   readonly hold: number;
   readonly melt: number;
 }
 
-export type GrowthPhase = "grow" | "hold" | "melt";
+type GrowthPhase = "grow" | "hold" | "melt";
 
 export interface GrowthState {
   phase: GrowthPhase;
@@ -80,7 +80,7 @@ export function cyclePeriod(c: GrowthCycle): number {
 }
 
 /** A fresh state object, for `growthStateAt`'s `out`. */
-export function createGrowthState(): GrowthState {
+function createGrowthState(): GrowthState {
   return { phase: "grow", cycle: 0, level: 0, melt: 0, time: 0 };
 }
 
@@ -127,7 +127,7 @@ export function growthStateAt(
  * A running growth clock. Time is kept unwrapped in float64 (CPU only); the values
  * an effect uploads (`level`, `melt`) are bounded.
  */
-export interface GrowthClock {
+interface GrowthClock {
   readonly durations: GrowthCycle;
   /** Seconds since the start of cycle 0, at speed 1. */
   readonly time: number;

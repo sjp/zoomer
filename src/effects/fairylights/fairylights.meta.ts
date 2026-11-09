@@ -1,22 +1,22 @@
 import { defineEffectMeta } from "../types";
 
 /** Most strings (swags) or strands per side minus one (curtain). */
-export const MAX_STRINGS = 4;
+const MAX_STRINGS = 4;
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "warm", label: "Warm white" },
   { value: "vintage", label: "Vintage" },
   { value: "cool", label: "Cool white" },
   { value: "gold", label: "Gold" },
 ] as const;
 
-export const LAYOUT_OPTIONS = [
+const LAYOUT_OPTIONS = [
   { value: "swags", label: "Swags" },
   { value: "curtain", label: "Curtain" },
   { value: "both", label: "Both" },
 ] as const;
 
-export const PATTERN_OPTIONS = [
+const PATTERN_OPTIONS = [
   { value: "twinkle", label: "Twinkle" },
   { value: "chase", label: "Slow chase" },
   { value: "steady", label: "Steady" },

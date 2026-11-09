@@ -25,9 +25,9 @@ export const HALF_W = 2.3;
 /** Camera eye height above the floor, standing. */
 export const EYE_Y = 1.45;
 /** Upward camera pitch (radians), so the floor's curve sits near the middle of the frame. */
-export const PITCH = (7 * Math.PI) / 180;
+const PITCH = (7 * Math.PI) / 180;
 /** Vertical field of view (radians). */
-export const FOV_Y = (58 * Math.PI) / 180;
+const FOV_Y = (58 * Math.PI) / 180;
 export const TAN_HALF_FOV = Math.tan(FOV_Y / 2);
 
 /** Window glass: centre of the first (s), spacing, half width, bottom, top and corner radius. */
@@ -51,13 +51,13 @@ export const INDICATOR_HALF: readonly [number, number] = [0.07, 0.11];
 export const INDICATOR_LAMP = 0.035;
 
 /** Seats: a cushion and a back, `SEAT_DEPTH` deep from `SEAT_GAP` off the wall. */
-export const SEAT_GAP = 0.06;
-export const SEAT_DEPTH = 0.62;
-export const SEAT_H = 0.4;
-export const BACK_H = 0.8;
-export const BACK_T = 0.14;
+const SEAT_GAP = 0.06;
+const SEAT_DEPTH = 0.62;
+const SEAT_H = 0.4;
+const BACK_H = 0.8;
+const BACK_T = 0.14;
 
-export interface SeatSpec {
+interface SeatSpec {
   /** Centre along the ring (arc length on the floor). */
   s: number;
   /** Length along the ring. */
@@ -155,14 +155,14 @@ export function windowDistance(s: number, h: number): number {
   return outside + Math.min(Math.max(qx, qy), 0) - WINDOW_CORNER;
 }
 
-export type SurfaceKind = "floor" | "ceiling" | "left" | "right";
+type SurfaceKind = "floor" | "ceiling" | "left" | "right";
 
 /**
  * Distance along `d` (from the eye) to a cylinder of radius r about the ring's
  * axis: the far root when the eye is inside it (`far`), else the near root.
  * -1 if the ray misses.
  */
-export function cylinderHit(d: readonly [number, number, number], r: number, far: boolean): number {
+function cylinderHit(d: readonly [number, number, number], r: number, far: boolean): number {
   const oy = EYE_Y - RING_R;
   const a = d[1] * d[1] + d[2] * d[2];
   const b = oy * d[1];
@@ -221,7 +221,7 @@ export function vanishingY(aspect: number): number {
 }
 
 /** Azimuth about the ring's axis of a direction: 0 straight ahead, positive upwards. */
-export const azimuth = (d: readonly [number, number, number]) => Math.atan2(d[1], d[2]);
+const azimuth = (d: readonly [number, number, number]) => Math.atan2(d[1], d[2]);
 
 /**
  * Range of azimuths [lo, hi] (radians) the visible windows span, from the eye:

@@ -30,7 +30,7 @@ export interface FakeGlOptions {
   record?: boolean;
 }
 
-export interface FakeObject {
+interface FakeObject {
   readonly kind: string;
   readonly id: number;
   deleted: boolean;
@@ -41,7 +41,7 @@ interface FakeLocation {
   readonly name: string;
 }
 
-export interface FakeGlState {
+interface FakeGlState {
   program: FakeObject | null;
   drawFramebuffer: FakeObject | null;
   readFramebuffer: FakeObject | null;

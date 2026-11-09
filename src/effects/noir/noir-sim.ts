@@ -15,7 +15,7 @@ import { type CityLayout, LAYERS, REF_HEIGHT } from "../city/city-sim";
 import type { AdvertSide } from "./noir.meta";
 
 /** Uniform 0..1 from three integers. */
-export function rand(a: number, b: number, c: number): number {
+function rand(a: number, b: number, c: number): number {
   return hash32(a ^ hash32(Math.imul(b, 0x9e3779b1) ^ hash32(c + 0x5bd1e995))) / 4294967296;
 }
 
@@ -51,13 +51,13 @@ export interface Room {
 const WALL_X = 0.1;
 const GLASS_X = 0.128;
 const MULLION_X = 0.3;
-export const WALL_TOP = 34;
-export const WALL_BOTTOM = 872;
-export const GLASS_TOP = 74;
-export const GLASS_BOTTOM = 816;
-export const FRAME = 16;
-export const MULLION_HALF = 6;
-export const SLAT_PITCH = 34;
+const WALL_TOP = 34;
+const WALL_BOTTOM = 872;
+const GLASS_TOP = 74;
+const GLASS_BOTTOM = 816;
+const FRAME = 16;
+const MULLION_HALF = 6;
+const SLAT_PITCH = 34;
 /** The window wall is this far away (m), and its edges are this far either side (m). */
 const DEPTH = 4;
 const HALF_ROOM = 2.1;
@@ -130,8 +130,8 @@ export function advertRect(side: AdvertSide, refWidth: number, out: AdvertRect):
 }
 
 /** Seconds between scene changes on average, the most either way, and the cross-fade. */
-export const ADVERT_PERIOD = 15;
-export const ADVERT_JITTER = 2.5;
+const ADVERT_PERIOD = 15;
+const ADVERT_JITTER = 2.5;
 export const ADVERT_FADE = 3;
 /** Number of scene patterns the shader knows. */
 export const ADVERT_PATTERNS = 4;
@@ -184,7 +184,7 @@ export function advertPalette(k: number, seed: number): number {
   return (((k * (n - 1) + start) % n) + n) % n;
 }
 
-export interface AdvertState {
+interface AdvertState {
   /** The scene showing (or fading in), and the one before it. */
   scene: number;
   prev: number;
@@ -220,8 +220,8 @@ export function advertGlow(k: number, seed: number, out: Rgb): Rgb {
 /* ----- Searchlight ----- */
 
 /** Each sweep has a slot this long and starts up to `SEARCH_JITTER` into it. */
-export const SEARCH_SLOT = 60;
-export const SEARCH_JITTER = 30;
+const SEARCH_SLOT = 60;
+const SEARCH_JITTER = 30;
 /** Fewest and most seconds from one sweep's start to the next. */
 export const MIN_SEARCH_GAP = SEARCH_SLOT - SEARCH_JITTER;
 export const MAX_SEARCH_GAP = SEARCH_SLOT + SEARCH_JITTER;
@@ -229,15 +229,15 @@ export const MAX_SEARCH_GAP = SEARCH_SLOT + SEARCH_JITTER;
 export const SEARCH_SECONDS = 16;
 const SEARCH_EDGE = 0.15;
 /** Widest beam angle from straight down (radians), at either end of a sweep. */
-export const SEARCH_ANGLE = (55 * Math.PI) / 180;
+const SEARCH_ANGLE = (55 * Math.PI) / 180;
 /** Width (in sweep units, -1..1) of the stretch where the beam shines into the room. */
-export const ROOM_WIDTH = 0.2;
+const ROOM_WIDTH = 0.2;
 /** Chance that a sweep passes over the apartment. */
 const ROOM_CHANCE = 0.65;
 /** How far the room light's direction swings sideways per unit of sweep past the window. */
-export const SLIDE = 1.6;
+const SLIDE = 1.6;
 
-export interface SearchState {
+interface SearchState {
   /** Whether a sweep is under way. */
   active: boolean;
   /** The sweep under way, or the last one (-1 before the first). */
@@ -308,7 +308,7 @@ export function searchAt(t: number, seed: number, out: SearchState): SearchState
 
 export const LANE_COUNT = 6;
 /** Cars start and end this far outside the frame (reference px), past their glow. */
-export const CAR_MARGIN = 90;
+const CAR_MARGIN = 90;
 /** A car's length at depth 1 (reference px). */
 export const CAR_LENGTH = 34;
 /** Most cars `carsAt` writes. */
@@ -365,7 +365,7 @@ export function carLanes(seed: number, refWidth: number): Lane[] {
 }
 
 /** Share of car slots filled at `traffic` 0..1. */
-export function carChance(traffic: number): number {
+function carChance(traffic: number): number {
   return 0.85 * clamp(Number.isFinite(traffic) ? traffic : 0, 0, 1);
 }
 

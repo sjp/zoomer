@@ -18,19 +18,19 @@ export const TWINKLE_DEPTH = 0.3;
 export const TWINKLE_MAX_HZ = 0.3;
 const TWINKLE_MIN_HZ = 0.03;
 /** Chase: bulbs per wave, the wave's rate in Hz, and how much it dims a bulb. */
-export const CHASE_PERIOD = 7;
+const CHASE_PERIOD = 7;
 export const CHASE_HZ = 0.07;
 export const CHASE_DEPTH = 0.6;
 /** Swag sway: most swing about the anchor line in radians, and the period range in seconds. */
-export const SWAG_SWAY = 0.035;
+const SWAG_SWAY = 0.035;
 /** Curtain strands swing about their top, so a much smaller angle moves them as far. */
-export const CURTAIN_SWAY = 0.006;
+const CURTAIN_SWAY = 0.006;
 const SWAY_PERIOD_MIN = 7;
 const SWAY_PERIOD_MAX = 12;
 /** Bulb spacing along the wire, in px at 1080 for the nearest string. */
 export const BULB_SPACING = 48;
 /** Halo radius of an in-focus bulb, and the radius of a fully blurred bokeh disc (px at 1080). */
-export const HALO_RADIUS = 15;
+const HALO_RADIUS = 15;
 export const BOKEH_RADIUS = 30;
 /** Swags: anchor heights and sag (px at 1080). Lowest point + biggest sprite stays in the top third. */
 const ANCHOR_MIN = 16;
@@ -47,11 +47,11 @@ const CURTAIN_TOP = -20;
 /** Smaller and closer together the further back a string is, at depth 1. */
 const DEPTH_SHRINK = 0.3;
 /** Wires fade into the wall as a string blurs, and are gone by this blur. */
-export const WIRE_FADE_BLUR = 0.45;
+const WIRE_FADE_BLUR = 0.45;
 /** Wire half width in px at 1080 for the nearest string. */
-export const WIRE_HALF_WIDTH = 0.8;
+const WIRE_HALF_WIDTH = 0.8;
 /** Most strings, swags and curtain strands together. */
-export const MAX_FAIRY_STRINGS = 16;
+const MAX_FAIRY_STRINGS = 16;
 /** Glow blobs on the wall: one per swag string and one per curtain side. */
 export const MAX_GLOWS = 6;
 /** Floats per bulb instance: x, y, radius (device px), level; r, g, b, blur. */
@@ -123,7 +123,7 @@ export function chaseLevel(k: number, t: number): number {
 
 // --- Layout -------------------------------------------------------------------
 
-export interface FairyBuild {
+interface FairyBuild {
   strings: number;
   layout: FairyLayout;
   seed: number;
@@ -147,7 +147,7 @@ export interface FairyFrame {
 }
 
 /** A glow blob on the wall: centre and radii in reference px, and strength. */
-export interface FairyGlow {
+interface FairyGlow {
   x: number;
   y: number;
   rx: number;
@@ -155,7 +155,7 @@ export interface FairyGlow {
   strength: number;
 }
 
-export interface FairyLights {
+interface FairyLights {
   /** Lays the strings out again; allocates nothing past the capacities. */
   build: (b: FairyBuild) => void;
   readonly stringCount: number;

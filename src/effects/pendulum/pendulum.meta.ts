@@ -7,19 +7,19 @@ export const MAX_PENDULUMS = 24;
 /** Largest swing, degrees from vertical. */
 export const MAX_AMPLITUDE = 20;
 
-export const VIEW_OPTIONS = [
+const VIEW_OPTIONS = [
   { value: "front", label: "Front" },
   { value: "angled", label: "Angled" },
   { value: "above", label: "Above" },
 ] as const;
 
-export const FINISH_OPTIONS = [
+const FINISH_OPTIONS = [
   { value: "chrome", label: "Chrome" },
   { value: "brass", label: "Brass" },
   { value: "coloured", label: "Coloured" },
 ] as const;
 
-export const PLACEMENT_OPTIONS = [
+const PLACEMENT_OPTIONS = [
   { value: "top", label: "Top" },
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },

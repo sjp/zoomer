@@ -8,7 +8,7 @@ import { resetUnpackState, type Scope } from "./gl";
 /** A clean system sans-serif stack; no font is bundled. */
 export const SANS_FONT_STACK = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
 
-export interface CanvasTextureOptions {
+interface CanvasTextureOptions {
   /** Min and mag filter. Defaults to `gl.LINEAR`. */
   filter?: GLenum;
   /** Premultiply the canvas's colour by its alpha on upload. Defaults to false. */

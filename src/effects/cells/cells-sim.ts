@@ -20,9 +20,9 @@ export const MAX_STEPS = 4;
 /** Steps a dividing cell grows before it splits; an absorbed cell shrinks for as many. */
 export const GROW_STEPS = Math.round(4 / FIXED_DT);
 /** Seconds the daughters of a split render merged (pinching apart). */
-export const MERGE_TIME = 5;
+const MERGE_TIME = 5;
 /** Disc area to frame area: just over the 1.21 that hexagonal discs need to cover the plane. */
-export const FILL = 1.24;
+const FILL = 1.24;
 /** Size spread between cells, as a radius multiplier range. */
 const SIZE_MIN = 0.86;
 const SIZE_MAX = 1.14;
@@ -206,7 +206,7 @@ export const CENTRE_AREA = (() => {
 })();
 
 /** Radius cell `i` settles to: its size, larger in the calm centre (same total area). */
-export function targetRadius(sim: CellsSim, i: number, rb: number, calm: boolean) {
+function targetRadius(sim: CellsSim, i: number, rb: number, calm: boolean) {
   if (!calm) {
     return rb * sim.size[i];
   }
@@ -302,7 +302,7 @@ const centrePenalty = (sim: CellsSim, i: number, calm: boolean) =>
   calm ? 1 - 0.8 * centreWeight(sim.x[i] / sim.width) : 1;
 
 /** The idle cell to divide next, favouring large, old cells; -1 if none. */
-export function pickParent(sim: CellsSim, calm: boolean): number {
+function pickParent(sim: CellsSim, calm: boolean): number {
   let best = -1;
   let bestScore = -Infinity;
   for (let i = 0; i < sim.n; i++) {
@@ -321,7 +321,7 @@ export function pickParent(sim: CellsSim, calm: boolean): number {
 }
 
 /** The idle cell to absorb, favouring old cells far from `parent` (if >= 0); -1 if none. */
-export function pickVictim(sim: CellsSim, parent: number, calm: boolean): number {
+function pickVictim(sim: CellsSim, parent: number, calm: boolean): number {
   let best = -1;
   let bestScore = -Infinity;
   const diag = Math.hypot(sim.width, sim.height);
@@ -402,7 +402,7 @@ function updateLifecycles(sim: CellsSim, opts: CellsOptions, target: number) {
 }
 
 /** Removes cell `i` by moving the last cell into its slot. */
-export function removeCell(sim: CellsSim, i: number) {
+function removeCell(sim: CellsSim, i: number) {
   const last = sim.n - 1;
   if (i !== last) {
     copyCell(sim, last, i);

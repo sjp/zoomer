@@ -18,8 +18,8 @@ const TAU = Math.PI * 2;
 // ---------------------------------------------------------------------------
 
 /** Radar centre: x as a fraction of the width, y as a fraction of the height. */
-export const CENTRE_X = 0.24;
-export const CENTRE_Y = 0.55;
+const CENTRE_X = 0.24;
+const CENTRE_Y = 0.55;
 /** Radar range in q units (canvas heights); rain fades out past it. */
 export const RANGE = 1.15;
 /** Range rings inside the range circle (the circle itself is the last). */
@@ -168,7 +168,7 @@ export function rainLevel(intensity: number): number {
   return l;
 }
 
-export interface RadarPalette {
+interface RadarPalette {
   /** Step colours, light rain first. */
   steps: readonly string[];
   /** Step opacities over the map, light rain first. */
@@ -333,7 +333,7 @@ export const PLACE_NAMES = [
   "Westfold",
 ] as const;
 
-export interface PlaceLabel {
+interface PlaceLabel {
   name: string;
   /** Marker position in q units. */
   x: number;
@@ -422,9 +422,9 @@ export const NOISE_PERIODS = [4, 8, 16, 32] as const;
  * Drift speed relative to the wind of each octave, then of the slow coverage
  * field that makes rain areas grow and decay, so the pattern evolves as it moves.
  */
-export const OCTAVE_DRIFT = [1, 1.12, 0.9, 1.25, 0.55] as const;
+const OCTAVE_DRIFT = [1, 1.12, 0.9, 1.25, 0.55] as const;
 /** Sideways drift of each, as a fraction of the wind speed. */
-export const OCTAVE_SIDE = [0.06, -0.1, 0.14, -0.05, 0.25] as const;
+const OCTAVE_SIDE = [0.06, -0.1, 0.14, -0.05, 0.25] as const;
 /** Offset pairs: one per octave plus the coverage field. */
 export const OFFSET_PAIRS = OCTAVE_DRIFT.length;
 

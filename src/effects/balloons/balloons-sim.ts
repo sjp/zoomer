@@ -256,7 +256,7 @@ export const altitudeLow = (depth: number) => mix(0.4, 0.58, clamp(depth, 0, 1))
 export const altitudeHigh = (depth: number) => mix(0.73, 0.84, clamp(depth, 0, 1));
 
 /** Extra speed in the centre third of the frame (where the speaker sits), as a fraction. */
-export const CENTRE_BOOST = 0.8;
+const CENTRE_BOOST = 0.8;
 
 /**
  * Speed multiplier at `x` on a canvas `aspect` wide: 1 + CENTRE_BOOST across the
@@ -269,9 +269,9 @@ export function centreBoost(x: number, aspect: number): number {
 }
 
 /** Left end of a balloon's wrapped track, height units: off-screen by its extent plus its gap. */
-export const trackLow = (radius: number, gap: number) => -EXTENT * radius - gap;
+const trackLow = (radius: number, gap: number) => -EXTENT * radius - gap;
 /** Length of a balloon's wrapped track: the screen, its extent on both sides, and its gap. */
-export const trackSpan = (radius: number, gap: number, aspect: number) =>
+const trackSpan = (radius: number, gap: number, aspect: number) =>
   aspect + 2 * EXTENT * radius + gap;
 
 // ---------------------------------------------------------------------------
@@ -286,15 +286,15 @@ const CLIMB_RADII = 0.05;
 /** Seconds the vertical speed takes to swing from zero to its fastest. */
 const CLIMB_EASE = 5;
 /** Seconds between new climb targets. */
-export const RETARGET_MIN = 8;
-export const RETARGET_MAX = 20;
+const RETARGET_MIN = 8;
+const RETARGET_MAX = 20;
 /** Seconds between burns, and the length of a burn. */
-export const BURN_GAP_MIN = 10;
+const BURN_GAP_MIN = 10;
 export const BURN_GAP_MAX = 30;
-export const BURN_MIN = 1.2;
+const BURN_MIN = 1.2;
 export const BURN_MAX = 2.4;
 /** Seconds a balloon takes to fade in or out when the count changes. */
-export const FADE_TIME = 2;
+const FADE_TIME = 2;
 /** Slowest and fastest envelope spin, radians per second. */
 const SPIN_MIN = 0.015;
 const SPIN_MAX = 0.04;
@@ -304,7 +304,7 @@ export const balloonCount = (count: number) =>
   clamp(Math.round(Number.isFinite(count) ? count : MIN_BALLOONS), MIN_BALLOONS, MAX_BALLOONS);
 
 /** Fastest climb or descent at `depth`, height units per second. */
-export const climbSpeed = (depth: number) => CLIMB_RADII * balloonRadius(depth);
+const climbSpeed = (depth: number) => CLIMB_RADII * balloonRadius(depth);
 
 /** Burner glow 0..1, `age` seconds into a burn `len` seconds long (age < 0: not burning). */
 export function burnGlow(age: number, len: number): number {

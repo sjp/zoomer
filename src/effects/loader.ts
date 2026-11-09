@@ -6,7 +6,7 @@ export type EffectEntry = EffectMeta & {
   load: () => Promise<EffectDefinition>;
 };
 
-export interface EffectLoader {
+interface EffectLoader {
   /** The implementation if it has already loaded, so a cached switch needs no async step. */
   get: (id: string) => EffectDefinition | undefined;
   /**

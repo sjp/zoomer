@@ -23,31 +23,31 @@ export const ROLL_SPEED = 0.1;
 /** Lift speed, frame heights per second at speed 1. */
 export const LIFT_SPEED = 0.07;
 /** Gravity for the drops (frame heights / s²), slowed for a calm look. */
-export const DROP_GRAVITY = 3;
+const DROP_GRAVITY = 3;
 
 /** Rail half-thickness: a rail is 2 × this tall. */
 export const RAIL_HALF = 0.007;
 /** Lift screw half-width. */
-export const LIFT_HALF = 0.024;
+const LIFT_HALF = 0.024;
 /** End-stop post half-width. */
-export const POST_HALF = 0.006;
+const POST_HALF = 0.006;
 
 /** Distances from the side edge (u): frame, lift axis, track ends. */
-export const FRAME_U0 = 0.025;
-export const FRAME_U1 = 0.615;
-export const FRAME_BORDER = 0.018;
-export const LIFT_U = 0.072;
-export const TRACK_U_OUT = 0.165;
-export const TRACK_U_IN = 0.53;
+const FRAME_U0 = 0.025;
+const FRAME_U1 = 0.615;
+const FRAME_BORDER = 0.018;
+const LIFT_U = 0.072;
+const TRACK_U_OUT = 0.165;
+const TRACK_U_IN = 0.53;
 /** Horizontal travel of a drop between tracks. */
-export const DROP_DX = 0.024;
+const DROP_DX = 0.024;
 /** Base plank: bottom and top (y). */
-export const BASE_Y0 = 0.04;
-export const BASE_Y1 = 0.075;
+const BASE_Y0 = 0.04;
+const BASE_Y1 = 0.075;
 /** Where the bottom track (or the return rail) ends: its marble centre height. */
-export const BOTTOM_Y = 0.16;
+const BOTTOM_Y = 0.16;
 /** Return rail: rise from its end to its start. */
-export const RETURN_RISE = 0.012;
+const RETURN_RISE = 0.012;
 
 export const MIN_LEVELS = 3;
 export const MAX_LEVELS = 6;
@@ -59,9 +59,9 @@ export const SEG_LIFT = 2;
 
 /** Landing bounce: two hops over this much track, the second a quarter of the first. */
 export const HOP_LEN = 0.05;
-export const HOP_HEIGHT = 0.007;
+const HOP_HEIGHT = 0.007;
 
-export interface Segment {
+interface Segment {
   kind: number;
   /** Marble centre at the start and end. */
   x0: number;
@@ -94,11 +94,11 @@ export interface Board {
 }
 
 /** Board kinds, matching the shader. */
-export const BOARD_PANEL = 0;
-export const BOARD_FRAME = 1;
+const BOARD_PANEL = 0;
+const BOARD_FRAME = 1;
 export const BOARD_RAIL = 2;
-export const BOARD_POST = 3;
-export const BOARD_LIFT = 4;
+const BOARD_POST = 3;
+const BOARD_LIFT = 4;
 
 export interface Run {
   segments: Segment[];
@@ -126,7 +126,7 @@ function clampLevels(levels: number): number {
 }
 
 /** Vertical pitch between rails for `levels` tracks (plus the return rail when odd). */
-export function trackPitch(levels: number): number {
+function trackPitch(levels: number): number {
   const n = clampLevels(levels);
   return Math.min(0.16, 0.58 / (n + (n % 2) - 1));
 }
@@ -446,7 +446,7 @@ export function freeAdvance(run: Run, s: number, time: number): number {
   return moved;
 }
 
-export interface Marbles {
+interface Marbles {
   /**
    * Marbles simulated and drawn: those wanted plus any still fading out.
    * Arrays are indexed by marble (0..count-1), which also picks its colour.

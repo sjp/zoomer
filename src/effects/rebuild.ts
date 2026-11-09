@@ -27,7 +27,7 @@ export function finishBuild<T>(steps: BuildSteps<T>): T {
 }
 
 /** Debounces an input on frame time. Values are compared with `===`. */
-export interface SettledValue<T> {
+interface SettledValue<T> {
   /**
    * Feeds this frame's value after `dt` seconds and returns the settled one: the
    * first value at once, then each new value once it has held for the settle time.
@@ -69,7 +69,7 @@ export function createSettledValue<T>(settleSeconds: number): SettledValue<T> {
 }
 
 /** Milliseconds, monotonic. */
-export type Clock = () => number;
+type Clock = () => number;
 
 const defaultClock: Clock = () => performance.now();
 
@@ -77,7 +77,7 @@ const defaultClock: Clock = () => performance.now();
  * One build at a time, identified by a key (a seed, a size, or both as a string),
  * stepped a little each frame.
  */
-export interface BackgroundBuild<K, T> {
+interface BackgroundBuild<K, T> {
   /**
    * Starts building `key` with the steps from `make`, unless that key is already
    * being built. Replaces any build in flight. The caller keeps track of which

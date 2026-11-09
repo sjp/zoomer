@@ -10,13 +10,13 @@
  */
 import { resetUnpackState, type Scope } from "./gl";
 
-export const LAND_MASK_URL = `${import.meta.env.BASE_URL}land-mask.png`;
+const LAND_MASK_URL = `${import.meta.env.BASE_URL}land-mask.png`;
 export const LAND_MASK_WIDTH = 1024;
 /** Decodes a mask sample to texels from the coast: r * GAIN - BIAS = (r * 255 - 128) / 8. */
 export const LAND_MASK_GAIN = 255 / 8;
 export const LAND_MASK_BIAS = 128 / 8;
 
-export interface LandMaskLoader {
+interface LandMaskLoader {
   /** The loaded image, once, the first call after it arrives; undefined otherwise. */
   take: () => HTMLImageElement | undefined;
 }

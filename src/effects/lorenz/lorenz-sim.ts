@@ -6,13 +6,12 @@
  */
 import { clamp, wrap } from "../math";
 import { createRng } from "../noise";
-import type { PALETTE_OPTIONS, POSITION_OPTIONS, SYSTEM_OPTIONS } from "./lorenz.meta";
+import type { PALETTE_OPTIONS, SYSTEM_OPTIONS } from "./lorenz.meta";
 import { lookup } from "../lookup";
 
-export type SystemId = (typeof SYSTEM_OPTIONS)[number]["value"];
-export type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
-export type PositionId = (typeof POSITION_OPTIONS)[number]["value"];
-export type Vec3 = readonly [number, number, number];
+type SystemId = (typeof SYSTEM_OPTIONS)[number]["value"];
+type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
+type Vec3 = readonly [number, number, number];
 
 const TAU = Math.PI * 2;
 
@@ -192,9 +191,9 @@ export const PARTICLE_FLOATS = 4;
 /** Seconds a respawned particle takes to fade in. */
 export const FADE_IN = 0.6;
 /** Mean seconds between respawns of one particle, to keep coverage even. */
-export const RESPAWN_LIFE = 25;
+const RESPAWN_LIFE = 25;
 /** Jitter around each seed sample, framed units. */
-export const SEED_JITTER = 0.003;
+const SEED_JITTER = 0.003;
 
 /**
  * Seeds `count` particles at random samples of the trajectory, jittered a little
@@ -278,9 +277,9 @@ export function project(
 }
 
 /** Fraction of the canvas width from the centre to a side anchor. */
-export const SIDE_FRACTION = 0.27;
+const SIDE_FRACTION = 0.27;
 /** Most half-widths of the projection, in SIZE units (perspective included). */
-export const REACH = 1.25;
+const REACH = 1.25;
 /** Gap kept from the canvas edge, frame heights. */
 export const EDGE_MARGIN = 0.04;
 
@@ -299,7 +298,7 @@ export function anchorX(position: string, aspect: number): number {
   return position === "left" ? -side : side;
 }
 
-export interface Palette {
+interface Palette {
   /** Cosine palette a + b cos(2 pi (c t + d)). */
   readonly a: Vec3;
   readonly b: Vec3;
@@ -338,7 +337,7 @@ export function paletteColor(p: Palette, t: number, out: Float64Array): Float64A
 }
 
 /** Trail decay time constant, seconds. */
-export const TRAIL_TAU = 0.3;
+const TRAIL_TAU = 0.3;
 /**
  * Extra subtraction per frame for an 8-bit trail layer, so faint residue reaches
  * zero instead of stalling where rounding cancels the decay.

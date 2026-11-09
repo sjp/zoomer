@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export type MugPosition = "left" | "right";
+type MugPosition = "left" | "right";
 export type DrinkId = "tea" | "coffee" | "chocolate";
 export type RoomId = "wall" | "window" | "shelves";
 

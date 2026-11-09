@@ -37,7 +37,7 @@ export function writeDirections(n: number, out: Float64Array): Float64Array {
 }
 
 /** Radians of phase per second at speed 1: one full breath in about 21 s. */
-export const PHASE_RATE = 0.3;
+const PHASE_RATE = 0.3;
 
 /**
  * Advances the shared wave phase by `dt` seconds at `speed` (negative reverses the
@@ -92,10 +92,10 @@ export function centreIndex(name: string): number {
 }
 
 /** Off-centre rest point, frame heights from the frame centre (y up): upper left, clear of the speaker. */
-export const OFF_CENTRE: readonly [number, number] = [-0.58, 0.2];
+const OFF_CENTRE: readonly [number, number] = [-0.58, 0.2];
 /** Drifting: Lissajous amplitude in frame heights, and seconds per cycle. */
-export const DRIFT_AMP: readonly [number, number] = [0.55, 0.28];
-export const DRIFT_PERIOD = 240;
+const DRIFT_AMP: readonly [number, number] = [0.55, 0.28];
+const DRIFT_PERIOD = 240;
 
 /** Advances the drift phase (cycles, in [0, 1)) by `dt` seconds. */
 export function advanceDrift(phase: number, dt: number): number {
@@ -161,7 +161,7 @@ export function patternValue(waves: Float32Array, n: number, x: number, y: numbe
  * Tone curve gain on `v * sqrt(n)`: the sum of n unit cosines has a standard
  * deviation of about sqrt(n / 2), so this keeps the look alike at every symmetry.
  */
-export const TONE_GAIN = 1.6;
+const TONE_GAIN = 1.6;
 
 /** Gain the shader applies to the raw sum Σ cos, for `n` waves and an amplitude factor `amp`. */
 export function toneScale(n: number, amp: number): number {

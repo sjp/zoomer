@@ -160,7 +160,7 @@ export const SEA_SKY_UNIFORMS = ["uZenith", "uHorizon", "uGlow", "uSkyA"] as con
 export const SEA_LAND_UNIFORMS = ["uLand", "uLandColor", "uLandMap"] as const;
 
 /** What one water draw needs, filled in place by the caller each frame. */
-export interface SeaWaterFrame {
+interface SeaWaterFrame {
   /** Full-res px per low-res px, across and up. */
   lowToFullX: number;
   lowToFullY: number;
@@ -222,7 +222,7 @@ export function createSeaWaterFrame(sky: SkyState): SeaWaterFrame {
   };
 }
 
-export interface SeaWater {
+interface SeaWater {
   /** Advances the swells and the ripples' drift by `dt` seconds at ripple strength `wind`. */
   advance: (dt: number, wind: number) => void;
   /**

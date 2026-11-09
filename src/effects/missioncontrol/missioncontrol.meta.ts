@@ -1,15 +1,15 @@
 import { defineEffectMeta } from "../types";
 
-export type PhosphorId = "green" | "white" | "amber";
-export type ClockId = "mission" | "local";
+type PhosphorId = "green" | "white" | "amber";
+type ClockId = "mission" | "local";
 
-export const PHOSPHOR_OPTIONS = [
+const PHOSPHOR_OPTIONS = [
   { value: "green", label: "Green" },
   { value: "white", label: "White" },
   { value: "amber", label: "Amber" },
 ] as const satisfies readonly { value: PhosphorId; label: string }[];
 
-export const CLOCK_OPTIONS = [
+const CLOCK_OPTIONS = [
   { value: "mission", label: "Mission time" },
   { value: "local", label: "Local time" },
 ] as const satisfies readonly { value: ClockId; label: string }[];

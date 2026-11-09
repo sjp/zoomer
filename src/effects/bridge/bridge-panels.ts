@@ -25,15 +25,15 @@ import { createRng, hash32 } from "../noise";
  * Panel colours, as indices into `PALETTE` in `bridge-sim.ts`: peach-orange,
  * pale orange, tan, lilac, mauve, periwinkle, pale blue and red-orange.
  */
-export const PEACH = 0;
-export const PALE_ORANGE = 1;
-export const TAN = 2;
-export const LILAC = 3;
-export const MAUVE = 4;
-export const PERIWINKLE = 5;
-export const PALE_BLUE = 6;
-export const RED_ORANGE = 7;
-export const COLOUR_COUNT = 8;
+const PEACH = 0;
+const PALE_ORANGE = 1;
+const TAN = 2;
+const LILAC = 3;
+const MAUVE = 4;
+const PERIWINKLE = 5;
+const PALE_BLUE = 6;
+const RED_ORANGE = 7;
+export const COLOUR_COUNT = RED_ORANGE + 1;
 
 /** Weighted picks for frames and buttons: mostly the warm colours, some cool ones. */
 const FRAME_COLOURS = [PEACH, PEACH, PALE_ORANGE, TAN, LILAC, MAUVE, PERIWINKLE];
@@ -51,14 +51,14 @@ export interface BoxShape {
   block: number;
 }
 
-export type Corner = "bl" | "br" | "tl" | "tr";
+type Corner = "bl" | "br" | "tl" | "tr";
 
 /**
  * A bar turning a right angle: a vertical bar `barW` wide and a horizontal bar
  * `barH` thick, meeting at `corner` of the bounding box, with an outer radius
  * `ro` and an inner fillet of radius `ri`.
  */
-export interface ElbowShape {
+interface ElbowShape {
   kind: "elbow";
   x0: number;
   y0: number;
@@ -72,7 +72,7 @@ export interface ElbowShape {
   block: number;
 }
 
-export interface RingShape {
+interface RingShape {
   kind: "ring";
   cx: number;
   cy: number;
@@ -82,7 +82,7 @@ export interface RingShape {
 }
 
 /** A line segment `w` thick with round ends. */
-export interface LineShape {
+interface LineShape {
   kind: "line";
   ax: number;
   ay: number;
@@ -94,7 +94,7 @@ export interface LineShape {
 
 export type Shape = BoxShape | ElbowShape | RingShape | LineShape;
 
-export type TextAlign = "left" | "right" | "center";
+type TextAlign = "left" | "right" | "center";
 
 /**
  * A run of text: `text`, or `alt` while its block shows its other reading (the
@@ -102,7 +102,7 @@ export type TextAlign = "left" | "right" | "center";
  * height. `dark` text is cut out of the block's shape; the rest is lit in the
  * block's colour on black.
  */
-export interface TextRun {
+interface TextRun {
   text: string;
   alt: string;
   x: number;
@@ -113,10 +113,10 @@ export interface TextRun {
   block: number;
 }
 
-export type WidgetKind = "sweep" | "graph";
+type WidgetKind = "sweep" | "graph";
 
 /** An area the composite shader animates itself: a sensor sweep or a scrolling graph. */
-export interface Widget extends WallRect {
+interface Widget extends WallRect {
   kind: WidgetKind;
   block: number;
 }
@@ -136,7 +136,7 @@ export interface PanelSet {
  * `bridge-live.ts` at draw time, and it may draw only inside `bounds` (which is
  * cleared before each redraw), squeezed to fit if need be.
  */
-export interface LiveText {
+interface LiveText {
   key: LiveKey;
   x: number;
   y: number;

@@ -36,7 +36,7 @@ export function wantsHyperspace(mode: string, cycleTime: number, cycleSeconds: n
   return phase >= 0.25 && phase < 0.85;
 }
 
-export interface Jump {
+interface Jump {
   /** Linear jump progress, 0..1; -1 before the first step. */
   readonly progress: number;
   /**
@@ -93,7 +93,7 @@ export const RESPAWN_DIST = 1.1;
 export const RESPAWN_MIN = 0.02;
 export const RESPAWN_MAX = 0.27;
 
-export interface StreakField {
+interface StreakField {
   /** Unit direction of each streak, fixed for its lifetime. */
   readonly dirX: Float32Array;
   readonly dirY: Float32Array;

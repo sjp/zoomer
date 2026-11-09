@@ -39,7 +39,7 @@ const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 // Palettes
 // ---------------------------------------------------------------------------
 
-export interface RidgePalette {
+interface RidgePalette {
   skyTop: Rgb;
   skyHorizon: Rgb;
   /** Fog, and what distant ridges fade into. */
@@ -95,9 +95,9 @@ export const layerCount = (layers: number) =>
   clamp(Math.round(Number.isFinite(layers) ? layers : MIN_LAYERS), MIN_LAYERS, MAX_LAYERS);
 
 /** Layer `i` of `n` as a depth: 0 nearest, 1 farthest. */
-export const layerDepth = (i: number, n: number) => (n > 1 ? i / (n - 1) : 0);
+const layerDepth = (i: number, n: number) => (n > 1 ? i / (n - 1) : 0);
 
-export interface LayerShape {
+interface LayerShape {
   /** Height of the layer's lowest valley. */
   base: number;
   /** Height of its highest peak above `base`. */
@@ -215,7 +215,7 @@ export function fogDensity(t: number): number {
 }
 
 /** Fraction of a layer's relief the fog floor sits above its base line. */
-export const FOG_FLOOR = 0.3;
+const FOG_FLOOR = 0.3;
 /** Thickness of the farthest band, which fogs the sky over the last ridge. */
 const BACK_FOG_THICKNESS = 0.14;
 /**
@@ -287,7 +287,7 @@ const WAIT_MAX = 45;
 /** Margin past the screen edge where flocks start and end, height units. */
 const EDGE = 0.06;
 
-export interface Flock {
+interface Flock {
   /** Birds in the current flock; 0 between flocks. */
   count: number;
   /** Seconds until the next flock while `count` is 0. */

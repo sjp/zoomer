@@ -31,10 +31,10 @@ export const TRAY_R = 0.235;
 export const TRAY_RIM_Y = -0.012;
 export const TRAY_FLOOR_Y = -0.06;
 /** Wheel centre's distance from its frame edge, and the wheel head top's screen height. */
-export const WHEEL_EDGE_X = 0.34;
-export const WHEEL_TOP_Y = 0.2;
+const WHEEL_EDGE_X = 0.34;
+const WHEEL_TOP_Y = 0.2;
 /** Visible rim width at the pot's opening. */
-export const RIM_W = 0.008;
+const RIM_W = 0.008;
 /** Throwing rings: pitch (pot units) and slow drift (radians per second). */
 export const RING_PITCH = 0.0125;
 export const RING_DRIFT = 0.15;
@@ -42,7 +42,7 @@ export const RING_DRIFT = 0.15;
 export const WOBBLE = 0.0014;
 
 /** A keyframe shape: radii at CTRL_N evenly spaced heights, its height, and how open its top is. */
-export interface PotShape {
+interface PotShape {
   /** Radii (pot units) at u = 0, 0.2, ..., 1. */
   readonly points: readonly number[];
   /** Height at which the shape holds CLAY_VOLUME (pot units). */
@@ -50,8 +50,6 @@ export interface PotShape {
   /** 0: a closed, flat top; 1: fully opened, a hollow pot with a rim. */
   readonly open: number;
 }
-
-export const CTRL_N = 6;
 
 export const MOUND: PotShape = {
   points: [0.13, 0.126, 0.116, 0.1, 0.078, 0.052],
@@ -72,7 +70,7 @@ export const FORMS: Readonly<Record<Exclude<PotteryFormId, "cycle">, PotShape>> 
 export const CYCLE_FORMS = ["vase", "bowl", "jar"] as const;
 
 /** Cycle fractions: centre the mound, pull a cylinder, shape the form, hold, sink back. */
-export const STAGES = [0.1, 0.32, 0.55, 0.8] as const;
+const STAGES = [0.1, 0.32, 0.55, 0.8] as const;
 
 const heightAt = (i: number) => i / (PROFILE_N - 1);
 
@@ -97,7 +95,7 @@ export function shapeRadius(points: readonly number[], u: number): number {
 }
 
 /** Clay cross-section at radius r: a disc, less the hole once the top is opened. */
-export function crossSection(r: number, wall: number, open: number): number {
+function crossSection(r: number, wall: number, open: number): number {
   const hole = open * Math.max(r - wall, 0);
   return Math.PI * (r * r - hole * hole);
 }
@@ -174,7 +172,7 @@ const BAKED_FORMS = {
 };
 
 /** The current pot: sampled radii, height, wall and openness. */
-export interface Profile {
+interface Profile {
   readonly radius: Float32Array;
   height: number;
   wall: number;
@@ -256,7 +254,7 @@ export function copyProfile(src: Profile, dst: Profile): Profile {
 }
 
 /** The largest radius of a profile. */
-export function maxRadius(p: Profile): number {
+function maxRadius(p: Profile): number {
   let m = 0;
   for (let i = 0; i < PROFILE_N; i++) {
     m = Math.max(m, p.radius[i]);
@@ -269,7 +267,7 @@ export function holeRadius(p: Profile): number {
   return clamp(p.open, 0, 1) * Math.max(p.radius[PROFILE_N - 1] - RIM_W, 0);
 }
 
-export interface PotteryLayout {
+interface PotteryLayout {
   /** Outer direction: +1 in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Height units per pot unit (1 on 16:9 and wider). */
@@ -319,7 +317,7 @@ export function potBox(
   return out;
 }
 
-export interface Clay {
+interface Clay {
   /** Wet albedo, linear-ish 0..1. */
   color: readonly [number, number, number];
   /** Specular strength: how glossy the wet surface is. */

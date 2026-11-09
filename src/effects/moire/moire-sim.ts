@@ -13,7 +13,7 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import { lookup } from "../lookup";
 import { wrap } from "../math";
 
-export interface MoirePalette {
+interface MoirePalette {
   /** Paper colour. */
   bg: string;
   /** Ink of each layer; each one differs slightly in hue. */
@@ -173,12 +173,12 @@ const OFFSETS = [0, 0.25, 0.6] as const;
 const GAINS = [0.35, 1, -0.8] as const;
 
 /** Rotate: angle swing (radians), and how far the centres orbit the frame centre (radians). */
-export const ROTATE_ANGLE = 0.05;
-export const ROTATE_ORBIT = 0.5;
+const ROTATE_ANGLE = 0.05;
+const ROTATE_ORBIT = 0.5;
 /** Drift: Lissajous amplitude of the centres, px at 1080p. */
-export const DRIFT_PX = 60;
+const DRIFT_PX = 60;
 /** Breathe: largest extra spacing factor. */
-export const BREATHE = 0.06;
+const BREATHE = 0.06;
 
 const TAU = 2 * Math.PI;
 

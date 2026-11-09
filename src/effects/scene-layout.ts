@@ -1,7 +1,7 @@
 /** Layout helpers shared by the illustrated Scenes, which are designed at 16:9. */
 
 /** The aspect ratio the Scenes are designed at. */
-export const DESIGN_ASPECT = 16 / 9;
+const DESIGN_ASPECT = 16 / 9;
 
 /**
  * Design units per frame unit's worth of the frame's height: 1 at 16:9 and

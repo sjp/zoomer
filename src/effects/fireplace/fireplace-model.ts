@@ -6,13 +6,13 @@
 import type { NoiseChannel } from "../noise";
 
 /** One palette stop: heat position 0..1, straight (not premultiplied) colour and alpha. */
-export interface RampStop {
+interface RampStop {
   at: number;
   rgb: readonly [number, number, number];
   a: number;
 }
 
-export interface FirePalette {
+interface FirePalette {
   /** Heat ramp, sorted by `at`, first at 0 and last at 1. */
   ramp: readonly RampStop[];
   /** Ambient glow and log rim-light colour, 0..1. */
@@ -62,8 +62,6 @@ export const PALETTES = {
     ember: [0.7, 1.0, 0.6],
   },
 } as const satisfies Record<string, FirePalette>;
-
-export type PaletteId = keyof typeof PALETTES;
 
 /** Looks up a palette by select value; unknown values fall back to wood. */
 export function getPalette(id: string): FirePalette {
@@ -213,7 +211,7 @@ export function hearthMaxHeight(layout: FireLayout): number {
 }
 
 /** Ember particles in reference px, x from the left, y up from the bottom. */
-export interface EmberState {
+interface EmberState {
   readonly max: number;
   count: number;
   /** Fractional embers owed by the spawn rate. */

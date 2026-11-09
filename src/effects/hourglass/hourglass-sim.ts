@@ -42,7 +42,7 @@ export const DIP_DEPTH = 0.07;
 export const DIP_W = 0.12;
 
 /** Glass unit at size 1 (height units). */
-export const HG_UNIT = 0.125;
+const HG_UNIT = 0.125;
 /** Where the hourglass stands (height units), and the table's back edge. */
 export const SEAT_Y = 0.07;
 export const TABLE_BACK_Y = 0.16;
@@ -60,7 +60,7 @@ const BOX_PAD = 0.004;
 export const SETTLE_TIME = 1.2;
 export const TURN_TIME = 1.5;
 /** Fall acceleration in glass units/s^2: the stream's head reaches the bottom in about 0.35 s. */
-export const FALL_G = 16;
+const FALL_G = 16;
 
 /** Samples in the volume tables. */
 export const TABLE_N = 65;
@@ -166,7 +166,7 @@ export function planeVolume(upX: number, upY: number, level: number): number {
   return v * dy;
 }
 
-export interface SandTables {
+interface SandTables {
   /** All the sand. */
   total: number;
   /**
@@ -236,9 +236,9 @@ export function turnLevel(t: SandTables, angle: number): number {
   return lookup(t.turn, angle / Math.PI);
 }
 
-export type Phase = "run" | "settle" | "turn";
+type Phase = "run" | "settle" | "turn";
 
-export interface HourglassClock {
+interface HourglassClock {
   phase: Phase;
   /** Seconds into the current phase. */
   time: number;
@@ -352,7 +352,7 @@ export function streamSpan(c: HourglassClock, apex: number, out: Float64Array | 
   out[1] = Math.max(upper, lower);
 }
 
-export interface HourglassLayout {
+interface HourglassLayout {
   /** Outer direction: +1 in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Glass unit (height units). */

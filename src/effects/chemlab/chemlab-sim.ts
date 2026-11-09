@@ -29,7 +29,7 @@ const TAU = Math.PI * 2;
 // ---------------------------------------------------------------------------
 
 /** The aspect the room is drawn for, and the frame's half width at it. */
-export const DESIGN_ASPECT = 16 / 9;
+const DESIGN_ASPECT = 16 / 9;
 export const HALF_W = DESIGN_ASPECT / 2;
 /** The middle third's half width: the speaker's place. */
 export const MIDDLE = HALF_W / 3;
@@ -50,7 +50,7 @@ export const BOARD_FRAME = 0.014;
 export const POSTER: Box = [-0.47, 0.15, 0.105, 0.088];
 
 /** A shelf: its left and right ends, its plank's top, and how tall things on it may be. */
-export interface Shelf {
+interface Shelf {
   readonly x0: number;
   readonly x1: number;
   readonly y: number;
@@ -71,14 +71,14 @@ export const SHELVES: readonly Shelf[] = [
 /** The tripod's height over a burner: a heated flask stands on its gauze. */
 export const TRIPOD_H = 0.085;
 /** The burner's barrel: half width and height (its flame sits on top). */
-export const BURNER_W = 0.009;
-export const BURNER_H = 0.05;
+const BURNER_W = 0.009;
+const BURNER_H = 0.05;
 /** The flame's height and half width at rest. */
 export const FLAME_H = 0.03;
 export const FLAME_W = 0.008;
 /** The boiling flask's centre x, its bulb's radius and its height to the neck's top. */
-export const STILL_X = 0.47;
-export const STILL_R = 0.042;
+const STILL_X = 0.47;
+const STILL_R = 0.042;
 export const STILL_H = 0.112;
 /** The still head's top: the vapour rises to here before turning into the condenser. */
 export const STILL_TOP: readonly [number, number] = [STILL_X, 0.03];
@@ -88,8 +88,8 @@ export const CONDENSER_B: readonly [number, number] = [0.735, -0.068];
 export const CONDENSER_R = 0.013;
 /** Where the drips fall from, and the receiver flask under it. */
 export const OUTLET: readonly [number, number] = [0.765, -0.09];
-export const RECEIVER_X = OUTLET[0];
-export const RECEIVER_W = 0.032;
+const RECEIVER_X = OUTLET[0];
+const RECEIVER_W = 0.032;
 export const RECEIVER_H = 0.1;
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ export const MAX_VESSELS = 40;
 export const MAX_PROPS = 40;
 
 /** One piece of glassware with a liquid in it. */
-export interface Vessel {
+interface Vessel {
   kind: number;
   /** Centre x and base y, half width (the widest part) and height. */
   x: number;
@@ -136,7 +136,7 @@ export interface Vessel {
 }
 
 /** A static thing: centre x, base y, half width, height and a tone for its label or wood. */
-export interface Prop {
+interface Prop {
   kind: number;
   x: number;
   y: number;
@@ -178,7 +178,7 @@ export function minFill(kind: number, h: number): number {
 }
 
 /** The neck's top centre (design units) and half width, where vapour comes out. */
-export function neckOf(v: Vessel, out: Float64Array): Float64Array {
+function neckOf(v: Vessel, out: Float64Array): Float64Array {
   out[0] = v.x;
   out[1] = v.y + v.h;
   out[2] =
@@ -225,10 +225,10 @@ const LOW_MENU: readonly ItemKind[] = ["beaker", "beaker", "conical"];
 const GAP_MIN = 0.008;
 const GAP_MAX = 0.03;
 /** Test tubes in a rack: half width, height, spacing, and the rack's height. */
-export const TUBE_W = 0.0075;
-export const TUBE_H = 0.1;
+const TUBE_W = 0.0075;
+const TUBE_H = 0.1;
 const TUBE_PITCH = 0.024;
-export const RACK_H = 0.048;
+const RACK_H = 0.048;
 
 /**
  * The glassware for `seed`, deterministic: reagent bottles and flasks on the
@@ -608,9 +608,9 @@ export function slewColours(
 // ---------------------------------------------------------------------------
 
 /** One reaction in every slot of this many seconds… */
-export const REACTION_SLOT = 120;
+const REACTION_SLOT = 120;
 /** …starting somewhere in the middle half of it, so they come one to three minutes apart. */
-export const REACTION_SPREAD = 0.5;
+const REACTION_SPREAD = 0.5;
 export const MIN_GAP = REACTION_SLOT * (1 - REACTION_SPREAD);
 export const MAX_GAP = REACTION_SLOT * (1 + REACTION_SPREAD);
 /** The first comes this soon. */
@@ -619,12 +619,12 @@ export const FIRST_REACTION = 25;
 export const CHANGE_MIN = 3;
 export const CHANGE_MAX = 5;
 /** A puff of vapour lasts this long. */
-export const PUFF_TIME = 9;
+const PUFF_TIME = 9;
 /** A reacting flask's glow: its rise, its fall after the change, and its peak (a share of its usual light). */
 export const GLOW_RISE = 1.5;
-export const GLOW_FALL = 3;
+const GLOW_FALL = 3;
 export const REACTION_GLOW = 0.6;
-export const PUFF_GLOW = 0.25;
+const PUFF_GLOW = 0.25;
 /** How often a reaction is a puff of vapour rather than a colour change, where it can be. */
 const PUFF_SHARE = 0.3;
 
@@ -777,18 +777,18 @@ export function reactionPuff(r: Reactions, v: number, t: number): number {
 
 /** One drip in each slot of this many seconds, give or take `DRIP_JITTER`: 2 to 4 s apart. */
 export const DRIP_SLOT = 3;
-export const DRIP_JITTER = 0.5;
+const DRIP_JITTER = 0.5;
 /** Seconds a drop takes to swell at the outlet, and to fall. */
-export const DRIP_FORM = 1.2;
-export const DRIP_FALL = 0.25;
+const DRIP_FORM = 1.2;
+const DRIP_FALL = 0.25;
 /** Seconds the receiver's level takes to rise after a drop lands. */
-export const DRIP_SETTLE = 0.4;
+const DRIP_SETTLE = 0.4;
 /** Drops to fill the receiver (four minutes), then slots spent fading it back to empty. */
 export const RECEIVER_DROPS = 80;
-export const FADE_SLOTS = 4;
-export const CYCLE_SLOTS = RECEIVER_DROPS + FADE_SLOTS;
+const FADE_SLOTS = 4;
+const CYCLE_SLOTS = RECEIVER_DROPS + FADE_SLOTS;
 /** The receiver's liquid fades out over this long once it is full. */
-export const FADE_TIME = 9;
+const FADE_TIME = 9;
 /** The receiver's level when full. */
 export const RECEIVER_FULL = maxFill(CONICAL, RECEIVER_W, RECEIVER_H);
 
@@ -802,7 +802,7 @@ export function dripTime(s: number): number {
   return (s + 0.5) * DRIP_SLOT + DRIP_JITTER * (2 * u - 1);
 }
 
-export interface Distillate {
+interface Distillate {
   /** The receiver's level above its base (design units, 0 when empty), and its liquid's opacity. */
   level: number;
   opacity: number;
@@ -860,7 +860,7 @@ export const VAPOUR_BOXES: readonly (readonly [number, number, number, number])[
 /** Sim units per design unit: the shared smoke flow's curls come out smaller on screen. */
 export const VAPOUR_SCALE = 1.6;
 /** The field's cell size at 1080p, in pixels. */
-export const VAPOUR_CELL_REF = 6;
+const VAPOUR_CELL_REF = 6;
 /** The vapour's rise, curl and onset (sim units above the box's bottom). */
 export const VAPOUR_RISE = 0.07;
 export const VAPOUR_CURL = 1.3;
@@ -891,7 +891,7 @@ export function vapourRegion(side: number, out: Float64Array): Float64Array {
 }
 
 /** Design point (x, y) in field `side`'s sim units, into `out`. */
-export function toVapour(side: number, x: number, y: number, out: Float64Array): Float64Array {
+function toVapour(side: number, x: number, y: number, out: Float64Array): Float64Array {
   const b = VAPOUR_BOXES[side];
   out[0] = (x - b[0]) * VAPOUR_SCALE;
   out[1] = (y - b[1]) * VAPOUR_SCALE;

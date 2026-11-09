@@ -58,7 +58,7 @@ export interface LoopHost {
   observeResize: (canvas: LoopCanvas, callback: () => void) => () => void;
 }
 
-export const browserHost: LoopHost = {
+const browserHost: LoopHost = {
   requestFrame: (callback) => requestAnimationFrame(callback),
   cancelFrame: (id) => {
     cancelAnimationFrame(id);

@@ -16,7 +16,6 @@ export const SIDE_OPTIONS = [
   { value: "right", label: "Right" },
   { value: "across", label: "Across" },
 ] as const;
-export type MobileSide = (typeof SIDE_OPTIONS)[number]["value"];
 
 export const mobileMeta = defineEffectMeta({
   id: "mobile",

@@ -209,7 +209,7 @@ export function easeInOut(p: number): number {
   return x * x * (3 - 2 * x);
 }
 
-export interface TruchetOptions {
+interface TruchetOptions {
   cols: number;
   rows: number;
   seed: number;

@@ -3,12 +3,12 @@ import { defineEffectMeta } from "../types";
 
 export type MarbleGlass = "clear" | "mixed" | "cats";
 
-export const SIDE_OPTIONS = [
+const SIDE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: MarbleSide; label: string }[];
 
-export const GLASS_OPTIONS = [
+const GLASS_OPTIONS = [
   { value: "clear", label: "Clear" },
   { value: "mixed", label: "Mixed colours" },
   { value: "cats", label: "Cat's eyes" },

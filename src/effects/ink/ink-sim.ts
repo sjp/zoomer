@@ -16,9 +16,9 @@ export const PLUME_LIFE = 55;
 /** Seconds the drop takes to appear: a quick, sharp start. */
 export const FADE_IN = 0.8;
 /** Age at which the plume starts fading; it reaches zero at `PLUME_LIFE`. */
-export const FADE_START = 22;
+const FADE_START = 22;
 /** Time constant of the unfurl: about 95% grown after 3 tau = 21 s. */
-export const UNFURL_TAU = 7;
+const UNFURL_TAU = 7;
 /** Seconds between drops at frequency 1. */
 export const MIN_INTERVAL = 15;
 export const MAX_INTERVAL = 40;
@@ -56,7 +56,7 @@ export const EDGE_BOTTOM = 3;
 /** Cumulative edge weights: mostly the sides, some top, a few from the bottom. */
 const EDGE_CDF = [0.35, 0.7, 0.9, 1] as const;
 
-export interface Plume {
+interface Plume {
   alive: boolean;
   /** Seconds since landing (speed-scaled). */
   age: number;
@@ -76,7 +76,7 @@ export interface Plume {
   color: number;
 }
 
-export interface DropState {
+interface DropState {
   readonly plumes: Plume[];
   /** Seconds (at frequency 1) until the next drop may land. */
   timer: number;
@@ -257,7 +257,7 @@ export function landingPoint(p: Plume, aspect: number, out: Float32Array, o = 0)
 }
 
 /** Uniform arrays for the shader, `MAX_PLUMES` vec4s each (see `packPlumes`). */
-export interface PlumeUniforms {
+interface PlumeUniforms {
   /** Centre x, y (frame heights), radius, intensity. */
   readonly p0: Float32Array;
   /** Coarse warp noise offset xy, fine warp noise offset xy (texture units, wrapped to [0, 1)). */

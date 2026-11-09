@@ -16,14 +16,14 @@ export const GLYPH_COUNT = GLYPHS.length;
 const GLYPH_INDEX = new Map<string, number>(Array.from(GLYPHS, (ch, i) => [ch, i]));
 
 /** Flips per second of a cell, before its small per-cell jitter. */
-export const FLIP_RATE = 10;
+const FLIP_RATE = 10;
 /** Per-cell flip-rate spread: each cell runs at FLIP_RATE × (1 ± RATE_JITTER). */
-export const RATE_JITTER = 0.06;
+const RATE_JITTER = 0.06;
 /** Start delay per column and per row (s), so a change ripples across the board. */
-export const STAGGER_COL = 0.035;
-export const STAGGER_ROW = 0.12;
+const STAGGER_COL = 0.035;
+const STAGGER_ROW = 0.12;
 /** Extra random start delay per cell (s), up to this. */
-export const STAGGER_JITTER = 0.15;
+const STAGGER_JITTER = 0.15;
 
 /** Steps a cell's drum takes from glyph `from` to glyph `to`, always forwards. */
 export function stepsTo(from: number, to: number): number {
@@ -72,7 +72,7 @@ export function textPages(text: string, perPage: number): string[][] {
 }
 
 /** Every cell's state; arrays are `cols × rows` long, row-major from the top-left. */
-export interface FlapBoard {
+interface FlapBoard {
   readonly cols: number;
   readonly rows: number;
   /** The glyph the cell shows (its lower half shows it until the flip ends). */
@@ -112,7 +112,7 @@ export function cellIdle(b: FlapBoard, i: number): boolean {
 }
 
 /** The stagger before cell (col, row) starts, given a change number for the jitter. */
-export function staggerDelay(col: number, row: number, change: number): number {
+function staggerDelay(col: number, row: number, change: number): number {
   const h = unit(hash32((row * 64 + col) * 7919 + change * 104729));
   return col * STAGGER_COL + row * STAGGER_ROW + STAGGER_JITTER * h;
 }
@@ -213,20 +213,20 @@ export function maxChangeTime(cols: number, rows: number, flipRate = FLIP_RATE):
 }
 
 /** Cell width over height. */
-export const CELL_ASPECT = 0.7;
+const CELL_ASPECT = 0.7;
 /** Gaps between cells, as fractions of the cell's width (across) and height (down). */
-export const GAP_X = 0.1;
-export const GAP_Y = 0.14;
+const GAP_X = 0.1;
+const GAP_Y = 0.14;
 /** The housing's margin around the cells, in cell heights. */
-export const MARGIN = 0.35;
+const MARGIN = 0.35;
 /** The board's top edge, and its height at MAX_ROWS rows (height units). */
-export const BOARD_TOP = 0.045;
-export const MAX_BOARD_H = 0.46;
+const BOARD_TOP = 0.045;
+const MAX_BOARD_H = 0.46;
 /** Widest the board gets, as a fraction of the frame width. */
-export const MAX_BOARD_W = 0.9;
+const MAX_BOARD_W = 0.9;
 
 /** Where the board sits, in height units (frame height 1), y down from the top. */
-export interface BoardLayout {
+interface BoardLayout {
   /** Top-left of the first cell. */
   x: number;
   y: number;
@@ -282,7 +282,7 @@ export function clockLabel(minutesOfDay: number): string {
 }
 
 /** The clock row's state: the label and when (epoch ms) to look at the time again. */
-export interface MinuteClock {
+interface MinuteClock {
   label: string;
   next: number;
 }

@@ -5,15 +5,15 @@ export const MIN_PLANETS = 2;
 export const MAX_PLANETS = 7;
 
 /** Steepest view tilt, degrees from top-down. */
-export const MAX_TILT = 60;
+const MAX_TILT = 60;
 
-export const SYSTEM_OPTIONS = [
+const SYSTEM_OPTIONS = [
   { value: "single", label: "Single star" },
   { value: "binary", label: "Binary" },
   { value: "random", label: "Random" },
 ] as const;
 
-export const CENTRE_OPTIONS = [
+const CENTRE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
   { value: "centre", label: "Centre" },

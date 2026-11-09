@@ -23,7 +23,7 @@ const DEG = Math.PI / 180;
 /** Eye height above the ground (m), the downward pitch, and the vertical field of view. */
 export const EYE_H = 4.5;
 export const PITCH = 11 * DEG;
-export const FOV_Y = 60 * DEG;
+const FOV_Y = 60 * DEG;
 export const TAN_HALF_FOV = Math.tan(FOV_Y / 2);
 /** The Moon's radius (m). */
 export const MOON_R = 1737400;
@@ -41,7 +41,7 @@ export const HORIZON_Y = elevationY(0);
 // ---------------------------------------------------------------------------
 
 /** The aspect the layout is drawn for. */
-export const DESIGN_ASPECT = 16 / 9;
+const DESIGN_ASPECT = 16 / 9;
 /** Width of the windows' frames, round the glass. */
 export const FRAME_W = 0.04;
 
@@ -50,7 +50,7 @@ export const BREAKERS = 1;
 export const LAMPS = 2;
 export const CHECKLIST = 3;
 
-export interface Panel {
+interface Panel {
   x0: number;
   y0: number;
   x1: number;
@@ -58,7 +58,7 @@ export interface Panel {
   kind: number;
 }
 
-export interface Dial {
+interface Dial {
   x: number;
   y: number;
   r: number;
@@ -154,7 +154,7 @@ export function windowSpan(layout: CabinLayout, y: number, out: Float64Array): F
 /** The sun's mean elevation, how far it creeps either way, and over how long (s). */
 export const SUN_ELEVATION = 9 * DEG;
 export const SUN_CREEP = 1.5 * DEG;
-export const SUN_PERIOD = 3 * 3600;
+const SUN_PERIOD = 3 * 3600;
 /** The sun's bearing, from the camera's forward direction towards its right. */
 export const SUN_AZIMUTH = 110 * DEG;
 
@@ -226,12 +226,12 @@ export function eventPhase(
 }
 
 /** Which slot `t` is in, for picking an event's details. */
-export const eventSlot = (t: number, gap: number) => Math.floor(Math.max(0, t) / gap);
+const eventSlot = (t: number, gap: number) => Math.floor(Math.max(0, t) / gap);
 
 /** The master alarm: every few minutes, three slow blinks (each ramping over 1.5 s). */
 export const WARNING_GAP = 210;
-export const WARNING_LENGTH = 9;
-export const WARNING_BLINKS = 3;
+const WARNING_LENGTH = 9;
+const WARNING_BLINKS = 3;
 const WARNING_SALT = 1;
 
 /** The master alarm's glow (0..1) at `t`. */
@@ -245,11 +245,11 @@ export function warningGlow(t: number, seed: number): number {
 }
 
 /** A distant dust plume: every few minutes, rising for a while and settling slowly. */
-export const PLUME_GAP = 170;
-export const PLUME_LENGTH = 50;
+const PLUME_GAP = 170;
+const PLUME_LENGTH = 50;
 const PLUME_SALT = 2;
 
-export interface Plume {
+interface Plume {
   /** Density, 0 when there's none. */
   amount: number;
   /** How far it has risen, 0..1. */
@@ -278,8 +278,8 @@ export function plumeAt(t: number, seed: number, out: Plume): Plume {
 }
 
 /** Fine dust drifting down past the windows, now and then. */
-export const DUST_GAP = 130;
-export const DUST_LENGTH = 40;
+const DUST_GAP = 130;
+const DUST_LENGTH = 40;
 const DUST_SALT = 3;
 
 /** How much dust is drifting past at `t` (0..1). */
@@ -296,8 +296,8 @@ export function dustLevel(t: number, seed: number): number {
 export const ASCENT_PERIOD = 1800;
 /** Seconds climbing to orbit, holding there, and descending back. */
 export const ASCENT_RISE = 60;
-export const ASCENT_HOLD = 150;
-export const ASCENT_DESCENT = 120;
+const ASCENT_HOLD = 150;
+const ASCENT_DESCENT = 120;
 export const ASCENT_LENGTH = ASCENT_RISE + ASCENT_HOLD + ASCENT_DESCENT;
 /** The orbit's height (m). */
 export const ORBIT_HEIGHT = 110000;
@@ -348,5 +348,5 @@ export function horizonDip(height: number): number {
 }
 
 /** The Earth's spin: one turn in this many seconds, and its turn (0..1) at `t`. */
-export const EARTH_TURN = 1800;
+const EARTH_TURN = 1800;
 export const earthTurn = (t: number) => fract(t / EARTH_TURN);

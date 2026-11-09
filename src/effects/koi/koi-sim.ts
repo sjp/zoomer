@@ -21,7 +21,7 @@ export const SPINE_POINTS = 10;
 /** Strip rows along the body: every spine point plus a Catmull-Rom midpoint between each pair. */
 export const BODY_ROWS = 2 * (SPINE_POINTS - 1) + 1;
 /** Strip rows of the tail fin, beyond the last spine point. */
-export const FIN_ROWS = 3;
+const FIN_ROWS = 3;
 export const ROWS = BODY_ROWS + FIN_ROWS;
 /** Triangle-strip vertices per fish: a left and right vertex per row. */
 export const VERTS_PER_FISH = ROWS * 2;
@@ -42,17 +42,16 @@ const FIN = [
 /** Cruise speed in reference px/s at speed 1, for a fish of the default length. */
 export const SWIM_PX = 42;
 /** Fastest turn in radians per second at speed 1. */
-export const MAX_TURN = 0.9;
+const MAX_TURN = 0.9;
 /** Edge avoidance starts this far (reference px) inside the frame. */
-export const EDGE_MARGIN = 150;
+const EDGE_MARGIN = 150;
 /** Fish heads never leave the frame by more than this (reference px). */
 export const HARD_MARGIN = 40;
 /** Seconds a fish takes to fade in when the count rises. */
 const FADE_IN = 2;
 
 /** Varieties, in the order the fragment shader's `variety` index expects. */
-export const VARIETIES = ["kohaku", "sanke", "showa", "ogon", "asagi"] as const;
-export type Variety = (typeof VARIETIES)[number];
+const VARIETIES = ["kohaku", "sanke", "showa", "ogon", "asagi"] as const;
 
 /** Width profile of the body at `u` (0 at the nose, 1 at the tail), as a fraction of the widest. */
 export function bodyProfile(u: number): number {
@@ -73,7 +72,7 @@ export interface FishFrame {
   speed: number;
 }
 
-export interface FishState {
+interface FishState {
   readonly max: number;
   readonly x: Float64Array;
   readonly y: Float64Array;
@@ -352,7 +351,7 @@ export function solveSpine(s: FishState, i: number, segment: number): void {
 }
 
 /** Scratch for `writeFishStrip`: swept spine points, row centres and row normals. */
-export interface StripScratch {
+interface StripScratch {
   readonly points: Float64Array;
   readonly rows: Float64Array;
   readonly normals: Float64Array;
@@ -367,7 +366,7 @@ export function createStripScratch(): StripScratch {
 }
 
 /** Half-width of strip row `r` as a fraction of the widest, and its `u`. */
-export function rowShape(r: number): [halfWidth: number, u: number] {
+function rowShape(r: number): [halfWidth: number, u: number] {
   if (r < BODY_ROWS) {
     const u = r / (BODY_ROWS - 1);
     // The nose row is kept a little wide so its triangles never collapse.
@@ -548,9 +547,9 @@ export const MAX_RIPPLES = 8;
 /** Seconds a ring lives. */
 export const RIPPLE_LIFE = 4.5;
 /** Ring growth in reference px per second. */
-export const RIPPLE_SPEED = 55;
+const RIPPLE_SPEED = 55;
 
-export interface Ripples {
+interface Ripples {
   readonly x: Float64Array;
   readonly y: Float64Array;
   /** Start time on the ripple clock; -Infinity for an empty slot. */
@@ -628,7 +627,7 @@ export function padOutline(points = 40): number[] {
   return out;
 }
 
-export interface Pads {
+interface Pads {
   readonly x: Float64Array;
   readonly y: Float64Array;
   readonly r: Float64Array;

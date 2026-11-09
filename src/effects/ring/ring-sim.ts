@@ -38,7 +38,7 @@ export function advanceSpin(phase: number, dt: number, spin: number): number {
 export const spinAngle = (phase: number) => TAU * wrap(phase, 0, 1);
 
 /** How a body looks from the station. */
-export interface BodySpec {
+interface BodySpec {
   /** Angular radius (radians). */
   radius: number;
   /** Longitude and latitude (radians) of the point facing the station. */
@@ -60,7 +60,7 @@ export const BODY_POLAR = 70 * DEG;
 export const BODY_AZIMUTH = 0;
 
 /** A body's placement in the sky frame, all unit vectors. */
-export interface BodyFrame {
+interface BodyFrame {
   /** Towards the body's centre. */
   centre: [number, number, number];
   /** Towards the sun. */
@@ -133,7 +133,7 @@ export const WASH: Readonly<Record<BodyId, number>> = { earth: 0.08, moon: 0.035
 export const INDICATOR_PERIOD = 75;
 export const INDICATOR_FADE = 3;
 /** Its soft lamp colours (linear-ish RGB, 0..1). */
-export const INDICATOR_COLOURS: readonly (readonly [number, number, number])[] = [
+const INDICATOR_COLOURS: readonly (readonly [number, number, number])[] = [
   [0.35, 0.85, 0.5],
   [1.0, 0.7, 0.25],
   [0.45, 0.7, 1.0],

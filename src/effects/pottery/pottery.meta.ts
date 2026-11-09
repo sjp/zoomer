@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export type PotteryCorner = "left" | "right";
+type PotteryCorner = "left" | "right";
 export type PotteryFormId = "vase" | "bowl" | "jar" | "cycle";
 export type ClayId = "terracotta" | "stoneware" | "porcelain";
 

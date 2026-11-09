@@ -8,22 +8,22 @@
 import { clamp, fract } from "../math";
 import { MAX_AMPLITUDE, MAX_PENDULUMS, MIN_PENDULUMS } from "./pendulum.meta";
 
-export type PendulumView = "front" | "angled" | "above";
-export type PendulumFinish = "chrome" | "brass" | "coloured";
-export type PendulumPlacement = "top" | "left" | "right";
+type PendulumView = "front" | "angled" | "above";
+type PendulumFinish = "chrome" | "brass" | "coloured";
+type PendulumPlacement = "top" | "left" | "right";
 
-export const REF_HEIGHT = 1080;
+const REF_HEIGHT = 1080;
 const TAU = 2 * Math.PI;
 const DEG = Math.PI / 180;
 
 /** Target period of the slowest (longest) pendulum, seconds. */
-export const BASE_PERIOD = 2.4;
+const BASE_PERIOD = 2.4;
 /** Ball radius the rig is designed around (reference px), before fitting. */
-export const BALL_RADIUS = 24;
+const BALL_RADIUS = 24;
 /** Pivot spacing in ball radii, at most: the balls nearly touch, as in the classic rig. */
-export const SPACING_RADII = 2.8;
+const SPACING_RADII = 2.8;
 /** Most the fit may enlarge the rig. */
-export const MAX_FIT = 1.25;
+const MAX_FIT = 1.25;
 /** How fast the swing and the lengths ease after a param change (1/s). */
 const EASE_RATE = 2.5;
 /** Brightness gain per unit of relative perspective scale (closer is brighter). */
@@ -48,11 +48,11 @@ const BAR_HIGHLIGHT = [0.5, 0.52, 0.56] as const;
 const SHADOW_ALPHA = 0.38;
 const BAR_SHADOW_ALPHA = 0.3;
 
-export const CHROME_TINT = [0.9, 0.92, 0.95] as const;
-export const BRASS_TINT = [1.0, 0.74, 0.4] as const;
+const CHROME_TINT = [0.9, 0.92, 0.95] as const;
+const BRASS_TINT = [1.0, 0.74, 0.4] as const;
 
 /** Camera yaw (about the vertical) and pitch (looking down), radians. */
-export const VIEWS: Record<PendulumView, { yaw: number; pitch: number }> = {
+const VIEWS: Record<PendulumView, { yaw: number; pitch: number }> = {
   front: { yaw: 0, pitch: 10 * DEG },
   angled: { yaw: 28 * DEG, pitch: 9 * DEG },
   above: { yaw: 0, pitch: 68 * DEG },
@@ -111,7 +111,7 @@ export function hsvToRgb(h: number, s: number, v: number, out: Float32Array, o: 
   out[o + 2] = f(1);
 }
 
-export interface RigConfig {
+interface RigConfig {
   count: number;
   view: string;
   placement: string;
@@ -120,7 +120,7 @@ export interface RigConfig {
 }
 
 /** The region the rig is fitted into, reference px. */
-export function placementBox(
+function placementBox(
   placement: PendulumPlacement,
   refWidth: number,
 ): { x0: number; x1: number; y0: number; y1: number } {
@@ -134,8 +134,6 @@ export function placementBox(
   }
   return { x0: 0.06 * w, x1: 0.94 * w, y0: 0.06 * h, y1: 0.48 * h };
 }
-
-export type PendulumRig = ReturnType<typeof createPendulumRig>;
 
 /**
  * The rig: geometry (`configure`), motion (`update`) and per-frame instance data

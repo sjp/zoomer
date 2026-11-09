@@ -23,7 +23,7 @@ export const MID_WEIGHT = 0.4;
  * from the texture. The summed noise is close to Gaussian, which the coverage
  * mapping relies on.
  */
-export const SPOT_SIGMA = 0.106;
+const SPOT_SIGMA = 0.106;
 /** Logistic approximation of the Gaussian quantile: probit(p) ~ logit(p) / 1.702. */
 const LOGIT_TO_PROBIT = 1 / 1.702;
 
@@ -47,14 +47,14 @@ const WOBBLE = 0.15;
 const WOBBLE_FREQ = 0.15;
 
 /** Gust noise frequency in 1/s (features tens of seconds apart) and the largest extra sway. */
-export const GUST_FREQ = 1 / 30;
+const GUST_FREQ = 1 / 30;
 export const GUST_MAX = 1;
 
 /** Sun drift speed in reference px per second (slow: a few hundred px an hour). */
 export const DRIFT_SPEED = 0.08;
 
 /** Spot elongation along the sun direction. */
-export const STRETCH = 1.35;
+const STRETCH = 1.35;
 
 /**
  * Sway amplitude multiplier at `time` seconds: 1 in still air, up to
@@ -145,20 +145,20 @@ export function sunBasis(out: Float32Array | Float64Array, angleDeg: number) {
  * `sideW` (fraction of the reference width) in from that edge. `frame`: window
  * cross centre as fractions of the frame.
  */
-export const REGIONS = {
+const REGIONS = {
   topRight: { top: 330, side: 1, sideW: 0.27, frame: [0.83, 0.17] },
   topLeft: { top: 330, side: -1, sideW: 0.27, frame: [0.17, 0.17] },
   right: { top: -1e4, side: 1, sideW: 0.3, frame: [0.85, 0.5] },
   left: { top: -1e4, side: -1, sideW: 0.3, frame: [0.15, 0.5] },
   full: { top: 1e4, side: 0, sideW: 0, frame: [0.7, 0.3] },
 } as const;
-export type Region = keyof typeof REGIONS;
+type Region = keyof typeof REGIONS;
 
 /** Half-width of the region's soft edge in reference px. */
 export const REGION_SOFT = 150;
 
 /** Region layout for the shader (all reference px). */
-export interface RegionLayout {
+interface RegionLayout {
   /** y of the top band's edge (soft either side). */
   topY: number;
   /** x of the frame edge the side band hangs from, and +1 / -1 / 0 for its side. */

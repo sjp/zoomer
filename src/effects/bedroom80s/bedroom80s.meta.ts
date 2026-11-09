@@ -1,15 +1,15 @@
 import { defineEffectMeta } from "../types";
 
-export type ScreenMode = "demo" | "stripes" | "prompt";
-export type ComputerSide = "left" | "right";
+type ScreenMode = "demo" | "stripes" | "prompt";
+type ComputerSide = "left" | "right";
 
-export const SCREEN_OPTIONS = [
+const SCREEN_OPTIONS = [
   { value: "demo", label: "Demo" },
   { value: "stripes", label: "Loading stripes" },
   { value: "prompt", label: "Text prompt" },
 ] as const satisfies readonly { value: ScreenMode; label: string }[];
 
-export const SIDE_OPTIONS = [
+const SIDE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: ComputerSide; label: string }[];

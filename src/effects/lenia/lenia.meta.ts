@@ -15,7 +15,7 @@ export const PALETTE_OPTIONS = [
 ] as const;
 
 /** Most creatures seeded at once. */
-export const MAX_COUNT = 8;
+const MAX_COUNT = 8;
 
 export const leniaMeta = defineEffectMeta({
   id: "lenia",

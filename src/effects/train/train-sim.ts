@@ -97,9 +97,9 @@ export function shadeLayer(out: Rgb, base: Rgb, light: Rgb, horizon: Rgb, z: num
 /** Train speed (world units per second) at speed 1: the poles then pass at 480 px/s. */
 export const V_MAX = 2.88;
 /** Acceleration, world units per second squared. */
-export const ACCEL = 0.6;
+const ACCEL = 0.6;
 
-export interface Train {
+interface Train {
   /** Position along the track, world units, unwrapped float64. */
   pos: number;
   /** Velocity, world units per second; NaN until the first step. */
@@ -149,7 +149,7 @@ export const BANK_COLUMNS = 1024;
 export const BANK_CHANNELS = 2;
 /** Period of the embankment table, reference px. */
 export const BANK_PERIOD = 2048;
-export const BANK_BASE = 175;
+const BANK_BASE = 175;
 
 /** Seed for one table, so each table and seed get their own stream. */
 const tableSeed = (seed: number, salt: number) => Math.floor(seed) * 7919 + salt;
@@ -490,7 +490,7 @@ export const TIME_KEYS = [
 ] as const;
 
 /** Time-of-day keys per second a change travels through. */
-export const TIME_RATE = 1.5;
+const TIME_RATE = 1.5;
 
 /** Index of a `timeOfDay` value; unknown values fall back to golden hour. */
 export function timeIndex(value: string): number {
@@ -498,7 +498,7 @@ export function timeIndex(value: string): number {
   return i < 0 ? 2 : i;
 }
 
-export interface TimeState {
+interface TimeState {
   /** Position along `TIME_KEYS`, fractional while changing; NaN until the first step. */
   pos: number;
 }
@@ -511,7 +511,7 @@ export function stepTime(state: TimeState, dt: number, index: number): number {
   return state.pos;
 }
 
-export interface TimeLook {
+interface TimeLook {
   hour: number;
   sunX: number;
   sunY: number;

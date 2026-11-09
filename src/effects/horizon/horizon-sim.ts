@@ -26,7 +26,7 @@ export function localDayPhase(d: Date): number {
   return fract(s / SECONDS_PER_DAY);
 }
 
-export interface DayClock {
+interface DayClock {
   /** The current day phase in [0, 1). */
   readonly phase: number;
   /**
@@ -192,9 +192,9 @@ export function sampleSky(phase: number, out: SkyState, keys: readonly SkyKey[] 
 // ---------------------------------------------------------------------------
 
 /** Horizontal half-span of the sun and moon arcs, as a fraction of the width. */
-export const ARC_HALF_WIDTH = 0.44;
+const ARC_HALF_WIDTH = 0.44;
 
-export interface ArcPoint {
+interface ArcPoint {
   /** Fraction of the width, 0 left. */
   x: number;
   /** Elevation, -1..1: sin of the angle above the horizon; the arc's height is `ARC_HEIGHT`. */
@@ -230,7 +230,7 @@ export const lunarPhase = (ms: number) => fract((ms - NEW_MOON_MS) / SYNODIC_MS)
  * (northern-hemisphere view). Also returns the lit fraction of the disc, for the
  * halo's strength.
  */
-export interface Terminator {
+interface Terminator {
   k: number;
   side: number;
   lit: number;

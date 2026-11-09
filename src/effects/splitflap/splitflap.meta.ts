@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type SplitflapStyle = "station" | "airport" | "retro";
 
-export const SPLITFLAP_STYLE_OPTIONS = [
+const SPLITFLAP_STYLE_OPTIONS = [
   { value: "station", label: "Station white" },
   { value: "airport", label: "Airport yellow" },
   { value: "retro", label: "Retro cream" },
@@ -13,7 +13,7 @@ export const BOARD_COLS = 22;
 /** Most rows the board shows (the `rows` param's max). */
 export const MAX_ROWS = 6;
 /** Most lines of text the board cycles through. */
-export const MAX_LINES = 6;
+const MAX_LINES = 6;
 
 export const splitflapMeta = defineEffectMeta({
   id: "splitflap",

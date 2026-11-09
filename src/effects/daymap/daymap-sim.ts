@@ -25,7 +25,7 @@ export const DEMO_RATE = 1440;
 /** Seconds leaving demo mode takes to ease back to the wall clock. */
 export const DEMO_EASE = 4;
 
-export interface MapClock {
+interface MapClock {
   /** The current simulated time, in Unix milliseconds (unwrapped, float64). */
   readonly ms: number;
   /**
@@ -105,7 +105,7 @@ export interface LatLon {
 export const createLatLon = (): LatLon => ({ lat: 0, lon: 0 });
 
 /** Days since J2000.0 for a Unix time in milliseconds. */
-export const daysSinceJ2000 = (ms: number) => ms / MS_PER_DAY + JD_UNIX_EPOCH - JD_J2000;
+const daysSinceJ2000 = (ms: number) => ms / MS_PER_DAY + JD_UNIX_EPOCH - JD_J2000;
 
 /** Greenwich mean sidereal time in degrees, for `n` days since J2000.0. */
 const gmstDeg = (n: number) => 280.46061837 + 360.98564736629 * n;
@@ -248,12 +248,12 @@ export function latLonToPixel(
  * nautical and civil twilight, then the low sun. Each segment adds its weight in
  * `TWILIGHT_WEIGHTS` to the light level.
  */
-export const TWILIGHT_KNOTS = [-18, -12, -6, 0, 8] as const;
+const TWILIGHT_KNOTS = [-18, -12, -6, 0, 8] as const;
 export const TWILIGHT_WEIGHTS = [0.06, 0.12, 0.32, 0.5] as const;
 /** Half-width of a band edge in "Bands" mode, in units of sin(elevation) (about 0.15 degrees). */
 const BAND_EDGE = 0.0026;
 
-export type TwilightMode = "smooth" | "bands";
+type TwilightMode = "smooth" | "bands";
 
 /**
  * The segment ramps for the shader, in sin(elevation): segment i ramps from
@@ -293,7 +293,7 @@ export function twilightLight(s: number, lo: ArrayLike<number>, hi: ArrayLike<nu
 // Pins
 // ---------------------------------------------------------------------------
 
-export interface City extends LatLon {
+interface City extends LatLon {
   name: string;
   /** IANA time zone, for the local-time label. */
   zone: string;

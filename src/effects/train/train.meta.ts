@@ -1,8 +1,8 @@
 import { defineEffectMeta } from "../types";
 
-export type TimeOfDay = "morning" | "afternoon" | "golden" | "dusk";
-export type Direction = "left" | "right";
-export type FrameStyle = "carriage" | "thin" | "none";
+type TimeOfDay = "morning" | "afternoon" | "golden" | "dusk";
+type Direction = "left" | "right";
+type FrameStyle = "carriage" | "thin" | "none";
 
 /** In the order the time-of-day transition passes through them. */
 export const TIME_OPTIONS = [
@@ -12,12 +12,12 @@ export const TIME_OPTIONS = [
   { value: "dusk", label: "Dusk" },
 ] as const satisfies readonly { value: TimeOfDay; label: string }[];
 
-export const DIRECTION_OPTIONS = [
+const DIRECTION_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: Direction; label: string }[];
 
-export const FRAME_OPTIONS = [
+const FRAME_OPTIONS = [
   { value: "carriage", label: "Carriage" },
   { value: "thin", label: "Thin" },
   { value: "none", label: "None" },

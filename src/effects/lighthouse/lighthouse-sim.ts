@@ -42,22 +42,22 @@ export const LANTERN_WIDTH = 0.78;
 export const CAP_HEIGHT = 0.026;
 export const CAP_WIDTH = 0.95;
 /** The tower is sunk this far into the ground so its foot meets the slope. */
-export const TOWER_SINK = 0.004;
+const TOWER_SINK = 0.004;
 
 /** Physical half-angle of the beam's cone, radians. */
-export const BEAM_HALF_ANGLE = (4.5 * Math.PI) / 180;
+const BEAM_HALF_ANGLE = (4.5 * Math.PI) / 180;
 /** On-screen beam length (height units): pointing at or away from the viewer, and side-on. */
 export const BEAM_MIN_LENGTH = 0.1;
 export const BEAM_MAX_LENGTH = 1.3;
 /** Beam brightness side-on, and the extra pointing toward and away from the viewer. */
-export const BEAM_SIDE = 0.3;
-export const BEAM_FRONT = 0.7;
-export const BEAM_BACK = 0.35;
+const BEAM_SIDE = 0.3;
+const BEAM_FRONT = 0.7;
+const BEAM_BACK = 0.35;
 /** Standard deviation of the flare's bump around facing the viewer (about 14° across at half height). */
-export const FLARE_SIGMA = (6 * Math.PI) / 180;
+const FLARE_SIGMA = (6 * Math.PI) / 180;
 /** Largest downward tilt of the beam, degrees, and how fast the beam eases to a new tilt, degrees per second. */
 export const MAX_TILT = 30;
-export const TILT_RATE = 2;
+const TILT_RATE = 2;
 
 /** Height of the headland's top at distance `d` from its frame edge. */
 export function headlandHeight(d: number): number {
@@ -92,7 +92,7 @@ export function beamAngle(phase: number, index: number): number {
 }
 
 /** A beam as drawn: a soft 2D wedge from the lantern. */
-export interface BeamProjection {
+interface BeamProjection {
   /** On-screen direction, a unit vector (y up). Level beams point straight left or right. */
   dirX: number;
   dirY: number;

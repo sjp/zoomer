@@ -196,7 +196,7 @@ export function advanceSpin(angle: number, dt: number, degPerSecond: number): nu
 }
 
 /** Palette cycles per second of slow drift: one full cycle every four minutes. */
-export const DRIFT_RATE = 1 / 240;
+const DRIFT_RATE = 1 / 240;
 
 /** Advances the palette drift (in cycles) by `dt` s, wrapped to [0, 1). */
 export function advanceDrift(drift: number, dt: number): number {

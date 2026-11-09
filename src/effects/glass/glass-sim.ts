@@ -35,7 +35,7 @@ export const GRID_ORIGIN = 512;
 export const seedHash = voronoiHash;
 
 /** Second hash of a seed, for its colour, glass kind and texture offset. */
-export function paneHash(h: number): number {
+function paneHash(h: number): number {
   return hash32(h ^ 0x5bd1e995);
 }
 
@@ -76,7 +76,7 @@ export function seedOffset(ix: number, iy: number, d: readonly number[], out: nu
   return out;
 }
 
-export { createVoronoiSample, type VoronoiSample };
+export { createVoronoiSample };
 
 let sampleDrift: readonly number[] = [0, 0];
 const glassOffset: VoronoiOffset = (_h, ix, iy, out) => seedOffset(ix, iy, sampleDrift, out);
@@ -147,7 +147,7 @@ export function sunAt(t: number, out: number[]): number[] {
 }
 
 /** Ambient light through the window: a base level with a slow, small wander. */
-export const AMBIENT = 0.68;
+const AMBIENT = 0.68;
 export function ambientAt(t: number): number {
   const w = 2 * Math.PI * t;
   return AMBIENT + 0.035 * Math.sin(w / 37) + 0.025 * Math.sin(w / 23 + 1);

@@ -1,22 +1,22 @@
 import { defineEffectMeta } from "../types";
 
 export type OutsideId = "station" | "anomaly" | "planet";
-export type TrafficId = "off" | "quiet" | "busy";
-export type LightingId = "normal" | "night" | "red";
+type TrafficId = "off" | "quiet" | "busy";
+type LightingId = "normal" | "night" | "red";
 
-export const OUTSIDE_OPTIONS = [
+const OUTSIDE_OPTIONS = [
   { value: "station", label: "Station and stars" },
   { value: "anomaly", label: "Anomaly nearby" },
   { value: "planet", label: "Planet below" },
 ] as const satisfies readonly { value: OutsideId; label: string }[];
 
-export const TRAFFIC_OPTIONS = [
+const TRAFFIC_OPTIONS = [
   { value: "quiet", label: "Now and then" },
   { value: "busy", label: "Busy" },
   { value: "off", label: "None" },
 ] as const satisfies readonly { value: TrafficId; label: string }[];
 
-export const LIGHTING_OPTIONS = [
+const LIGHTING_OPTIONS = [
   { value: "normal", label: "Normal" },
   { value: "night", label: "Night shift" },
   { value: "red", label: "Red alert" },

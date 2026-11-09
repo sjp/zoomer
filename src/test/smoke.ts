@@ -22,7 +22,7 @@ export interface SmokeOptions {
   allowFlat: boolean;
 }
 
-export interface SmokeResult {
+interface SmokeResult {
   /** Exceptions and GL errors, each prefixed with the stage it happened in. */
   errors: string[];
   /**
@@ -200,7 +200,7 @@ function fixedDate(RealDate: DateConstructor, time: number): DateConstructor {
   });
 }
 
-export interface Capture {
+interface Capture {
   width: number;
   height: number;
   /** RGBA rows, bottom row first (as `readPixels` returns them), base64-encoded. */

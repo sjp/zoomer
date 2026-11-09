@@ -42,7 +42,7 @@ const TAU = Math.PI * 2;
 /** Stem segments per plant. */
 export const PLANT_SEGS = 512;
 /** Strands (main stem, branches, tendrils) per plant. */
-export const PLANT_STRANDS = 32;
+const PLANT_STRANDS = 32;
 /** Leaves per plant. */
 export const PLANT_LEAVES = 110;
 /** Flowers per plant. */
@@ -67,8 +67,8 @@ export const SPRITE_FLOATS = 7;
 
 // --- Growth constants -------------------------------------------------------
 
-export const KIND_MAIN = 0;
-export const KIND_BRANCH = 1;
+const KIND_MAIN = 0;
+const KIND_BRANCH = 1;
 export const KIND_TENDRIL = 2;
 /** Arc length between committed stem points, per strand kind (ref px). */
 export const SEG_LEN = [7, 7, 3] as const;
@@ -93,18 +93,18 @@ export const THICKEN_AGE = 50;
 // --- Lifecycle (plant seconds) ---------------------------------------------
 
 /** A leaf unfolds over this long after the tip passes. */
-export const LEAF_GROW = 3.5;
+const LEAF_GROW = 3.5;
 /** A flower opens over this long. */
-export const FLOWER_OPEN = 5;
+const FLOWER_OPEN = 5;
 /** Leaves start yellowing spread over this long after withering begins, oldest first. */
-export const WITHER_SPREAD = 14;
+const WITHER_SPREAD = 14;
 /** A leaf takes this long to yellow, then drops. */
-export const YELLOW = 7;
+const YELLOW = 7;
 /** The stem starts fading this long after withering begins, and fades over `STEM_FADE`. */
-export const STEM_FADE_START = 11;
-export const STEM_FADE = 12;
+const STEM_FADE_START = 11;
+const STEM_FADE = 12;
 /** A plant is retired this long after withering begins (every leaf has dropped by then). */
-export const RETIRE_AFTER = 24;
+const RETIRE_AFTER = 24;
 /** Plant seconds between spawns while below the density. */
 const SPAWN_GAP = 3;
 const SPAWN_GAP_RANGE = 5;
@@ -167,11 +167,11 @@ export function angleDiff(a: number, b: number): number {
 // --- Shapes -----------------------------------------------------------------
 
 /** Indices into `VINE_SHAPES`. */
-export const SHAPE_HEART = 0;
-export const SHAPE_IVY = 1;
-export const SHAPE_LEAFLET = 2;
-export const SHAPE_FLOWER = 3;
-export const SHAPE_FLORET = 4;
+const SHAPE_HEART = 0;
+const SHAPE_IVY = 1;
+const SHAPE_LEAFLET = 2;
+const SHAPE_FLOWER = 3;
+const SHAPE_FLORET = 4;
 
 const OUTLINE_POINTS = 72;
 
@@ -245,7 +245,7 @@ export const VINE_SHAPES: readonly (readonly number[])[] = [
 
 // --- Plant types --------------------------------------------------------------
 
-export interface PlantType {
+interface PlantType {
   leafShape: number;
   /** Leaf radius (ref px), spacing along the stem (ref px) and angle off the stem (rad). */
   leafSize: number;
@@ -415,8 +415,8 @@ export interface Vines {
 }
 
 /** Density grid cell (ref px) and size: wide enough for a 4.4:1 frame. */
-export const CELL = 40;
-export const GRID_COLS = 120;
+const CELL = 40;
+const GRID_COLS = 120;
 const GRID_ROWS = 28;
 
 /** The density grid cell holding world point (`wx`, `wy`) in ref px, clamped to the grid. */

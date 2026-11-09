@@ -27,7 +27,7 @@ import { glslFloat } from "./gl";
 import { fract } from "./math";
 
 /** One sine of a swell. */
-export interface SwellWave {
+interface SwellWave {
   /** Whole cycles per swell period (a positive integer). */
   readonly cycles: number;
   /** Relative weight; the swell is normalised by the sum of their absolute values. */

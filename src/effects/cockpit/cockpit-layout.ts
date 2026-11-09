@@ -17,8 +17,8 @@ export const CONSOLE_LOW = -0.31;
 /** Height of the console top at the sides, where the clusters sit. */
 export const CONSOLE_HIGH = -0.15;
 /** |x| where the console top starts to rise, and where it stops. */
-export const CONSOLE_RISE0 = 0.2;
-export const CONSOLE_RISE1 = 0.75;
+const CONSOLE_RISE0 = 0.2;
+const CONSOLE_RISE1 = 0.75;
 /** Depth of the glare shield along the console's top edge. */
 export const LIP = 0.026;
 
@@ -52,7 +52,7 @@ export const PANEL_LAMPS = 0;
 export const PANEL_TOGGLES = 1;
 export const PANEL_SCREEN = 2;
 export const PANEL_LEVERS = 3;
-export const PANEL_PLATE = 4;
+const PANEL_PLATE = 4;
 
 /** Most panels, the size of the shader's uniform arrays. */
 export const MAX_PANELS = 16;
@@ -72,7 +72,7 @@ const TOGGLE_W = 0.026;
 const TOGGLE_H = 0.05;
 const TOGGLE_COLS = 6;
 
-export interface Panel {
+interface Panel {
   x0: number;
   y0: number;
   x1: number;
@@ -94,10 +94,10 @@ export interface Panel {
 }
 
 /** Lamp colours. */
-export const LAMP_RED = 0;
-export const LAMP_AMBER = 1;
-export const LAMP_WHITE = 2;
-export const LAMP_GREEN = 3;
+const LAMP_RED = 0;
+const LAMP_AMBER = 1;
+const LAMP_WHITE = 2;
+const LAMP_GREEN = 3;
 
 export interface Lamp {
   colour: number;

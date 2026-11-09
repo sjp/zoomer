@@ -23,7 +23,7 @@ import { WORLD_OPTIONS } from "./planet.meta";
 // Presets and options
 // ---------------------------------------------------------------------------
 
-export type WorldId = (typeof WORLD_OPTIONS)[number]["value"];
+type WorldId = (typeof WORLD_OPTIONS)[number]["value"];
 
 /**
  * The framing's anchor: which side of the frame the planet sits beyond, as
@@ -54,7 +54,7 @@ export function framingAnchor(framing: string): readonly [number, number] {
 }
 
 /** Per-world shading constants: everything the shader needs besides the textures. */
-export interface WorldStyle {
+interface WorldStyle {
   /** Scales the `clouds` param; 0 skips the cloud layer (and its build). */
   clouds: number;
   /** Scales the `cities` param; 0 for worlds without city lights. */
@@ -129,7 +129,7 @@ export const SHADOW_SHIFT = 2;
  * no city lights; from 0.5 up is matte land, and `(a - 0.5) * 2` is its city-light
  * density. Bilinear filtering across a coast blends the two sensibly.
  */
-export const GLOSSY = 0;
+const GLOSSY = 0;
 export function materialByte(city: number): number {
   return Math.round(127.5 + 127.5 * clamp(city, 0, 1));
 }
@@ -519,7 +519,7 @@ function gasCoarse(noise: Noise): Fill {
  * Storm ovals: [lon (turns), lat, half-width (radians along the surface, divided
  * by cos(lat) to give radians of longitude), half-height, kind].
  */
-export const MAX_STORMS = 6;
+const MAX_STORMS = 6;
 
 function gasStorms(seed: number): Float64Array {
   const s = new Float64Array(MAX_STORMS * 5);

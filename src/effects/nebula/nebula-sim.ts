@@ -48,10 +48,10 @@ export function paletteColor(
 /** Noise texture side, in texels. */
 export const NOISE_SIZE = 256;
 /** Lattice cells across the texture, one octave per RGBA channel. */
-export const NOISE_PERIODS = [2, 4, 8, 16] as const;
+const NOISE_PERIODS = [2, 4, 8, 16] as const;
 const NOISE_SEED = 29;
 
-export function nebulaNoiseChannels(seed = NOISE_SEED): NoiseChannel[] {
+function nebulaNoiseChannels(seed = NOISE_SEED): NoiseChannel[] {
   return NOISE_PERIODS.map((period, c) => ({ period, seed: seed * 37 + c * 1013 + 5 }));
 }
 
@@ -111,7 +111,7 @@ export function densityThreshold(density: number): number {
 // ---------------------------------------------------------------------------
 
 /** Rotation in rad per (speed-scaled) second: 1 degree per minute. */
-export const ROTATION_RATE = Math.PI / 180 / 60;
+const ROTATION_RATE = Math.PI / 180 / 60;
 const TAU = Math.PI * 2;
 
 /**
@@ -119,7 +119,7 @@ const TAU = Math.PI * 2;
  * gas layers 0..2, dust. The warp moves fastest, so shapes deform in place rather
  * than scroll; the layers drift slowly in different directions.
  */
-export const DRIFT = [
+const DRIFT = [
   0.0041, -0.0029, 0.0012, 0.0007, -0.0009, 0.0011, 0.0006, -0.0013, -0.0011, -0.0006,
 ] as const;
 /** Floats in an offsets array: five xy pairs (warp, layer 0, 1, 2, dust). */
@@ -270,9 +270,9 @@ export function gasAmount(
 /** Floats per star instance: x, y (gas space), radius (1080p px), brightness, r, g, b. */
 export const STAR_STRIDE = 7;
 /** Stars per unit area (canvas heights squared) at full star density. */
-export const STARS_PER_AREA = 400;
+const STARS_PER_AREA = 400;
 /** Stars are generated over a disc this big (covers a 3:1 canvas at any rotation). */
-export const STAR_DISC = 0.5 * Math.sqrt(10) + 0.02;
+const STAR_DISC = 0.5 * Math.sqrt(10) + 0.02;
 export const MAX_STARS = Math.ceil(STARS_PER_AREA * Math.PI * STAR_DISC * STAR_DISC);
 /** Brightness power law: P(b > x) = (x / STAR_MIN)^-STAR_ALPHA, capped at STAR_MAX. */
 export const STAR_MIN = 0.15;
@@ -283,7 +283,7 @@ export const SPIKE_STARS = 3;
 /** Minimum brightness for a spike. */
 export const SPIKE_MIN = 1.2;
 /** How much the densest gas dims a star (fraction). */
-export const STAR_DIM = 0.55;
+const STAR_DIM = 0.55;
 
 /** Star brightness for a uniform u in [0, 1): a Pareto (power-law) draw, capped. */
 export function starBrightness(u: number): number {
@@ -292,7 +292,7 @@ export function starBrightness(u: number): number {
 }
 
 /** Halo radius (1080p px) for a star brightness: tiny points for most, soft glows for the bright. */
-export function starRadius(b: number): number {
+function starRadius(b: number): number {
   const t = Math.min(1, Math.max(0, (b - 0.4) / (STAR_MAX - 0.4)));
   return 1.7 + 4.5 * t ** 0.7;
 }
@@ -303,12 +303,12 @@ export function coverRadius(aspect: number): number {
 }
 
 /** Number of seeded star draws for a star density (0..1). */
-export function starDraws(density: number): number {
+function starDraws(density: number): number {
   const d = density <= 0 ? 0 : density >= 1 ? 1 : density;
   return Math.round(d * MAX_STARS);
 }
 
-export interface StarResult {
+interface StarResult {
   /** Stars written. */
   count: number;
   /** The first `spikes` stars are the ones to draw with spikes. */

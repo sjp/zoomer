@@ -15,22 +15,22 @@ export const REF_HEIGHT = 1080;
 
 // Layout, in frame heights.
 /** Gap above the sign's lettering. */
-export const TOP_MARGIN = 0.07;
+const TOP_MARGIN = 0.07;
 /** Gap between the lettering and the frame's side edge. */
-export const SIDE_MARGIN = 0.06;
+const SIDE_MARGIN = 0.06;
 /** Largest font size, for a short phrase. */
 export const MAX_FONT = 0.14;
 /** Distance between line centres, in font sizes. */
 export const LINE_PITCH = 1.2;
 /** Tallest the lettering may be, so the sign stays in the upper part of the frame. */
-export const REGION_HEIGHT = 0.32;
+const REGION_HEIGHT = 0.32;
 /** Advance per code point, in ems, when the font can't be measured. */
-export const FALLBACK_ADVANCE = 0.6;
+const FALLBACK_ADVANCE = 0.6;
 
 // Tubes.
 /** Tube radius, in font sizes, and its smallest value (reference px). */
-export const TUBE_RADIUS_EM = 0.034;
-export const MIN_TUBE_RADIUS = 2;
+const TUBE_RADIUS_EM = 0.034;
+const MIN_TUBE_RADIUS = 2;
 /** Distance-field texel size (reference px). */
 export const FIELD_TEXEL = 1.5;
 /** How far the halo reaches beyond the tube centre, in tube radii. */
@@ -39,19 +39,19 @@ export const HALO_RADII = 12;
 // Wall glow.
 /** Glow texel size (reference px) and the blur's box radius in texels (three passes). */
 export const GLOW_TEXEL = 16;
-export const GLOW_BLUR = 5;
+const GLOW_BLUR = 5;
 /** Margin around the field's box, in glow texels: wider than the blur reaches, so the edges stay black. */
 export const GLOW_MARGIN = 3 * GLOW_BLUR + 3;
 
 /** Width of the lettering's region (frame heights) at this aspect ratio. */
-export function regionWidth(aspect: number, position: NeonPosition): number {
+function regionWidth(aspect: number, position: NeonPosition): number {
   if (position === "centre") {
     return Math.max(0.1, Math.min(aspect - 2 * SIDE_MARGIN, 0.62 * aspect));
   }
   return Math.max(0.1, 0.42 * aspect - SIDE_MARGIN);
 }
 
-export interface SignLayout {
+interface SignLayout {
   /** Font size (frame heights). */
   font: number;
   /** The lettering's box: left, top, width and height (frame heights, y down). */
@@ -125,7 +125,7 @@ export function tubeRadius(font: number): number {
  * The field's grid: the lettering's box plus the halo's reach, in texels of
  * `FIELD_TEXEL` reference px. `left`/`top` are the grid's origin (reference px).
  */
-export interface FieldGrid {
+interface FieldGrid {
   left: number;
   top: number;
   cols: number;
@@ -302,7 +302,7 @@ function boxPass(
   }
 }
 
-export interface GlowGrid {
+interface GlowGrid {
   /** Origin (reference px) and size (texels of `GLOW_TEXEL`). */
   left: number;
   top: number;
@@ -417,8 +417,8 @@ export function placeClips(
 }
 
 /** A clip's half-width and half-height, in tube radii. */
-export const CLIP_HALF_W = 0.9;
-export const CLIP_HALF_H = 2.4;
+const CLIP_HALF_W = 0.9;
+const CLIP_HALF_H = 2.4;
 
 /**
  * Draws a clip at (cx, cy) (texels) into `cover` (coverage 0–1, antialiased) and
@@ -466,12 +466,12 @@ export const RIPPLE_A1 = 0.04;
 export const RIPPLE_A2 = 0.025;
 export const BREATH_A = 0.015;
 /** Angular frequencies (rad/s): 0.1, 0.142 and 0.042 Hz. */
-export const RIPPLE_W1 = (TAU * 12) / SHIMMER_PERIOD;
-export const RIPPLE_W2 = (TAU * 17) / SHIMMER_PERIOD;
-export const BREATH_W = (TAU * 5) / SHIMMER_PERIOD;
+const RIPPLE_W1 = (TAU * 12) / SHIMMER_PERIOD;
+const RIPPLE_W2 = (TAU * 17) / SHIMMER_PERIOD;
+const BREATH_W = (TAU * 5) / SHIMMER_PERIOD;
 /** Spatial wavenumbers (rad per reference px): wavelengths of about 420 and 260 px. */
-export const RIPPLE_K1 = TAU / 420;
-export const RIPPLE_K2 = TAU / 260;
+const RIPPLE_K1 = TAU / 420;
+const RIPPLE_K2 = TAU / 260;
 
 /** The whole sign's slow breath: a brightness factor near 1. */
 export function breath(t: number, amount: number): number {

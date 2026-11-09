@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type AdvertSide = "left" | "right" | "off";
 
-export const ADVERT_OPTIONS = [
+const ADVERT_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
   { value: "off", label: "Off" },

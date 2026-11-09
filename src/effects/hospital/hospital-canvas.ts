@@ -10,9 +10,9 @@ import type { Vitals } from "./hospital-sim";
 import { SANS_FONT_STACK } from "../canvas-texture";
 
 /** A system font stack, a clean grotesque like a monitor's. */
-export const SANS = SANS_FONT_STACK;
+const SANS = SANS_FONT_STACK;
 /** Marker-pen handwriting, from whichever casual face the system has. */
-export const HAND = `"Segoe Print", "Bradley Hand", "Marker Felt", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive`;
+const HAND = `"Segoe Print", "Bradley Hand", "Marker Felt", "Chalkboard SE", "Comic Sans MS", "Comic Neue", cursive`;
 
 /** The waveforms' area, left to right. */
 export const WAVE_X0 = 0.018;

@@ -12,7 +12,7 @@ export const MIN_WAVE_TIME = 6;
 
 export const MAX_WAVE_TIME = 15;
 
-export const WATER_OPTIONS = [
+const WATER_OPTIONS = [
   { value: "tropical", label: "Tropical" },
   { value: "atlantic", label: "Atlantic" },
   { value: "dusk", label: "Dusk" },

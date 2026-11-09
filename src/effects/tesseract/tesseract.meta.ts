@@ -9,14 +9,14 @@ export const SHAPE_OPTIONS = [
 
 export type PolytopeShape = (typeof SHAPE_OPTIONS)[number]["value"];
 
-export const COLOUR_OPTIONS = [
+const COLOUR_OPTIONS = [
   { value: "cyan", label: "Cyan" },
   { value: "magenta", label: "Magenta" },
   { value: "white", label: "White" },
   { value: "rainbow", label: "Depth rainbow" },
 ] as const;
 
-export const POSITION_OPTIONS = [
+const POSITION_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
   { value: "centre", label: "Centre" },

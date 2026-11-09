@@ -17,11 +17,11 @@ export const TABLE_SIZE = 512;
 /** Thickest film the table covers, in nm. Thicker films clamp to the last entry. */
 export const MAX_THICKNESS = 1500;
 /** Wavelength samples integrated per entry, evenly spaced over the visible range. */
-export const WAVELENGTH_SAMPLES = 24;
+const WAVELENGTH_SAMPLES = 24;
 const LAMBDA_MIN = 400;
 const LAMBDA_MAX = 700;
 
-export interface FilmLook {
+interface FilmLook {
   /** Refractive index of the film. */
   n: number;
   /** Colour saturation multiplier on the `saturation` param. */
@@ -42,7 +42,7 @@ const LOOKS: Readonly<Record<FilmMode, FilmLook>> = {
   pearl: { n: 1.5, saturation: 0.45, lift: 0.55, alphaFloor: 0.45, alphaGain: 0.55 },
 };
 
-export function filmLook(mode: string): FilmLook {
+function filmLook(mode: string): FilmLook {
   return LOOKS[filmMode(mode)];
 }
 

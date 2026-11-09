@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type CabinWeather = "fair" | "night" | "storm";
 
-export const WEATHER_OPTIONS = [
+const WEATHER_OPTIONS = [
   { value: "fair", label: "Fair" },
   { value: "night", label: "Night" },
   { value: "storm", label: "Storm" },

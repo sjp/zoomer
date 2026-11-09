@@ -60,13 +60,13 @@ export function glassPreset(name: string): GlassPreset {
 // ---------------------------------------------------------------------------
 // Shapes
 
-export type ShapeKind = "disc" | "capsule" | "ring";
+type ShapeKind = "disc" | "capsule" | "ring";
 
 /**
  * One shape and its two-harmonic Lissajous path. Lengths in frame-height units,
  * angular rates in rad/s at speed 1.
  */
-export interface ShapePath {
+interface ShapePath {
   kind: ShapeKind;
   /** Disc / capsule end radius, or ring centre-line radius. */
   radius: number;
@@ -244,7 +244,7 @@ export function fluteOffset(u: number, squash = FLUTE_SQUASH): number {
 /** Grain texture side in texels; one texel per 1080p pixel, so it tiles every 256 px. */
 export const GRAIN_SIZE = 256;
 /** Lattice cells across the coarse (mottling) channel. */
-export const GRAIN_COARSE_PERIOD = 8;
+const GRAIN_COARSE_PERIOD = 8;
 
 /**
  * The static frosting texture: RG8, `size` x `size`, REPEAT-wrapped. R is white

@@ -2,7 +2,7 @@ import type { PaletteId } from "./kelp-sim";
 import { QUALITY_OPTIONS } from "../param-options";
 import { defineEffectMeta } from "../types";
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "temperate", label: "Temperate green" },
   { value: "tropical", label: "Tropical blue" },
   { value: "dusk", label: "Dusk" },

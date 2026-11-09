@@ -23,9 +23,9 @@ export const DESIGN_ASPECT = 16 / 9;
 /** A box: centre x, y and half width, half height. */
 export type Box = [number, number, number, number];
 /** A disc: centre x, y and radius. */
-export type Disc = [number, number, number];
+type Disc = [number, number, number];
 
-export interface RoomLayout {
+interface RoomLayout {
   aspect: number;
   /** The monitor's screen; its bezel is `BEZEL` bigger all round. */
   screen: Box;
@@ -170,8 +170,8 @@ function uniform(seed: number, index: number, salt: number): number {
 }
 
 /** The slowest and fastest rates the heart model takes. */
-export const MIN_RATE = 30;
-export const MAX_RATE = 200;
+const MIN_RATE = 30;
+const MAX_RATE = 200;
 
 /** The R wave's time after its beat starts, s. */
 export const R_TIME = 0.2;
@@ -259,7 +259,7 @@ export const ERASE_COLUMNS = 9;
 /** Channels per column in `Monitor.traces`: ECG, pleth, breathing, unused. */
 export const TRACE_CHANNELS = 4;
 /** Beats averaged into the heart rate the monitor shows. */
-export const RATE_BEATS = 4;
+const RATE_BEATS = 4;
 
 export interface Vitals {
   hr: number;
@@ -328,9 +328,9 @@ function shownRate(m: Monitor): number {
 }
 
 /** Seconds each SpO2 and breathing-rate reading holds, and between blood pressure readings. */
-export const SPO2_HOLD = 9;
-export const RR_HOLD = 12;
-export const NIBP_HOLD = 300;
+const SPO2_HOLD = 9;
+const RR_HOLD = 12;
+const NIBP_HOLD = 300;
 
 /** The readings that change only now and then: SpO2, breathing rate and blood pressure. */
 function slowVitals(m: Monitor): void {
@@ -413,11 +413,6 @@ export function heartFlash(m: Monitor): number {
     return 0;
   }
   return 1 - since / FLASH_SECONDS;
-}
-
-/** The sweep's position across the screen (0..1), between columns. */
-export function sweepPosition(m: Monitor): number {
-  return (m.cursor + clamp(m.carry / COLUMN_SECONDS, 0, 1)) / TRACE_COLUMNS;
 }
 
 // ---------------------------------------------------------------------------

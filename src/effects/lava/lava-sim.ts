@@ -12,7 +12,7 @@
 import { SEARCH_BOUND } from "../voronoi";
 import { lookup } from "../lookup";
 
-export interface Camera {
+interface Camera {
   /** Eye height above the ground, in cells. */
   height: number;
   /** Horizon row, as a fraction of the frame height from the top. */
@@ -136,7 +136,7 @@ export const SEAM_DENSITY = 2;
 /** Breathing depth: the glow swings between 1 - 2 BREATH and 1. */
 export const BREATH = 0.14;
 /** Breathing cycles per second at `pulse` = 1. */
-export const PULSE_RATE = 1 / 14;
+const PULSE_RATE = 1 / 14;
 /** Phase cycles across the slow noise's range, so the breathing travels along the seams. */
 export const PULSE_SPREAD = 2;
 
@@ -147,14 +147,14 @@ export const LOCAL_WIDTH = [0.35, 0.9] as const;
 export const LOCAL_GLOW = [0.4, 0.6] as const;
 
 /** Core half width (cells) for `heat` and the local heat field (both 0..1). */
-export function coreWidth(heat: number, local: number): number {
+function coreWidth(heat: number, local: number): number {
   return (
     CORE_MAX * (HEAT_WIDTH[0] + HEAT_WIDTH[1] * heat) * (LOCAL_WIDTH[0] + LOCAL_WIDTH[1] * local)
   );
 }
 
 /** Glow amplitude for `heat` and the local heat field (both 0..1), and the breathing (0..1). */
-export function glowAmplitude(heat: number, local: number, breath: number): number {
+function glowAmplitude(heat: number, local: number, breath: number): number {
   return heat * (LOCAL_GLOW[0] + LOCAL_GLOW[1] * local) * (1 - 2 * BREATH + 2 * BREATH * breath);
 }
 
@@ -203,7 +203,7 @@ export function seamGlow(
 /** Footprint (cells along z) over which the seams fade into their average glow. */
 export const FAR_FADE = [0.35, 1] as const;
 
-export interface SkyPreset {
+interface SkyPreset {
   zenith: string;
   horizon: string;
   /** Underglow colour of the smoke at full heat. */

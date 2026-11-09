@@ -35,21 +35,21 @@ export const SHADOW_RY = MUG_R * MUG_K * 1.45;
 export const SHADOW_SOFT = 0.035;
 
 /** Mug centre's distance from its frame edge, and the base ellipse's centre height. */
-export const MUG_EDGE_X = 0.27;
+const MUG_EDGE_X = 0.27;
 export const MUG_BASE_Y = 0.075;
 /** The table's far edge, behind the mug. */
 export const TABLE_Y = 0.19;
 
 /** Steam box above the mug: half-width, bottom below the rim, and top (height units). */
-export const STEAM_HALF_W = 0.18;
-export const STEAM_BELOW_RIM = 0.035;
-export const STEAM_TOP = 0.62;
+const STEAM_HALF_W = 0.18;
+const STEAM_BELOW_RIM = 0.035;
+const STEAM_TOP = 0.62;
 /** Sim units per height unit. */
 export const STEAM_SCALE = 3;
 /** Steam grid cell size, 1080p reference px; the grid is the same at every resolution. */
-export const STEAM_CELL_REF = 3;
+const STEAM_CELL_REF = 3;
 
-export interface MugLayout {
+interface MugLayout {
   /** Outer direction: +1 if the mug is in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Mug centre x and base ellipse centre y. */
@@ -145,9 +145,9 @@ export function steamEmitter(steam: number, out: SteamEmitter): SteamEmitter {
 }
 
 /** Steam rise (sim units/s), curl strength, and the band over which the curl sets in. */
-export const STEAM_RISE = 0.3;
-export const STEAM_CURL = 3.2;
-export const STEAM_ONSET = [0, 0.45] as const;
+const STEAM_RISE = 0.3;
+const STEAM_CURL = 3.2;
+const STEAM_ONSET = [0, 0.45] as const;
 
 /** Fills the parts of the smoke flow that don't depend on time. */
 export function steamFlow(out: Flow): Flow {
@@ -178,7 +178,7 @@ export function mugDraft(draft: number, t: number, side: number): number {
   return d * (DRAFT_GUST * g * Math.abs(g) + DRAFT_LEAN * Math.sign(side));
 }
 
-export interface DrinkLook {
+interface DrinkLook {
   /** Liquid colour in the shade. */
   color: string;
   /** Strength of the room light's reflection on the surface. */
@@ -196,7 +196,7 @@ export function drinkFor(id: string): DrinkLook {
   return lookup(DRINKS, id, "tea");
 }
 
-export interface RoomLook {
+interface RoomLook {
   /** 0: warm wall, 1: window, 2: shelves (the room shader's branch). */
   kind: number;
   wall: string;

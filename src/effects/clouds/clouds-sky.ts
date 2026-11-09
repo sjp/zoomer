@@ -18,7 +18,7 @@ import { TIME_OPTIONS } from "./clouds.meta";
  * one octave of tileable gradient noise, so one bilinear fetch of the texture
  * yields four octaves, combined in the shader with weights 1/2, 1/4, 1/8, 1/16.
  */
-export const NOISE_PERIODS = [4, 8, 16, 32] as const;
+const NOISE_PERIODS = [4, 8, 16, 32] as const;
 
 /**
  * Channels of the clouds' RGBA8 noise texture, for `buildPeriodicNoiseTexture`:
@@ -168,7 +168,7 @@ export function coverageOpacity(coverage: number): number {
 // Time-of-day presets
 // ---------------------------------------------------------------------------
 
-export interface SkyPreset {
+interface SkyPreset {
   skyTop: string;
   skyBottom: string;
   /** Sunlit side of the clouds. */
@@ -191,7 +191,7 @@ export interface SkyPreset {
   lightY: number;
 }
 
-export type TimeOfDay = (typeof TIME_OPTIONS)[number]["value"];
+type TimeOfDay = (typeof TIME_OPTIONS)[number]["value"];
 
 export const PRESETS: Readonly<Record<TimeOfDay, SkyPreset>> = {
   day: {
@@ -315,7 +315,7 @@ export function buildPresetTable(presets: Readonly<Record<TimeOfDay, SkyPreset>>
 // ---------------------------------------------------------------------------
 
 /** Seconds a time-of-day change takes to blend in. */
-export const TRANSITION_SECONDS = 2;
+const TRANSITION_SECONDS = 2;
 
 /** Eased progress (smoothstep) of a transition `elapsed` seconds into `duration`. */
 export function transitionWeight(elapsed: number, duration: number): number {
@@ -351,7 +351,7 @@ export function lerpPreset(
   return out;
 }
 
-export interface PresetTransition {
+interface PresetTransition {
   /** Current blended preset row (`PRESET_STRIDE` floats). Reused every update. */
   readonly values: Float32Array;
   /**

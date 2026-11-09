@@ -13,9 +13,9 @@ import type { DisplaySide } from "./bridge.meta";
 /** Camera eye height: seated, about where the command chairs are. */
 export const EYE_Y = 1.22;
 /** Upward camera pitch (radians), so the rail and the top of the wall both fit. */
-export const PITCH = (5 * Math.PI) / 180;
+const PITCH = (5 * Math.PI) / 180;
 /** Vertical field of view (radians). */
-export const FOV_Y = (52 * Math.PI) / 180;
+const FOV_Y = (52 * Math.PI) / 180;
 export const TAN_HALF_FOV = Math.tan(FOV_Y / 2);
 
 /** The aft wall: a cylinder of radius `WALL_R` about a vertical axis at z = `WALL_CZ`. */
@@ -42,14 +42,14 @@ export const LEDGE_DEPTH = 0.3;
 export const LEDGE_S = 1.82;
 
 /** Wall panels' glass, bottom and top. */
-export const PANEL_Y0 = 0.95;
-export const PANEL_Y1 = 2.0;
+const PANEL_Y0 = 0.95;
+const PANEL_Y1 = 2.0;
 /** Width of the beige frame (bezel) around each panel's glass. */
 export const BEZEL = 0.04;
 /** The long strip of panel graphics above the stations. */
-export const BAND_Y0 = 2.1;
-export const BAND_Y1 = 2.34;
-export const BAND_S = 2.7;
+const BAND_Y0 = 2.1;
+const BAND_Y1 = 2.34;
+const BAND_S = 2.7;
 /** Cove light at the top of the wall, below the ceiling. */
 export const COVE_Y0 = 2.56;
 export const COVE_Y1 = 2.66;

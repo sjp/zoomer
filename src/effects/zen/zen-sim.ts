@@ -49,7 +49,7 @@ export const BIG_STONE: readonly [number, number] = [56, 74];
 export const SMALL_STONE: readonly [number, number] = [30, 52];
 /** Rings start outside the moss (this times the radius) and run at least this many spacings. */
 export const STONE_PAD = 1.15;
-export const RING_COUNT = 2;
+const RING_COUNT = 2;
 /** Hairpin rays start this many ring radii along the groove from the stone. */
 export const GAP = 2;
 /** How fast the ring field rises past the ring radius. */
@@ -311,7 +311,7 @@ export const RERAKE_DURATION = 60;
 /** Width of the soft band between the old and new patterns, reference px. */
 export const RERAKE_BAND = 180;
 
-export interface Rerake {
+interface Rerake {
   /** Seconds since the last sweep ended (or since the start). */
   idle: number;
   /** Sweep progress 0..1, or -1 while idle. */

@@ -20,7 +20,7 @@ import type { OutsideId } from "./stationops.meta";
 // ---------------------------------------------------------------------------
 
 /** The aspect the room is drawn for. */
-export const DESIGN_ASPECT = 16 / 9;
+const DESIGN_ASPECT = 16 / 9;
 
 /** How much design x is squeezed for a frame of `aspect`: 1 at 16:9 and wider. */
 export function layoutK(aspect: number): number {
@@ -77,9 +77,9 @@ export const PYLONS: readonly (readonly number[])[] = [
 ];
 
 /** The ship lanes' far end: below the left viewport, behind the ring (design units). */
-export const DOCK = [-0.6, -0.14] as const;
+const DOCK = [-0.6, -0.14] as const;
 /** Where ships enter or leave the view: off the left edge, high and low, and from above. */
-export const ENTRIES: readonly (readonly [number, number])[] = [
+const ENTRIES: readonly (readonly [number, number])[] = [
   [-1.35, 0.24],
   [-1.3, -0.02],
   [-0.78, 0.72],
@@ -99,7 +99,7 @@ export const ANOMALY_SITES: Readonly<Record<OutsideId, readonly [number, number,
 /** The planet below the right viewport: centre (design units) and radius (frame heights). */
 export const PLANET = [0.74, -0.31, 0.32] as const;
 
-export interface Rect {
+interface Rect {
   x0: number;
   y0: number;
   x1: number;
@@ -157,13 +157,13 @@ function slotRandom(seed: number, salt: number, slot: number, k = 0): number {
 }
 
 /** Smootherstep: 0 at 0, 1 at 1, with zero slope and curvature at both ends. */
-export function smoother(x: number): number {
+function smoother(x: number): number {
   const u = clamp(x, 0, 1);
   return u * u * u * (u * (u * 6 - 15) + 10);
 }
 
 /** When an event happens in a slot, and which slot. */
-export interface Scheduled {
+interface Scheduled {
   /** How far through the event `t` is (0..1), or -1 between events. */
   phase: number;
   slot: number;
@@ -207,18 +207,18 @@ export const FOCAL = 1.8;
 /** Depth of the station's ring and pylons; ships farther than this pass behind them. */
 export const STATION_Z = 20;
 /** Depth where a lane starts (off-screen, close by) and ends (at the dock). */
-export const ENTRY_Z = 4.5;
+const ENTRY_Z = 4.5;
 export const DOCK_Z = 24;
 /** The ships, in the order the ship shader numbers them, and their sizes. */
-export const SHIP_NAMES = ["runabout", "freighter", "cruiser"] as const;
-export const SHIP_SCALES: readonly number[] = [0.42, 0.72, 0.95];
+const SHIP_NAMES = ["runabout", "freighter", "cruiser"] as const;
+const SHIP_SCALES: readonly number[] = [0.42, 0.72, 0.95];
 /** Radius of the sphere every ship (at scale 1) fits inside. */
 export const SHIP_RADIUS = 0.7;
 
 /** Seconds between passes, per traffic setting ("off" or unknown: none), and how long each takes. */
 export const QUIET_GAP = 150;
 export const BUSY_GAP = 70;
-export const trafficGap = (traffic: string) =>
+const trafficGap = (traffic: string) =>
   traffic === "busy" ? BUSY_GAP : traffic === "quiet" ? QUIET_GAP : 0;
 export const PASS_LENGTH = 40;
 /** Seconds of quiet at least before each pass (and at the start). */
@@ -226,7 +226,7 @@ export const TRAFFIC_LEAD = 12;
 const TRAFFIC_SALT = 1;
 
 /** A ship arriving or departing; `kind` is -1 when none is in view. */
-export interface ShipPass {
+interface ShipPass {
   kind: number;
   /** Centre in view space (eye at the origin looking along +z, frame-height units at z = FOCAL). */
   x: number;
@@ -323,9 +323,9 @@ export const ANOMALY_GAP: Readonly<Record<OutsideId, number>> = {
 };
 /** Seconds opening, held open and closing. */
 export const ANOMALY_OPEN = 12;
-export const ANOMALY_HOLD = 26;
-export const ANOMALY_CLOSE = 12;
-export const ANOMALY_LENGTH = ANOMALY_OPEN + ANOMALY_HOLD + ANOMALY_CLOSE;
+const ANOMALY_HOLD = 26;
+const ANOMALY_CLOSE = 12;
+const ANOMALY_LENGTH = ANOMALY_OPEN + ANOMALY_HOLD + ANOMALY_CLOSE;
 /** Seconds of quiet at least before each opening (and at the start). */
 export const ANOMALY_LEAD = 45;
 /** Seconds per turn of the swirl. */
@@ -368,7 +368,7 @@ export function anomalyOpen(t: number, seed: number, outside: string, enabled: b
 /** Console light cells: the room tags each glowing panel with one of these. */
 export const CELL_COUNT = 256;
 /** Seconds per cell slot at most; each cell's is between 55% and 100% of it. */
-export const CELL_SLOT = 14;
+const CELL_SLOT = 14;
 /** Seconds a cell takes to dim or brighten: never a sudden change. */
 export const CELL_RAMP = 1;
 /** Chance of a change in a cell's slot. */
@@ -379,10 +379,10 @@ export const CELL_BRIGHT = 1.25;
 const CELL_SALT = 3;
 /** A cell that never changes, for the calm light behind the speaker, and its level. */
 export const STEADY_CELL = CELL_COUNT - 1;
-export const STEADY_LEVEL = 0.85;
+const STEADY_LEVEL = 0.85;
 
 /** Cell `id`'s resting level for `seed`: 0.7..1. */
-export function cellBase(id: number, seed: number): number {
+function cellBase(id: number, seed: number): number {
   return 0.7 + 0.3 * slotRandom(seed, CELL_SALT, id, 7);
 }
 

@@ -104,7 +104,7 @@ export const LAYERS: readonly LayerSpec[] = [
 ];
 
 /** A main building body, for tests and debugging. */
-export interface Building {
+interface Building {
   layer: number;
   x: number;
   width: number;
@@ -573,7 +573,7 @@ export function strobe(age: number): number {
 }
 
 /** One aircraft crossing the sky at a time, rarely. Positions are reference px. */
-export interface Aircraft {
+interface Aircraft {
   active: boolean;
   x: number;
   y: number;

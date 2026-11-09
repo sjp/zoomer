@@ -2,13 +2,13 @@ import { defaults } from "../effects/params";
 import type { AnyParamValues, EffectWebGL2, Viewport } from "../effects/types";
 import { createFakeGl } from "./fake-gl";
 
-export const viewport = (width: number, height: number): Viewport => ({
+const viewport = (width: number, height: number): Viewport => ({
   width,
   height,
   scale: height / 1080,
 });
 
-export interface TimedRun {
+interface TimedRun {
   /** CPU milliseconds each `frame` call took, in order. */
   times: number[];
   /** The slowest frame from `from` (an index into `times`) on. */

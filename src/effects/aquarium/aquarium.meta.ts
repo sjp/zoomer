@@ -10,7 +10,7 @@ export const SPECIES_OPTIONS = [
   { value: "mixed", label: "Mixed" },
 ] as const;
 
-export const LIGHT_OPTIONS = [
+const LIGHT_OPTIONS = [
   { value: "daylight", label: "Daylight" },
   { value: "night", label: "Blue night" },
   { value: "warm", label: "Warm" },

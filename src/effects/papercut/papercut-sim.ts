@@ -26,7 +26,7 @@ import { SCENE_IDS, MIN_LAYERS, MAX_LAYERS } from "./papercut.meta";
 
 const TAU = Math.PI * 2;
 
-export type SceneId = (typeof SCENE_IDS)[number];
+type SceneId = (typeof SCENE_IDS)[number];
 
 /** Most stack slots any scene uses: scenery plus up to two decor layers (sun, clouds, boat). */
 export const MAX_STACK = 10;
@@ -42,16 +42,16 @@ const DX = TABLE_PERIOD / TABLE_COLUMNS;
 export const NONE = -1;
 
 /** Shape kinds, as the shader's `shapeSdf` numbers them. */
-export const SHAPE_DISC = 1;
-export const SHAPE_CLOUD = 2;
-export const SHAPE_CRESCENT = 3;
-export const SHAPE_BOAT = 4;
+const SHAPE_DISC = 1;
+const SHAPE_CLOUD = 2;
+const SHAPE_CRESCENT = 3;
+const SHAPE_BOAT = 4;
 
 /** Largest parallax offset of the front layer at motion 1, height units. */
 export const MOTION_AMP = 0.012;
 /** Periods (seconds) of the parallax Lissajous path, and the vertical share of its amplitude. */
-export const PARALLAX_PERIOD_X = 47;
-export const PARALLAX_PERIOD_Y = 31;
+const PARALLAX_PERIOD_X = 47;
+const PARALLAX_PERIOD_Y = 31;
 const PARALLAX_Y_SHARE = 0.6;
 const PARALLAX_Y_PHASE = 1.1;
 /** Boat bob: period (s), lift (height units) and roll (radians). */
@@ -59,9 +59,9 @@ const BOB_PERIOD = 7;
 const BOB_LIFT = 0.004;
 const BOB_ROLL = 0.04;
 
-export type ColorRole = "land" | "sun" | "cloud" | "boat";
+type ColorRole = "land" | "sun" | "cloud" | "boat";
 
-export interface ShapeSpec {
+interface ShapeSpec {
   kind: number;
   /** Centre: x as a fraction of the width, y in height units. */
   x: number;
@@ -72,7 +72,7 @@ export interface ShapeSpec {
   drift: number;
 }
 
-export interface LayerSpec {
+interface LayerSpec {
   role: ColorRole;
   /** Shade of a land layer, 0 at the back to 1 at the front. */
   t: number;
@@ -411,7 +411,7 @@ export function buildScene(id: SceneId, count: number, out: Float32Array): Scene
 // Palettes
 // ---------------------------------------------------------------------------
 
-export interface Palette {
+interface Palette {
   sky: string;
   back: string;
   front: string;
@@ -455,7 +455,7 @@ export const SCENE_PALETTES: Record<SceneId, Palette> = {
   },
 };
 
-export const SHARED_PALETTES: Record<Exclude<(typeof PALETTE_IDS)[number], "scene">, Palette> = {
+const SHARED_PALETTES: Record<Exclude<(typeof PALETTE_IDS)[number], "scene">, Palette> = {
   sunset: {
     sky: "#fbd3a2",
     back: "#eb9b7d",

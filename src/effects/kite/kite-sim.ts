@@ -8,14 +8,13 @@
  * The writers convert to device pixels, y down, for the renderers.
  */
 import { hexToUnitRgb, type Rgb } from "../color";
-import type { COLOUR_OPTIONS, CORNER_OPTIONS, KITE_OPTIONS } from "./kite.meta";
+import type { COLOUR_OPTIONS, KITE_OPTIONS } from "./kite.meta";
 import { approach, clamp } from "../math";
 import { hash32 } from "../noise";
 import { STREAK_FLOATS } from "../streaks";
 
-export type KiteKind = (typeof KITE_OPTIONS)[number]["value"];
-export type KiteColours = (typeof COLOUR_OPTIONS)[number]["value"];
-export type KiteCorner = (typeof CORNER_OPTIONS)[number]["value"];
+type KiteKind = (typeof KITE_OPTIONS)[number]["value"];
+type KiteColours = (typeof COLOUR_OPTIONS)[number]["value"];
 
 const TAU = Math.PI * 2;
 
@@ -28,7 +27,7 @@ const TAU = Math.PI * 2;
  * units of `KITE_SIZE`. Panels are triangles with a palette slot each, grouped
  * into flat faces (one for the flat kites, eight for the box kite).
  */
-export interface KiteShape {
+interface KiteShape {
   /** Points, xyz triples. */
   readonly points: Float64Array;
   /** Triangles, three point indices each. */
@@ -55,7 +54,7 @@ export interface KiteShape {
 }
 
 /** Frame heights per kite unit. */
-export const KITE_SIZE = 0.085;
+const KITE_SIZE = 0.085;
 
 /** Triangle edge masks: bit 0 = edge 0-1, bit 1 = edge 1-2, bit 2 = edge 2-0. */
 const E01 = 1;
@@ -210,7 +209,7 @@ export function shapeFor(kind: string): KiteShape {
 // Palettes
 // ---------------------------------------------------------------------------
 
-export interface KitePalette {
+interface KitePalette {
   /** Panel colours, four slots. */
   readonly panels: readonly Rgb[];
   /** Tail band colours, cycled down the tail. */
@@ -253,16 +252,16 @@ export function paletteFor(id: string): KitePalette {
 // ---------------------------------------------------------------------------
 
 /** Horizontal distance of the path centre from the frame's side edge (at 16:9). */
-export const CORNER_INSET = 0.34;
+const CORNER_INSET = 0.34;
 /** Path centre height. */
-export const PATH_Y = 0.73;
+const PATH_Y = 0.73;
 /** Figure-eight half-width and half-height at full wind. */
-export const PATH_AX = 0.12;
-export const PATH_AY = 0.07;
+const PATH_AX = 0.12;
+const PATH_AY = 0.07;
 /** Seconds per figure-eight at wind 0.5 without gusts. */
 const PATH_PERIOD = 16;
 /** Height a full gust lifts the kite by. */
-export const GUST_LIFT = 0.03;
+const GUST_LIFT = 0.03;
 /** Gust noise lattice points per second. */
 const GUST_RATE = 0.11;
 /** Seconds the kite takes to fly over to the other corner. */
@@ -297,12 +296,12 @@ export function gustAt(time: number): number {
 }
 
 /** Horizontal scale for narrow frames, so the kite stays in its corner. */
-export function aspectScale(aspect: number): number {
+function aspectScale(aspect: number): number {
   return clamp(aspect / (16 / 9), 0.4, 1);
 }
 
 /** The pose that sets where and how the kite is drawn. */
-export interface KitePose {
+interface KitePose {
   x: number;
   y: number;
   roll: number;
@@ -311,7 +310,7 @@ export interface KitePose {
   gust: number;
 }
 
-export interface KiteState {
+interface KiteState {
   /** Path phase, radians; unwrapped float64 (the wander terms are not 2π-periodic). */
   phase: number;
   /** Seconds since creation, float64, for gusts and flutter. */
@@ -375,7 +374,7 @@ export function pathRate(wind: number, gust: number): number {
  * (radians per second), `time` (seconds), wind 0..1, eased corner blend `side`
  * (0 left, 1 right) and frame aspect. A pure function of its inputs.
  */
-export function poseAt(
+function poseAt(
   pose: KitePose,
   phase: number,
   rate: number,
@@ -450,12 +449,7 @@ export function poseMatrix(out: Float64Array, roll: number, pitch: number, yaw: 
 }
 
 /** Writes the shape's points in world space into `world` (xyz triples). */
-export function placeShape(
-  world: Float64Array,
-  rot: Float64Array,
-  shape: KiteShape,
-  pose: KitePose,
-) {
+function placeShape(world: Float64Array, rot: Float64Array, shape: KiteShape, pose: KitePose) {
   const p = shape.points;
   for (let i = 0; i < p.length; i += 3) {
     const x = p[i];
@@ -582,8 +576,8 @@ const TWIST_SPEED = 1.3;
 // ---------------------------------------------------------------------------
 
 /** String anchor: this far beyond the side edge, and this high (below the frame). */
-export const ANCHOR_OUT = 0.25;
-export const ANCHOR_Y = -0.45;
+const ANCHOR_OUT = 0.25;
+const ANCHOR_Y = -0.45;
 
 /** Catenary parameter (horizontal tension over weight, frame heights) for a wind and gust. */
 export function catenaryParam(wind: number, gust: number): number {
@@ -712,7 +706,7 @@ const TWIST_WAVES = 1.4;
 /** Tail segments per colour band. */
 const BAND = 3;
 /** Fabric opacity: the sky shows faintly through it. */
-export const FABRIC_ALPHA = 0.88;
+const FABRIC_ALPHA = 0.88;
 /** Unit vector towards the sun: high up, a little right, behind the kite. */
 const SUN = (() => {
   const v = [0.3, 0.55, -0.78];
@@ -848,7 +842,7 @@ export function writeTail(
 }
 
 /** Shading of a face with world normal (nx, ny, nz): front light, plus the sun glowing through. */
-export function fabricLight(nx: number, ny: number, nz: number): number {
+function fabricLight(nx: number, ny: number, nz: number): number {
   // The side the viewer sees.
   const sgn = nz < 0 ? -1 : 1;
   const d = sgn * (nx * SUN[0] + ny * SUN[1] + nz * SUN[2]);

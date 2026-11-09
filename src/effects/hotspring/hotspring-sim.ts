@@ -30,7 +30,7 @@ const EMPTY_TOP = -1;
 const EMPTY_BOTTOM = 2;
 
 /** A boulder: a half-ellipse resting on `base`, `rx` wide and `ry` tall (height units). */
-export interface Boulder {
+interface Boulder {
   x: number;
   base: number;
   rx: number;
@@ -77,7 +77,7 @@ const BANK_RISE = 0.14;
 const BANK_END = 0.8;
 
 /** Side mass width (height units) for an aspect ratio. */
-export function sideMass(aspect: number): number {
+function sideMass(aspect: number): number {
   return clamp(0.2 * aspect + 0.05, 0.3, 0.55);
 }
 
@@ -240,7 +240,7 @@ export function buildRockTable(l: SpringLayout, out: Float32Array): void {
 }
 
 /** Snow depth on a flat top, height units, and where creases fade out. */
-export const CAP_DEPTH = 0.024;
+const CAP_DEPTH = 0.024;
 const CREASE_WIDTH = 0.012;
 
 function capsAndCreases(
@@ -288,13 +288,13 @@ function capsAndCreases(
 }
 
 /** Steam box beyond the pool's sides, below the waterline and above it. */
-export const STEAM_SPILL = 0.12;
-export const STEAM_BELOW = 0.14;
-export const STEAM_ABOVE = 0.5;
+const STEAM_SPILL = 0.12;
+const STEAM_BELOW = 0.14;
+const STEAM_ABOVE = 0.5;
 /** Sim units per height unit. */
 export const STEAM_SCALE = 1.4;
 /** Steam grid cell size, 1080p reference px; the grid is the same at every resolution. */
-export const STEAM_CELL_REF = 4;
+const STEAM_CELL_REF = 4;
 
 /** The steam box in sim units (x0, y0, width, height), centred on the pool's far edge. */
 export function steamRegion(l: SpringLayout, out: Float64Array): void {
@@ -312,7 +312,7 @@ export function steamGrid(l: SpringLayout, out: Int32Array | number[]): void {
 }
 
 /** Emitter settings for the smoke field, sim units. */
-export interface SpringEmitters {
+interface SpringEmitters {
   /** Far and near emitters: (x, y, segment half-width, strength), as `uEmit0` / `uEmit1`. */
   far: [number, number, number, number];
   near: [number, number, number, number];
@@ -330,13 +330,13 @@ export const createEmitters = (): SpringEmitters => ({
 });
 
 /** The near emitter: below the far edge (height units) and its share of the far one's output. */
-export const NEAR_DROP = 0.09;
-export const NEAR_SHARE = 0.55;
+const NEAR_DROP = 0.09;
+const NEAR_SHARE = 0.55;
 /** Life at steam 0 and 1, and the extra fade per sim unit of height. */
-export const STEAM_LIFE = [1.6, 3.6] as const;
+const STEAM_LIFE = [1.6, 3.6] as const;
 export const STEAM_HEIGHT_DECAY = 0.7;
 /** Wisp amount at steam 0 and 1: more steam fills in between the wisps. */
-export const STEAM_WISP = [0.75, 0.5] as const;
+const STEAM_WISP = [0.75, 0.5] as const;
 /** Wisps per sim unit along the surface, and their drift (rad/s). */
 export const WISP_K = 22;
 export const WISP_SPEED = 0.25;
@@ -360,9 +360,9 @@ export function springEmitters(l: SpringLayout, steam: number, out: SpringEmitte
 }
 
 /** Steam rise (sim units/s), curl strength, and the band over which the curl sets in. */
-export const STEAM_RISE = 0.12;
-export const STEAM_CURL = 1.4;
-export const STEAM_ONSET = [0, 0.4] as const;
+const STEAM_RISE = 0.12;
+const STEAM_CURL = 1.4;
+const STEAM_ONSET = [0, 0.4] as const;
 
 /** Fills the parts of the smoke flow that don't depend on time. */
 export function steamFlow(out: Flow): Flow {
@@ -374,8 +374,8 @@ export function steamFlow(out: Flow): Flow {
 }
 
 /** Steady sideways lean and peak gust, sim units/s per sim unit of height. */
-export const DRAFT_LEAN = 0.12;
-export const DRAFT_GUST = 0.18;
+const DRAFT_LEAN = 0.12;
+const DRAFT_GUST = 0.18;
 const TAU = Math.PI * 2;
 
 /**
@@ -406,10 +406,10 @@ export function meltMask(l: SpringLayout, steam: number, x: number, y: number): 
 }
 
 /** Melt band above the far edge at steam 0 and 1, and where it ends below it. */
-export const MELT_BAND = [0.05, 0.3] as const;
-export const MELT_BELOW = 0.03;
+const MELT_BAND = [0.05, 0.3] as const;
+const MELT_BELOW = 0.03;
 /** Half-width of the mask's fade across each side of the pool. */
-export const MASK_EDGE = 0.1;
+const MASK_EDGE = 0.1;
 /** Mask texture size: smooth, so a small texture with bilinear filtering is enough. */
 export const MASK_W = 96;
 export const MASK_H = 64;

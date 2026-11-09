@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type CoatId = "ginger" | "tabby" | "black" | "tuxedo";
 export type TimeOfDayId = "morning" | "afternoon" | "golden";
-export type CatCorner = "left" | "right";
+type CatCorner = "left" | "right";
 
 export const COAT_OPTIONS = [
   { value: "ginger", label: "Ginger" },

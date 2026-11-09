@@ -1,22 +1,22 @@
 import { defineEffectMeta } from "../types";
 
 export type GearLayoutId = "corner" | "side" | "frame";
-export type GearMetalId = "brass" | "steel" | "mixed";
+type GearMetalId = "brass" | "steel" | "mixed";
 export type GearBackdropId = "plate" | "wood" | "paper";
 
-export const GEAR_LAYOUT_OPTIONS = [
+const GEAR_LAYOUT_OPTIONS = [
   { value: "corner", label: "Corner" },
   { value: "side", label: "Side" },
   { value: "frame", label: "Frame" },
 ] as const satisfies readonly { value: GearLayoutId; label: string }[];
 
-export const GEAR_METAL_OPTIONS = [
+const GEAR_METAL_OPTIONS = [
   { value: "brass", label: "Brass" },
   { value: "steel", label: "Steel" },
   { value: "mixed", label: "Mixed" },
 ] as const satisfies readonly { value: GearMetalId; label: string }[];
 
-export const GEAR_BACKDROP_OPTIONS = [
+const GEAR_BACKDROP_OPTIONS = [
   { value: "plate", label: "Dark plate" },
   { value: "wood", label: "Wood" },
   { value: "paper", label: "Paper" },

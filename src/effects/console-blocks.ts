@@ -27,13 +27,13 @@ export interface Block {
 }
 
 /** Seconds per event slot, at most; each block's slot is between this and 60% of it. */
-export const SLOT = 30;
+const SLOT = 30;
 /** Seconds per chase slot for a group of buttons. */
 export const CHASE_SLOT = 16;
 /** Seconds between one button lighting in a chase and the next. */
-export const CHASE_STEP = 0.11;
+const CHASE_STEP = 0.11;
 /** Seconds each button stays lit in a chase. */
-export const CHASE_HOLD = 0.22;
+const CHASE_HOLD = 0.22;
 /** Fade time (s) into and out of a dim or a colour swap. */
 export const FADE = 0.15;
 /** Chance of an event per slot at `activity` 1 for a block of full busyness. */
@@ -46,7 +46,7 @@ function rand(a: number, b: number, c: number): number {
   return hash32(a ^ hash32(Math.imul(b, 0x9e3779b1) ^ hash32(c + 0x632be5ab))) / 4294967296;
 }
 
-export type EventKind = "none" | "dim" | "swap" | "flash" | "tick";
+type EventKind = "none" | "dim" | "swap" | "flash" | "tick";
 
 /** One event: its kind, start and length (s). */
 export interface BlockEvent {

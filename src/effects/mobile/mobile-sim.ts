@@ -26,7 +26,7 @@ export type ShapeKind = typeof SHAPE_DISC | typeof SHAPE_PETAL | typeof SHAPE_CR
  * Petal: a vesica (the overlap of two discs offset by ±PETAL_OFFSET in x) with tips
  * at (0, ±1) and half-width PETAL_HALF_WIDTH, so it fits the unit disc.
  */
-export const PETAL_HALF_WIDTH = 0.42;
+const PETAL_HALF_WIDTH = 0.42;
 export const PETAL_OFFSET = (1 - PETAL_HALF_WIDTH * PETAL_HALF_WIDTH) / (2 * PETAL_HALF_WIDTH);
 export const PETAL_RADIUS = PETAL_OFFSET + PETAL_HALF_WIDTH;
 /** Crescent: the unit disc minus a disc of this radius centred here. */
@@ -35,7 +35,7 @@ export const CRESCENT_CUT_Y = 0.22;
 export const CRESCENT_CUT_R = 0.8;
 
 /** Area of the overlap of two discs of radii r1 and r2 whose centres are d apart. */
-export function discOverlap(r1: number, r2: number, d: number): number {
+function discOverlap(r1: number, r2: number, d: number): number {
   if (d >= r1 + r2) {
     return 0;
   }
@@ -102,14 +102,14 @@ export function paletteFor(id: string): readonly Rgb[] {
 export const MAX_ARMS = 11;
 export const MAX_SHAPES = MAX_ARMS + 1;
 /** Straight segments per arm wire. */
-export const ARM_SEGMENTS = 8;
+const ARM_SEGMENTS = 8;
 /** Wire segments: each arm's curve and hanging wire, and each shape's stub. */
 export const MAX_WIRES = MAX_ARMS * (ARM_SEGMENTS + 1) + MAX_SHAPES;
 /** Floats per wire segment in `writeWires`: x, y, z of each end. */
 export const WIRE_FLOATS = 6;
 
 /** Largest swing of a hanging wire, as horizontal travel per unit of wire length. */
-export const SWING_MAX = 0.1;
+const SWING_MAX = 0.1;
 /** Clearance kept between parts that can turn past each other. */
 const MARGIN = 0.012;
 /** Shortest hanging wire above a sub-mobile. */
@@ -136,7 +136,7 @@ interface Region {
 }
 
 /** Where a mobile hangs for a side and frame aspect (width / height). */
-export function regionFor(side: string, aspect: number): Region {
+function regionFor(side: string, aspect: number): Region {
   const maxHalf = Math.max(0.1, aspect / 2 - EDGE);
   if (side === "across") {
     return {
@@ -152,7 +152,7 @@ export function regionFor(side: string, aspect: number): Region {
   return { x, halfWidth, height: 0.52, spread: 1, stretch: 1.4 };
 }
 
-export interface MobileShape {
+interface MobileShape {
   kind: ShapeKind;
   /** Radius (frame heights) and mass (area). */
   r: number;
@@ -175,7 +175,7 @@ export interface MobileShape {
   lit: number;
 }
 
-export interface MobileEnd {
+interface MobileEnd {
   shape: MobileShape | null;
   arm: MobileArm | null;
 }

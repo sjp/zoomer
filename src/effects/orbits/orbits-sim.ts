@@ -23,30 +23,30 @@ export const TAU = Math.PI * 2;
 export const KEPLER_ITERATIONS = 5;
 
 /** Planet period (s at speed 1) at `A_REF` reference px; periods follow a^1.5. */
-export const PERIOD_REF = 30;
-export const A_REF = 100;
+const PERIOD_REF = 30;
+const A_REF = 100;
 /** The same for moons about their planet (a much lighter parent). */
-export const MOON_PERIOD_REF = 9;
-export const MOON_A_REF = 24;
+const MOON_PERIOD_REF = 9;
+const MOON_A_REF = 24;
 
 /** Nothing of a planet comes closer than this to a single star's centre, reference px. */
-export const SINGLE_CLEAR = 60;
+const SINGLE_CLEAR = 60;
 /** Circumbinary planets keep this many binary apoapses away, so the pair can't disturb them. */
-export const BINARY_CLEAR = 3;
+const BINARY_CLEAR = 3;
 /** The innermost planet's semi-major axis lies this far beyond the clearance, reference px. */
-export const INNER_OFFSET = 40;
+const INNER_OFFSET = 40;
 /** Outermost semi-major axis for 2 and for 7 planets, reference px. */
-export const SPREAD_MIN = 300;
-export const SPREAD_MAX = 560;
+const SPREAD_MIN = 300;
+const SPREAD_MAX = 560;
 /** Empty gap between the reaches of neighbouring planets, reference px. */
-export const ORBIT_GAP = 8;
+const ORBIT_GAP = 8;
 /** Most eccentric planet orbit, and binary orbit. */
-export const PLANET_E_MAX = 0.16;
-export const BINARY_E_MAX = 0.3;
+const PLANET_E_MAX = 0.16;
+const BINARY_E_MAX = 0.3;
 /** Binary semi-major axis (relative orbit), reference px. */
 export const BINARY_A = 44;
 /** Planet radius range, reference px. */
-export const PLANET_RADIUS = [4, 11.5] as const;
+const PLANET_RADIUS = [4, 11.5] as const;
 /** Ring inner radius as a multiple of the planet's. */
 export const RING_INNER = 1.3;
 /** Most moons in a system. */
@@ -54,17 +54,17 @@ export const MAX_MOONS = 8;
 /** Most planets and moons: the size of the GPU arrays and body batch. */
 export const MAX_BODIES = MAX_PLANETS + MAX_MOONS;
 /** Glow octagon radius as a multiple of the star's core radius. */
-export const GLOW_RATIO = 14;
+const GLOW_RATIO = 14;
 
 /** Floats per body instance: centre x, y, radius, extent (device px); rgb, band phase; light xyz, ring outer. */
 export const BODY_FLOATS = 12;
 /** Floats per star-glow instance: centre x, y, core radius, glow radius (device px); rgb, gain. */
 export const GLOW_FLOATS = 8;
 
-export type SystemKind = "single" | "binary";
-export type BodyKind = "star" | "planet" | "moon";
+type SystemKind = "single" | "binary";
+type BodyKind = "star" | "planet" | "moon";
 
-export interface Body {
+interface Body {
   kind: BodyKind;
   /** Semi-major axis about the parent, reference px (0: sits at the parent). */
   a: number;

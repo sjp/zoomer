@@ -12,7 +12,7 @@ import { smoothstep, wrap } from "../math";
 
 export const REF_HEIGHT = 1080;
 
-export interface RoomPalette extends ShelfPalette {
+interface RoomPalette extends ShelfPalette {
   /** Back wall between the bookcases. */
   wall: string;
   floor: string;
@@ -115,7 +115,7 @@ export const BEAM_CORE = 0.35;
 /** Where the beam ends, as a fraction of the frame width from its window side. */
 const BEAM_REACH = 0.78;
 
-export interface BeamGeometry {
+interface BeamGeometry {
   /** Window point (reference px, y up). */
   ox: number;
   oy: number;
@@ -159,7 +159,7 @@ export function beamHalfWidth(s: number): number {
 }
 
 /** Fade along the beam: in as it enters the frame, out towards its end. */
-export function beamAlong(s: number, length: number): number {
+function beamAlong(s: number, length: number): number {
   return smoothstep(BEAM_IN[0], BEAM_IN[1], s) * (1 - smoothstep(BEAM_OUT * length, length, s));
 }
 
@@ -173,7 +173,7 @@ export function beamMaskLocal(g: BeamGeometry, s: number, t: number): number {
 }
 
 /** Lamp height (reference px): on a table in front of the lower shelves. */
-export const LAMP_Y = 330;
+const LAMP_Y = 330;
 
 /**
  * The lamp stands in front of the bookcase opposite the window (on the right
@@ -251,7 +251,7 @@ const SETTLE = 1.2;
 /** Glint spin speed range, rad/s. */
 const SPIN = [0.5, 1.3] as const;
 
-export interface Motes {
+interface Motes {
   readonly max: number;
   /** Position along the beam as a fraction of its length, in [0, 1). */
   readonly s: Float64Array;
@@ -298,7 +298,7 @@ const vel = { s: 0, t: 0 };
  * Air velocity at `s`, `t` px in the beam's frame: the curl of a sum of slowly
  * travelling sine waves, plus a slow settle down the screen. Writes into `out`.
  */
-export function flowAt(
+function flowAt(
   g: BeamGeometry,
   phase: Float64Array,
   s: number,

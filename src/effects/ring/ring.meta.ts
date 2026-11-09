@@ -1,15 +1,15 @@
 import { defineEffectMeta } from "../types";
 
 export type BodyId = "earth" | "moon" | "none";
-export type WindowSide = "left" | "right";
+type WindowSide = "left" | "right";
 
-export const BODY_OPTIONS = [
+const BODY_OPTIONS = [
   { value: "earth", label: "Earth" },
   { value: "moon", label: "Moon" },
   { value: "none", label: "None" },
 ] as const satisfies readonly { value: BodyId; label: string }[];
 
-export const WINDOW_OPTIONS = [
+const WINDOW_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: WindowSide; label: string }[];

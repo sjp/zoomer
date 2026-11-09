@@ -13,8 +13,8 @@ export const MAX_PATTERN_HZ = 5;
 export const MAX_FEATURE_PX_PER_FRAME = 10;
 
 /** The reference frame the per-frame limit is measured in: 1080 px tall, 30 fps. */
-export const REFERENCE_HEIGHT = 1080;
-export const REFERENCE_FPS = 30;
+const REFERENCE_HEIGHT = 1080;
+const REFERENCE_FPS = 30;
 
 /**
  * Caps the speed of a pattern repeating every `period` (any length unit; `speed`

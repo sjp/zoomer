@@ -28,7 +28,7 @@ export const SCHEDULE_MAX_LAG = 2;
  * rate redraws the pending gap from "now", which is exact for a Poisson
  * process (it has no memory), so a slider never leaves a long wait behind.
  */
-export interface EventSchedule {
+interface EventSchedule {
   /** Time (s) of the pending event; NaN before the first `takeEvent`. */
   next: number;
   /** Rate (events per s) `next` was drawn at; NaN before the first `takeEvent`. */
@@ -43,7 +43,7 @@ export const createEventSchedule = (seed: number): EventSchedule => ({
 });
 
 /** An exponential gap (s) with mean `1 / rate`. */
-export const eventGap = (rand: () => number, rate: number) => -Math.log(1 - rand()) / rate;
+const eventGap = (rand: () => number, rate: number) => -Math.log(1 - rand()) / rate;
 
 /**
  * Returns the time (s) of the next event due at or before `t` (s, float64,
@@ -79,7 +79,7 @@ export function takeEvent(s: EventSchedule, t: number, rate: number): number {
 // ---------------------------------------------------------------------------
 
 /** The (still) sky's pole sits this high (reference px), horizontally centred. Only the star layout uses it. */
-export const POLE_Y = 600;
+const POLE_Y = 600;
 /** Share of star cells occupied: a sparse field. */
 export const STAR_DENSITY = 0.28;
 
@@ -97,11 +97,7 @@ export function skyPole(refWidth: number, out: [number, number]): [number, numbe
 export const BAND: MilkyWayBand = bandThrough([0, POLE_Y], 470, 720, 1.1, 170);
 
 /** Radiant position (reference px) for a frame `refWidth` wide. */
-export function radiantPoint(
-  id: string,
-  refWidth: number,
-  out: [number, number],
-): [number, number] {
+function radiantPoint(id: string, refWidth: number, out: [number, number]): [number, number] {
   const w = Math.max(1, refWidth);
   if (id === "topRight") {
     out[0] = 0.86 * w;
@@ -125,28 +121,28 @@ export const MAX_ACTIVE = 8;
 /** Direction jitter about the line from the radiant, ± radians. */
 export const DIRECTION_JITTER = 3 * DEG;
 /** Starts no nearer the radiant than this, reference px (meteors there are foreshortened to dots). */
-export const RADIANT_CLEARANCE = 70;
+const RADIANT_CLEARANCE = 70;
 /** Faint and bright meteors: base length (reference px), flight time (s) and peak brightness. */
-export const FAINT_LENGTH = [130, 280] as const;
-export const BRIGHT_LENGTH = [260, 460] as const;
-export const FAINT_DURATION = [0.2, 0.55] as const;
-export const BRIGHT_DURATION = [0.55, 1] as const;
-export const FAINT_PEAK = [0.35, 0.7] as const;
-export const BRIGHT_PEAK = 1;
+const FAINT_LENGTH = [130, 280] as const;
+const BRIGHT_LENGTH = [260, 460] as const;
+const FAINT_DURATION = [0.2, 0.55] as const;
+const BRIGHT_DURATION = [0.55, 1] as const;
+const FAINT_PEAK = [0.35, 0.7] as const;
+const BRIGHT_PEAK = 1;
 /** Bright meteors' trails glow on for this long after the flight, s. */
-export const TRAIL_LIFE = [2, 4] as const;
+const TRAIL_LIFE = [2, 4] as const;
 /** Shortest path worth drawing, reference px; shorter (after clipping) is redrawn. */
-export const MIN_LENGTH = 50;
+const MIN_LENGTH = 50;
 /** Tries at a valid path before an event is skipped. */
 const SPAWN_TRIES = 8;
 /** Keep meteor paths this far (reference px) above the ground's top. */
 export const FLOOR_MARGIN = 24;
 /** The visible streak behind the head, as a share of the path length (once grown). */
-export const STREAK_SHARE = 0.45;
+const STREAK_SHARE = 0.45;
 /** Where (share of the flight) the streak reaches its full length. */
 const STREAK_GROW = 0.35;
 /** Bright meteors flare over the last part of the flight, from this share on. */
-export const FLARE_FROM = 0.78;
+const FLARE_FROM = 0.78;
 /** Peak glow of a trail, as a share of its meteor's peak. */
 export const TRAIL_PEAK = 0.35;
 
@@ -164,7 +160,7 @@ const WHITE = [0.95, 0.97, 1] as const;
 const GREEN = [0.62, 1, 0.7] as const;
 const ORANGE = [1, 0.74, 0.5] as const;
 
-export interface Meteor {
+interface Meteor {
   /** Start time, s. */
   start: number;
   /** Flight time, s. */
@@ -205,7 +201,7 @@ const createMeteor = (): Meteor => ({
 });
 
 /** Where meteors may go in the current frame. Rebuild with `setSkyFrame` when an input changes. */
-export interface SkyFrame {
+interface SkyFrame {
   refWidth: number;
   /** Radiant, reference px. */
   radiantX: number;
@@ -398,7 +394,7 @@ export function trailEnvelope(age: number, duration: number, trailLife: number):
 }
 
 /** A meteor's pose at one time. Positions are reference px. */
-export interface MeteorPose {
+interface MeteorPose {
   headX: number;
   headY: number;
   /** End of the visible streak behind the head. */
@@ -428,7 +424,7 @@ export const createMeteorPose = (): MeteorPose => ({
 });
 
 /** Distance of the head along the path at flight share `u` (0..1): slowing slightly. */
-export const headDistance = (length: number, u: number) => {
+const headDistance = (length: number, u: number) => {
   const v = clamp(u, 0, 1);
   return length * v * (1.15 - 0.15 * v);
 };
@@ -458,7 +454,7 @@ export function meteorAt(m: Meteor, t: number, out: MeteorPose): MeteorPose {
 }
 
 /** The live meteors (the first `count` of `list`), the schedule and the spawn RNG. */
-export interface MeteorShower {
+interface MeteorShower {
   list: Meteor[];
   count: number;
   schedule: EventSchedule;
@@ -536,7 +532,7 @@ const FAR_AMP = 0.06;
 export const HILL_TOP = Math.max(NEAR_BASE + NEAR_AMP + NEAR_RISE, FAR_BASE + FAR_AMP);
 
 /** The hillside rises toward the left (-1) or the right (1) for this seed. */
-export const hillSide = (seed: number) => (createRng(Math.floor(seed) * 31 + 5)() < 0.5 ? -1 : 1);
+const hillSide = (seed: number) => (createRng(Math.floor(seed) * 31 + 5)() < 0.5 ? -1 : 1);
 
 /**
  * Fills `out` (`HILL_COLUMNS * HILL_CHANNELS`) with the near and far hill heights
@@ -579,7 +575,7 @@ export function hillHeightAt(table: Float32Array, layer: number, u: number): num
 export const MAX_TREES = 8;
 export const TREE_FLOATS = 3;
 /** Tree height range, reference px. */
-export const TREE_HEIGHT = [55, 125] as const;
+const TREE_HEIGHT = [55, 125] as const;
 /** Tent half-width and height, reference px; how far its base sits below the crest. */
 export const TENT_HALF_W = 58;
 export const TENT_H = 74;
@@ -587,7 +583,7 @@ const TENT_SINK = 10;
 const TREE_SINK = 4;
 
 /** The ground's extras: trees and a tent, placed on the near hill. */
-export interface GroundLayout {
+interface GroundLayout {
   trees: Float32Array;
   treeCount: number;
   tent: boolean;

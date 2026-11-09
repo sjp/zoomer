@@ -28,9 +28,9 @@ import {
 } from "./starfield-sim";
 
 /** Star colours: hot blue-white, white and cool orange. */
-export const STAR_BLUE = "#b4c8ff";
-export const STAR_WHITE = "#f4f2ec";
-export const STAR_ORANGE = "#ffb070";
+const STAR_BLUE = "#b4c8ff";
+const STAR_WHITE = "#f4f2ec";
+const STAR_ORANGE = "#ffb070";
 /** Milky Way haze colour, before the caller's strength. */
 export const HAZE_COLOR = "#aab4d6";
 /** Haze brightness at a strength of 1. */
@@ -161,7 +161,7 @@ void main() {
 `;
 
 /** Per-frame inputs of `StarSprites.draw`. Keep one and update it, so a frame allocates nothing. */
-export interface StarDraw {
+interface StarDraw {
   /** Canvas size, device px. */
   width: number;
   height: number;
@@ -194,7 +194,7 @@ export const createStarDraw = (): StarDraw => ({
 });
 
 /** Point stars of the shared layout as additive sprites. */
-export interface StarSprites {
+interface StarSprites {
   /** Lists and uploads the stars for `layout`; returns the count. Call on resize or when the layout changes. */
   build: (layout: StarfieldLayout) => number;
   /** Stars from the last `build`. */

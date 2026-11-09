@@ -28,11 +28,11 @@ export const CUSHION_Y = -0.11;
 export const CUSHION_RX = 0.66;
 export const CUSHION_RY = 0.17;
 /** Gap between the frame edge and the cushion, height units. */
-export const EDGE_GAP = 0.05;
+const EDGE_GAP = 0.05;
 /** The cat pass box in the cat frame: cushion and its shadow, the cat with a lifted tail and ears. */
 export const BOX_LOCAL = [-0.74, -0.36, 0.74, 0.52] as const;
 /** Cat size limits (height units per cat unit). */
-export const SIZE_RANGE = [0.25, 0.55] as const;
+const SIZE_RANGE = [0.25, 0.55] as const;
 
 /**
  * The window opening, measured from the cat's frame edge ("outer" x) in
@@ -43,7 +43,7 @@ export const WINDOW_FRAME = 0.035;
 export const WINDOW_BAR_X = 0.5;
 export const WINDOW_BAR_Y = 0.66;
 
-export interface CatLayout {
+interface CatLayout {
   /** +1: the cat is in the bottom-left corner (head to the right); -1: bottom-right. */
   side: 1 | -1;
   /** Height units per cat unit. */
@@ -64,7 +64,7 @@ export const createCatLayout = (): CatLayout => ({
 });
 
 /** Clamps the `size` param; non-finite values fall back to the default. */
-export function catSize(size: number): number {
+function catSize(size: number): number {
   return clamp(Number.isFinite(size) ? size : 0.4, SIZE_RANGE[0], SIZE_RANGE[1]);
 }
 
@@ -107,7 +107,7 @@ export function breathAt(t: number): number {
 // ---------------------------------------------------------------- events
 
 /** A schedule of rare events: each gap is drawn from [minGap, maxGap]. */
-export interface EventTrack {
+interface EventTrack {
   readonly minGap: number;
   readonly maxGap: number;
   readonly rng: () => number;
@@ -151,14 +151,14 @@ export function advanceTrack(track: EventTrack, t: number): void {
 
 /** Ear twitches: gaps (s), first one, duration (s) and peak angle (rad, backwards). */
 export const EAR_GAP = [20, 40] as const;
-export const EAR_FIRST = [6, 14] as const;
+const EAR_FIRST = [6, 14] as const;
 export const EAR_DURATION = 0.55;
-export const EAR_ANGLE = 0.5;
+const EAR_ANGLE = 0.5;
 /** Tail flicks: gaps (s), first one, duration (s) and peak lift of the tip (rad). */
 export const TAIL_GAP = [28, 55] as const;
-export const TAIL_FIRST = [12, 22] as const;
+const TAIL_FIRST = [12, 22] as const;
 export const TAIL_DURATION = 2.2;
-export const TAIL_ANGLE = 0.5;
+const TAIL_ANGLE = 0.5;
 
 /**
  * The twitching ear's angle `tau` seconds into a twitch: flicked back in under
@@ -185,7 +185,7 @@ export function tailFlick(tau: number): number {
   return TAIL_ANGLE * s * s * (1 + 0.25 * Math.sin(TAU * u));
 }
 
-export interface CatClock {
+interface CatClock {
   ear: EventTrack;
   tail: EventTrack;
 }
@@ -198,7 +198,7 @@ export function createCatClock(seed = 117): CatClock {
 }
 
 /** The pose at time `t`: breath (0..1), near-ear and far-ear angles, tail-tip lift (rad). */
-export interface CatPose {
+interface CatPose {
   breath: number;
   earNear: number;
   earFar: number;
@@ -223,7 +223,7 @@ export function catPose(clock: CatClock, t: number, out: CatPose): CatPose {
 
 // ---------------------------------------------------------------- palettes
 
-export interface CoatLook {
+interface CoatLook {
   /** Main fur colour, tabby stripe colour and stripe strength (0: none). */
   fur: string;
   stripe: string;
@@ -291,7 +291,7 @@ export function coatFor(id: string): CoatLook {
   return lookup(COATS, id, "ginger");
 }
 
-export interface TimeLook {
+interface TimeLook {
   /** Sky at the top and bottom of the window, and the garden outside. */
   skyTop: string;
   skyBottom: string;
@@ -351,7 +351,7 @@ export function timeFor(id: string): TimeLook {
 
 /** Beam half-width across its axis, height units, and the height at which it fades out on top. */
 export const BEAM_HALF_WIDTH = 0.2;
-export const BEAM_TOP = WINDOW[3];
+const BEAM_TOP = WINDOW[3];
 /** Where the beam's axis meets the sill, past the cat's centre (cat units). */
 const BEAM_LAND = 0.25;
 
@@ -360,7 +360,7 @@ const BEAM_LAND = 0.25;
  * and its unit direction pointing up towards the window. It slants down and
  * inwards, across the cat.
  */
-export interface Beam {
+interface Beam {
   x: number;
   y: number;
   dx: number;
@@ -395,11 +395,11 @@ export function beamLight(beam: Beam, along: number, across: number): number {
 // ---------------------------------------------------------------- motes
 
 /** Mote drift speed (height units/s), settling speed, radius range (1080p px). */
-export const MOTE_SPEED = 0.006;
-export const MOTE_SETTLE = 0.0015;
+const MOTE_SPEED = 0.006;
+const MOTE_SETTLE = 0.0015;
 export const MOTE_RADIUS = [3, 8] as const;
 
-export interface Motes {
+interface Motes {
   /** Beam coordinates: along the axis (0..1 of its length) and across (-1..1 of the half-width). */
   along: Float32Array;
   across: Float32Array;

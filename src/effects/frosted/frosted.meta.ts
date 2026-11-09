@@ -1,7 +1,7 @@
 import { QUALITY_OPTIONS } from "../param-options";
 import { defineEffectMeta } from "../types";
 
-export const GLASS_OPTIONS = [
+const GLASS_OPTIONS = [
   { value: "frosted", label: "Frosted" },
   { value: "reeded", label: "Reeded" },
   { value: "clear", label: "Clear-ish" },
@@ -9,7 +9,7 @@ export const GLASS_OPTIONS = [
 
 export const MAX_SHAPES = 5;
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "dusk", label: "Dusk" },
   { value: "lagoon", label: "Lagoon" },
   { value: "orchid", label: "Orchid" },

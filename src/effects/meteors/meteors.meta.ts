@@ -1,15 +1,15 @@
 import { defineEffectMeta } from "../types";
 
-export type RadiantId = "topLeft" | "topRight" | "offFrame";
-export type GroundId = "hills" | "trees" | "tent" | "none";
+type RadiantId = "topLeft" | "topRight" | "offFrame";
+type GroundId = "hills" | "trees" | "tent" | "none";
 
-export const RADIANT_OPTIONS = [
+const RADIANT_OPTIONS = [
   { value: "topLeft", label: "Top left" },
   { value: "topRight", label: "Top right" },
   { value: "offFrame", label: "Off-frame" },
 ] as const satisfies readonly { value: RadiantId; label: string }[];
 
-export const GROUND_OPTIONS = [
+const GROUND_OPTIONS = [
   { value: "hills", label: "Hills" },
   { value: "trees", label: "Trees" },
   { value: "tent", label: "Tent" },
@@ -17,7 +17,7 @@ export const GROUND_OPTIONS = [
 ] as const satisfies readonly { value: GroundId; label: string }[];
 
 /** Most meteors per minute. */
-export const RATE_MAX = 60;
+const RATE_MAX = 60;
 
 export const meteorsMeta = defineEffectMeta({
   id: "meteors",

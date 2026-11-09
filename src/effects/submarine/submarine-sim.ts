@@ -21,9 +21,9 @@ const TAU = Math.PI * 2;
 /** Glass radius, the brass ring's width round it, and the glass centre's height. */
 export const GLASS_R = 380;
 export const RING_W = 62;
-export const GLASS_Y = 548;
+const GLASS_Y = 548;
 /** The viewport sits this share of the frame width away from the gauges' side. */
-export const GLASS_SHIFT = 0.06;
+const GLASS_SHIFT = 0.06;
 /** Radius (glass units) of the thin inner ring; the struts run from it out to the rim. */
 export const INNER_RING = 0.68;
 /** Struts round the outer band of the glass. */
@@ -32,11 +32,11 @@ export const STRUTS = 8;
 export const STRUT_HALF = 9;
 export const INNER_HALF = 6;
 /** Height of the depth dial's centre; the pressure gauge sits below it, then the lamp's shelf. */
-export const DEPTH_DIAL_Y = 740;
-export const DIAL_GAP = 64;
+const DEPTH_DIAL_Y = 740;
+const DIAL_GAP = 64;
 export const SHELF_Y = 196;
 /** Lamp: shade centre height above the shelf, shade half width and height. */
-export const LAMP_SHADE_Y = 112;
+const LAMP_SHADE_Y = 112;
 export const LAMP_SHADE_HALF = 38;
 export const LAMP_SHADE_H = 46;
 /** The pipe along the top of the wall: its centre height and radius. */
@@ -130,9 +130,9 @@ export const FIXED_DEPTH: Readonly<Record<Exclude<DepthMode, "descend">, number>
 };
 
 /** The descend cycle: seconds in the shallows, sinking, in the abyss and surfacing. */
-export const HOLD_TOP = 90;
-export const SINK_TIME = 720;
-export const HOLD_BOTTOM = 150;
+const HOLD_TOP = 90;
+const SINK_TIME = 720;
+const HOLD_BOTTOM = 150;
 export const RISE_TIME = 240;
 export const DESCEND_PERIOD = HOLD_TOP + SINK_TIME + HOLD_BOTTOM + RISE_TIME;
 /** Shallowest and deepest points of the cycle. */
@@ -166,7 +166,7 @@ export function depthAt(mode: string, time: number): number {
 }
 
 /** Seconds a change of the depth setting takes to sweep the whole range, so it never cuts. */
-export const DEPTH_EASE = 15;
+const DEPTH_EASE = 15;
 
 /** Eases the shown depth toward the setting's, at most 1 / DEPTH_EASE per second. */
 export function easeDepth(current: number, target: number, dt: number): number {
@@ -181,7 +181,7 @@ export const PEAK_SINK = (1.5 * (CYCLE_BOTTOM - CYCLE_TOP)) / SINK_TIME;
 // Water and life by depth
 // ---------------------------------------------------------------------------
 
-export interface Zones {
+interface Zones {
   /** Sunlit shallows: shafts, caustics, the sea floor and fish shoals. */
   shallows: number;
   /** Jellyfish: from the twilight zone down. */
@@ -203,12 +203,12 @@ export function zonesAt(d: number, out: Zones): Zones {
 }
 
 /** Water colour (linear-ish display RGB) near the surface and deep below, at three depths. */
-export const WATER_TOP: readonly (readonly [number, number, number])[] = [
+const WATER_TOP: readonly (readonly [number, number, number])[] = [
   [0.16, 0.5, 0.52],
   [0.03, 0.12, 0.27],
   [0.006, 0.014, 0.03],
 ];
-export const WATER_DEEP: readonly (readonly [number, number, number])[] = [
+const WATER_DEEP: readonly (readonly [number, number, number])[] = [
   [0.035, 0.22, 0.3],
   [0.01, 0.045, 0.12],
   [0.002, 0.005, 0.012],
@@ -239,8 +239,8 @@ export function needleAngle(reading: number): number {
 }
 
 /** How far the wander moves the pressure and depth needles, as shares of their scales. */
-export const PRESSURE_WANDER = 0.08;
-export const DEPTH_WANDER = 0.012;
+const PRESSURE_WANDER = 0.08;
+const DEPTH_WANDER = 0.012;
 
 /** The pressure gauge's reading (0..1): rising with depth, plus its wander. */
 export function pressureReading(d: number, wander: number): number {
@@ -260,15 +260,15 @@ export function depthReading(d: number, wander: number): number {
 export const WHALE_MIN_TIME = 20;
 export const WHALE_MAX_TIME = 40;
 export const WHALE_MIN_GAP = 75;
-export const WHALE_GAP_SPREAD = 150;
+const WHALE_GAP_SPREAD = 150;
 /** The first whale comes within this window (s) after the scene starts. */
-export const WHALE_FIRST_MIN = 20;
-export const WHALE_FIRST_SPREAD = 50;
+const WHALE_FIRST_MIN = 20;
+const WHALE_FIRST_SPREAD = 50;
 /** Whale length (glass units) at size 1, and the seconds of one stroke of its tail. */
-export const WHALE_LEN = 1.9;
-export const WHALE_STROKE = 7;
+const WHALE_LEN = 1.9;
+const WHALE_STROKE = 7;
 
-export interface WhalePass {
+interface WhalePass {
   /** Start time (s) and seconds to cross. */
   start: number;
   duration: number;
@@ -280,7 +280,7 @@ export interface WhalePass {
   fog: number;
 }
 
-export interface WhaleSchedule {
+interface WhaleSchedule {
   readonly rng: () => number;
   /** The current or next pass. */
   readonly pass: WhalePass;

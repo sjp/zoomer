@@ -56,7 +56,7 @@ export const NUDGE = 5 / 1080;
 /** Slack around the box for the antialiased edges (height units). */
 const BOX_PAD = 0.004;
 
-export interface GlobeLayout {
+interface GlobeLayout {
   /** Outer direction: +1 if the globe is in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Sphere radius, centre x and y (height units), at rest. */
@@ -108,11 +108,11 @@ export function globeLayout(
 }
 
 /** Shake impulse: upward speed range and sideways spread (globe units/s). */
-export const SHAKE_UP = [0.5, 1.5] as const;
-export const SHAKE_SIDE = 0.7;
+const SHAKE_UP = [0.5, 1.5] as const;
+const SHAKE_SIDE = 0.7;
 /** Swirl speed per unit of distance from the vortex centre just after a shake (1/s), and its decay time (s). */
-export const SWIRL_START = 1;
-export const SWIRL_DECAY = 3;
+const SWIRL_START = 1;
+const SWIRL_DECAY = 3;
 /** Vortex centre (globe units), and the noise flow's share of the swirl. */
 const VORTEX_Y = 0.15;
 const SWIRL_NOISE = 0.5;
@@ -126,9 +126,9 @@ const MOUND_FLOW = 0.3;
  */
 const SETTLE_SWIRL = 0.3;
 /** Drag rate (1/s): how fast a flake takes up the water's speed. */
-export const DRAG = 2.2;
+const DRAG = 2.2;
 /** Settling speed range in still water (globe units/s). */
-export const FALL = [0.09, 0.16] as const;
+const FALL = [0.09, 0.16] as const;
 /** How much speed into the glass a flake keeps, reflected. */
 const RESTITUTION = 0.3;
 /** Largest integration step (s). */
@@ -144,7 +144,7 @@ const NUDGE_HZ = 4;
 const NUDGE_DECAY = 0.18;
 export const NUDGE_TIME = 1;
 
-export interface Snow {
+interface Snow {
   readonly count: number;
   /** Position and velocity, globe units (x to the right, y up). */
   readonly x: Float64Array;

@@ -16,9 +16,9 @@ import { TELEMETRY_LINES } from "../dot-matrix";
 /** Camera eye height above the back row's floor. */
 export const EYE_Y = 1.2;
 /** Camera pitch (radians): level, so the wall fills the top and the consoles the bottom. */
-export const PITCH = 0;
+const PITCH = 0;
 /** Vertical field of view (radians). */
-export const FOV_Y = (50 * Math.PI) / 180;
+const FOV_Y = (50 * Math.PI) / 180;
 export const TAN_HALF_FOV = Math.tan(FOV_Y / 2);
 
 /** The front wall: a plane at z = `WALL_Z`, from the pit floor up to the ceiling. */
@@ -73,7 +73,7 @@ export interface Rect {
   y1: number;
 }
 
-export type WallScreenId = "map" | "telemetry" | "tv" | "clock" | "countdown" | "graphs";
+type WallScreenId = "map" | "telemetry" | "tv" | "clock" | "countdown" | "graphs";
 
 /**
  * The wall's screens. The map spans the middle, behind the speaker; the busy
@@ -131,11 +131,11 @@ export function facePoint(k: number, x: number, f: number): [number, number, num
 
 /* ----- Console layouts ----- */
 
-export type ScreenMode = "numbers" | "graph" | "off";
-export const SCREEN_MODES: readonly ScreenMode[] = ["numbers", "graph", "off"];
+type ScreenMode = "numbers" | "graph" | "off";
+const SCREEN_MODES: readonly ScreenMode[] = ["numbers", "graph", "off"];
 
 /** One console unit's face and top, in unit-local metres: x along the unit, y up the face. */
-export interface ConsoleUnit {
+interface ConsoleUnit {
   row: number;
   /** Unit index along its row. */
   index: number;
@@ -168,8 +168,8 @@ export const telemetryBlock = (i: number) => 1 + UNIT_COUNT * BLOCKS_PER_UNIT + 
 export const BLOCK_COUNT = telemetryBlock(TELEMETRY_LINES);
 
 /** Size of a CRT on a face, and where screens sit. */
-export const SCREEN_W = 0.32;
-export const SCREEN_H = 0.24;
+const SCREEN_W = 0.32;
+const SCREEN_H = 0.24;
 const SCREEN_Y0 = 0.16;
 const LEFT_X0 = 0.12;
 const RIGHT_X0 = 0.66;

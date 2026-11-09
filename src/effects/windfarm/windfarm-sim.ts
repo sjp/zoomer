@@ -23,7 +23,7 @@ export { COLUMNS, SPAN };
 /** Hill layers, nearest first. */
 export const HILL_LAYERS = 4;
 
-export interface HillShape {
+interface HillShape {
   /** Height of the layer's lowest valley. */
   base: number;
   /** Height of its highest crest above `base`. */
@@ -115,7 +115,7 @@ export const hillHeightAt = (table: Float32Array, layer: number, x: number) =>
 // Palettes
 // ---------------------------------------------------------------------------
 
-export type TimeOfDay = (typeof TIME_OPTIONS)[number]["value"];
+type TimeOfDay = (typeof TIME_OPTIONS)[number]["value"];
 
 export interface FarmPalette {
   skyTop: Rgb;
@@ -307,7 +307,7 @@ export const SINK = 0.03;
 /** Half-width of a turbine's silhouette about its tower: the rotor disc, foreshortened. */
 export const HALF_WIDTH = BLADE * YAW_COS + Math.abs(HUB_X) + 0.01;
 /** Clear gap kept between turbine silhouettes (height units). */
-export const GAP = 0.012;
+const GAP = 0.012;
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -397,7 +397,7 @@ export function silhouettesOverlap(
 }
 
 /** Radius kept clear around a farther turbine's hub and nacelle, in units of its tower height. */
-export const HUB_CLEAR = 0.1;
+const HUB_CLEAR = 0.1;
 
 /**
  * Whether two turbines collide in the layout. On the same layer, their whole
@@ -465,7 +465,7 @@ const MAX_HIDDEN = 0.3;
 /** Share of a zone, from its outer edge, open to turbines on the nearest layer. */
 const NEAR_OUTER = 0.4;
 /** Base rotor speed at `wind` 1, revolutions per second. */
-export const ROTOR_REVS = 0.16;
+const ROTOR_REVS = 0.16;
 
 /** Seconds a turbine a relayout adds takes to fade in. */
 export const TURBINE_FADE = 1.5;

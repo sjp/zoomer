@@ -98,7 +98,7 @@ export function graphShift(t: number): number {
 }
 
 /** Samples of the random walk averaged into one wander value: about 3 s of the walk. */
-export const WANDER_SAMPLES = 48;
+const WANDER_SAMPLES = 48;
 
 /**
  * The newest `n` samples of `row` of a graph walk, averaged and centred:

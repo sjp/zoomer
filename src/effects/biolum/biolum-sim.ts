@@ -33,14 +33,14 @@ export const BREAK = 0.08;
 export const APPROACH_DIST = 1.4;
 
 /** Each wave's run-up is a factor in [REACH_MIN, REACH_MAX). */
-export const REACH_MIN = 0.1;
+const REACH_MIN = 0.1;
 export const REACH_MAX = 0.17;
 /** Seconds the break takes to peel from one side of the frame to the other. */
-export const PEEL_MIN = 1.2;
+const PEEL_MIN = 1.2;
 export const PEEL_MAX = 2.5;
 /** Each spacing is the interval times a factor in [SPACING_MIN, SPACING_MAX), mean 1. */
 export const SPACING_MIN = 0.9;
-export const SPACING_MAX = 1.1;
+const SPACING_MAX = 1.1;
 /** Seconds a wave stays in flight after draining, while its wet sand fades. */
 export const WET_TAIL = 3;
 /** Seconds over which the wet sand fades at the end of a wave (on its local clock). */
@@ -89,7 +89,7 @@ export function biolumFront(tau: number, reach: number): number {
 }
 
 /** Fade of a wave's wet sand at the end of its life, on its local clock. */
-export function wetFade(tau: number): number {
+function wetFade(tau: number): number {
   return 1 - smoothstep(T_ACTIVE + WET_TAIL - WET_FADE, T_ACTIVE + WET_TAIL, tau);
 }
 
@@ -112,7 +112,7 @@ export function capGlow(g: number): number {
   return 1 - Math.exp(-GLOW_CAP * Math.max(0, g));
 }
 
-export interface BiolumWave {
+interface BiolumWave {
   /** Start time on the scheduler clock (s). */
   start: number;
   reach: number;
@@ -125,7 +125,7 @@ export interface BiolumWave {
   offY: number;
 }
 
-export interface BiolumScheduler {
+interface BiolumScheduler {
   /** Live waves, oldest first; only the first `count` are in flight. */
   readonly waves: readonly BiolumWave[];
   readonly count: number;

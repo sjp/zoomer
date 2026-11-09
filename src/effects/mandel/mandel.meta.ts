@@ -25,7 +25,7 @@ export const MAX_DETAIL = 400;
 /** About 200 iterations at the deep end of the loop. */
 export const DEFAULT_DETAIL = 160;
 /** `spin` limit, degrees per second either way. */
-export const SPIN_MAX = 6;
+const SPIN_MAX = 6;
 
 export const mandelMeta = defineEffectMeta({
   id: "mandel",

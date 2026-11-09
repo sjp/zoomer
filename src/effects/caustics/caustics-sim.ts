@@ -48,7 +48,7 @@ export function tileResolution(screenPx: number): number {
 }
 
 /** One god ray: a soft vertical band that sways and pulses slowly. */
-export interface Ray {
+interface Ray {
   /** Centre in 0..1 across the table. */
   center: number;
   /** Gaussian half-width in table units. */
@@ -144,12 +144,12 @@ export function tileMatrices(
 export const BUBBLE_MIN_R = 2.5;
 export const BUBBLE_MAX_R = 10;
 /** Rise speed in reference px/s of the largest bubble at speed 1. */
-export const BUBBLE_RISE = 60;
+const BUBBLE_RISE = 60;
 /** Reference frame height. */
 const REF_HEIGHT = 1080;
 
 /** Structure-of-arrays bubble state, positions in reference px (y down). */
-export interface BubbleState {
+interface BubbleState {
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly r: Float32Array;

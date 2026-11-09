@@ -83,7 +83,7 @@ export const MAX_RUNNER_R = 24;
 const TRAIL_SHARE_MAX = 0.35;
 export const MAX_TRAIL_R = TRAIL_SHARE_MAX * MAX_RUNNER_R;
 /** A running drop smaller than this sticks to the glass again. */
-export const STOP_R = 7;
+const STOP_R = 7;
 /** Fall speed in reference px/s for a drop of radius `BREAK_MIN` at speed 1. */
 const BASE_SPEED = 90;
 /** Peak horizontal wiggle as a fraction of the fall speed. */
@@ -103,7 +103,7 @@ const WIPE = 0.9;
 /** Runners fade in over this many seconds. */
 const RUNNER_FADE_IN = 1;
 /** Longest step simulated, so a stalled tab does not teleport runners. */
-export const MAX_DT = 0.1;
+const MAX_DT = 0.1;
 const TAU = Math.PI * 2;
 
 export interface RainSim {
@@ -257,7 +257,7 @@ export function resizeRainSim(sim: RainSim, width: number, height: number) {
 }
 
 /** Respawns static slot `i` at a random place, fading in (or mid-life if `randomAge`). */
-export function spawnStatic(sim: RainSim, i: number, randomAge: boolean) {
+function spawnStatic(sim: RainSim, i: number, randomAge: boolean) {
   const { rng } = sim;
   const t = rng();
   sim.dx[i] = rng() * sim.width;

@@ -3,7 +3,7 @@ import { defineEffectMeta } from "../types";
 
 export const MAX_BLOBS = 6;
 
-export const PALETTE_OPTIONS = [
+const PALETTE_OPTIONS = [
   { value: "dusk", label: "Dusk" },
   { value: "ocean", label: "Ocean" },
   { value: "mint", label: "Mint" },

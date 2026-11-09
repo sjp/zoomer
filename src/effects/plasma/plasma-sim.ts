@@ -49,7 +49,7 @@ const EDGE_RADII = 1.02;
 /** Slack around the box for the antialiased edges (height units). */
 const BOX_PAD = 0.004;
 
-export interface PlasmaLayout {
+interface PlasmaLayout {
   /** +1 if the globe is in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Sphere radius, centre x and y (height units). */
@@ -112,8 +112,8 @@ const FLOOR_K = 4;
 /** How fast a filament fades in or out when the count changes (1/s). */
 export const FADE_RATE = 0.6;
 /** Brightness: base level, slow noise depth, and the noise's rate (1/s, real time). */
-export const BRIGHT_BASE = 0.85;
-export const BRIGHT_DEPTH = 0.15;
+const BRIGHT_BASE = 0.85;
+const BRIGHT_DEPTH = 0.15;
 const BRIGHT_RATE = 0.1;
 /** Path shape: sideways bend, its noise frequency along the path, scroll and evolve rates. */
 const BEND = 0.32;
@@ -346,7 +346,7 @@ export function filamentPath(p: Plasma, i: number, out: Float64Array): Float64Ar
  * Branch `b`'s end direction for filament `i` into `out[0..2]`: the main end
  * pushed sideways by slow noise, renormalised onto the sphere.
  */
-export function branchEnd(p: Plasma, i: number, b: number, out: Float64Array): Float64Array {
+function branchEnd(p: Plasma, i: number, b: number, out: Float64Array): Float64Array {
   const ex = p.ends[3 * i];
   const ey = p.ends[3 * i + 1];
   const ez = p.ends[3 * i + 2];

@@ -2,7 +2,7 @@ import { defineEffectMeta } from "../types";
 
 export type SpringTime = "dusk" | "night" | "day";
 
-export const TIME_OPTIONS = [
+const TIME_OPTIONS = [
   { value: "dusk", label: "Dusk" },
   { value: "night", label: "Night" },
   { value: "day", label: "Day" },

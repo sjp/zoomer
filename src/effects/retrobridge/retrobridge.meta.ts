@@ -1,21 +1,21 @@
 import { defineEffectMeta } from "../types";
 
-export type AlertMode = "normal" | "red";
+type AlertMode = "normal" | "red";
 export type Lighting = "classic" | "cool" | "warm";
-export type DoorSide = "right" | "left";
+type DoorSide = "right" | "left";
 
-export const ALERT_OPTIONS = [
+const ALERT_OPTIONS = [
   { value: "normal", label: "Normal" },
   { value: "red", label: "Red alert" },
 ] as const satisfies readonly { value: AlertMode; label: string }[];
 
-export const LIGHTING_OPTIONS = [
+const LIGHTING_OPTIONS = [
   { value: "classic", label: "Classic" },
   { value: "cool", label: "Cool" },
   { value: "warm", label: "Warm" },
 ] as const satisfies readonly { value: Lighting; label: string }[];
 
-export const DOOR_OPTIONS = [
+const DOOR_OPTIONS = [
   { value: "right", label: "Right" },
   { value: "left", label: "Left" },
 ] as const satisfies readonly { value: DoorSide; label: string }[];

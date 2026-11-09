@@ -1,6 +1,6 @@
 import { defineEffectMeta } from "../types";
 
-export type TurntablePosition = "left" | "right";
+type TurntablePosition = "left" | "right";
 export type RpmId = "33" | "45";
 export type PlinthId = "walnut" | "black" | "white";
 export type TurntableRoomId = "lamp" | "window" | "dark";

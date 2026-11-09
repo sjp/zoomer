@@ -18,12 +18,12 @@ export const SHELF_TEX_H = 512;
 /** Shelves per bookcase. */
 export const SHELF_ROWS = 5;
 /** Plinth top and cornice bottom, as fractions of the bookcase height. */
-export const SHELF_PLINTH = 0.05;
-export const SHELF_CORNICE = 0.955;
+const SHELF_PLINTH = 0.05;
+const SHELF_CORNICE = 0.955;
 /** Height of one shelf (board plus the space above it), fraction of the height. */
-export const SHELF_ROW_H = (SHELF_CORNICE - SHELF_PLINTH) / SHELF_ROWS;
+const SHELF_ROW_H = (SHELF_CORNICE - SHELF_PLINTH) / SHELF_ROWS;
 /** Board thickness, fraction of the height. */
-export const SHELF_BOARD = 0.022;
+const SHELF_BOARD = 0.022;
 /** Where the inner side panel starts, in side units (0 = frame edge, 1 = inner edge). */
 export const SHELF_PANEL_U = 0.95;
 /** Spine widths, side units (about 15–35 reference px on a 16:9 frame). */
@@ -36,7 +36,7 @@ const MAX_GAPS = 2;
 const GAP_CHANCE = 0.07;
 const GAP_W = [0.03, 0.08] as const;
 /** Bookcase width as a fraction of the frame width (never more than a third). */
-export const SHELF_SIDE_FRAC = 0.3;
+const SHELF_SIDE_FRAC = 0.3;
 /** Vertical convergence towards the inner edge: 0 is flat-on. */
 export const SHELF_PERSP = 0.22;
 /** Eye level, fraction of the frame height: shelf lines converge on it. */
@@ -51,7 +51,7 @@ export interface ShelfPalette {
   spines: readonly string[];
 }
 
-export interface Spine {
+interface Spine {
   /** 0 = left bookcase, 1 = right. */
   side: 0 | 1;
   row: number;
@@ -74,7 +74,7 @@ export function shelfSideWidth(frameWidth: number): number {
 }
 
 /** Bottom of a row's board, fraction of the bookcase height. */
-export function shelfRowBottom(row: number): number {
+function shelfRowBottom(row: number): number {
   return SHELF_PLINTH + row * SHELF_ROW_H;
 }
 
@@ -217,7 +217,7 @@ export function bakeShelves(
   return out;
 }
 
-export interface BookshelfTexture {
+interface BookshelfTexture {
   readonly texture: WebGLTexture;
   /** Rebakes the texture (and its mipmaps) for a layout seed and palette. */
   update: (seed: number, palette: ShelfPalette) => void;

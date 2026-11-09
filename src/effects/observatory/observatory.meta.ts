@@ -1,14 +1,14 @@
 import { defineEffectMeta } from "../types";
 
-export type WorkLights = "red" | "off";
-export type ScopeSide = "left" | "right";
+type WorkLights = "red" | "off";
+type ScopeSide = "left" | "right";
 
-export const LIGHT_OPTIONS = [
+const LIGHT_OPTIONS = [
   { value: "red", label: "Red" },
   { value: "off", label: "Off" },
 ] as const satisfies readonly { value: WorkLights; label: string }[];
 
-export const SIDE_OPTIONS = [
+const SIDE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: ScopeSide; label: string }[];

@@ -13,7 +13,7 @@ const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
 const isFrameRate = (v: string): v is FrameRate => has(FRAME_RATES, v);
 
 /** The effect list's state, owned by the app because ← / → follow it too. */
-export type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose"> & {
+type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose"> & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };

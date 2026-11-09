@@ -17,7 +17,7 @@ import { createRng } from "../noise";
 import type { PlinthId, RpmId, TurntableRoomId } from "./turntable.meta";
 
 /** View elevation above the horizontal (radians), and its projection factors. */
-export const ELEVATION = (25 * Math.PI) / 180;
+const ELEVATION = (25 * Math.PI) / 180;
 /** Screen y per unit of world Z (depth foreshortening). */
 export const VIEW_K = Math.sin(ELEVATION);
 /** Screen y per unit of world Y (height). */
@@ -52,23 +52,23 @@ export const ARM_Y = 0.036;
 export const PIVOT_BASE_R = 0.026;
 export const PIVOT_BASE_H = 0.018;
 /** Pivot to record centre, and the arm's effective length (pivot to stylus), with a little overhang. */
-export const PIVOT_D = Math.hypot(PIVOT_X, PIVOT_Z);
-export const ARM_L = PIVOT_D + 0.016;
+const PIVOT_D = Math.hypot(PIVOT_X, PIVOT_Z);
+const ARM_L = PIVOT_D + 0.016;
 /** Headshell length, cartridge height above the stylus tip, and the lift height. */
-export const HEAD_LEN = 0.042;
-export const CART_H = 0.009;
-export const LIFT_H = 0.014;
+const HEAD_LEN = 0.042;
+const CART_H = 0.009;
+const LIFT_H = 0.014;
 /** Counterweight: span behind the pivot. */
-export const WEIGHT_NEAR = 0.014;
+const WEIGHT_NEAR = 0.014;
 export const WEIGHT_FAR = 0.056;
 /** Finger lift length, out from the headshell's side. */
-export const FINGER_LEN = 0.016;
+const FINGER_LEN = 0.016;
 
 /** Gap from the frame's side edge to the plinth, and from the bottom (height units). */
-export const EDGE_X = 0.05;
-export const EDGE_Y = 0.045;
+const EDGE_X = 0.05;
+const EDGE_Y = 0.045;
 /** Slack around the plinth for its soft shadow on the surface below (local units). */
-export const SHADOW_PAD = 0.065;
+const SHADOW_PAD = 0.065;
 /** The turntable shrinks to keep its inner edge within this fraction of the width. */
 export const MAX_WIDTH_FRAC = 0.38;
 /** The far edge of the surface the turntable stands on, local screen y. */
@@ -80,7 +80,7 @@ const LOCAL_TOP = PLINTH_BACK * VIEW_K + (ARM_Y + LIFT_H) * VIEW_V + 0.03;
 const LOCAL_LEFT = -PLINTH_LEFT - SHADOW_PAD;
 const LOCAL_RIGHT = PLINTH_RIGHT + SHADOW_PAD;
 
-export interface TurntableLayout {
+interface TurntableLayout {
   /** +1 if the turntable is in the bottom-right corner, -1 bottom-left. */
   side: 1 | -1;
   /** Height units per local unit (at most 1). */
@@ -166,11 +166,11 @@ export const START_REVS = 40;
 /** The return cycle: in the run-out groove, lifting, swinging out, lowering (seconds). */
 export const RUNOUT_S = 6;
 export const LIFT_S = 1.6;
-export const SWING_S = 5;
-export const LOWER_S = 2.2;
+const SWING_S = 5;
+const LOWER_S = 2.2;
 export const RETURN_S = RUNOUT_S + LIFT_S + SWING_S + LOWER_S;
 
-export interface ArmState {
+interface ArmState {
   /** Revolutions played into the side, 0..SIDE_REVS. */
   revs: number;
   /** Seconds into the return cycle, or -1 while playing. */
@@ -213,7 +213,7 @@ export function advanceArm(s: ArmState, dt: number, rps: number): ArmState {
   return s;
 }
 
-export interface ArmPose {
+interface ArmPose {
   /** The groove radius under the stylus. */
   r: number;
   /** 0: stylus in the groove, 1: fully lifted. */
@@ -253,14 +253,14 @@ export function armPose(s: ArmState, out: ArmPose): ArmPose {
  * stylus at groove radius `r`: the arm swings from the back right, so the
  * stylus lands on the record's front-right quarter.
  */
-export function armAngle(r: number): number {
+function armAngle(r: number): number {
   const base = Math.atan2(-PIVOT_Z, -PIVOT_X);
   const c = (PIVOT_D * PIVOT_D + ARM_L * ARM_L - r * r) / (2 * PIVOT_D * ARM_L);
   return base + Math.acos(clamp(c, -1, 1));
 }
 
 /** Direction towards the key light (world, before mirroring for the side), not normalised. */
-export const LIGHT = [0.45, 0.78, 0.42] as const;
+const LIGHT = [0.45, 0.78, 0.42] as const;
 
 /** Unit light direction for a side: the lamp is on the outer side, above and behind. */
 export function lightDir(side: number, out: Float64Array | number[]): void {
@@ -275,12 +275,12 @@ export function lightDir(side: number, out: Float64Array | number[]): void {
  * screen units for the tube, headshell, counterweight and finger lift, then
  * the tube's and headshell's shadows.
  */
-export const ARM_TUBE = 0;
+const ARM_TUBE = 0;
 export const ARM_HEAD = 4;
-export const ARM_WEIGHT = 8;
-export const ARM_FINGER = 12;
-export const ARM_TUBE_SHADOW = 16;
-export const ARM_HEAD_SHADOW = 20;
+const ARM_WEIGHT = 8;
+const ARM_FINGER = 12;
+const ARM_TUBE_SHADOW = 16;
+const ARM_HEAD_SHADOW = 20;
 export const ARM_FLOATS = 24;
 
 const tmp = new Float64Array(2);

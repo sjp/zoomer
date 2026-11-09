@@ -7,7 +7,7 @@
  */
 
 /** What copying needs from the browser, so tests can stand in for it. */
-export interface ClipboardEnv {
+interface ClipboardEnv {
   /** `navigator.clipboard.writeText`, when the page has it. */
   writeText?: ((text: string) => Promise<void>) | undefined;
   /** Copies `text` the old way; returns whether the browser says it did. */
@@ -15,7 +15,7 @@ export interface ClipboardEnv {
 }
 
 /** Copies via a hidden, selected textarea and `execCommand("copy")`. */
-export function legacyCopy(text: string): boolean {
+function legacyCopy(text: string): boolean {
   const area = document.createElement("textarea");
   area.value = text;
   area.setAttribute("readonly", "");

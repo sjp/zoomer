@@ -44,16 +44,16 @@ export const MAX_BLOSSOMS = 360;
 export const BLOSSOMS_PER_BRANCH = 140;
 
 /** Rotation per segment (radians) at breeze 1, by depth: the main branch barely moves. */
-export const DEPTH_GAIN = [0.008, 0.04, 0.055, 0.065] as const;
+const DEPTH_GAIN = [0.008, 0.04, 0.055, 0.065] as const;
 /** Seconds of lag per level of depth, so the twigs trail the branch they grow from. */
-export const LAG_PER_DEPTH = 0.45;
+const LAG_PER_DEPTH = 0.45;
 
 /** What sits on a twig. */
 export const KIND_BLOSSOM = 0;
-export const KIND_BUD = 1;
-export const KIND_LEAF = 2;
+const KIND_BUD = 1;
+const KIND_LEAF = 2;
 
-export interface Segment {
+interface Segment {
   /** Index of the segment this one grows from (it starts at that one's end), or -1 for a root. */
   readonly parent: number;
   /** 0 for the main branch, 1 for its twigs, and so on. */
@@ -77,7 +77,7 @@ export interface Segment {
   readonly tip: boolean;
 }
 
-export interface Blossom {
+interface Blossom {
   readonly segment: number;
   /** Position along the segment, 0..1, and offset across it (reference px, + = the segment's left). */
   readonly t: number;
@@ -235,7 +235,7 @@ export function blossomBudget(corner: CornerId, density: number): number {
  * index `first` on), denser towards the tips: a segment's share grows with its
  * depth and doubles at a tip, and positions along it lean towards its end.
  */
-export function placeBlossoms(
+function placeBlossoms(
   segments: readonly Segment[],
   count: number,
   seed: number,
@@ -315,7 +315,7 @@ export function buildScene(corner: CornerId, seed: number, density: number): Sce
 // --- Sway -------------------------------------------------------------------
 
 /** A segment's own rotation (radians) at swell `phase` and `breeze` (0..1). */
-export const segmentAngle = (s: Segment, phase: number, breeze: number) =>
+const segmentAngle = (s: Segment, phase: number, breeze: number) =>
   breeze * s.gain * swayAt(BREEZE_SWELL, phase, s.lag);
 
 /** The posed scene, written by `poseScene`; preallocate with `createPose`. */
@@ -397,7 +397,7 @@ const hex = (h: string): Rgb => {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
-export interface Sky {
+interface Sky {
   readonly top: Rgb;
   readonly bottom: Rgb;
   /** Bark colour, a little lifted towards the sky's light. */
@@ -410,7 +410,7 @@ export const SKIES: Readonly<Record<SkyId, Sky>> = {
   dusk: { top: hex("#a99bc4"), bottom: hex("#f3c6bf"), bark: hex("#3a2630") },
 };
 
-export interface BlossomPalette {
+interface BlossomPalette {
   /** Petal colours, the bud colour, and the pale centre. */
   readonly petals: readonly Rgb[];
   readonly bud: Rgb;
@@ -436,7 +436,7 @@ export const BLOSSOM_PALETTES: Readonly<Record<BlossomId, BlossomPalette>> = {
 };
 
 /** Fresh young leaves. */
-export const LEAF_GREEN: Rgb = hex("#8fb565");
+const LEAF_GREEN: Rgb = hex("#8fb565");
 
 /** Falling-petal seasons (see `leaves-sim.ts`) in each blossom colour. */
 export const PETAL_SEASONS: Readonly<Record<BlossomId, Season>> = (() => {
@@ -528,7 +528,7 @@ export function writeBlossoms(
 /** Shed petals waiting for a free piece; more are dropped rather than burst out later. */
 export const MAX_PENDING = 4;
 
-export interface Shedder {
+interface Shedder {
   /** Petals due but not yet taken. */
   readonly pending: number;
   /** Advances `dt` seconds at `rate` petals per second (a Poisson process). */

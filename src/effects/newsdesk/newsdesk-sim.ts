@@ -18,9 +18,9 @@ import { clamp, smoothstep, wrap } from "../math";
 export const DESIGN_ASPECT = 16 / 9;
 
 /** A box: centre x, y and half width, half height. */
-export type Box = [number, number, number, number];
+type Box = [number, number, number, number];
 /** A disc: centre x, y and radius. */
-export type Disc = [number, number, number];
+type Disc = [number, number, number];
 
 export interface DeskLayout {
   aspect: number;
@@ -49,7 +49,7 @@ export interface DeskLayout {
 /** The video wall's bezel round its glass. */
 export const WALL_BEZEL = 0.009;
 /** How far the light strips stand in from the side pieces' ends. */
-export const STRIP_INSET = 0.016;
+const STRIP_INSET = 0.016;
 
 /** The wall's top and bottom edges at `x`. */
 export function wallEdges(l: DeskLayout, x: number): [number, number] {
@@ -180,7 +180,7 @@ export function tickerLine(text: string): string {
 /** Texels per row of the ticker's strip texture; longer strips wrap onto more rows. */
 export const TICKER_ROW = 2048;
 /** The ticker's speed at 1080p, in pixels per second. */
-export const TICKER_SPEED = 60;
+const TICKER_SPEED = 60;
 
 /**
  * The ticker's speed in device pixels a second: about `TICKER_SPEED` times

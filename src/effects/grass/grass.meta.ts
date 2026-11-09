@@ -1,14 +1,14 @@
 import type { FieldId, SunId } from "./grass-sim";
 import { defineEffectMeta } from "../types";
 
-export const FIELD_OPTIONS = [
+const FIELD_OPTIONS = [
   { value: "meadow", label: "Meadow" },
   { value: "wheat", label: "Wheat" },
   { value: "dry", label: "Dry grass" },
   { value: "lavender", label: "Lavender" },
 ] as const satisfies readonly { value: FieldId; label: string }[];
 
-export const SUN_OPTIONS = [
+const SUN_OPTIONS = [
   { value: "midday", label: "Midday" },
   { value: "golden", label: "Golden hour" },
   { value: "overcast", label: "Overcast" },

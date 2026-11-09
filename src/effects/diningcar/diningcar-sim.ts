@@ -27,7 +27,7 @@ export const WIN_Y1 = 960;
 export const WIN_RADIUS = 58;
 export const FRAME_W = 16;
 /** Half width of the panelled post between the two panes, behind the speaker. */
-export const POST_HALF = 72;
+const POST_HALF = 72;
 /** Where the lamp, vase and drink stand on the cloth (y of their bases). */
 export const LAMP_BASE_Y = 214;
 export const VASE_BASE_Y = 222;
@@ -129,7 +129,7 @@ export const MIN_JOLT_GAP = 1;
 /** Relative jitter of each rail length and of the minimum gap. */
 export const JOLT_JITTER = 0.08;
 
-export interface Jolts {
+interface Jolts {
   readonly rng: () => number;
   /** Distance to the next joint, world units. */
   until: number;
@@ -166,7 +166,7 @@ export function stepJolts(j: Jolts, dt: number, v: number): boolean {
 // Springs
 // ---------------------------------------------------------------------------
 
-export interface Spring {
+interface Spring {
   /** Displacement and velocity. */
   x: number;
   v: number;
@@ -233,19 +233,19 @@ export const BUMP_KICK = 60;
 export const STATION_Z = 10;
 export const BUILDING_Z = 17;
 /** Platform length and lamp spacing (world units) for a station; a crossing has two lamps. */
-export const STATION_LEN = 48;
-export const STATION_LAMP_GAP = 8;
-export const CROSSING_LEN = 5;
+const STATION_LEN = 48;
+const STATION_LAMP_GAP = 8;
+const CROSSING_LEN = 5;
 /** Gap from one lit place to the next, world units: about a minute at full `stations` and default speed, ten at the least. */
-export const MIN_STATION_GAP = 150;
-export const MAX_STATION_GAP = 1450;
+const MIN_STATION_GAP = 150;
+const MAX_STATION_GAP = 1450;
 /** Share of lit places that are level crossings rather than stations. */
-export const CROSSING_SHARE = 0.4;
+const CROSSING_SHARE = 0.4;
 /** Seconds for the station's light on the table to come up or fade: never a flash. */
 export const STATION_RAMP = 1.6;
 /** Peak light on the table: a station, and a crossing's two lamps. */
-export const STATION_LIGHT = 1;
-export const CROSSING_LIGHT = 0.45;
+const STATION_LIGHT = 1;
+const CROSSING_LIGHT = 0.45;
 
 /** Mean gap between lit places for `stations` (0..1); infinite at 0. */
 export function stationGap(stations: number): number {
@@ -256,7 +256,7 @@ export function stationGap(stations: number): number {
   return MIN_STATION_GAP + (MAX_STATION_GAP - MIN_STATION_GAP) * (1 - s) ** 2;
 }
 
-export interface Stations {
+interface Stations {
   readonly rng: () => number;
   /** World x of the current or next lit place's first lamp; NaN until placed. */
   at: number;
@@ -364,7 +364,7 @@ export function viewStation(st: Stations, pos: number, cx: number, out: Float32A
 // Drinks
 // ---------------------------------------------------------------------------
 
-export interface DrinkLook {
+interface DrinkLook {
   /** 0 a wine glass, 1 a tea glass in a brass holder. */
   readonly vessel: number;
   readonly rgb: readonly [number, number, number];
@@ -374,7 +374,7 @@ export interface DrinkLook {
   readonly level: number;
 }
 
-export const DRINKS: Readonly<Record<Drink, DrinkLook>> = {
+const DRINKS: Readonly<Record<Drink, DrinkLook>> = {
   red: { vessel: 0, rgb: [0.34, 0.015, 0.05], alpha: 0.9, level: 128 },
   white: { vessel: 0, rgb: [0.86, 0.7, 0.32], alpha: 0.42, level: 128 },
   tea: { vessel: 1, rgb: [0.5, 0.2, 0.05], alpha: 0.85, level: 112 },

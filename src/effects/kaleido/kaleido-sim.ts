@@ -98,7 +98,7 @@ export function sourceLayout(w: number, radiusPx: number, maxSize: number): Sour
 export type PaletteName = "jewel" | "pastel" | "mono";
 export type ViewName = "full" | "circle";
 
-export interface KaleidoPalette {
+interface KaleidoPalette {
   /** Backlight showing between chips. */
   bg: string;
   /** Circle view: the dark surround outside the eyepiece. */

@@ -36,8 +36,8 @@ export { type StepClock, takeSteps } from "../step-clock";
 /** Grid cells across the frame. */
 export const GRID_W = 256;
 /** Grid height limits, for very tall or very wide frames. */
-export const MIN_GRID_H = 64;
-export const MAX_GRID_H = 256;
+const MIN_GRID_H = 64;
+const MAX_GRID_H = 256;
 /** Simulation steps per second at speed 1; the effect never runs more than one a frame. */
 export const MAX_STEP_RATE = 60;
 
@@ -54,7 +54,7 @@ export function gridSize(
 }
 
 /** One Lenia rule: published numeric parameters. */
-export interface Rule {
+interface Rule {
   /** Name and code in the Lenia species table. */
   name: string;
   /** Kernel radius in cells. */
@@ -97,7 +97,7 @@ export const KERNEL_R = 13;
 /** The kernel peaks every rule shares. */
 export const KERNEL_B: readonly number[] = [1];
 
-export type SpeciesId = (typeof SPECIES_OPTIONS)[number]["value"];
+type SpeciesId = (typeof SPECIES_OPTIONS)[number]["value"];
 
 /**
  * What each species option runs: the rules it cycles through (the next one on
@@ -118,7 +118,7 @@ export function speciesFor(id: string): (typeof SPECIES)[SpeciesId] {
 }
 
 /** The kernel core, a smooth bump on (0, 1) peaking at 1 for r = 1/2. */
-export function kernelCore(r: number): number {
+function kernelCore(r: number): number {
   return r <= 0 || r >= 1 ? 0 : Math.exp(4 - 1 / (r * (1 - r)));
 }
 
@@ -151,7 +151,7 @@ export function growth(u: number, mu: number, sigma: number): number {
  * fetches twice over: about 133 fetches of each sign for R = 13, against 528
  * cells in the disc.
  */
-export interface TapTable {
+interface TapTable {
   /** Pairs. */
   count: number;
   /** Per pair: x offset (fractional), y offset, weight. */
@@ -201,7 +201,7 @@ export const TAPS = buildTaps(KERNEL_R, KERNEL_B);
 
 /** Largest representable 16-bit state value: the GPU stores A in two bytes. */
 const Q16 = 65535;
-export const quantise16 = (v: number) => Math.round(clamp(v, 0, 1) * Q16) / Q16;
+const quantise16 = (v: number) => Math.round(clamp(v, 0, 1) * Q16) / Q16;
 
 /**
  * Reads A at fractional (x, y), linearly filtered between whole cells along x,
@@ -247,7 +247,7 @@ export function potential(
 }
 
 /** Settings for one CPU step. */
-export interface StepOptions {
+interface StepOptions {
   /** Round the result to 16 bits, as the GPU stores it. */
   quantise?: boolean;
   /** Filter weight bits (see `sampleX`); 0 for exact. */
@@ -344,7 +344,7 @@ export function mass(A: Float32Array): number {
  *   so its seeding falls back to random soup, as do the "soup" species and
  *   any rule with no listed seeds.
  */
-export const PATCH_DIAMETER = 3.2;
+const PATCH_DIAMETER = 3.2;
 /** Patch radius in cells, for R = KERNEL_R. */
 export const PATCH_RADIUS = (PATCH_DIAMETER * KERNEL_R) / 2;
 /** Side of the square buffer one patch is drawn into. */
@@ -412,7 +412,7 @@ export function spawnPatch(pick: number, ruleId: RuleId, soup: boolean, out: Flo
 }
 
 /** Random-soup patches seeded at once. */
-export const SOUP_PATCHES = 8;
+const SOUP_PATCHES = 8;
 /** Minimum distance between seeded patch centres, in cells: no overlap, and a kernel's reach apart. */
 export const PATCH_SPACING = 2 * PATCH_RADIUS + KERNEL_R;
 
@@ -534,7 +534,7 @@ export function pickSpawnSpot(
 const SPOT_SCRATCH = new Int32Array(2);
 
 /** A tile whose largest value is at most this (in 8-bit steps) counts as empty. */
-export const EMPTY_TILE_MAX = 3;
+const EMPTY_TILE_MAX = 3;
 
 /**
  * Packs a field into the GPU's RGBA8 state layout: A as 16 bits (r = high byte,
@@ -611,9 +611,9 @@ export function readStats(bytes: Uint8Array, out: FieldStats): FieldStats {
   return out;
 }
 
-export type LifePhase = "in" | "live" | "out";
+type LifePhase = "in" | "live" | "out";
 
-export interface Life {
+interface Life {
   phase: LifePhase;
   /** Display brightness, 0..1. */
   fade: number;
@@ -682,7 +682,7 @@ export function judgeStats(
 
 // Palettes -------------------------------------------------------------------
 
-export type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
+type PaletteId = (typeof PALETTE_OPTIONS)[number]["value"];
 
 /** Palettes as colour stops from empty (t = 0) to the densest core (t = 1). */
 export const PALETTES = {

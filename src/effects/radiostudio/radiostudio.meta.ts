@@ -1,21 +1,21 @@
 import { defineEffectMeta } from "../types";
 
-export type OnAirMode = "on" | "off" | "auto";
-export type MicSide = "left" | "right";
+type OnAirMode = "on" | "off" | "auto";
+type MicSide = "left" | "right";
 
-export const ON_AIR_OPTIONS = [
+const ON_AIR_OPTIONS = [
   { value: "auto", label: "Auto" },
   { value: "on", label: "On" },
   { value: "off", label: "Off" },
 ] as const satisfies readonly { value: OnAirMode; label: string }[];
 
-export const MIC_OPTIONS = [
+const MIC_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ] as const satisfies readonly { value: MicSide; label: string }[];
 
 /** Code points on the sign: one short line. */
-export const SIGN_MAX_LENGTH = 12;
+const SIGN_MAX_LENGTH = 12;
 
 export const radiostudioMeta = defineEffectMeta({
   id: "radiostudio",

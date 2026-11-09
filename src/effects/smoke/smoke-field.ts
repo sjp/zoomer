@@ -115,7 +115,7 @@ ${
 }
 `;
 
-export const SMOKE_FIELD_UNIFORMS = [
+const SMOKE_FIELD_UNIFORMS = [
   "uField",
   "uRegion",
   "uPhase",
@@ -128,7 +128,7 @@ export const SMOKE_FIELD_UNIFORMS = [
   "uDecay",
   "uSeed",
 ] as const;
-export type SmokeFieldUniform = (typeof SMOKE_FIELD_UNIFORMS)[number];
+type SmokeFieldUniform = (typeof SMOKE_FIELD_UNIFORMS)[number];
 
 export interface SmokeField {
   /** The advection program; bind it and set `uniforms` before `advance`. */

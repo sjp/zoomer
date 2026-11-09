@@ -85,7 +85,7 @@ export const BURN_MAX = 4;
 /** Seconds the glow takes to rise at a burn's start and to fall at its end. */
 export const BURN_RAMP = 1;
 
-export interface Burner {
+interface Burner {
   /** Seconds into the current burn, or -1 between burns. */
   age: number;
   /** The current burn's length (s). */
@@ -102,7 +102,7 @@ export const burnerGap = (gap: number) =>
   clamp(Number.isFinite(gap) ? gap : MIN_GAP, MIN_GAP, MAX_GAP);
 
 /** How long the quiet spell lasts for a gap param of `gap` (s). */
-export const quietLength = (b: Burner, gap: number) =>
+const quietLength = (b: Burner, gap: number) =>
   burnerGap(gap) * (1 - GAP_SPREAD + 2 * GAP_SPREAD * b.draw);
 
 /** A burner for `seed`, part-way through its first quiet spell. */
@@ -170,7 +170,7 @@ export const GORES = 28;
 /** The most colours a scheme has. */
 export const MAX_SCHEME_COLOURS = 7;
 
-export interface Scheme {
+interface Scheme {
   /** Gore colours, in order round the envelope (or picked from at random). */
   colours: readonly Rgb[];
   /** True to pick each panel's colour at random (patchwork) rather than cycle by gore. */
@@ -196,7 +196,7 @@ export const schemeFor = (id: string): Scheme => lookup(SCHEMES, id, "rainbow");
 
 /* ----- Light ----- */
 
-export interface RideLight {
+interface RideLight {
   /** The Hot-Air Balloons effect's light: sky, glow, sun, lit and shaded sides, mist. */
   base: LightSetting;
   /** The sun's bearing (radians, clockwise from straight ahead) and height above the horizon. */
@@ -379,7 +379,7 @@ export const HEIGHT_METRES = 14;
 /** The river's width, as a fraction of the map. */
 export const RIVER_WIDTH = 8 / MAP_SIZE;
 /** Its meander: a sum of whole-cycle sines across the map, so it tiles. */
-export const RIVER_TERMS = 3;
+const RIVER_TERMS = 3;
 const RIVER_AMPS = [0.09, 0.035, 0.015] as const;
 
 /** The river's meander phases for `seed`. */
@@ -707,21 +707,21 @@ export function buildLandscape(seed: number, size = MAP_SIZE): Uint8Array {
 /* ----- Other balloons ----- */
 
 /** The nearest and farthest the other balloons fly, metres. */
-export const OTHER_NEAR = 550;
-export const OTHER_FAR = 2600;
+const OTHER_NEAR = 550;
+const OTHER_FAR = 2600;
 /** Their envelopes' radius, metres. */
-export const OTHER_RADIUS = 9;
+const OTHER_RADIUS = 9;
 /** Their heights, as angles above (or below) the horizon, radians. */
-export const OTHER_LOW = -0.07;
-export const OTHER_HIGH = 0.12;
+const OTHER_LOW = -0.07;
+const OTHER_HIGH = 0.12;
 /** How far round they spread, radians either side: off-screen at the ends. */
-export const OTHER_SPAN = 1.15;
+const OTHER_SPAN = 1.15;
 /** How far they bob up and down, metres, and their slowest and fastest bob (s). */
-export const BOB_METRES = 6;
-export const BOB_MIN = 18;
-export const BOB_MAX = 34;
+const BOB_METRES = 6;
+const BOB_MIN = 18;
+const BOB_MAX = 34;
 /** Their fastest drift round relative to us, radians per second. */
-export const OTHER_DRIFT = 0.0025;
+const OTHER_DRIFT = 0.0025;
 /** Seconds to fade in or out when the count changes. */
 export const OTHER_FADE = 2;
 

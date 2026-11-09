@@ -38,7 +38,7 @@ type Vec3 = readonly [number, number, number];
  * surface of its own), and its wing side (+1 right wing, -1 left, 0 for parts
  * that don't flap).
  */
-export interface MeshTriangle {
+interface MeshTriangle {
   readonly v: readonly [Vec3, Vec3, Vec3];
   readonly part: number;
   readonly side: number;
@@ -268,13 +268,13 @@ export const GLIDE = 0.3;
 const FLAP_AMP = 0.5;
 const FLAP_LIFT = 0.15;
 /** Seconds per wingbeat. */
-export const FLAP_PERIOD = 0.8;
+const FLAP_PERIOD = 0.8;
 /** Wingbeats per flap event. */
 const FLAP_CYCLES_MIN = 2;
 const FLAP_CYCLES_MAX = 3;
 /** Seconds of gliding between flap events. */
-export const FLAP_GAP_MIN = 5;
-export const FLAP_GAP_MAX = 14;
+const FLAP_GAP_MIN = 5;
+const FLAP_GAP_MAX = 14;
 /** Bounds of `flapAngle`. */
 export const FLAP_MIN = GLIDE + FLAP_LIFT - FLAP_AMP;
 export const FLAP_MAX = GLIDE + FLAP_LIFT + FLAP_AMP;
@@ -295,8 +295,8 @@ export function flapAngle(u: number, cycles: number): number {
 // ---------------------------------------------------------------------------
 
 /** Crane size (height units per crane unit) at depth 0 (far) and 1 (near). */
-export const SIZE_FAR = 0.05;
-export const SIZE_NEAR = 0.12;
+const SIZE_FAR = 0.05;
+const SIZE_NEAR = 0.12;
 /** Crane units from the origin to the farthest point of the mesh, plus a margin. */
 export const EXTENT = 1.05;
 /** Flight lanes (height units): above and below the central band the speaker covers. */
@@ -305,7 +305,7 @@ export const BOTTOM_LANE: readonly [number, number] = [0.1, 0.3];
 /** Share of cranes in the top lane. */
 const TOP_SHARE = 0.6;
 /** Vertical bob amplitude (height units) and rate (radians per second). */
-export const BOB_AMP = 0.022;
+const BOB_AMP = 0.022;
 const BOB_RATE: readonly [number, number] = [0.25, 0.45];
 /** Heading wobble amplitude (radians) and rate; banking follows the turn rate. */
 const SWAY_AMP = 0.18;
@@ -319,12 +319,12 @@ const TILT_PER_Y = 0.6;
 /** Haze towards the sky colour for the farthest cranes. */
 const HAZE_FAR = 0.35;
 
-export const craneSize = (depth: number) => mix(SIZE_FAR, SIZE_NEAR, depth);
-export const craneHaze = (depth: number) => HAZE_FAR * (1 - depth);
+const craneSize = (depth: number) => mix(SIZE_FAR, SIZE_NEAR, depth);
+const craneHaze = (depth: number) => HAZE_FAR * (1 - depth);
 /** Flight speed (height units per second at speed 1) for a depth and a 0..1 random. */
-export const craneSpeed = (depth: number, r: number) => (0.018 + 0.026 * depth) * (0.85 + 0.3 * r);
+const craneSpeed = (depth: number, r: number) => (0.018 + 0.026 * depth) * (0.85 + 0.3 * r);
 
-export interface Flyer {
+interface Flyer {
   /** Not on screen and not flying: waits to be spawned when the count allows. */
   parked: boolean;
   /** Centre x (height units). */
@@ -351,7 +351,7 @@ export interface Flyer {
   flapWait: number;
 }
 
-export interface Hanger {
+interface Hanger {
   /** Anchor x, as a fraction of the width. */
   anchor: number;
   /** Thread length (height units). */
@@ -414,7 +414,7 @@ function enter(f: Flyer, aspect: number): void {
 }
 
 /** Whether `f` has flown off the far side. */
-export const flownOff = (f: Flyer, aspect: number) =>
+const flownOff = (f: Flyer, aspect: number) =>
   f.dir > 0 ? f.x > aspect + craneMargin(f.depth) : f.x < -craneMargin(f.depth);
 
 /** A crane field for `seed`: the first `count` cranes spread over the frame, the rest parked. */
@@ -511,7 +511,7 @@ export function stepCranes(c: Cranes, dt: number, aspect: number, speed: number,
 }
 
 /** A crane's placement for drawing. */
-export interface Pose {
+interface Pose {
   /** Origin of the crane's mesh (height units). */
   x: number;
   y: number;
@@ -564,7 +564,7 @@ export function flyerPose(f: Flyer, out: Pose): void {
 }
 
 /** Swing angle of hanger `h`'s thread from the vertical at mobile time `time`. */
-export function hangerSwing(h: Hanger, time: number): number {
+function hangerSwing(h: Hanger, time: number): number {
   return SWING_AMP * Math.sin(h.swing + h.swingRate * time);
 }
 
@@ -603,11 +603,11 @@ export function hangerPose(
 // ---------------------------------------------------------------------------
 
 /** Washi print on a crane: none, stripes or dots. */
-export const PATTERN_NONE = 0;
+const PATTERN_NONE = 0;
 export const PATTERN_STRIPES = 1;
 export const PATTERN_DOTS = 2;
 
-export interface PaperColour {
+interface PaperColour {
   readonly base: Rgb;
   readonly print: Rgb;
   readonly pattern: number;
@@ -648,7 +648,7 @@ export function paletteFor(id: string): readonly PaperColour[] {
 export const paperFor = (palette: readonly PaperColour[], tint: number) =>
   palette[Math.min(palette.length - 1, Math.floor(tint * palette.length))];
 
-export interface Sky {
+interface Sky {
   readonly top: Rgb;
   readonly bottom: Rgb;
 }
@@ -690,7 +690,7 @@ const Z_SHARE = 0.4;
 export const zScale = (n: number) => (Z_SHARE * Z_SPAN) / Math.max(1, n);
 
 /** Scratch, so writing instances allocates nothing. */
-export interface InstanceScratch {
+interface InstanceScratch {
   readonly poses: Pose[];
   readonly order: Int32Array;
   readonly matrix: Float64Array;

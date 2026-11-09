@@ -10,7 +10,7 @@ export const PALETTE_OPTIONS = [
   { value: "archive", label: "Archive" },
 ] as const satisfies readonly { value: PaletteId; label: string }[];
 
-export const BEAM_OPTIONS = [
+const BEAM_OPTIONS = [
   { value: "left", label: "From left" },
   { value: "right", label: "From right" },
   { value: "off", label: "Off" },
