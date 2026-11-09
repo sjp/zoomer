@@ -6,6 +6,7 @@ import {
   CLOUD_DEPTH,
   CLOUD_SLOT,
   cloudLight,
+  CLOUD_MAX_PASS,
   createBeamGeometry,
   createMotes,
   lampPosition,
@@ -109,6 +110,24 @@ describe("cloudLight", () => {
     for (const m of minima) {
       expect(m).toBeGreaterThanOrEqual(1 - CLOUD_DEPTH[1] - 1e-6);
       expect(m).toBeLessThanOrEqual(1 - CLOUD_DEPTH[0] + 1e-6);
+    }
+  });
+
+  it("passes last at most CLOUD_MAX_PASS and end inside their slot, for any seed", () => {
+    const step = 0.1;
+    for (let seed = 0; seed < 50; seed++) {
+      for (let slot = 0; slot < 5; slot++) {
+        let first = Infinity;
+        let last = -Infinity;
+        for (let local = 0; local < CLOUD_SLOT; local += step) {
+          if (cloudLight(seed, slot * CLOUD_SLOT + local) < 1) {
+            first = Math.min(first, local);
+            last = local;
+          }
+        }
+        expect(last - first).toBeLessThanOrEqual(CLOUD_MAX_PASS);
+        expect(last).toBeLessThan(CLOUD_SLOT - step);
+      }
     }
   });
 
