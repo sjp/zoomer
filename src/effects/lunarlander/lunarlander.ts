@@ -1,4 +1,4 @@
-import { advanceGraph, createGraphWalk, type GraphWalk, walkWander } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, type GraphWalk, walkWander } from "../graph-walk";
 import {
   beginFrame,
   createDataTexture,

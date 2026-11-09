@@ -70,7 +70,7 @@ import {
 import { approach } from "../math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "./bridge-ship-shapes";
 import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt, type ShipPlan } from "./bridge-ships";
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "./bridge-graph";
+import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
 import { planetStyle } from "./bridge-planets";
 import {
   clockText,

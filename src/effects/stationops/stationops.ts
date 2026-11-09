@@ -1,4 +1,4 @@
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
 import {
   beginFrame,
   createDataTexture,

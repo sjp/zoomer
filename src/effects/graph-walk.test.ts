@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  advanceGraph,
-  createGraphWalk,
-  GRAPH_RATE,
-  GRAPH_SAMPLES,
-  graphShift,
-} from "./bridge-graph";
+import { advanceGraph, createGraphWalk, GRAPH_RATE, GRAPH_SAMPLES, graphShift } from "./graph-walk";
 
 const N = GRAPH_SAMPLES;
 

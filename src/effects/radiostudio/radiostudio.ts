@@ -1,4 +1,4 @@
-import { advanceGraph, createGraphWalk, walkWander } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, walkWander } from "../graph-walk";
 import { unitRgbMemo } from "../color";
 import {
   beginFrame,

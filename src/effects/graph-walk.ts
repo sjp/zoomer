@@ -1,13 +1,13 @@
 /**
- * Starship Bridge POWER graph: a noisy random walk that scrolls across each
- * graph widget. Each row is a mean-reverting walk (so it wanders but stays on
+ * Scrolling graph widgets for the Scenes' consoles: a noisy random walk that
+ * scrolls across each graph. Each row is a mean-reverting walk (so it wanders but stays on
  * the graph) with strong jitter on every sample, drawn from a seeded hash of
  * the sample's index, so the trace never repeats. Values are bytes, one row per
  * widget, ready to upload as an R8 texture. `walkWander` averages a row's
  * newest samples into a slowly wandering value, for gauge needles.
  */
-import { clamp } from "../math";
-import { hash32 } from "../noise";
+import { clamp } from "./math";
+import { hash32 } from "./noise";
 
 /** Samples held per row: the graph shows `GRAPH_SAMPLES - 2` segments across its width. */
 export const GRAPH_SAMPLES = 128;

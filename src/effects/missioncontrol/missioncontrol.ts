@@ -81,7 +81,7 @@ import {
   WALL_GRAPHS,
   writeLine,
 } from "./missioncontrol-text";
-import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../bridge/bridge-graph";
+import { advanceGraph, createGraphWalk, GRAPH_SAMPLES, graphShift } from "../graph-walk";
 import { hexToUnitRgb, type Rgb } from "../color";
 import {
   beginFrame,
