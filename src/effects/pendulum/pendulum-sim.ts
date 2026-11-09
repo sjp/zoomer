@@ -119,12 +119,6 @@ export interface RigConfig {
   refWidth: number;
 }
 
-export interface RigParams {
-  cycle: number;
-  /** Swing amplitude, degrees. */
-  amplitude: number;
-}
-
 /** The region the rig is fitted into, reference px. */
 export function placementBox(
   placement: PendulumPlacement,
@@ -364,11 +358,14 @@ export function createPendulumRig() {
       builtFinish = "";
     },
 
-    /** Advances the clock and eases the swing and lengths toward the params. */
-    update(dt: number, p: RigParams): void {
-      const n = baseOscillations(p.cycle, state.count);
+    /**
+     * Advances the clock and eases the swing and lengths toward the params: the
+     * pattern's `cycle` (s) and the swing `amplitude` (degrees).
+     */
+    update(dt: number, cycle: number, amplitude: number): void {
+      const n = baseOscillations(cycle, state.count);
       state.n = n;
-      const target = clamp(p.amplitude, 0, MAX_AMPLITUDE) * DEG;
+      const target = clamp(amplitude, 0, MAX_AMPLITUDE) * DEG;
       const e = 1 - Math.exp(-Math.max(0, dt) * EASE_RATE);
       if (Number.isNaN(state.nShown)) {
         state.nShown = n;
@@ -383,7 +380,7 @@ export function createPendulumRig() {
       } else {
         state.amplitude += (target - state.amplitude) * e;
       }
-      advanceClock(clock, dt, p.cycle, n);
+      advanceClock(clock, dt, cycle, n);
       for (let i = 0; i < state.count; i++) {
         length[i] = state.longest * lengthRatio(i, state.nShown);
         angle[i] = swingAngle(i, clock.phase, clock.u, state.amplitude);

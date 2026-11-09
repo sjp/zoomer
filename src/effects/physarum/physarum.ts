@@ -347,6 +347,8 @@ export const physarum = defineEffect(physarumMeta, {
         }
       };
 
+      const grid: [number, number] = [0, 0];
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -355,7 +357,9 @@ export const physarum = defineEffect(physarumMeta, {
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          const [w, h] = gridSize(width, height, BASE_CELL * p.scale * scale);
+          gridSize(width, height, BASE_CELL * p.scale * scale, grid);
+          const w = grid[0];
+          const h = grid[1];
           const count = agentCount(p.agents);
           let reseed = false;
           if (w !== trail.width || h !== trail.height) {

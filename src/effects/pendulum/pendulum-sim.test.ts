@@ -101,7 +101,7 @@ describe("swing", () => {
     const prev = new Float64Array(24);
     for (let s = 0; s < 1200; s++) {
       const cycle = s < 600 ? 30 : 120;
-      rig.update(1 / 60, { cycle, amplitude: 14 });
+      rig.update(1 / 60, cycle, 14);
       for (let i = 0; i < 24; i++) {
         const a = rig.angle[i];
         if (Math.abs(a) > 14 * DEG + 1e-12) {
@@ -143,7 +143,7 @@ describe("lengths", () => {
     let bad = 0;
     for (let count = MIN_PENDULUMS; count <= MAX_PENDULUMS; count++) {
       rig.configure({ count, view: "front", placement: "left", refWidth: 1920 });
-      rig.update(0.1, { cycle: 60, amplitude: 10 });
+      rig.update(0.1, 60, 10);
       for (let i = 1; i < count; i++) {
         if (!(rig.length[i] < rig.length[i - 1])) {
           bad++;
@@ -176,7 +176,7 @@ describe("placement", () => {
               rig.configure({ count, view, placement, refWidth: width });
               const third = (width * scale) / 3;
               for (let s = 0; s < 40; s++) {
-                rig.update(s === 0 ? 0 : 0.37, { cycle: 30, amplitude: MAX_AMPLITUDE });
+                rig.update(s === 0 ? 0 : 0.37, 30, MAX_AMPLITUDE);
                 rig.fill(scale, "chrome", b.balls, b.strings, b.bar, b.shadows);
                 let lo = Infinity;
                 let hi = -Infinity;
@@ -218,7 +218,7 @@ describe("placement", () => {
       for (const width of WIDTHS) {
         rig.configure({ count: MAX_PENDULUMS, view, placement: "top", refWidth: width });
         for (let s = 0; s < 30; s++) {
-          rig.update(s === 0 ? 0 : 0.41, { cycle: 30, amplitude: MAX_AMPLITUDE });
+          rig.update(s === 0 ? 0 : 0.41, 30, MAX_AMPLITUDE);
           rig.fill(1, "brass", b.balls, b.strings, b.bar, b.shadows);
           for (let j = 0; j < rig.state.ballCount; j++) {
             const o = j * BALL_FLOATS;
@@ -242,9 +242,9 @@ describe("frame data", () => {
     const rig = createPendulumRig();
     const b = buffers();
     rig.configure({ count: 15, view: "angled", placement: "top", refWidth: 1920 });
-    rig.update(0, { cycle: 60, amplitude: 15 });
+    rig.update(0, 60, 15);
     // Mid-cycle, so the swings spread toward and away from the viewer.
-    rig.update(17.3, { cycle: 60, amplitude: 15 });
+    rig.update(17.3, 60, 15);
     rig.fill(1, "chrome", b.balls, b.strings, b.bar, b.shadows);
     let minR = Infinity;
     let maxR = 0;
@@ -267,8 +267,8 @@ describe("frame data", () => {
     const rig = createPendulumRig();
     const b = buffers();
     rig.configure({ count: 12, view: "front", placement: "right", refWidth: 1920 });
-    rig.update(0, { cycle: 60, amplitude: 12 });
-    rig.update(3.1, { cycle: 60, amplitude: 12 });
+    rig.update(0, 60, 12);
+    rig.update(3.1, 60, 12);
     rig.fill(1, "coloured", b.balls, b.strings, b.bar, b.shadows);
     const heads = new Set<string>();
     for (let j = 0; j < 12; j++) {
@@ -293,7 +293,7 @@ describe("frame data", () => {
     const rig = createPendulumRig();
     const b = buffers();
     rig.configure({ count: 10, view: "above", placement: "top", refWidth: 1920 });
-    rig.update(0, { cycle: 60, amplitude: 12 });
+    rig.update(0, 60, 12);
     rig.fill(1, "coloured", b.balls, b.strings, b.bar, b.shadows);
     const colours = new Set<string>();
     for (let j = 0; j < 10; j++) {
@@ -321,7 +321,7 @@ describe("frame data", () => {
     let bad = 0;
     for (const view of VIEWS) {
       rig.configure({ count: 20, view, placement: "left", refWidth: 1920 });
-      rig.update(0, { cycle: 60, amplitude: 12 });
+      rig.update(0, 60, 12);
       rig.fill(2, "chrome", b.balls, b.strings, b.bar, b.shadows);
       if (rig.state.shadowCount !== 21) {
         bad++;

@@ -109,10 +109,12 @@ export function birdCounts(birds: number, quality: string, out: BirdCounts): Bir
   return out;
 }
 
-/** Field grid size for a frame of `aspect` = width / height. */
-export function gridSize(aspect: number): [number, number] {
+/** Field grid size for a frame of `aspect` = width / height, written to `out`. */
+export function gridSize(aspect: number, out: [number, number] = [0, 0]): [number, number] {
   const a = Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 9;
-  return [clamp(Math.round(a * GRID_H), 1, MAX_GRID_W), GRID_H];
+  out[0] = clamp(Math.round(a * GRID_H), 1, MAX_GRID_W);
+  out[1] = GRID_H;
+  return out;
 }
 
 // --- Field encoding --------------------------------------------------------

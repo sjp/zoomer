@@ -441,6 +441,8 @@ export const lenia = defineEffect(leniaMeta, {
         life.quiet = 0;
       };
 
+      const grid: [number, number] = [0, 0];
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -448,7 +450,9 @@ export const lenia = defineEffect(leniaMeta, {
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          const [w, h] = gridSize(width, height);
+          gridSize(width, height, grid);
+          const w = grid[0];
+          const h = grid[1];
           const count = Math.round(p.count);
           const same =
             p.species === seededSpecies && count === seededCount && p.seed === seededSeed;

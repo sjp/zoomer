@@ -41,10 +41,16 @@ export const MAX_GRID_H = 256;
 /** Simulation steps per second at speed 1; the effect never runs more than one a frame. */
 export const MAX_STEP_RATE = 60;
 
-/** Grid size for a canvas: GRID_W across, square cells. */
-export function gridSize(width: number, height: number): [number, number] {
+/** Grid size for a canvas: GRID_W across, square cells. Written to `out`. */
+export function gridSize(
+  width: number,
+  height: number,
+  out: [number, number] = [0, 0],
+): [number, number] {
   const aspect = height > 0 && width > 0 ? height / width : 9 / 16;
-  return [GRID_W, clamp(Math.round(GRID_W * aspect), MIN_GRID_H, MAX_GRID_H)];
+  out[0] = GRID_W;
+  out[1] = clamp(Math.round(GRID_W * aspect), MIN_GRID_H, MAX_GRID_H);
+  return out;
 }
 
 /** One Lenia rule: published numeric parameters. */

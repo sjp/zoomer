@@ -349,6 +349,8 @@ export const murmuration = defineEffect(murmurationMeta, {
       const steer = new Float32Array(3);
       const predator = new Float32Array(3);
 
+      const grid: [number, number] = [0, 0];
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -362,7 +364,9 @@ export const murmuration = defineEffect(murmurationMeta, {
             birds.seed(seedBirds(1, MAX_BIRDS, aspect, new Float32Array(MAX_BIRDS * BIRD_FLOATS)));
             seeded = true;
           }
-          const [w, h] = gridSize(aspect);
+          gridSize(aspect, grid);
+          const w = grid[0];
+          const h = grid[1];
           if (w !== field.width || h !== field.height) {
             regrid(w, h);
           }

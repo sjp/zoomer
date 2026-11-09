@@ -198,7 +198,7 @@ export const pendulum = defineEffect(pendulumMeta, {
           if (builtKey.take()) {
             rig.configure({ count: p.count, view: p.view, placement: p.placement, refWidth });
           }
-          rig.update(dt, { cycle: p.cycle, amplitude: p.amplitude });
+          rig.update(dt, p.cycle, p.amplitude);
           rig.fill(scale, p.finish, balls.data, strings.data, bar.data, shadows.data);
           const st = rig.state;
 

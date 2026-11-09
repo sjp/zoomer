@@ -102,10 +102,17 @@ export function agentCount(id: string): number {
 /** Floats per agent: x, y (uv) and heading (radians). */
 export const AGENT_FLOATS = 3;
 
-/** Trail grid size for a canvas, with `cell` device pixels per cell. */
-export function gridSize(width: number, height: number, cell: number): [number, number] {
+/** Trail grid size for a canvas, with `cell` device pixels per cell, written to `out`. */
+export function gridSize(
+  width: number,
+  height: number,
+  cell: number,
+  out: [number, number] = [0, 0],
+): [number, number] {
   const c = Math.max(1, cell);
-  return [clamp(Math.ceil(width / c), 1, MAX_GRID), clamp(Math.ceil(height / c), 1, MAX_GRID)];
+  out[0] = clamp(Math.ceil(width / c), 1, MAX_GRID);
+  out[1] = clamp(Math.ceil(height / c), 1, MAX_GRID);
+  return out;
 }
 
 /** Per-agent deposit for the given decay rate, trail grid cells and agent count. */

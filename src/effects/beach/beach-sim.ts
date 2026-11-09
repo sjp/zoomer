@@ -246,11 +246,17 @@ export function layoutAxes(layout: string, aspect: number, out: Float32Array): F
   let y: number;
   let c: number;
   if (layout === "left") {
-    [x, y, c] = [1, 0, 0.2 * aspect];
+    x = 1;
+    y = 0;
+    c = 0.2 * aspect;
   } else if (layout === "right") {
-    [x, y, c] = [-1, 0, -0.8 * aspect];
+    x = -1;
+    y = 0;
+    c = -0.8 * aspect;
   } else if (layout === "bottom") {
-    [x, y, c] = [0, 1, 0.24];
+    x = 0;
+    y = 1;
+    c = 0.24;
   } else {
     // A line from (0.45 aspect, 0) on the bottom edge to (0, 0.62) on the left edge.
     const ax = 0.45 * aspect;

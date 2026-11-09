@@ -70,7 +70,12 @@ export function signedPermutations(base: readonly number[], evenOnly = false): n
 
 /** The shape named by a param value, or the tesseract for an unknown one. */
 export function toShape(value: string): PolytopeShape {
-  return SHAPE_OPTIONS.find((o) => o.value === value)?.value ?? "tesseract";
+  for (const o of SHAPE_OPTIONS) {
+    if (o.value === value) {
+      return o.value;
+    }
+  }
+  return "tesseract";
 }
 
 /** The coordinate sets that generate each shape, as [base, evenOnly] pairs. */
@@ -212,19 +217,22 @@ export function projectPolytope(poly: Polytope, m: Float64Array, out: Float32Arr
   }
 }
 
+const RAINBOW_SATURATION = 0.75;
+
+/** One channel of a full-value HSV colour: hue `h` in 0..6, saturation `s`, channel offset `n`. */
+function hsvChannel(n: number, h: number, s: number): number {
+  const k = (n + h) % 6;
+  return 1 - s * Math.max(0, Math.min(k, 4 - k, 1));
+}
+
 /**
  * Depth rainbow: violet-blue when far (0) through green to orange-red when near (1),
  * at full value and 0.75 saturation. Writes linear-ish 0..1 RGB to `out`.
  */
 export function rainbow(t: number, out: Rgb): Rgb {
   const h = 0.72 * (1 - (t < 0 ? 0 : t > 1 ? 1 : t)) * 6;
-  const s = 0.75;
-  const f = (n: number) => {
-    const k = (n + h) % 6;
-    return 1 - s * Math.max(0, Math.min(k, 4 - k, 1));
-  };
-  out[0] = f(5);
-  out[1] = f(3);
-  out[2] = f(1);
+  out[0] = hsvChannel(5, h, RAINBOW_SATURATION);
+  out[1] = hsvChannel(3, h, RAINBOW_SATURATION);
+  out[2] = hsvChannel(1, h, RAINBOW_SATURATION);
   return out;
 }
