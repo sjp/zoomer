@@ -52,16 +52,25 @@ export async function canRecordMp4(width: number, height: number, opts: Mp4Optio
   }
 }
 
+/** A finished clip and its length in media time, which a stall can cut short. */
+export interface Mp4Clip {
+  blob: Blob;
+  seconds: number;
+}
+
 /**
  * Records `opts.seconds` of the canvas, in media time: frames are timestamped by when
  * they were drawn, and the clip ends once a frame lands past the clip length. Frames
- * drawn faster than `opts.fps` are skipped.
+ * drawn faster than `opts.fps` are skipped. `onProgress` gets the media time of each
+ * frame kept. If frames stop arriving, the clip ends early with what it has, and its
+ * `seconds` says how long it came out.
  */
 export async function recordMp4(
   canvas: HTMLCanvasElement,
   opts: Mp4Options,
   subscribe: FrameSubscriber,
-): Promise<Blob> {
+  onProgress?: (seconds: number) => void,
+): Promise<Mp4Clip> {
   const width = even(canvas.width);
   const height = even(canvas.height);
   const cropped = width !== canvas.width || height !== canvas.height;
@@ -71,10 +80,12 @@ export async function recordMp4(
   output.addVideoTrack(source, { frameRate: opts.fps });
   await output.start();
 
-  return new Promise<Blob>((resolve, reject) => {
+  return new Promise<Mp4Clip>((resolve, reject) => {
     const interval = 1000 / opts.fps;
     let start: number | undefined;
     let lastKept = 0;
+    // Media time covered so far: up to the end of the last kept frame.
+    let covered = 0;
     let frames = 0;
     let pending = 0;
     let done = false;
@@ -98,7 +109,10 @@ export async function recordMp4(
         }
         await queue;
         await output.finalize();
-        resolve(new Blob([target.buffer ?? new ArrayBuffer(0)], { type: "video/mp4" }));
+        resolve({
+          blob: new Blob([target.buffer ?? new ArrayBuffer(0)], { type: "video/mp4" }),
+          seconds: covered,
+        });
       } catch (e) {
         void output.cancel().catch(() => undefined);
         reject(e instanceof Error ? e : new Error(String(e)));
@@ -114,6 +128,7 @@ export async function recordMp4(
       start ??= now;
       const time = (now - start) / 1000;
       if (time >= opts.seconds) {
+        covered = opts.seconds;
         void stop();
         return;
       }
@@ -139,6 +154,8 @@ export async function recordMp4(
       }
       frames++;
       pending++;
+      covered = Math.min(opts.seconds, time + interval / 1000);
+      onProgress?.(time);
       queue = queue
         .then(() => source.add(sample))
         .finally(() => {

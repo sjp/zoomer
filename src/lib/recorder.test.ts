@@ -3,7 +3,7 @@ import { avcLevel, candidateTypes, recordCanvas, videoBitrate } from "./recorder
 
 const mp4 = vi.hoisted(() => ({
   canRecordMp4: vi.fn<() => Promise<boolean>>(),
-  recordMp4: vi.fn<(...args: unknown[]) => Promise<Blob>>(),
+  recordMp4: vi.fn<(...args: unknown[]) => Promise<{ blob: Blob; seconds: number }>>(),
 }));
 vi.mock("./mp4-recorder", () => mp4);
 
@@ -116,10 +116,25 @@ describe("recordCanvas", () => {
       videoBitsPerSecond: 12_000_000,
     });
     vi.advanceTimersByTime(5000);
-    const { blob, extension } = await result;
+    const { blob, extension, seconds } = await result;
     expect(extension).toBe("webm");
     expect(blob.size).toBe(5);
+    expect(seconds).toBe(5);
     expect(track.stop).toHaveBeenCalled();
+  });
+
+  it("reports wall-clock progress, and stops reporting when it ends", async () => {
+    const { canvas } = fakeCanvas();
+    const onProgress = vi.fn<(s: number) => void>();
+    const result = recordCanvas(canvas, 5, 30, undefined, onProgress);
+    vi.advanceTimersByTime(1000);
+    expect(onProgress).toHaveBeenLastCalledWith(1);
+    vi.advanceTimersByTime(4000);
+    await result;
+    const calls = onProgress.mock.calls.length;
+    vi.advanceTimersByTime(1000);
+    expect(onProgress).toHaveBeenCalledTimes(calls);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("on error, stops the tracks and cancels the stop timer", async () => {
@@ -175,7 +190,7 @@ describe("recordCanvas", () => {
     beforeEach(() => {
       vi.stubGlobal("VideoEncoder", vi.fn());
       mp4.canRecordMp4.mockResolvedValue(true);
-      mp4.recordMp4.mockResolvedValue(new Blob(["mp4"]));
+      mp4.recordMp4.mockResolvedValue({ blob: new Blob(["mp4"]), seconds: 4 });
     });
 
     it("prefers MediaRecorder when it can write MP4", async () => {
@@ -195,13 +210,17 @@ describe("recordCanvas", () => {
 
     it("encodes MP4 with WebCodecs when MediaRecorder only writes WebM", async () => {
       const { canvas } = fakeCanvas();
-      const { blob, extension } = await recordCanvas(canvas, 5, 30, frames);
+      const onProgress = vi.fn<(s: number) => void>();
+      const { blob, extension, seconds } = await recordCanvas(canvas, 5, 30, frames, onProgress);
       expect(extension).toBe("mp4");
       expect(blob.size).toBe(3);
+      // A clip cut short by a stall says so.
+      expect(seconds).toBe(4);
       expect(mp4.recordMp4).toHaveBeenCalledWith(
         canvas,
         { seconds: 5, fps: 30, bitrate: 12_000_000 },
         frames,
+        onProgress,
       );
     });
 

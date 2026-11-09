@@ -63,18 +63,30 @@ export function videoBitrate(width: number, height: number): number {
 interface Recording {
   blob: Blob;
   extension: "mp4" | "webm";
+  /**
+   * The clip's length in seconds. Less than asked for when a WebCodecs recording
+   * ended early because frames stopped arriving (a hidden tab, a crashed effect).
+   */
+  seconds: number;
 }
+
+/** How often a MediaRecorder recording reports progress, in ms. */
+const PROGRESS_MS = 250;
 
 /**
  * Records the canvas for `seconds`, as MP4 where possible. Uses MediaRecorder when it
  * can write MP4 (Chrome, Edge, Safari); otherwise, given `frames` (which reports each
  * drawn frame), encodes MP4 through WebCodecs (Firefox); otherwise MediaRecorder WebM.
+ *
+ * `onProgress` gets the seconds recorded so far: media time from the frames under
+ * WebCodecs, wall-clock time under MediaRecorder (whose stop deadline is a timer).
  */
 export function recordCanvas(
   canvas: HTMLCanvasElement,
   seconds: number,
   fps = 30,
   frames?: FrameSubscriber,
+  onProgress?: (seconds: number) => void,
 ): Promise<Recording> {
   const { width, height } = canvas;
   const supported = candidateTypes(width, height, fps).filter(
@@ -87,19 +99,20 @@ export function recordCanvas(
     typeof VideoEncoder === "undefined"
   ) {
     return mediaRecorderType !== undefined && mediaRecorderType !== ""
-      ? recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType)
+      ? recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType, onProgress)
       : Promise.reject(new Error("This browser cannot record video."));
   }
   return (async () => {
     const { canRecordMp4, recordMp4 } = await import("./mp4-recorder");
     const opts = { seconds, fps, bitrate: videoBitrate(width, height) };
     if (await canRecordMp4(width, height, opts)) {
-      return { blob: await recordMp4(canvas, opts, frames), extension: "mp4" as const };
+      const clip = await recordMp4(canvas, opts, frames, onProgress);
+      return { ...clip, extension: "mp4" as const };
     }
     if (mediaRecorderType === undefined || mediaRecorderType === "") {
       throw new Error("This browser cannot record video.");
     }
-    return recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType);
+    return recordWithMediaRecorder(canvas, seconds, fps, mediaRecorderType, onProgress);
   })();
 }
 
@@ -113,12 +126,14 @@ function recordWithMediaRecorder(
   seconds: number,
   fps: number,
   mimeType: string,
+  onProgress?: (seconds: number) => void,
 ): Promise<Recording> {
   const { width, height } = canvas;
   return new Promise((resolve, reject) => {
     let stream: MediaStream | undefined;
     let recorder: MediaRecorder | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let progress: ReturnType<typeof setInterval> | undefined;
     let settled = false;
     const chunks: Blob[] = [];
 
@@ -129,6 +144,7 @@ function recordWithMediaRecorder(
       }
       settled = true;
       clearTimeout(timer);
+      clearInterval(progress);
       if (recorder && recorder.state !== "inactive") {
         try {
           recorder.stop();
@@ -147,6 +163,7 @@ function recordWithMediaRecorder(
         resolve({
           blob: new Blob(chunks, { type: mimeType }),
           extension: mimeType.startsWith("video/mp4") ? "mp4" : "webm",
+          seconds,
         });
       }
     };
@@ -170,6 +187,12 @@ function recordWithMediaRecorder(
         finish();
       });
       rec.start(1000);
+      if (onProgress) {
+        const start = performance.now();
+        progress = setInterval(() => {
+          onProgress(Math.min(seconds, (performance.now() - start) / 1000));
+        }, PROGRESS_MS);
+      }
       timer = setTimeout(() => {
         if (rec.state !== "inactive") {
           rec.stop();

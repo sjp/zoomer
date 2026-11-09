@@ -136,15 +136,21 @@ describe("canRecordMp4", () => {
 describe("recordMp4", () => {
   it("timestamps frames from the first, skips extras, and stops at the clip length", async () => {
     const frames = frameSource();
-    const result = recordMp4(canvas(), opts, frames.subscribe);
+    const progress: number[] = [];
+    const result = recordMp4(canvas(), opts, frames.subscribe, (s) => {
+      progress.push(s);
+    });
     await flush();
     // 60 Hz display, 30 fps clip: every other frame is kept, until 1 s has passed.
     for (let i = 0; i <= 61; i++) {
       frames.draw(1000 + (i * 1000) / 60);
       await flush();
     }
-    const blob = await result;
+    const { blob, seconds } = await result;
     expect(blob.type).toBe("video/mp4");
+    expect(seconds).toBe(1);
+    expect(progress).toHaveLength(30);
+    expect(progress[1]).toBeCloseTo(1 / 30, 6);
     expect(seen.added).toHaveLength(30);
     expect(seen.added[0].timestamp).toBe(0);
     expect(seen.added[1].timestamp).toBe(33_333);
@@ -191,14 +197,19 @@ describe("recordMp4", () => {
     expect(frames.count).toBe(0);
   });
 
-  it("ends with what it has when frames stop arriving", async () => {
+  it("ends with what it has when frames stop arriving, and says how long it is", async () => {
     vi.useFakeTimers();
     const frames = frameSource();
     const result = recordMp4(canvas(), opts, frames.subscribe);
     await vi.advanceTimersByTimeAsync(0);
     frames.draw(0);
+    frames.draw(100);
+    frames.draw(200);
     await vi.advanceTimersByTimeAsync(3000);
-    expect((await result).size).toBe(1);
+    const { blob, seconds } = await result;
+    expect(blob.size).toBe(3);
+    // The last frame starts at 0.2 s and lasts one frame interval.
+    expect(seconds).toBeCloseTo(0.2 + 1 / 30, 6);
   });
 
   it("rejects when no frame ever arrives", async () => {
