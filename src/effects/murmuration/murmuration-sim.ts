@@ -22,7 +22,7 @@ import { createRng, hash32 } from "../noise";
 import { MAX_BIRDS, type HORIZON_OPTIONS, type SKY_OPTIONS } from "./murmuration.meta";
 import { lookup } from "../lookup";
 
-export { type StepClock, takeSteps } from "../reaction/reaction-sim";
+export { type StepClock, takeSteps } from "../step-clock";
 
 /** Simulation steps per second; the draw extrapolates positions between steps. */
 export const STEP_RATE = 30;

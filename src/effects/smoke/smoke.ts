@@ -11,7 +11,6 @@ import {
 } from "../gl";
 import { lowResSize, qualityDivisor } from "../lowres";
 import { wrap } from "../math";
-import type { StepClock } from "../reaction/reaction-sim";
 import { createSmokeField } from "./smoke-field";
 import {
   draftAt,
@@ -26,6 +25,7 @@ import {
 } from "./smoke-sim";
 import { smokeMeta } from "./smoke.meta";
 import { defineEffect } from "../types";
+import type { StepClock } from "../step-clock";
 
 /** Density fades this many times faster at the top of the canvas than at the bottom. */
 const HEIGHT_DECAY = 1.5;

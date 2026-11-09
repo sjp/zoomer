@@ -31,7 +31,7 @@ import { createRng } from "../noise";
 import { lookup } from "../lookup";
 import type { PALETTE_OPTIONS, SPECIES_OPTIONS } from "./lenia.meta";
 
-export { type StepClock, takeSteps } from "../reaction/reaction-sim";
+export { type StepClock, takeSteps } from "../step-clock";
 
 /** Grid cells across the frame. */
 export const GRID_W = 256;

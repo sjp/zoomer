@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { StepClock } from "../reaction/reaction-sim";
 import {
   draftAt,
   DRAFT_SPEED,
@@ -22,6 +21,7 @@ import {
   wispFactor,
 } from "./smoke-sim";
 import { SOURCE_OPTIONS } from "./smoke.meta";
+import type { StepClock } from "../step-clock";
 
 const flowFor = (turbulence: number, draft = 0.05): Flow => {
   const f: Flow = { rise: 0.13, draft, curl: 0, onset0: 0, onset1: 1 };

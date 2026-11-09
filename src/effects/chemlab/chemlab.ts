@@ -26,7 +26,6 @@ import { createNoise, HASH32_GLSL } from "../noise";
 import { riseSpeed } from "../bubbles/bubbles-sim";
 import { createSmokeField, type SmokeField } from "../smoke/smoke-field";
 import { simSteps, WAVE_COUNT, wavePhases } from "../smoke/smoke-sim";
-import type { StepClock } from "../reaction/reaction-sim";
 import { createSpriteBatch } from "../sprites";
 import { defineEffect } from "../types";
 import {
@@ -93,6 +92,7 @@ import {
 import { chemlabMeta } from "./chemlab.meta";
 import { SDF2D_GLSL } from "../sdf-glsl";
 import { fitScale } from "../scene-layout";
+import type { StepClock } from "../step-clock";
 
 const g = glslFloat;
 const v3 = (c: readonly number[]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;

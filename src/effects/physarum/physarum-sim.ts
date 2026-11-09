@@ -41,7 +41,7 @@ import { createRng, hash32 } from "../noise";
 import type { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
 import { lookup } from "../lookup";
 
-export { type StepClock, takeSteps } from "../reaction/reaction-sim";
+export { type StepClock, takeSteps } from "../step-clock";
 
 /** Simulation steps per second, below the display rate to save power. */
 export const STEP_RATE = 30;

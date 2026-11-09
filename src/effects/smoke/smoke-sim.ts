@@ -14,9 +14,9 @@
  * advected smoke neither piles up nor thins out from the flow itself.
  */
 import { clamp, smoothstep, wrap } from "../math";
-import { type StepClock, takeSteps } from "../reaction/reaction-sim";
 import type { SOURCE_OPTIONS } from "./smoke.meta";
 import { lookup } from "../lookup";
+import { type StepClock, takeSteps } from "../step-clock";
 
 /** Simulation steps per second, and the fixed step length. */
 export const SIM_RATE = 60;

@@ -37,12 +37,11 @@ import {
   SPOT_U,
   STATS_SIZE,
   statsTile,
-  type StepClock,
-  takeSteps,
   wantsSample,
 } from "./reaction-sim";
 import { reactionMeta } from "./reaction.meta";
 import { defineEffect } from "../types";
+import { type StepClock, takeSteps } from "../step-clock";
 
 /** Most simulation steps in one frame, however long it was. */
 export const MAX_STEPS = 16;

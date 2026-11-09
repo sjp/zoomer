@@ -46,10 +46,10 @@ import {
   WISP_SPEED,
 } from "./mug-sim";
 import { mugMeta } from "./mug.meta";
-import type { StepClock } from "../reaction/reaction-sim";
 import { createSmokeField } from "../smoke/smoke-field";
 import { type Flow, simSteps, WAVE_COUNT, wavePhases } from "../smoke/smoke-sim";
 import { defineEffect } from "../types";
+import type { StepClock } from "../step-clock";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;

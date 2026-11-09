@@ -46,12 +46,12 @@ import { createLowResTarget } from "../lowres";
 import { clamp, wrap } from "../math";
 import { createNoise } from "../noise";
 import { PINE_GLSL } from "../pines";
-import type { StepClock } from "../reaction/reaction-sim";
 import { createSmokeField } from "../smoke/smoke-field";
 import { type Flow, simSteps, WAVE_COUNT, wavePhases } from "../smoke/smoke-sim";
 import { createFlakes, type FlakeFrame } from "../snow/snow-sim";
 import { createFlakeRenderer } from "../snowflakes";
 import { defineEffect } from "../types";
+import type { StepClock } from "../step-clock";
 
 const g = glslFloat;
 const vec4Of = (f: (r: (typeof RIPPLES)[number]) => number) =>
