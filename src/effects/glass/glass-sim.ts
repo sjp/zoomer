@@ -152,3 +152,19 @@ export function ambientAt(t: number): number {
   const w = 2 * Math.PI * t;
   return AMBIENT + 0.035 * Math.sin(w / 37) + 0.025 * Math.sin(w / 23 + 1);
 }
+
+/** The lead highlight's peak. */
+export const HIGHLIGHT = 0.16;
+/** Lead widths in device px over which the highlight fades in (thin leads would shimmer). */
+export const HIGHLIGHT_FADE = [3, 6] as const;
+
+/** Lead half width (device px, at least 0.5), opacity and highlight for `leadWidth` px at 1080p. */
+export function leadStyle(leadWidth: number, scale: number): [number, number, number] {
+  const w = Math.max(0, leadWidth * scale);
+  const ew = Math.max(w, 1);
+  const t = Math.min(
+    Math.max((w - HIGHLIGHT_FADE[0]) / (HIGHLIGHT_FADE[1] - HIGHLIGHT_FADE[0]), 0),
+    1,
+  );
+  return [ew / 2, w / ew, HIGHLIGHT * t * t * (3 - 2 * t)];
+}

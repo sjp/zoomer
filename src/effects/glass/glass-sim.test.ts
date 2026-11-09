@@ -6,7 +6,10 @@ import {
   DRIFT_PERIOD,
   driftUniform,
   GRID_ORIGIN,
+  HIGHLIGHT,
+  HIGHLIGHT_FADE,
   JITTER,
+  leadStyle,
   palette,
   PALETTE_SIZE,
   PALETTES,
@@ -204,6 +207,43 @@ describe("sun patch", () => {
     for (let t = 0; t < 600; t += 0.7) {
       expect(ambientAt(t)).toBeGreaterThan(0.6);
       expect(ambientAt(t)).toBeLessThan(0.75);
+    }
+  });
+});
+
+describe("leadStyle", () => {
+  it("draws the lead at its width in device px, half each side of the edge", () => {
+    expect(leadStyle(6, 1)).toEqual([3, 1, HIGHLIGHT]);
+    const [hw, alpha] = leadStyle(6, 2);
+    expect(hw).toBe(6);
+    expect(alpha).toBe(1);
+  });
+
+  it("keeps a lead thinner than a pixel a pixel wide but faint, so it never breaks up", () => {
+    const [hw, alpha, hl] = leadStyle(2, 0.25);
+    expect(hw).toBe(0.5);
+    expect(alpha).toBeCloseTo(0.5, 12);
+    expect(hl).toBe(0);
+    expect(leadStyle(0, 1)).toEqual([0.5, 0, 0]);
+    expect(leadStyle(-3, 1)).toEqual([0.5, 0, 0]);
+  });
+
+  it("fades the highlight in smoothly between the fade widths", () => {
+    const [lo, hi] = HIGHLIGHT_FADE;
+    expect(leadStyle(lo, 1)[2]).toBe(0);
+    expect(leadStyle(hi, 1)[2]).toBe(HIGHLIGHT);
+    expect(leadStyle((lo + hi) / 2, 1)[2]).toBeCloseTo(HIGHLIGHT / 2, 12);
+    const ramp = Array.from({ length: 13 }, (_, i) => leadStyle(lo + ((hi - lo) * i) / 12, 1)[2]);
+    expect(ramp).toEqual(ramp.toSorted((x, y) => x - y));
+  });
+
+  it("scales with the frame, so the lead looks the same at every resolution", () => {
+    for (const w of [2, 6, 14]) {
+      const [hd] = leadStyle(w, 1);
+      const [uhd, alpha, hl] = leadStyle(w, 2);
+      expect(uhd).toBeCloseTo(2 * hd, 12);
+      expect(alpha).toBe(1);
+      expect(hl).toBeGreaterThanOrEqual(leadStyle(w, 1)[2]);
     }
   });
 });

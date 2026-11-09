@@ -4,6 +4,7 @@ import {
   driftUniform,
   GRID_ORIGIN,
   JITTER,
+  leadStyle,
   palette,
   PALETTE_SIZE,
   PALETTES,
@@ -41,12 +42,9 @@ const PANE_SPREAD = 0.16;
 const SUN_RX = 0.6;
 const SUN_RY = 0.42;
 const SUN_GAIN = 0.62;
-/** Lead highlight peak, its light direction (y down: from the upper left), and bloom strength. */
-const HIGHLIGHT = 0.16;
+/** The lead highlight's light direction (y down: from the upper left), and bloom strength. */
 const LIGHT_DIR = [-0.6, -0.8] as const;
 const BLOOM = 0.3;
-/** Lead widths in device px over which the highlight fades in (thin leads would shimmer). */
-const HIGHLIGHT_FADE = [3, 6] as const;
 
 /** Every palette as PALETTE_SIZE rgb triples (0..1), built once. */
 const PALETTE_DATA = new Map<readonly string[], Float32Array>(
@@ -153,17 +151,6 @@ void main() {
   outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
-
-/** Lead half width (device px, at least 0.5), opacity and highlight for `leadWidth` px at 1080p. */
-export function leadStyle(leadWidth: number, scale: number): [number, number, number] {
-  const w = Math.max(0, leadWidth * scale);
-  const ew = Math.max(w, 1);
-  const t = Math.min(
-    Math.max((w - HIGHLIGHT_FADE[0]) / (HIGHLIGHT_FADE[1] - HIGHLIGHT_FADE[0]), 0),
-    1,
-  );
-  return [ew / 2, w / ew, HIGHLIGHT * t * t * (3 - 2 * t)];
-}
 
 /**
  * A stained-glass window lit from behind: jewel-toned Voronoi panes in dark lead,
