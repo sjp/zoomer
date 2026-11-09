@@ -1,3 +1,4 @@
+import { createColorEase, unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
@@ -9,6 +10,7 @@ import {
   scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
+import { smoothstep } from "../math";
 import {
   advanceArm,
   advanceRotation,
@@ -38,10 +40,12 @@ import {
   PLINTH_LEFT,
   PLINTH_RIGHT,
   plinthFor,
+  type PlinthLook,
   RECORD_R,
   RECORD_Y,
   revsPerSecond,
   roomFor,
+  type RoomLook,
   SPINDLE_R,
   SURFACE_BACK,
   TRACK_GAPS,
@@ -54,6 +58,8 @@ import { defineEffect } from "../types";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
+/** Seconds for a change of room or plinth to crossfade. */
+const ROOM_FADE = 1.5;
 /** Anisotropic sheen exponent: higher makes the light cone narrower. */
 const SHEEN_N = 120;
 /** Tonearm radii (local units): tube, headshell, counterweight, finger lift, pillar. */
@@ -443,8 +449,43 @@ export const turntable = defineEffect(turntableMeta, {
       let height = 1;
       /** Record rotation in revolutions, wrapped to [0, 1). */
       let rotation = 0;
-      /** What the room target holds; cleared whenever it may have been reallocated. */
+      /** What the room target holds; cleared whenever it may have been reallocated or mid-fade. */
       let drawnRoom = "";
+      /** The room shown, the one it is fading from, and how far the fade is (1: done). */
+      let shownRoom = "";
+      let fromRoom = "";
+      let roomMix = 1;
+      const drawRoom = (room: RoomLook) => {
+        ru.i1("uKind", room.kind);
+        ru.rgb("uWall", room.wall);
+        ru.rgb("uSurface", room.surface);
+        ru.rgb("uLight", room.light);
+        ru.rgb("uBokehA", room.bokehA);
+        ru.rgb("uBokehB", room.bokehB);
+        ru.f2("uBokehSurf", room.bokeh, layout.oy + SURFACE_BACK * layout.scale);
+        gl.uniform4fv(ru.loc.uBokeh, bokehLights(room.seed, bokeh));
+        triangle.draw();
+      };
+      /**
+       * The light on the turntable and the plinth's look, eased as one block:
+       * the key light (RGB), ambient, plinth top and front (RGB), grain, gloss.
+       */
+      const lookEase = createColorEase(12);
+      const lookTarget = new Float32Array(12);
+      const plinthTop = lookEase.value.subarray(4, 7);
+      const plinthFront = lookEase.value.subarray(7, 10);
+      const lightRgb = unitRgbMemo();
+      const topRgb = unitRgbMemo();
+      const frontRgb = unitRgbMemo();
+      const packLook = (room: RoomLook, plinth: PlinthLook) => {
+        lookTarget.set(lightRgb(room.light), 0);
+        lookTarget[3] = room.ambient;
+        lookTarget.set(topRgb(plinth.top), 4);
+        lookTarget.set(frontRgb(plinth.front), 7);
+        lookTarget[10] = plinth.grain;
+        lookTarget[11] = plinth.gloss;
+        return lookTarget;
+      };
       let drawnSide = 0;
 
       return {
@@ -469,26 +510,42 @@ export const turntable = defineEffect(turntableMeta, {
           advanceArm(arm, step, rps);
           const aspect = width / height;
           turntableLayout(aspect, p.position, layout);
-          const room = roomFor(p.room);
           const plinth = plinthFor(p.plinth);
 
-          // 1. The room, re-rendered only when it changes, upscaled every frame.
-          if (target.direct || drawnRoom !== p.room || drawnSide !== layout.side) {
+          // 1. The room, re-rendered only when it changes, upscaled every
+          //    frame. A new room crossfades from the old one, both drawn.
+          if (p.room !== shownRoom) {
+            if (shownRoom === "") {
+              roomMix = 1;
+            } else {
+              // Mid-fade, fade from whichever room shows more.
+              fromRoom = roomMix < 0.5 ? fromRoom : shownRoom;
+              roomMix = 0;
+            }
+            shownRoom = p.room;
+          }
+          const fading = roomMix < 1;
+          if (fading) {
+            roomMix = Math.min(1, roomMix + step / ROOM_FADE);
+          }
+          const room = roomFor(shownRoom);
+          if (target.direct || fading || drawnRoom !== shownRoom || drawnSide !== layout.side) {
             target.bind();
             gl.useProgram(roomProgram);
             ru.f2("uFrame", aspect, 1);
             ru.f1("uSide", layout.side);
-            ru.i1("uKind", room.kind);
-            ru.rgb("uWall", room.wall);
-            ru.rgb("uSurface", room.surface);
-            ru.rgb("uLight", room.light);
-            ru.rgb("uBokehA", room.bokehA);
-            ru.rgb("uBokehB", room.bokehB);
-            ru.f2("uBokehSurf", room.bokeh, layout.oy + SURFACE_BACK * layout.scale);
-            gl.uniform4fv(ru.loc.uBokeh, bokehLights(room.seed, bokeh));
-            triangle.draw();
+            if (roomMix < 1) {
+              drawRoom(roomFor(fromRoom));
+              gl.enable(gl.BLEND);
+              gl.blendColor(0, 0, 0, smoothstep(0, 1, roomMix));
+              gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+              drawRoom(room);
+              gl.disable(gl.BLEND);
+            } else {
+              drawRoom(room);
+            }
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            drawnRoom = p.room;
+            drawnRoom = roomMix < 1 ? "" : shownRoom;
             drawnSide = layout.side;
           }
           target.blit();
@@ -513,15 +570,16 @@ export const turntable = defineEffect(turntableMeta, {
           const hl = Math.hypot(hx, hy, hz);
           tu.f1("uPx", 1 / height);
           tu.f3("uOrigin", layout.ox, layout.oy, layout.scale);
-          tu.rgb("uLight", room.light);
+          const look = lookEase.step(packLook(room, plinth), step, ROOM_FADE);
+          tu.v3("uLight", look);
           tu.f3("uLDir", light[0], light[1], light[2]);
           tu.f3("uHalf", hx / hl, hy / hl, hz / hl);
-          tu.f3("uAmbRotRpm", room.ambient, rotation * Math.PI * 2, p.rpm === "45" ? 1 : 0);
+          tu.f3("uAmbRotRpm", look[3], rotation * Math.PI * 2, p.rpm === "45" ? 1 : 0);
           tu.rgb("uLabel", p.label);
-          tu.rgb("uPlinthTop", plinth.top);
-          tu.rgb("uPlinthFront", plinth.front);
+          tu.v3("uPlinthTop", plinthTop);
+          tu.v3("uPlinthFront", plinthFront);
           armPose(arm, pose);
-          tu.f3("uPlinthLift", plinth.grain, plinth.gloss, pose.lift);
+          tu.f3("uPlinthLift", look[10], look[11], pose.lift);
           gl.uniform4fv(tu.loc.uArm, armGeometry(pose, light, armData));
           triangle.draw();
           gl.disable(gl.BLEND);
