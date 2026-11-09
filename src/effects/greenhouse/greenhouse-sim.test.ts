@@ -9,6 +9,7 @@ import {
   createBobs,
   createDrips,
   createRivulets,
+  eaveAt,
   EAVE_EDGE,
   eaveY,
   inCentre,
@@ -21,6 +22,7 @@ import {
   MAX_LEAVES,
   MAX_RIVULETS,
   PALETTES,
+  resetRivulets,
   PANE_MARGIN,
   rivuletR,
   roofPoint,
@@ -325,5 +327,48 @@ describe("bob springs", () => {
     stepBobs(b, Number.NaN, 1);
     stepBobs(b, -1, 1);
     expect(b.x[0]).toBe(0.01);
+  });
+});
+
+describe("eaveAt", () => {
+  it("runs straight between the rafter feet, clamped to the roof", () => {
+    for (const kind of ["arched", "pitched"] as const) {
+      const roof = defined(buildRoof(kind, 16 / 9));
+      for (let i = 0; i <= roof.panes; i++) {
+        expect(eaveAt(roof, i)).toBeCloseTo(roof.footY[i], 12);
+      }
+      for (let i = 0; i < roof.panes; i++) {
+        const mid = (roof.footY[i] + roof.footY[i + 1]) / 2;
+        expect(eaveAt(roof, i + 0.5)).toBeCloseTo(mid, 12);
+      }
+      expect(eaveAt(roof, -2)).toBe(eaveAt(roof, 0));
+      expect(eaveAt(roof, roof.panes + 3)).toBe(eaveAt(roof, roof.panes));
+    }
+  });
+
+  it("matches the roof's own eave line at height fraction 0", () => {
+    const roof = defined(buildRoof("arched", 21 / 9));
+    const p: [number, number] = [0, 0];
+    for (let r = 0; r <= roof.panes; r += 0.25) {
+      roofPoint(roof, r, 0, p);
+      expect(eaveAt(roof, r)).toBeCloseTo(p[1], 12);
+    }
+  });
+});
+
+describe("resetRivulets", () => {
+  it("clears every rivulet, and they come back with the rain", () => {
+    const roof = defined(buildRoof("pitched", 16 / 9));
+    const riv = createRivulets(4);
+    for (let s = 0; s < 200; s++) {
+      stepRivulets(riv, roof, 0.1, 1);
+    }
+    expect(riv.alive.some((a) => a === 1)).toBe(true);
+    resetRivulets(riv);
+    expect(riv.alive.every((a) => a === 0)).toBe(true);
+    for (let s = 0; s < 200; s++) {
+      stepRivulets(riv, roof, 0.1, 1);
+    }
+    expect(riv.alive.some((a) => a === 1)).toBe(true);
   });
 });
