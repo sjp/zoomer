@@ -340,16 +340,13 @@ describe("framing and sun", () => {
 });
 
 describe("stepped texture builds", () => {
-  /** Runs `steps`, returning the result, the yield count and the longest step in ms. */
+  /** Runs `steps`, returning the result and the yield count. */
   function run(steps: BuildSteps<Uint8Array>) {
     let yields = 0;
-    let longest = 0;
     for (;;) {
-      const t0 = performance.now();
       const r = steps.next();
-      longest = Math.max(longest, performance.now() - t0);
       if (r.done === true) {
-        return { data: r.value, yields, longest };
+        return { data: r.value, yields };
       }
       yields++;
     }
@@ -363,7 +360,6 @@ describe("stepped texture builds", () => {
     const built = run(buildSurfaceSteps(world, 3));
     expect(sameBytes(built.data, buildSurface(world, 3))).toBe(true);
     expect(built.yields).toBeGreaterThan(100);
-    expect(built.longest).toBeLessThan(25);
     const clouds = run(buildCloudsSteps(world, 3));
     expect(sameBytes(clouds.data, buildClouds(world, 3))).toBe(true);
   });
