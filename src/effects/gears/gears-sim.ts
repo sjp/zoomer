@@ -7,6 +7,7 @@
  * in radians, anticlockwise.
  */
 import { approach, clamp, fract } from "../math";
+import { capPatternSpeed } from "../motion-limits";
 import { createRng } from "../noise";
 import { type GearLayoutId, MAX_GEARS } from "./gears.meta";
 
@@ -427,6 +428,26 @@ export function growTrain(layout: GearLayoutId, aspect: number, seed: number): G
   }
 
   return gears;
+}
+
+/** Teeth passing a fixed point per turn of the drive, for the fastest-toothed gear in `gears`. */
+export function teethPerDriveTurn(gears: readonly Gear[]): number {
+  let max = 0;
+  for (const g of gears) {
+    max = Math.max(max, g.teeth * Math.abs(g.ratio));
+  }
+  return max;
+}
+
+/**
+ * Drive speed in radians per second for `rpm`, capped so no gear's teeth pass a
+ * point faster than MAX_PATTERN_HZ (`teethPerTurn` from `teethPerDriveTurn`).
+ * Compound gears multiply the drive's speed, so a train with fast small gears
+ * caps lower; at the default 1 rpm the cap rarely applies.
+ */
+export function driveOmega(rpm: number, teethPerTurn: number): number {
+  const revs = Number.isFinite(rpm) ? Math.max(0, rpm / 60) : 0;
+  return TAU * (teethPerTurn > 0 ? capPatternSpeed(revs, 1 / teethPerTurn) : revs);
 }
 
 /** The escapement's ease within one tick: a quick kick, a small overshoot and a settle; 0 to 1. */

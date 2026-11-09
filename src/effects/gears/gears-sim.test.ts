@@ -5,6 +5,7 @@ import {
   CLEARANCE,
   createDrive,
   driveAngle,
+  driveOmega,
   type Gear,
   gearAngle,
   growTrain,
@@ -12,13 +13,15 @@ import {
   LAYOUT_SPECS,
   MAX_RATIO,
   regionFits,
+  teethPerDriveTurn,
   STYLE_BALANCE,
   TICK_PERIOD,
   tickEase,
   tipRadius,
   toothEdge,
 } from "./gears-sim";
-import { type GearLayoutId, MAX_GEARS } from "./gears.meta";
+import { type GearLayoutId, gearsMeta, MAX_GEARS } from "./gears.meta";
+import { MAX_PATTERN_HZ } from "../motion-limits";
 
 const TAU = Math.PI * 2;
 const LAYOUTS: GearLayoutId[] = ["corner", "side", "frame"];
@@ -308,5 +311,33 @@ describe("drive", () => {
     }
     expect(pos).toBeGreaterThan(30);
     expect(neg).toBeGreaterThan(30);
+  });
+});
+
+describe("driveOmega", () => {
+  const { speed } = gearsMeta.params;
+
+  it("keeps every gear's teeth under MAX_PATTERN_HZ at any speed", () => {
+    for (const { gears } of trains) {
+      const teeth = teethPerDriveTurn(gears.slice(0, MAX_GEARS));
+      for (let rpm = speed.min; rpm <= speed.max + 1e-9; rpm += speed.step) {
+        for (const g of gears.slice(0, MAX_GEARS)) {
+          const hz = (driveOmega(rpm, teeth) / TAU) * Math.abs(g.ratio) * g.teeth;
+          expect(hz).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
+        }
+      }
+    }
+  });
+
+  it("leaves the default speed alone", () => {
+    for (const { gears } of trains) {
+      const teeth = teethPerDriveTurn(gears.slice(0, MAX_GEARS));
+      expect(driveOmega(speed.default, teeth)).toBeCloseTo((speed.default * TAU) / 60, 12);
+    }
+  });
+
+  it("gives 0 for a bad speed", () => {
+    expect(driveOmega(Number.NaN, 40)).toBe(0);
+    expect(driveOmega(-1, 40)).toBe(0);
   });
 });

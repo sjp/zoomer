@@ -11,12 +11,14 @@ import {
 import {
   ADDENDUM,
   advanceDrive,
+  driveOmega,
   balanceAngle,
   createDrive,
   DEDENDUM,
   driveAngle,
   type Gear,
   growTrain,
+  teethPerDriveTurn,
   LAYERS,
   LAYOUT_SPECS,
   METAL_BRASS,
@@ -387,6 +389,8 @@ export const gears = defineEffect(gearsMeta, {
       const layerFirst = new Int32Array(LAYERS);
       const layerCount = new Int32Array(LAYERS);
       let train: Gear[] = [];
+      /** Teeth passing a point per drive turn, for the speed cap. */
+      let trainTeeth = 0;
       let trainLayout = "";
       let trainSeed = Number.NaN;
       let trainAspect = Number.NaN;
@@ -405,6 +409,7 @@ export const gears = defineEffect(gearsMeta, {
         trainSeed = seed;
         trainAspect = aspect;
         train = growTrain(layout, aspect, seed).slice(0, MAX_GEARS);
+        trainTeeth = teethPerDriveTurn(train);
         let k = 0;
         for (let layer = 0; layer < LAYERS; layer++) {
           layerFirst[layer] = k;
@@ -430,7 +435,7 @@ export const gears = defineEffect(gearsMeta, {
           const layout = isLayoutId(p.layout) ? p.layout : "corner";
           ensureTrain(layout, p.seed, aspect);
           poolFor(layout, aspect, pool);
-          advanceDrive(drive, dt, (p.speed * TAU) / 60, p.tick);
+          advanceDrive(drive, dt, driveOmega(p.speed, trainTeeth), p.tick);
           const angle = driveAngle(drive);
           const swing = balanceAngle(drive);
 
