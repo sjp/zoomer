@@ -1,8 +1,9 @@
 /**
  * The Lava Lamp's wax blobs: their per-seed constants, their slow rise and fall,
  * and the packing of their metaball field into shader uniforms. Shared with the
- * 1980s Bedroom's little lamp.
+ * 1980s Bedroom's little lamp and the Chemistry Lab's goo.
  */
+import { glslFloat } from "../gl";
 import { createRng } from "../noise";
 
 const TAU = Math.PI * 2;
@@ -108,3 +109,24 @@ export function fillBlobs(
     r2[i] = r * r * life[i];
   }
 }
+
+/**
+ * GLSL `lavaField(p, pool)`: the metaball field of `count` blobs at `p` (lamp
+ * px: x across the lamp's width in `fillBlobs` units, y down from the top, 0 to
+ * `REF_H`), plus the pool of wax at the bottom with weight `pool`. Wax is where
+ * the field passes about 1. The shader declares `uBlobs` and `uBlobR2` as filled
+ * by `fillBlobs`.
+ */
+export const lavaFieldGlsl = (count: number) => /* glsl */ `
+float lavaField(vec2 p, float pool) {
+  float field = 0.0;
+  for (int i = 0; i < ${String(count)}; i++) {
+    vec4 b = uBlobs[i];
+    vec2 o = p * b.xy + b.zw;
+    field += uBlobR2[i] / (dot(o, o) + ${glslFloat(EPS)});
+  }
+  float pd = max(0.0, ${glslFloat(REF_H)} - p.y);
+  field += pool / (pd * pd + ${glslFloat(EPS)});
+  return field;
+}
+`;

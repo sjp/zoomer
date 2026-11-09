@@ -13,7 +13,13 @@ import {
   type RenderTarget,
   withScope,
 } from "../gl";
-import { BASE_RADIUS, EPS, fillBlobs, makeBlobs, REF_H } from "../lavalamp/lavalamp-blobs";
+import {
+  BASE_RADIUS,
+  fillBlobs,
+  makeBlobs,
+  REF_H,
+  lavaFieldGlsl,
+} from "../lavalamp/lavalamp-blobs";
 import { approach, clamp, wrap } from "../math";
 import { buildFontTexture, GLYPH_COUNT, GLYPH_H, GLYPH_W, glyphIndex } from "../dot-matrix";
 import { createNoise, HASH32_GLSL } from "../noise";
@@ -768,6 +774,7 @@ uniform float uTime;
 uniform float uBubbling;
 uniform vec4 uBlobs[${String(LAVA_BLOBS)}];
 uniform float uBlobR2[${String(LAVA_BLOBS)}];
+${lavaFieldGlsl(LAVA_BLOBS)}
 /** The goo column's width in lamp units, and its pool's radius squared. */
 uniform vec2 uLavaW;
 out vec4 outColor;
@@ -898,14 +905,7 @@ vec4 vessel(int kind, vec2 q) {
       // Slow blobs of brighter goo, as in the Lava Lamp.
       float depth = max(level - bottom, 1e-3);
       vec2 lp = vec2((q.x + w) / (2.0 * w) * uLavaW.x, (level - q.y) / depth * ${g(REF_H)});
-      float field = 0.0;
-      for (int i = 0; i < ${String(LAVA_BLOBS)}; i++) {
-        vec4 b = uBlobs[i];
-        vec2 o = lp * b.xy + b.zw;
-        field += uBlobR2[i] / (dot(o, o) + ${g(EPS)});
-      }
-      float pd = max(0.0, ${g(REF_H)} - lp.y);
-      field += uLavaW.y / (pd * pd + ${g(EPS)});
+      float field = lavaField(lp, uLavaW.y);
       vec3 wax = mix(L, vec3(1.0), 0.45) * lit * (0.6 + 0.5 * nz);
       liq = mix(liq * 0.6, wax, smoothstep(0.85, 1.15, field));
     }

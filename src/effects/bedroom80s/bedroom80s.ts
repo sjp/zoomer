@@ -14,7 +14,13 @@ import {
   withScope,
 } from "../gl";
 import { HALF_DUTY, SLAT_GAP_GLSL } from "../blinds/blinds-sim";
-import { BASE_RADIUS, EPS, fillBlobs, makeBlobs, REF_H } from "../lavalamp/lavalamp-blobs";
+import {
+  BASE_RADIUS,
+  fillBlobs,
+  makeBlobs,
+  REF_H,
+  lavaFieldGlsl,
+} from "../lavalamp/lavalamp-blobs";
 import { buildFontTexture, GLYPH_COUNT, GLYPH_H, GLYPH_W, glyphIndex } from "../dot-matrix";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
@@ -965,6 +971,7 @@ uniform vec4 uVal;
 uniform sampler2D uDemo;
 uniform vec4 uBlobs[${String(LAMP_BLOBS)}];
 uniform float uBlobR2[${String(LAMP_BLOBS)}];
+${lavaFieldGlsl(LAMP_BLOBS)}
 uniform vec3 uLampRgb;
 /** The lamp's width in lamp units, and its wax pool's radius squared. */
 uniform vec2 uLampW;
@@ -1007,14 +1014,7 @@ vec4 lamp(vec2 q) {
     return vec4(0.0);
   }
   vec2 p = vec2((q.x + hs.x) / (2.0 * hs.x) * uLampW.x, (hs.y - q.y) / (2.0 * hs.y) * ${g(REF_H)});
-  float field = 0.0;
-  for (int i = 0; i < ${String(LAMP_BLOBS)}; i++) {
-    vec4 b = uBlobs[i];
-    vec2 o = p * b.xy + b.zw;
-    field += uBlobR2[i] / (dot(o, o) + ${g(EPS)});
-  }
-  float pd = max(0.0, ${g(REF_H)} - p.y);
-  field += uLampW.y / (pd * pd + ${g(EPS)});
+  float field = lavaField(p, uLampW.y);
   float t = p.y / ${g(REF_H)};
   vec3 wax = mix(mix(uLampRgb, vec3(1.0, 0.85, 0.6), 0.3), uLampRgb, t);
   vec3 liquid = uLampRgb * 0.22 + vec3(0.03, 0.02, 0.04);
