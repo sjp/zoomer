@@ -201,3 +201,11 @@ describe("cabinLayout", () => {
     });
   }
 });
+
+describe("climb", () => {
+  it("can't reach orbit sooner than 15 s into a lift-off", () => {
+    // The view from orbit (and its surface texture, built in the background) starts
+    // at a climb of 0.25.
+    expect(0.25 / CLIMB_RATE).toBeGreaterThanOrEqual(15);
+  });
+});

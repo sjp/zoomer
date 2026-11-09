@@ -18,8 +18,8 @@ import { lowResSize } from "../lowres";
 import { approach, clamp, smoothstep } from "../math";
 import { HASH32_GLSL, hash32 } from "../noise";
 import {
-  buildClouds,
-  buildSurface,
+  buildCloudsSteps,
+  buildSurfaceSteps,
   CLOUD_H,
   CLOUD_SOFT,
   CLOUD_W,
@@ -30,6 +30,7 @@ import {
 } from "../planet/planet-sim";
 import { drawGlyphAtlas, GLYPH_AT_GLSL } from "../splitflap/splitflap-atlas";
 import { defineEffect } from "../types";
+import { createBackgroundBuild } from "../rebuild";
 import {
   ascentAt,
   BREAKERS,
@@ -70,6 +71,13 @@ const g = glslFloat;
 
 /** The ground cache is never taller than this, so lift-off from a 4K canvas costs no more than 1080p. */
 const GROUND_MAX_H = 1080;
+/**
+ * CPU milliseconds per frame spent building the Earth's clouds and the lunar
+ * surface seen from orbit, which together take a few hundred ms in one go.
+ */
+const BUILD_BUDGET_MS = 2;
+/** Seconds the Earth's clouds take to fade in once built. */
+const CLOUD_FADE_SECONDS = 2;
 /** Horizon angles stored in the ground cache run 0..HORIZON_MAX radians. */
 const HORIZON_MAX = 0.5;
 /** Glyph atlas cell, in texels: labels are tiny, so one small atlas serves every size. */
@@ -984,6 +992,32 @@ export const lunarlander = defineEffect(lunarlanderMeta, {
       const surfaceTex = texture(SURFACE_W, SURFACE_H, gl.RGBA8, gl.RGBA, surfaceData);
       let cloudsBuilt = false;
       let surfaceBuilt = false;
+      let cloudFade = 0;
+      // Both textures build a little each frame from the start: the clouds first (the
+      // Earth is up from the first frame), then the surface, long before any lift-off
+      // can reach orbit (at least 15 s of climbing).
+      const cloudBuild = createBackgroundBuild<number, Uint8Array>();
+      cloudBuild.request(0, () => buildCloudsSteps("earth", BODY_SEED, cloudData));
+      const surfaceBuild = createBackgroundBuild<number, Uint8Array>();
+      surfaceBuild.request(0, () => buildSurfaceSteps("desert", BODY_SEED, surfaceData));
+      const uploadClouds = () => {
+        cloudsBuilt = true;
+        gl.activeTexture(gl.TEXTURE3);
+        updateDataTexture(gl, cloudTex, CLOUD_W, CLOUD_H, gl.RGBA, gl.UNSIGNED_BYTE, cloudData);
+      };
+      const uploadSurface = () => {
+        surfaceBuilt = true;
+        gl.activeTexture(gl.TEXTURE4);
+        updateDataTexture(
+          gl,
+          surfaceTex,
+          SURFACE_W,
+          SURFACE_H,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          surfaceData,
+        );
+      };
       const shaping = cloudShaping(EARTH_CLOUDS, WORLDS.earth, new Float64Array(2));
       const atlas = scope.add(gl.createTexture(), (t) => {
         gl.deleteTexture(t);
@@ -1132,29 +1166,23 @@ export const lunarlander = defineEffect(lunarlanderMeta, {
           const slide = HORIZON_Y - elevationY(-dip);
           const orbitMix = smoothstep(0.25, 0.7, climb);
           const quiet = 1 - smoothstep(0, 0.08, climb);
-          if (orbitMix > 0 && !surfaceBuilt) {
-            surfaceBuilt = true;
-            buildSurface("desert", BODY_SEED, surfaceData);
-            gl.activeTexture(gl.TEXTURE4);
-            updateDataTexture(
-              gl,
-              surfaceTex,
-              SURFACE_W,
-              SURFACE_H,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              surfaceData,
-            );
+          if (!cloudsBuilt) {
+            if (cloudBuild.step(BUILD_BUDGET_MS)) {
+              uploadClouds();
+            }
+          } else if (!surfaceBuilt) {
+            if (orbitMix > 0) {
+              // Never expected: the climb takes far longer than the build.
+              surfaceBuild.finish();
+              uploadSurface();
+            } else if (surfaceBuild.step(BUILD_BUDGET_MS)) {
+              uploadSurface();
+            }
           }
+          cloudFade = Math.min(1, cloudFade + (cloudsBuilt ? step / CLOUD_FADE_SECONDS : 0));
 
           // 4. The Earth.
           const side = p.earth === "left" ? -1 : p.earth === "right" ? 1 : 0;
-          if (side !== 0 && !cloudsBuilt) {
-            cloudsBuilt = true;
-            buildClouds("earth", BODY_SEED, cloudData);
-            gl.activeTexture(gl.TEXTURE3);
-            updateDataTexture(gl, cloudTex, CLOUD_W, CLOUD_H, gl.RGBA, gl.UNSIGNED_BYTE, cloudData);
-          }
 
           // 5. Composite.
           gl.useProgram(compProgram);
@@ -1170,7 +1198,7 @@ export const lunarlander = defineEffect(lunarlanderMeta, {
           const phi = Math.PI * (1 - phase);
           cu.f3("uEarthSun", Math.sin(phi), 0.12, Math.cos(phi));
           cu.f1("uEarthTurn", earthTurn(time));
-          cu.f2("uCloud", shaping[0], shaping[1]);
+          cu.f2("uCloud", shaping[0], shaping[1] * cloudFade);
           plumeAt(time, seed, plume);
           const amount = plume.amount * quiet;
           if (amount > 0) {

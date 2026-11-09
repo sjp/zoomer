@@ -7,22 +7,10 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl, type FakeGl, type FakeGlOptions } from "../test/fake-gl";
+import { FakeOffscreenCanvas } from "../test/offscreen-canvas";
 import { paramSets } from "../test/param-sets";
 import { effects } from "./registry";
 import type { AnyParamValues, EffectWebGL2, Viewport } from "./types";
-
-/** Digital rain draws its glyph atlas on an OffscreenCanvas, which Node lacks. */
-class FakeOffscreenCanvas {
-  width: number;
-  height: number;
-  constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
-  getContext() {
-    return new Proxy({}, { get: (_, key) => (key === "then" ? undefined : () => undefined) });
-  }
-}
 
 beforeAll(() => {
   vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
