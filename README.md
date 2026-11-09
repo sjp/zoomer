@@ -115,9 +115,9 @@ front of them. Bright events ramp over at least a second and never flash the who
 
 Start from an existing effect of a similar shape: `tunnel/` or `lavalamp/` for full-screen
 shaders, `bokeh/` or `snow/` for sprites, `warp/` for streaks and `flowfield/` for
-framebuffers. `src/effects/lifecycle.test.ts` checks the WebGL rules every effect must follow:
-uniforms written only to the bound program, every object deleted on dispose, and the default
-framebuffer and `FUNC_ADD` left at the end of each frame.
+framebuffers. `src/test/lifecycle.ts` (run by `src/effects/lifecycle-*.test.ts`) checks the
+WebGL rules every effect must follow: uniforms written only to the bound program, every object
+deleted on dispose, and the default framebuffer and `FUNC_ADD` left at the end of each frame.
 
 ## Deploying
 
