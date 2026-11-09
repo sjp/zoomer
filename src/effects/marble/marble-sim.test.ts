@@ -247,11 +247,31 @@ describe("scheduler", () => {
     expect(bakes).toBeGreaterThan(20);
   });
 
+  it("keeps the live queue short at the default settings", () => {
+    for (const seed of [1, 2, 3]) {
+      const sim = createMarble({ seed, colours: 5, extent: EXTENT });
+      let sum = 0;
+      let samples = 0;
+      let longest = 0;
+      for (let i = 0; i < 20 * 60 * 30; i++) {
+        sim.step(1 / 30, { speed: 1, drops: 1.5, strokes: "mixed" }, EXTENT);
+        sim.commitBake(sim.bakeCount());
+        if (i >= 60 * 30) {
+          sum += sim.ops.length;
+          samples++;
+          longest = Math.max(longest, sim.ops.length);
+        }
+      }
+      // Every live operation costs each pixel a step of the inverse map.
+      expect(sum / samples).toBeLessThan(4);
+      expect(longest).toBeLessThanOrEqual(BAKE_AT + 1);
+    }
+  });
+
   it("starts with finished rings and keeps adding strokes and drops", () => {
     const sim = createMarble({ seed: 1, colours: 6, extent: EXTENT });
     const initial = sim.ops.length;
     expect(initial).toBeGreaterThanOrEqual(9);
-    expect(initial).toBeLessThan(BAKE_AT);
     expect(sim.ops.every((op) => op.kind === KIND_DROP && isDone(op, 0))).toBe(true);
     const kinds = new Set<string>();
     for (let i = 0; i < 6000; i++) {

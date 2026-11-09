@@ -55,7 +55,7 @@ export interface MarbleOp {
 /** Operations the shader holds; the queue never grows past this. */
 export const MAX_OPS = 24;
 /** Queue length at which the finished prefix is baked, rate-limited by `BAKE_MIN_INTERVAL`. */
-export const BAKE_AT = 16;
+export const BAKE_AT = 6;
 /** Queue length at which the bake ignores the rate limit. */
 export const BAKE_FORCE_AT = MAX_OPS - 3;
 /** Real seconds between bakes, unless the queue is nearly full. */

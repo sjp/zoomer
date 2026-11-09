@@ -41,7 +41,8 @@ const MINIFY = [0.35, 0.9] as const;
  * blends against the paint it pushed aside. What is left samples the baked base,
  * or the initial stripes (anti-aliased with `fwidth` on the stripe index field)
  * before the first bake. The bake runs the same shader into an RGBA8 target with
- * only the oldest finished operations and no dither.
+ * only the oldest finished operations, no dither, and a cubic resample of the
+ * old base.
  *
  * Every branch and loop bound depends only on uniforms, so the derivatives stay
  * in uniform control flow.
@@ -60,6 +61,8 @@ uniform sampler2D uBase;
 /** Units to base texture coordinates: uv = p * xy + zw. */
 uniform vec4 uBaseMap;
 uniform float uHasBase;
+/** 1 in the bake: resample the base with a sharp cubic rather than bilinear. */
+uniform float uSharp;
 uniform float uDither;
 out vec4 outColor;
 ${DITHER_GLSL}
@@ -75,6 +78,39 @@ vec3 stripes(vec2 p) {
   vec3 b = uPalette[int(mod(nb, n))];
   vec3 c = mix(a, b, clamp(0.5 - min(fr, 1.0 - fr) / fw, 0.0, 0.5));
   return mix(c, uMean, smoothstep(${glslFloat(MINIFY[0])}, ${glslFloat(MINIFY[1])}, fw));
+}
+
+/** Catmull-Rom weights for the four texels round a sample \`f\` past the second. */
+vec4 cubicWeights(float f) {
+  float f2 = f * f;
+  float f3 = f2 * f;
+  return vec4(
+    -0.5 * f3 + f2 - 0.5 * f,
+    1.5 * f3 - 2.5 * f2 + 1.0,
+    -1.5 * f3 + 2.0 * f2 + 0.5 * f,
+    0.5 * f3 - 0.5 * f2);
+}
+
+/**
+ * The base resampled with a Catmull-Rom cubic: each bake resamples the whole
+ * base, and bilinear filtering would soften it a little more every time. Texel
+ * centres are read through the sampler so the mirrored wrap still applies.
+ */
+vec3 sharpBase(vec2 uv) {
+  vec2 size = vec2(textureSize(uBase, 0));
+  vec2 t = uv * size - 0.5;
+  vec2 i = floor(t);
+  vec4 wx = cubicWeights(t.x - i.x);
+  vec4 wy = cubicWeights(t.y - i.y);
+  vec3 c = vec3(0.0);
+  for (int y = 0; y < 4; y++) {
+    vec3 row = vec3(0.0);
+    for (int x = 0; x < 4; x++) {
+      row += wx[x] * textureLod(uBase, (i + vec2(float(x), float(y)) - 0.5) / size, 0.0).rgb;
+    }
+    c += wy[y] * row;
+  }
+  return clamp(c, 0.0, 1.0);
 }
 
 void main() {
@@ -112,7 +148,8 @@ void main() {
   }
   vec3 base;
   if (uHasBase > 0.5) {
-    base = texture(uBase, q * uBaseMap.xy + uBaseMap.zw).rgb;
+    vec2 uv = q * uBaseMap.xy + uBaseMap.zw;
+    base = uSharp > 0.5 ? sharpBase(uv) : texture(uBase, uv).rgb;
   } else {
     base = stripes(q);
   }
@@ -167,6 +204,7 @@ export const marble = defineEffect(marbleMeta, {
         "uBase",
         "uBaseMap",
         "uHasBase",
+        "uSharp",
         "uDither",
       ]);
       gl.useProgram(program);
@@ -223,6 +261,7 @@ export const marble = defineEffect(marbleMeta, {
           uploadOps(s, 0, k);
           bindBase();
           u.f1("uDither", 0);
+          u.f1("uSharp", 1);
           spare.bind();
           triangle.draw();
           const old = base;
@@ -280,6 +319,7 @@ export const marble = defineEffect(marbleMeta, {
           uploadOps(sim, 0, sim.ops.length);
           bindBase();
           u.f1("uDither", 1);
+          u.f1("uSharp", 0);
           triangle.draw();
           gl.bindTexture(gl.TEXTURE_2D, null);
         },
