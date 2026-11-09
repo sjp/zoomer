@@ -630,18 +630,5 @@ export function paletteFor(id: string): CoralPalette {
   return lookup(PALETTES, id, "reef");
 }
 
-/** Caustic phase rates (radians per second at speed 1); each phase wraps at 2π. */
+/** Caustic phase rates (radians per second at speed 1), for `advancePhases`. */
 export const CAUSTIC_RATES: readonly number[] = [0.21, -0.17, 0.13, -0.11];
-
-/** Advances the caustic phases by `dt`, each wrapped to [0, 2π). */
-export function advanceCaustics(phases: Float32Array, dt: number): void {
-  const tau = Math.PI * 2;
-  const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
-  for (let i = 0; i < CAUSTIC_RATES.length; i++) {
-    let v = (phases[i] + step * CAUSTIC_RATES[i]) % tau;
-    if (v < 0) {
-      v += tau;
-    }
-    phases[i] = v;
-  }
-}

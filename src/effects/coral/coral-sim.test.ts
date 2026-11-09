@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  advanceCaustics,
   buildReef,
-  CAUSTIC_RATES,
   CENTER_HEIGHT,
   createReef,
   cycleSeed,
@@ -207,24 +205,5 @@ describe("palettes", () => {
     }
     expect(paletteFor("nope")).toBe(PALETTES.reef);
     expect(paletteFor("toString")).toBe(PALETTES.reef);
-  });
-});
-
-describe("advanceCaustics", () => {
-  it("advances each phase at its rate and wraps to 0..2pi", () => {
-    const phases = new Float32Array(CAUSTIC_RATES.length);
-    advanceCaustics(phases, 2);
-    for (let i = 0; i < phases.length; i++) {
-      const want = (((2 * CAUSTIC_RATES[i]) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      expect(phases[i]).toBeCloseTo(want, 5);
-    }
-    advanceCaustics(phases, 1e4);
-    for (const p of phases) {
-      expect(p).toBeGreaterThanOrEqual(0);
-      expect(p).toBeLessThan(2 * Math.PI + 1e-6);
-    }
-    const before = Array.from(phases);
-    advanceCaustics(phases, Number.NaN);
-    expect(Array.from(phases)).toEqual(before);
   });
 });

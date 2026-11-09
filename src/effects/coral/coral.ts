@@ -1,5 +1,4 @@
 import {
-  advanceCaustics,
   buildReef,
   CAUSTIC_RATES,
   createReef,
@@ -25,6 +24,7 @@ import { createLowResTarget } from "../lowres";
 import { clamp } from "../math";
 import { createSpriteBatch, QUAD } from "../sprites";
 import { defineEffect } from "../types";
+import { advancePhases } from "../caustics/caustics-sim";
 
 const F = glslFloat;
 
@@ -277,7 +277,7 @@ export const coral = defineEffect(coralMeta, {
           const seed = Number.isFinite(p.seed) ? Math.floor(p.seed) : 0;
           const growth = Number.isFinite(p.growth) ? clamp(p.growth, MIN_GROWTH, MAX_GROWTH) : 1;
           const s = clock.advance(step, growth, p.cycle);
-          advanceCaustics(phases, step);
+          advancePhases(phases, step, CAUSTIC_RATES);
 
           // Rebuild the reef for a new cycle, seed, layout param or (settled) aspect.
           if (aspect !== builtAspect) {
