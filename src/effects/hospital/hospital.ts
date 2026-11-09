@@ -34,7 +34,9 @@ import {
   ERASE_COLUMNS,
   heartFlash,
   type Monitor,
-  type RoomLayout,
+  packRoomLayout,
+  ROOM_SLOT,
+  ROOM_SLOTS,
   roomLayout,
   stepMonitor,
   TRACE_CHANNELS,
@@ -47,13 +49,12 @@ import { createCanvasTexture, paintCanvas, type CanvasTexture } from "../canvas-
 import { createChangeKey } from "../change-key";
 
 const g = glslFloat;
+const SL = ROOM_SLOT;
 
 /** How far round its box (frame heights) the care board draws: its frame, shadow and pen tray. */
 const BOARD_REACH = 0.05;
 const vec3 = (c: readonly [number, number, number]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
 
-/** Layout slots in the room shader's `uL` array (see `packLayout`). */
-const SLOTS = 14;
 /** Largest text texture side, in texels. */
 const MAX_TEXT_TEXELS = 2048;
 
@@ -81,26 +82,26 @@ uniform vec2 uRes;
 uniform float uSide;
 /** 0 by day, 1 at night. */
 uniform float uNight;
-uniform vec4 uL[${String(SLOTS)}];
+uniform vec4 uL[${String(ROOM_SLOTS)}];
 uniform sampler2D uBoard;
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
 ${SHARED_GLSL}
-#define SCREEN uL[0]
-#define CLOCK uL[1]
-#define BOARD uL[2]
-#define CHART uL[3]
-#define BAG uL[4]
-#define DRIP uL[5]
-#define PUMP uL[6]
-#define OXY uL[7]
-#define GLOVES uL[8]
-#define PILLOW uL[9]
-#define HEADBOARD uL[10]
-#define HEADWALL uL[11]
-#define MISC uL[12]
-#define RAILS uL[13]
+#define SCREEN uL[${String(SL.screen)}]
+#define CLOCK uL[${String(SL.clock)}]
+#define BOARD uL[${String(SL.board)}]
+#define CHART uL[${String(SL.chart)}]
+#define BAG uL[${String(SL.bag)}]
+#define DRIP uL[${String(SL.drip)}]
+#define PUMP uL[${String(SL.pump)}]
+#define OXY uL[${String(SL.oxygen)}]
+#define GLOVES uL[${String(SL.gloves)}]
+#define PILLOW uL[${String(SL.pillow)}]
+#define HEADBOARD uL[${String(SL.headboard)}]
+#define HEADWALL uL[${String(SL.headwall)}]
+#define MISC uL[${String(SL.misc)}]
+#define RAILS uL[${String(SL.rails)}]
 const float BEZEL = ${g(BEZEL)};
 const float BOARD_FRAME = ${g(BOARD_FRAME)};
 const float BAND = ${g(BOARD_BAND)};
@@ -871,28 +872,6 @@ void main() {
 }
 `;
 
-/** Packs the layout into the room shader's `uL` slots. */
-function packLayout(l: RoomLayout, showClock: boolean, out: Float32Array): void {
-  out.fill(0);
-  const put = (slot: number, v: readonly number[]) => {
-    out.set([v[0] ?? 0, v[1] ?? 0, v[2] ?? 0, v[3] ?? 0], slot * 4);
-  };
-  put(0, l.screen);
-  put(1, [l.clock[0], l.clock[1], l.clock[2], showClock ? 1 : 0]);
-  put(2, l.board);
-  put(3, l.chart);
-  put(4, l.bag);
-  put(5, l.drip);
-  put(6, l.pump);
-  put(7, l.oxygen);
-  put(8, l.gloves);
-  put(9, l.pillow);
-  put(10, l.headboard);
-  put(11, l.headwall);
-  put(12, [l.pole, l.rail, l.curtain, l.aspect / 2]);
-  put(13, l.rails);
-}
-
 /**
  * Propped up in a hospital bed: a pillow and headboard behind the speaker, a
  * bedside monitor on the wall to one side, and on the other a drip stand with
@@ -953,7 +932,7 @@ export const hospital = defineEffect(hospitalMeta, {
       let width = 1;
       let height = 1;
       let layout = roomLayout(16 / 9);
-      const slots = new Float32Array(SLOTS * 4);
+      const slots = new Float32Array(ROOM_SLOTS * 4);
       // What the cached room and textures were drawn for; NaN or null forces a redraw.
       let roomSide = Number.NaN;
       let roomNight = Number.NaN;
@@ -1047,7 +1026,7 @@ export const hospital = defineEffect(hospitalMeta, {
             roomSide = side;
             roomNight = night;
             roomClock = p.clock;
-            packLayout(layout, p.clock, slots);
+            packRoomLayout(layout, p.clock, slots);
             gl.useProgram(roomProgram);
             ru.f2("uRes", width, height);
             ru.f1("uSide", side);

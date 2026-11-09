@@ -58,6 +58,58 @@ export interface RoomLayout {
   curtain: number;
 }
 
+/**
+ * Where each part of the layout sits in the room shader's `uL` array, in vec4
+ * slots: boxes as (x, y, half width, half height), discs as (x, y, radius, 0).
+ * The clock's w is 1 when shown; `misc` holds the pole's x, the bumper rail,
+ * the curtain's start and half the aspect.
+ */
+export const ROOM_SLOT = {
+  screen: 0,
+  clock: 1,
+  board: 2,
+  chart: 3,
+  bag: 4,
+  drip: 5,
+  pump: 6,
+  oxygen: 7,
+  gloves: 8,
+  pillow: 9,
+  headboard: 10,
+  headwall: 11,
+  misc: 12,
+  rails: 13,
+} as const;
+/** vec4 slots in the room shader's `uL` array. */
+export const ROOM_SLOTS = 14;
+
+/** Packs `l` into the room shader's `uL` slots: `ROOM_SLOTS * 4` floats of `out`. */
+export function packRoomLayout(l: RoomLayout, showClock: boolean, out: Float32Array): void {
+  out.fill(0, 0, ROOM_SLOTS * 4);
+  const put = (slot: number, v: readonly number[], w = v[3] ?? 0) => {
+    const o = slot * 4;
+    out[o] = v[0] ?? 0;
+    out[o + 1] = v[1] ?? 0;
+    out[o + 2] = v[2] ?? 0;
+    out[o + 3] = w;
+  };
+  const S = ROOM_SLOT;
+  put(S.screen, l.screen);
+  put(S.clock, l.clock, showClock ? 1 : 0);
+  put(S.board, l.board);
+  put(S.chart, l.chart);
+  put(S.bag, l.bag);
+  put(S.drip, l.drip);
+  put(S.pump, l.pump);
+  put(S.oxygen, l.oxygen);
+  put(S.gloves, l.gloves);
+  put(S.pillow, l.pillow);
+  put(S.headboard, l.headboard);
+  put(S.headwall, l.headwall);
+  put(S.misc, [l.pole, l.rail, l.curtain, l.aspect / 2]);
+  put(S.rails, l.rails);
+}
+
 /** How far the monitor's bezel reaches past its screen. */
 export const BEZEL = 0.016;
 /** The care board's aluminium frame. */

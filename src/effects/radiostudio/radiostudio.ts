@@ -25,13 +25,15 @@ import {
   musicLevel,
   onAirTarget,
   packRadius,
+  packStudioLayout,
   REEL_HUB,
   SIGN_RIM,
   stepBar,
   stepLight,
   stepNeedle,
   stepTape,
-  type StudioLayout,
+  STUDIO_SLOT,
+  STUDIO_SLOTS,
   studioLayout,
   WINDOW_FRAME,
 } from "./radiostudio-sim";
@@ -41,6 +43,7 @@ import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
 import { createCanvasTexture, paintCanvas, SANS_FONT_STACK } from "../canvas-texture";
 
 const g = glslFloat;
+const SL = STUDIO_SLOT;
 
 /** The downlights' colour; their strength varies over the booth. */
 const LIGHT_RGB = [1, 0.88, 0.75] as const;
@@ -49,8 +52,6 @@ const MASK_RANGE = 4;
 /** Seconds the foam colour must hold still before the booth is redrawn with it. */
 const FOAM_SETTLE = 0.3;
 
-/** Layout slots in the room shader's `uL` array (see `packLayout`). */
-const SLOTS = 19;
 /** A VU needle's pivot below its face's centre, and its swing either side of upright (radians), in face half-heights. */
 const VU_PIVOT = 1.25;
 const VU_SWING = 0.84;
@@ -93,26 +94,30 @@ uniform vec3 uFoam;
  * black), the mask that tints the foam while its colour changes.
  */
 uniform float uOther;
-uniform vec4 uL[${String(SLOTS)}];
+uniform vec4 uL[${String(STUDIO_SLOTS)}];
 out vec4 outColor;
 ${HASH32_GLSL}
 ${DITHER_GLSL}
 ${SHARED_GLSL}
-#define SIGN uL[0]
-#define WIN uL[1]
-#define RACK uL[2]
-#define METER0 uL[3]
-#define METER1 uL[4]
-#define BAR0 uL[5]
-#define BAR1 uL[6]
-#define DECK0 uL[7]
-#define DECK1 uL[8]
-#define CLOCK uL[13]
-#define MIC uL[14]
-#define ARM0 uL[15]
-#define ARM1 uL[16]
-#define RECORDS uL[17]
-#define PLATTER uL[18]
+#define SIGN uL[${String(SL.sign)}]
+#define WIN uL[${String(SL.window)}]
+#define RACK uL[${String(SL.rack)}]
+#define METER0 uL[${String(SL.meter0)}]
+#define METER1 uL[${String(SL.meter1)}]
+#define BAR0 uL[${String(SL.bar0)}]
+#define BAR1 uL[${String(SL.bar1)}]
+#define DECK0 uL[${String(SL.deck0)}]
+#define DECK1 uL[${String(SL.deck1)}]
+#define REEL0 uL[${String(SL.reel0)}]
+#define REEL1 uL[${String(SL.reel0 + 1)}]
+#define REEL2 uL[${String(SL.reel0 + 2)}]
+#define REEL3 uL[${String(SL.reel0 + 3)}]
+#define CLOCK uL[${String(SL.clock)}]
+#define MIC uL[${String(SL.mic)}]
+#define ARM0 uL[${String(SL.arm0)}]
+#define ARM1 uL[${String(SL.arm1)}]
+#define RECORDS uL[${String(SL.records)}]
+#define PLATTER uL[${String(SL.platter)}]
 const float SIGN_RIM = ${g(SIGN_RIM)};
 const float FRAME = ${g(WINDOW_FRAME)};
 const float VU_PIVOT = ${g(VU_PIVOT)};
@@ -616,8 +621,8 @@ vec4 room(vec2 f) {
   clockFace(f);
   rack(f);
   records(f);
-  deck(f, DECK0, uL[9], uL[10]);
-  deck(f, DECK1, uL[11], uL[12]);
+  deck(f, DECK0, REEL0, REEL1);
+  deck(f, DECK1, REEL2, REEL3);
   desk(f);
   mic(f);
   // How much of the sign's glow lands here.
@@ -803,27 +808,6 @@ void main() {
 }
 `;
 
-/** Packs the layout into the room shader's `uL` slots. */
-function packLayout(l: StudioLayout, showClock: boolean, out: Float32Array): void {
-  out.fill(0);
-  const put = (slot: number, a: number, b: number, c: number, d: number) => {
-    out.set([a, b, c, d], slot * 4);
-  };
-  const boxes = [l.sign, l.window, l.rack, ...l.meters, ...l.bars, ...l.decks];
-  boxes.forEach((b, i) => {
-    put(i, b[0], b[1], b[2], b[3]);
-  });
-  l.reels.forEach((r, i) => {
-    put(9 + i, r[0], r[1], r[2], 0);
-  });
-  put(13, l.clock[0], l.clock[1], l.clock[2], showClock ? 1 : 0);
-  put(14, l.mic[0], l.mic[1], l.mic[2], l.mic[3]);
-  put(15, l.arm[0], l.arm[1], l.arm[2], l.arm[3]);
-  put(16, l.arm[4], l.arm[5], l.deskTop, l.deskLip);
-  put(17, l.records[0], l.records[1], l.records[2], l.records[3]);
-  put(18, l.platter[0], l.platter[1], l.platter[2], l.platter[3]);
-}
-
 /**
  * A DJ's booth in a radio studio: wedge foam on the walls, a red ON AIR sign
  * high on one side, a broadcast microphone on a sprung arm on the other, a
@@ -913,7 +897,7 @@ export const radiostudio = defineEffect(radiostudioMeta, {
       let width = 1;
       let height = 1;
       let layout = studioLayout(16 / 9);
-      const slots = new Float32Array(SLOTS * 4);
+      const slots = new Float32Array(STUDIO_SLOTS * 4);
       // What the cached booth and sign text were drawn for; NaN or null forces a redraw.
       let roomSide = Number.NaN;
       let roomFoam = "";
@@ -996,7 +980,7 @@ export const radiostudio = defineEffect(radiostudioMeta, {
             roomSide = side;
             roomClock = p.clock;
             roomFoam = p.foam;
-            packLayout(layout, p.clock, slots);
+            packStudioLayout(layout, p.clock, slots);
             drawRoom(roomTarget, foam[0], foam[1], foam[2], 1, side);
             tinting = false;
           } else if (p.foam !== roomFoam) {

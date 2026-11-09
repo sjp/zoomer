@@ -8,10 +8,11 @@ import {
   createTape,
   DESIGN_ASPECT,
   LIGHT_FADE,
-  musicLevel,
   MUSIC_SAMPLES,
+  musicLevel,
   onAirTarget,
   packRadius,
+  packStudioLayout,
   REEL_FULL,
   REEL_HUB,
   SIGN_RIM,
@@ -19,6 +20,8 @@ import {
   stepLight,
   stepNeedle,
   stepTape,
+  STUDIO_SLOT,
+  STUDIO_SLOTS,
   studioLayout,
   TAPE_MIN,
   TAPE_RUN,
@@ -263,5 +266,54 @@ describe("tape reels", () => {
     const tape = createTape(0.3);
     stepTape(tape, 5, 0);
     expect(tape).toEqual(createTape(0.3));
+  });
+});
+
+describe("packStudioLayout", () => {
+  const slot = (out: Float32Array, i: number) => Array.from(out.subarray(i * 4, i * 4 + 4));
+  const f32 = (v: readonly number[]) => Array.from(new Float32Array(v));
+  const S = STUDIO_SLOT;
+
+  it("gives every part its own slot, filling the array", () => {
+    const used = [...Object.values(S), S.reel0 + 1, S.reel0 + 2, S.reel0 + 3].toSorted(
+      (a, b) => a - b,
+    );
+    expect(used).toEqual(Array.from({ length: STUDIO_SLOTS }, (_, i) => i));
+  });
+
+  it("puts each part where the shader reads it, and nothing past the slots", () => {
+    for (const aspect of [16 / 9, 4 / 3, 21 / 9]) {
+      const l = studioLayout(aspect);
+      const out = new Float32Array(STUDIO_SLOTS * 4 + 8).fill(Number.NaN);
+      packStudioLayout(l, true, out);
+      expect(slot(out, S.sign)).toEqual(f32(l.sign));
+      expect(slot(out, S.window)).toEqual(f32(l.window));
+      expect(slot(out, S.rack)).toEqual(f32(l.rack));
+      expect(slot(out, S.meter0)).toEqual(f32(l.meters[0]));
+      expect(slot(out, S.meter1)).toEqual(f32(l.meters[1]));
+      expect(slot(out, S.bar0)).toEqual(f32(l.bars[0]));
+      expect(slot(out, S.bar1)).toEqual(f32(l.bars[1]));
+      expect(slot(out, S.deck0)).toEqual(f32(l.decks[0]));
+      expect(slot(out, S.deck1)).toEqual(f32(l.decks[1]));
+      l.reels.forEach((r, i) => {
+        expect(slot(out, S.reel0 + i)).toEqual(f32([...r, 0]));
+      });
+      expect(slot(out, S.clock)).toEqual(f32([...l.clock, 1]));
+      expect(slot(out, S.mic)).toEqual(f32(l.mic));
+      expect(slot(out, S.arm0)).toEqual(f32(l.arm.slice(0, 4)));
+      expect(slot(out, S.arm1)).toEqual(f32([l.arm[4], l.arm[5], l.deskTop, l.deskLip]));
+      expect(slot(out, S.records)).toEqual(f32(l.records));
+      expect(slot(out, S.platter)).toEqual(f32(l.platter));
+      expect(Array.from(out.subarray(0, STUDIO_SLOTS * 4)).every((v) => Number.isFinite(v))).toBe(
+        true,
+      );
+      expect(Array.from(out.subarray(STUDIO_SLOTS * 4)).every((v) => Number.isNaN(v))).toBe(true);
+    }
+  });
+
+  it("flags a hidden clock", () => {
+    const out = new Float32Array(STUDIO_SLOTS * 4);
+    packStudioLayout(studioLayout(16 / 9), false, out);
+    expect(out[S.clock * 4 + 3]).toBe(0);
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  beatInterval,
   BEZEL,
+  type Box,
   COLUMN_SECONDS,
   createMonitor,
   DESIGN_ASPECT,
@@ -11,17 +13,18 @@ import {
   ERASE_COLUMNS,
   FLASH_SECONDS,
   heartFlash,
+  packRoomLayout,
   plethBeat,
   PULSE_DELAY,
   R_TIME,
-  beatInterval,
   respWave,
+  ROOM_SLOT,
+  ROOM_SLOTS,
   roomLayout,
   stepMonitor,
   SWEEP_SECONDS,
   TRACE_CHANNELS,
   TRACE_COLUMNS,
-  type Box,
 } from "./hospital-sim";
 
 const edges = ([cx, cy, hw, hh]: Box) => [cx - hw, cx + hw, cy - hh, cy + hh] as const;
@@ -275,5 +278,48 @@ describe("dripDrop", () => {
     expect(Array.from(dripDrop(0.7 + DRIP_PERIOD * 3, out))[0]).toBeCloseTo(a[0]);
     dripDrop(Number.NaN, out);
     expect(Array.from(out).every((v) => Number.isFinite(v))).toBe(true);
+  });
+});
+
+describe("packRoomLayout", () => {
+  const slot = (out: Float32Array, i: number) => Array.from(out.subarray(i * 4, i * 4 + 4));
+  const f32 = (v: readonly number[]) => Array.from(new Float32Array(v));
+  const S = ROOM_SLOT;
+
+  it("gives every part its own slot, filling the array", () => {
+    const used = Object.values(S).toSorted((a, b) => a - b);
+    expect(used).toEqual(Array.from({ length: ROOM_SLOTS }, (_, i) => i));
+  });
+
+  it("puts each part where the shader reads it, and nothing past the slots", () => {
+    for (const aspect of [16 / 9, 4 / 3, 21 / 9]) {
+      const l = roomLayout(aspect);
+      const out = new Float32Array(ROOM_SLOTS * 4 + 8).fill(Number.NaN);
+      packRoomLayout(l, true, out);
+      expect(slot(out, S.screen)).toEqual(f32(l.screen));
+      expect(slot(out, S.clock)).toEqual(f32([...l.clock, 1]));
+      expect(slot(out, S.board)).toEqual(f32(l.board));
+      expect(slot(out, S.chart)).toEqual(f32(l.chart));
+      expect(slot(out, S.bag)).toEqual(f32(l.bag));
+      expect(slot(out, S.drip)).toEqual(f32(l.drip));
+      expect(slot(out, S.pump)).toEqual(f32(l.pump));
+      expect(slot(out, S.oxygen)).toEqual(f32(l.oxygen));
+      expect(slot(out, S.gloves)).toEqual(f32(l.gloves));
+      expect(slot(out, S.pillow)).toEqual(f32(l.pillow));
+      expect(slot(out, S.headboard)).toEqual(f32(l.headboard));
+      expect(slot(out, S.headwall)).toEqual(f32(l.headwall));
+      expect(slot(out, S.misc)).toEqual(f32([l.pole, l.rail, l.curtain, aspect / 2]));
+      expect(slot(out, S.rails)).toEqual(f32(l.rails));
+      expect(Array.from(out.subarray(0, ROOM_SLOTS * 4)).every((v) => Number.isFinite(v))).toBe(
+        true,
+      );
+      expect(Array.from(out.subarray(ROOM_SLOTS * 4)).every((v) => Number.isNaN(v))).toBe(true);
+    }
+  });
+
+  it("flags a hidden clock", () => {
+    const out = new Float32Array(ROOM_SLOTS * 4);
+    packRoomLayout(roomLayout(16 / 9), false, out);
+    expect(out[S.clock * 4 + 3]).toBe(0);
   });
 });

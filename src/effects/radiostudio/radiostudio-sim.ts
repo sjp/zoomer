@@ -54,6 +54,65 @@ export interface StudioLayout {
   deskLip: number;
 }
 
+/**
+ * Where each part of the layout sits in the room shader's `uL` array, in vec4
+ * slots: boxes as (x, y, half width, half height), discs as (x, y, radius, 0).
+ * The four reels take four slots from `reel0`; the clock's w is 1 when shown;
+ * `arm0` holds the arm's mount and elbow, `arm1` its tip then the desk's top
+ * and lip.
+ */
+export const STUDIO_SLOT = {
+  sign: 0,
+  window: 1,
+  rack: 2,
+  meter0: 3,
+  meter1: 4,
+  bar0: 5,
+  bar1: 6,
+  deck0: 7,
+  deck1: 8,
+  reel0: 9,
+  clock: 13,
+  mic: 14,
+  arm0: 15,
+  arm1: 16,
+  records: 17,
+  platter: 18,
+} as const;
+/** vec4 slots in the room shader's `uL` array. */
+export const STUDIO_SLOTS = 19;
+
+/** Packs `l` into the room shader's `uL` slots: `STUDIO_SLOTS * 4` floats of `out`. */
+export function packStudioLayout(l: StudioLayout, showClock: boolean, out: Float32Array): void {
+  out.fill(0, 0, STUDIO_SLOTS * 4);
+  const put = (slot: number, v: readonly number[], w = v[3] ?? 0) => {
+    const o = slot * 4;
+    out[o] = v[0] ?? 0;
+    out[o + 1] = v[1] ?? 0;
+    out[o + 2] = v[2] ?? 0;
+    out[o + 3] = w;
+  };
+  const S = STUDIO_SLOT;
+  put(S.sign, l.sign);
+  put(S.window, l.window);
+  put(S.rack, l.rack);
+  put(S.meter0, l.meters[0]);
+  put(S.meter1, l.meters[1]);
+  put(S.bar0, l.bars[0]);
+  put(S.bar1, l.bars[1]);
+  put(S.deck0, l.decks[0]);
+  put(S.deck1, l.decks[1]);
+  l.reels.forEach((r, i) => {
+    put(S.reel0 + i, r, 0);
+  });
+  put(S.clock, l.clock, showClock ? 1 : 0);
+  put(S.mic, l.mic);
+  put(S.arm0, l.arm);
+  put(S.arm1, [l.arm[4], l.arm[5], l.deskTop, l.deskLip]);
+  put(S.records, l.records);
+  put(S.platter, l.platter);
+}
+
 /** How far the sign's housing reaches past its face. */
 export const SIGN_RIM = 0.012;
 /** The window's wooden frame. */
