@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { configDefaults, defineConfig } from "vitest/config";
 
@@ -37,6 +38,14 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+/**
+ * Vite's and Vitest's caches, pinned to the project root. The default is relative to
+ * the working directory, so Vitest run from a subfolder with `--config` pointing here
+ * would otherwise scatter `node_modules/.vite` folders through `src/`. (Run from a
+ * subfolder without `--config`, Vitest finds no config at all; run it from the root.)
+ */
+export const CACHE_DIR = fileURLToPath(new URL("node_modules/.vite", import.meta.url));
+
 /** Kept out of every Vitest run. */
 export const TEST_EXCLUDE = ["**/.claude/**", "e2e/**"];
 
@@ -45,6 +54,7 @@ export default defineConfig({
   // Relative base so the build works when served from a GitHub Pages
   // project subpath (https://<user>.github.io/<repo>/).
   base: "./",
+  cacheDir: CACHE_DIR,
   plugins: [react(), contentSecurityPolicy()],
   // Agent worktrees live under .claude/; keep their copies of the tests out of the run.
   // e2e/ holds the Playwright browser tests, run by `npm run test:browser`, and
