@@ -251,6 +251,9 @@ export const frost = defineEffect(frostMeta, {
       cu.i1("uDiffuse", 2);
 
       let diffuse: RenderTarget | null = null;
+      /** The diffuse target's size last allocated (or tried, if that failed). */
+      let diffuseW = 0;
+      let diffuseH = 0;
       scope.defer(() => diffuse?.dispose());
       let fieldTex: WebGLTexture | null = null;
       scope.defer(() => {
@@ -385,10 +388,18 @@ export const frost = defineEffect(frostMeta, {
           target.resize(width, height, SCENE_DIVISOR);
           const dw = lowResSize(width, DIFFUSE_DIVISOR);
           const dh = lowResSize(height, DIFFUSE_DIVISOR);
-          if (!diffuse || diffuse.width !== dw || diffuse.height !== dh) {
+          // A failed allocation isn't retried until the size changes, so a size
+          // past MAX_TEXTURE_SIZE or out of memory doesn't reallocate every frame.
+          if (dw !== diffuseW || dh !== diffuseH) {
+            // Allocates only when the size changes.
+            diffuseW = dw;
+            diffuseH = dh;
             diffuse?.dispose();
             diffuse = null;
             diffuse = createRenderTarget(gl, dw, dh, gl.RGBA8);
+            if (!diffuse) {
+              console.warn(`frost: can't allocate a ${String(dw)}x${String(dh)} diffuse target`);
+            }
             sceneKey.invalidate();
           }
           sceneKey.setText(0, p.scene);
