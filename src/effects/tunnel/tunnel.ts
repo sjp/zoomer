@@ -8,9 +8,11 @@ import {
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
+  updateDataTexture,
   withScope,
 } from "../gl";
-import { wrap } from "../math";
+import { smoothstep, wrap } from "../math";
+import { createBackgroundBuild, finishBuild, type BuildSteps } from "../rebuild";
 import { createNoise, fbmPeriodic2 } from "../noise";
 import { tunnelMeta } from "./tunnel.meta";
 import { defineEffect } from "../types";
@@ -132,9 +134,17 @@ void main() {
  * with ridged strands, normalised to [0, 1]. Runs once per instance.
  */
 export const buildTexture = (out: Float32Array, seed: number) => {
+  finishBuild(buildTextureSteps(out, seed));
+};
+
+/** `buildTexture` as build steps, yielding every few rows and after the sort. */
+export function* buildTextureSteps(out: Float32Array, seed: number): BuildSteps<void> {
   const noise = createNoise(seed);
   const P = 4;
   for (let y = 0; y < TEX; y++) {
+    if (y % 4 === 3) {
+      yield;
+    }
     const v = (y / TEX) * P;
     for (let x = 0; x < TEX; x++) {
       const u = (x / TEX) * P;
@@ -155,7 +165,9 @@ export const buildTexture = (out: Float32Array, seed: number) => {
   for (let i = 0; i < order.length; i++) {
     order[i] = i;
   }
+  yield;
   order.sort((a, b) => out[a] - out[b]);
+  yield;
   const last = order.length - 1;
   for (let r = 0; r <= last; r++) {
     const t = r / last;
@@ -165,6 +177,9 @@ export const buildTexture = (out: Float32Array, seed: number) => {
   // sharpen, which would otherwise show as jaggies on the magnified near walls.
   const src = out.slice();
   for (let y = 0; y < TEX; y++) {
+    if (y % 32 === 31) {
+      yield;
+    }
     const ym = ((y - 1) & MASK) * TEX;
     const y0 = y * TEX;
     const yp = ((y + 1) & MASK) * TEX;
@@ -181,7 +196,7 @@ export const buildTexture = (out: Float32Array, seed: number) => {
         16;
     }
   }
-};
+}
 
 /**
  * Halves a square, tiling single-channel texture with a 2x2 box filter. Used to
@@ -214,16 +229,18 @@ export function buildMipChain(level0: Float32Array, size: number): Float32Array[
   return levels;
 }
 
+/** The wall texture is deterministic, so it (and its mips) is built once and reused across instances. */
 let textureLevels: Float32Array[] | undefined;
-/** The wall texture is deterministic, so build it (and its mips) once and reuse it across instances. */
-const getTextureLevels = () => {
-  if (!textureLevels) {
-    const data = new Float32Array(TEX * TEX);
-    buildTexture(data, 1337);
-    textureLevels = buildMipChain(data, TEX);
-  }
-  return textureLevels;
-};
+function* buildTextureLevels(): BuildSteps<Float32Array[]> {
+  const data = new Float32Array(TEX * TEX);
+  yield* buildTextureSteps(data, 1337);
+  yield;
+  return buildMipChain(data, TEX);
+}
+/** CPU milliseconds per frame spent building the wall texture (about 60 ms in all). */
+const BUILD_BUDGET_MS = 2;
+/** Seconds the walls take to fade in once their texture is ready. */
+const REVEAL_SECONDS = 0.6;
 
 /**
  * A texture-mapped wormhole, drawn by a WebGL2 fragment shader: per-pixel angle
@@ -245,7 +262,7 @@ export const tunnel = defineEffect(tunnelMeta, {
           internalFormat: gl.R16F,
           format: gl.RED,
           type: gl.FLOAT,
-          data: getTextureLevels()[0],
+          data: textureLevels?.[0] ?? new Float32Array(TEX * TEX),
           wrap: gl.REPEAT,
         }),
         (t) => {
@@ -253,25 +270,36 @@ export const tunnel = defineEffect(tunnelMeta, {
         },
       );
       // Mipmaps stop the walls shimmering where they minify (mid-depth and beyond);
-      // the shader picks the level with textureGrad. Uploaded straight after
-      // createDataTexture, so its unpack state still applies.
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      const levels = getTextureLevels();
-      for (let i = 1; i < levels.length; i++) {
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          i,
-          gl.R16F,
-          TEX >> i,
-          TEX >> i,
-          0,
-          gl.RED,
-          gl.FLOAT,
-          levels[i],
-        );
+      // the shader picks the level with textureGrad.
+      const uploadLevels = (levels: Float32Array[]) => {
+        gl.activeTexture(gl.TEXTURE0);
+        updateDataTexture(gl, texture, TEX, TEX, gl.RED, gl.FLOAT, levels[0]);
+        for (let i = 1; i < levels.length; i++) {
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            i,
+            gl.R16F,
+            TEX >> i,
+            TEX >> i,
+            0,
+            gl.RED,
+            gl.FLOAT,
+            levels[i],
+          );
+        }
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      };
+      // The first instance on a page builds the texture over its first frames, with
+      // the walls fading in once it lands, rather than stalling a frame for it.
+      const build = createBackgroundBuild<number, Float32Array[]>();
+      let reveal = 0;
+      if (textureLevels) {
+        uploadLevels(textureLevels);
+        reveal = 1;
+      } else {
+        build.request(0, buildTextureLevels);
       }
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-      gl.bindTexture(gl.TEXTURE_2D, null);
       const u = createUniforms(gl, program, [
         "uTex",
         "uPixScale",
@@ -313,6 +341,16 @@ export const tunnel = defineEffect(tunnelMeta, {
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
+          if (build.building !== undefined) {
+            const levels = build.step(BUILD_BUDGET_MS);
+            if (levels) {
+              textureLevels ??= levels;
+              uploadLevels(textureLevels);
+            }
+          }
+          if (build.building === undefined) {
+            reveal = Math.min(1, reveal + Math.max(0, dt) / REVEAL_SECONDS);
+          }
           time += dt;
           const dv = p.speed * SPEED_TEX * dt;
           vOff = wrapTexels(vOff + dv);
@@ -337,6 +375,8 @@ export const tunnel = defineEffect(tunnelMeta, {
           u.f2("uScroll", su / TEX, vOff / TEX);
           u.f1("uSpiral", spk);
           u.f1("uRings", p.rings);
+          const wallGain = p.brightness * smoothstep(0, 1, reveal);
+          u.f2("uGain", 0.85 * wallGain, 0.2 * wallGain);
           if (
             p.color1 !== lastColor1 ||
             p.color2 !== lastColor2 ||
@@ -356,7 +396,6 @@ export const tunnel = defineEffect(tunnelMeta, {
             u.v3("uColor2", c2);
             u.f3("uRamp12", c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
             u.f3("uRamp23", c3[0] - c2[0], c3[1] - c2[1], c3[2] - c2[2]);
-            u.f2("uGain", 0.85 * p.brightness, 0.2 * p.brightness);
             // The core glow leans colour 3 towards white, pre-multiplied by its gain.
             const bright = p.core !== "dark";
             const glow = mixRgb(hexToRgb(p.color3), [255, 255, 255], 0.55);
