@@ -795,3 +795,39 @@ export function scissorBox(
   gl.scissor(x0, y0, x1 - x0, y1 - y0);
   return true;
 }
+
+/** Probe results per context and format: whether a 1x1 target of it was complete. */
+const floatProbes = new WeakMap<WebGL2RenderingContext, Map<GLenum, boolean>>();
+
+/**
+ * Whether float textures of `internalFormat` (`R16F`, `RG16F`, `RGBA16F`, or a
+ * 32-bit float format) can be rendered to here. Enables `EXT_color_buffer_float`,
+ * or for the 16-bit formats `EXT_color_buffer_half_float` where that's all there
+ * is, then checks that a 1x1 target of the format is complete. Every effect asks
+ * here, so they agree on what's renderable. The probe is cached per context;
+ * the extensions are requested on every call, since a restored context needs
+ * them enabled again.
+ */
+export function floatRenderable(gl: WebGL2RenderingContext, internalFormat: GLenum): boolean {
+  const half =
+    internalFormat === gl.R16F || internalFormat === gl.RG16F || internalFormat === gl.RGBA16F;
+  const ext =
+    gl.getExtension("EXT_color_buffer_float") !== null ||
+    (half && gl.getExtension("EXT_color_buffer_half_float") !== null);
+  if (!ext) {
+    return false;
+  }
+  let probes = floatProbes.get(gl);
+  if (!probes) {
+    probes = new Map();
+    floatProbes.set(gl, probes);
+  }
+  let ok = probes.get(internalFormat);
+  if (ok === undefined) {
+    const probe = createRenderTarget(gl, 1, 1, internalFormat);
+    ok = probe !== null;
+    probe?.dispose();
+    probes.set(internalFormat, ok);
+  }
+  return ok;
+}

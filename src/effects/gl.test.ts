@@ -10,6 +10,7 @@ import {
   withScope,
   scissorBox,
   scopedProgram,
+  floatRenderable,
 } from "./gl";
 import { createFakeGl } from "../test/fake-gl";
 import { defined } from "../test/defined";
@@ -489,6 +490,30 @@ describe("scopedProgram", () => {
     scopedProgram(fake.gl, scope, "vs", "fs");
     expect(fake.live().filter((o) => o.kind === "Program")).toHaveLength(1);
     scope.dispose();
+    expect(fake.live()).toEqual([]);
+  });
+});
+
+describe("floatRenderable", () => {
+  it("needs a colour-buffer float extension", () => {
+    const { gl } = createFakeGl();
+    expect(floatRenderable(gl, gl.RGBA16F)).toBe(false);
+  });
+
+  it("accepts the half-float extension for 16-bit formats only", () => {
+    const { gl } = createFakeGl({ extensions: ["EXT_color_buffer_half_float"] });
+    expect(floatRenderable(gl, gl.R16F)).toBe(true);
+    expect(floatRenderable(gl, gl.RGBA16F)).toBe(true);
+    expect(floatRenderable(gl, gl.R32F)).toBe(false);
+  });
+
+  it("probes a target, once per context and format, and frees it", () => {
+    const fake = createFakeGl({ extensions: ["EXT_color_buffer_float"], unrenderable: ["RG16F"] });
+    expect(floatRenderable(fake.gl, fake.gl.RGBA16F)).toBe(true);
+    expect(floatRenderable(fake.gl, fake.gl.RG16F)).toBe(false);
+    const made = fake.created.get("Texture");
+    expect(floatRenderable(fake.gl, fake.gl.RGBA16F)).toBe(true);
+    expect(fake.created.get("Texture")).toBe(made);
     expect(fake.live()).toEqual([]);
   });
 });
