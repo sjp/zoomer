@@ -5,6 +5,7 @@ import {
   BEND_LIMIT,
   BEND_SWAY,
   BLADE_FLOATS,
+  BLADE_INSTANCE_FLOATS,
   BLADE_STRIP,
   bendPoints,
   bladeCount,
@@ -211,5 +212,25 @@ describe("selectBlades", () => {
     const field = buildBladeField(5, 100);
     expect(selectBlades(field, 500, new Float32Array(1000 * BLADE_FLOATS))).toBe(100);
     expect(selectBlades(field, 50, new Float32Array(20 * BLADE_FLOATS))).toBe(20);
+  });
+
+  it("appends each blade's eased life, by blade index, as its opacity", () => {
+    const field = buildBladeField(5, 200);
+    const life = new Float32Array(200).fill(1);
+    life.fill(0.5, 100);
+    const out = new Float32Array(200 * BLADE_INSTANCE_FLOATS);
+    expect(selectBlades(field, 150, out, life)).toBe(150);
+    const plain = new Float32Array(200 * BLADE_FLOATS);
+    selectBlades(field, 150, plain);
+    let fading = 0;
+    for (let j = 0; j < 150; j++) {
+      const o = j * BLADE_INSTANCE_FLOATS;
+      expect(out.subarray(o, o + BLADE_FLOATS)).toEqual(
+        plain.subarray(j * BLADE_FLOATS, (j + 1) * BLADE_FLOATS),
+      );
+      fading += out[o + BLADE_FLOATS] === 0.5 ? 1 : 0;
+    }
+    // Blades 100..149 are fading (smoothstep(0.5) is 0.5); the rest are opaque.
+    expect(fading).toBe(50);
   });
 });

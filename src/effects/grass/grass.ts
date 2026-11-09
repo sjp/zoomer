@@ -11,11 +11,13 @@ import {
   withScope,
   scopedProgram,
 } from "../gl";
+import { createCountFade } from "../fade";
 import {
   BEND_BASE,
   BEND_GUST,
   BEND_LIMIT,
   BEND_SWAY,
+  BLADE_FADE_IN,
   BLADE_STRIP,
   bladeCount,
   buildBladeField,
@@ -94,6 +96,8 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aBlade;
 /** Tone 0..1, own-sway cycles per wind period, flex, rest lean (radians). */
 layout(location = 2) in vec4 aTraits;
+/** Opacity: below 1 while a count change fades the blade in or out. */
+layout(location = 3) in float aOpacity;
 uniform vec2 uResolution;
 /** Horizon y (px from the top) and grass-band height (px). */
 uniform vec2 uField;
@@ -163,7 +167,7 @@ void main() {
   vColor = mix(col, uHaze, haze);
   vGlow = uGlow * (s * s * (0.35 + 0.65 * exp(-sunDx * sunDx)) * (1.0 - haze));
   // Far blades fade out over the distance band, which carries on without them.
-  vAlpha = smoothstep(${f(D_MIN)}, ${f(D_MIN * 1.7)}, d);
+  vAlpha = smoothstep(${f(D_MIN)}, ${f(D_MIN * 1.7)}, d) * aOpacity;
 }
 `;
 
@@ -321,12 +325,13 @@ export const grass = defineEffect(grassMeta, {
           gl.deleteTexture(t);
         },
       );
-      const blades = scope.own(createSpriteBatch(gl, MAX_BLADES, [4, 4], [BLADE_STRIP]));
+      const blades = scope.own(createSpriteBatch(gl, MAX_BLADES, [4, 4, 1], [BLADE_STRIP]));
       /** Blades in the batch; -1 builds them on the first frame. */
       let built = -1;
       // Every blade the count can reach, sorted once: a resize or a density change only
       // picks out a subset, rather than allocating and sorting again every frame.
       const field = buildBladeField(SEED, MAX_BLADES);
+      const fade = createCountFade(MAX_BLADES);
 
       const band: Rgb = [0, 0, 0];
       const rootLit: Rgb = [0, 0, 0];
@@ -349,9 +354,15 @@ export const grass = defineEffect(grassMeta, {
           phase += Math.max(0, dt) * windRate(p.wind);
           phase -= Math.floor(phase);
 
+          // Blades a density change or resize adds fade in, and those it removes fade out.
           const count = bladeCount(p.density, width / Math.max(1, height));
-          if (count !== built) {
-            built = selectBlades(field, count, blades.data);
+          let rewrite = false;
+          if (built < 0) {
+            fade.snap(count);
+            rewrite = true;
+          }
+          if (fade.step(count, dt, BLADE_FADE_IN) || rewrite) {
+            built = selectBlades(field, fade.live, blades.data, fade.life);
             blades.upload(built);
           }
 

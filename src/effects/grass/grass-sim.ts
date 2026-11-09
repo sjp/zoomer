@@ -108,21 +108,40 @@ export function buildBladeField(seed: number, count: number): BladeField {
   return { count: n, data, index: order };
 }
 
+/** Floats per blade instance: the blade's `BLADE_FLOATS`, then its opacity. */
+export const BLADE_INSTANCE_FLOATS = BLADE_FLOATS + 1;
+
+/** Seconds a blade added by a higher count takes to fade in. */
+export const BLADE_FADE_IN = 1;
+
 /**
  * Copies blades 0..count-1 of `field` into `out`, still back to front, and returns
  * how many it wrote (clamped to the field and to what `out` holds). One pass, no
  * sort and no allocation, so a count change (a resize or the density slider) is cheap.
+ * With `life` (by blade index, as a `CountFade` keeps it), each blade is written as
+ * `BLADE_INSTANCE_FLOATS`, its eased life appended as its opacity.
  */
-export function selectBlades(field: BladeField, count: number, out: Float32Array): number {
-  const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / BLADE_FLOATS)));
+export function selectBlades(
+  field: BladeField,
+  count: number,
+  out: Float32Array,
+  life?: Float32Array,
+): number {
+  const stride = life ? BLADE_INSTANCE_FLOATS : BLADE_FLOATS;
+  const n = Math.max(0, Math.min(Math.floor(count), Math.floor(out.length / stride)));
   const { data, index } = field;
   let j = 0;
   for (let k = 0; k < field.count && j < n; k++) {
-    if (index[k] < n) {
+    const i = index[k];
+    if (i < n) {
       const src = k * BLADE_FLOATS;
-      const dst = j * BLADE_FLOATS;
+      const dst = j * stride;
       for (let f = 0; f < BLADE_FLOATS; f++) {
         out[dst + f] = data[src + f];
+      }
+      if (life) {
+        const l = life[i];
+        out[dst + BLADE_FLOATS] = l * l * (3 - 2 * l);
       }
       j++;
     }
