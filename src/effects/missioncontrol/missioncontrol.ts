@@ -117,6 +117,8 @@ import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 
 /** Seconds the shaders' clock repeats over; every periodic motion in them divides it. */
 const SHADER_PERIOD = 1000;
+/** Frames per second of the launch screen's film grain: each is freshly random, at a pace the codec can follow. */
+const TV_GRAIN_RATE = 6;
 /** CRT phosphor colours. */
 const PHOSPHOR_GREEN: Rgb = hexToUnitRgb("#5cff7a");
 const PHOSPHOR_WHITE: Rgb = hexToUnitRgb("#d8e6ff");
@@ -847,8 +849,10 @@ float tvScene(vec2 uv) {
     float wisp = smoothstep(0.12, 0.0, length(vp * vec2(0.6, 2.5))) * step(0.0, vp.x) * smoothstep(0.35, 0.75, n);
     v = mix(v, 0.85, 0.6 * wisp);
   }
-  // Film grain, slow enough not to sparkle.
-  v += 0.05 * (hash2(floor(uv * vec2(160.0, 120.0)) + floor(uTime * 12.0)) - 0.5);
+  // Film grain, re-randomised at the codec's frame rate, slow enough not to sparkle.
+  uvec2 gc = uvec2(ivec2(floor(uv * vec2(160.0, 120.0))) + 65536);
+  uint gf = uint(floor(uTime * ${g(TV_GRAIN_RATE)}));
+  v += 0.05 * (float(hash32(gc.x ^ hash32(gc.y ^ hash32(gf)))) / 4294967296.0 - 0.5);
   return v * uTv.z;
 }
 
