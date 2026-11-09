@@ -25,6 +25,7 @@ import { clamp } from "../math";
 import { createSpriteBatch, QUAD } from "../sprites";
 import { defineEffect } from "../types";
 import { advancePhases } from "../caustics/caustics-sim";
+import { createChangeKey } from "../change-key";
 
 const F = glslFloat;
 
@@ -254,7 +255,7 @@ export const coral = defineEffect(coralMeta, {
       const colors = new Float32Array(SLOTS * 3);
       const phases = new Float32Array(CAUSTIC_RATES.length);
       const clock = createGrowthClock(CYCLE, START);
-      let builtKey = "";
+      const builtKey = createChangeKey(3);
       let builtAspect = 0;
       let resizeWait = 0;
       let paletteKey = "";
@@ -286,12 +287,13 @@ export const coral = defineEffect(coralMeta, {
             resizeWait = 0;
           }
           const cs = cycleSeed(seed, s.cycle);
-          const key = `${String(cs)}|${String(p.density)}|${String(p.height)}`;
-          if (key !== builtKey || resizeWait >= RESIZE_SETTLE || builtAspect === 0) {
+          builtKey.set(0, cs);
+          builtKey.set(1, p.density);
+          builtKey.set(2, p.height);
+          if (builtKey.take() || resizeWait >= RESIZE_SETTLE || builtAspect === 0) {
             buildReef(cs, aspect, p.density, p.height, reef);
             batch.data.set(reef.data.subarray(0, reef.count * batch.stride));
             batch.upload(reef.count);
-            builtKey = key;
             builtAspect = aspect;
             resizeWait = 0;
           }

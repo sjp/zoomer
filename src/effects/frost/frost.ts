@@ -33,6 +33,7 @@ import { clamp, smoothstep } from "../math";
 import { createBackgroundBuild, createSettledValue } from "../rebuild";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** The cycle at growth speed 1: a few minutes to grow, a hold, about a minute to melt. */
 const CYCLE = { grow: 180, hold: 75, melt: 60 };
@@ -274,12 +275,16 @@ export const frost = defineEffect(frostMeta, {
       let fieldW = 1;
       let fieldH = 1;
       /** What the uploaded field was built for: seed and size, and the cycle. */
-      let appliedBase = "";
+      let appliedBase = Number.NaN;
       let appliedCycle = Number.NaN;
       /** The next cycle's field, built ahead so the cycle boundary only uploads it. */
-      let next: { base: string; cycle: number; field: FrostField } | null = null;
+      let next: { base: number; cycle: number; field: FrostField } | null = null;
       // The field is built a little each frame (about 100 ms of work in all), never in one go.
-      const build = createBackgroundBuild<string, FrostField>();
+      // Each build's key is a new number, taken when the base or the cycle wanted changes.
+      const build = createBackgroundBuild<number, FrostField>();
+      let buildId = 0;
+      let buildBase = Number.NaN;
+      let buildCycle = Number.NaN;
       const settledSeed = createSettledValue<number>(SEED_SETTLE);
       const settledSize = createSettledValue<number>(RESIZE_SETTLE);
       let reveal = 0;
@@ -291,9 +296,15 @@ export const frost = defineEffect(frostMeta, {
       let height = 1;
       let aspect = 1;
       let scale = 1;
-      let sceneKey = "";
+      /** The field size the frame's shape wants, packed as width * 65536 + height. */
+      const packedFieldSize = (a: number) => {
+        const want = fieldSize(a);
+        return want.width * 65536 + want.height;
+      };
+      let wantSize = packedFieldSize(aspect);
+      const sceneKey = createChangeKey(5);
 
-      const applyField = (field: FrostField, base: string, cycle: number) => {
+      const applyField = (field: FrostField, base: number, cycle: number) => {
         const { width: w, height: h } = field;
         if (fieldTex && w === fieldW && h === fieldH) {
           gl.activeTexture(gl.TEXTURE0);
@@ -322,10 +333,14 @@ export const frost = defineEffect(frostMeta, {
         appliedBase = base;
         appliedCycle = cycle;
       };
-      const keyOf = (base: string, cycle: number) => `${base}|${String(cycle)}`;
       /** Steps the build of `base`'s field for `cycle`, and returns it once it completes. */
-      const stepBuild = (base: string, seed: number, cycle: number, w: number, h: number) => {
-        build.request(keyOf(base, cycle), () => buildFrostFieldSteps(cycleSeed(seed, cycle), w, h));
+      const stepBuild = (base: number, seed: number, cycle: number, w: number, h: number) => {
+        if (build.building === undefined || base !== buildBase || cycle !== buildCycle) {
+          buildBase = base;
+          buildCycle = cycle;
+          buildId++;
+          build.request(buildId, () => buildFrostFieldSteps(cycleSeed(seed, cycle), w, h));
+        }
         return build.step(BUILD_BUDGET_MS);
       };
 
@@ -359,6 +374,7 @@ export const frost = defineEffect(frostMeta, {
           height = Math.max(1, Math.floor(v.height));
           aspect = width / height;
           scale = v.scale > 0 ? v.scale : height / 1080;
+          wantSize = packedFieldSize(aspect);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -373,11 +389,14 @@ export const frost = defineEffect(frostMeta, {
             diffuse?.dispose();
             diffuse = null;
             diffuse = createRenderTarget(gl, dw, dh, gl.RGBA8);
-            sceneKey = "";
+            sceneKey.invalidate();
           }
-          const key = `${p.scene}|${String(seed)}|${String(target.width)}x${String(target.height)}|${String(aspect)}`;
-          if (key !== sceneKey) {
-            sceneKey = key;
+          sceneKey.setText(0, p.scene);
+          sceneKey.set(1, seed);
+          sceneKey.set(2, target.width);
+          sceneKey.set(3, target.height);
+          sceneKey.set(4, aspect);
+          if (sceneKey.take()) {
             drawScene(p.scene, seed, dw, dh);
           }
 
@@ -385,12 +404,12 @@ export const frost = defineEffect(frostMeta, {
           const growth = Number.isFinite(p.growth) ? clamp(p.growth, MIN_GROWTH, MAX_GROWTH) : 1;
           const s = clock.advance(step, growth, p.cycle);
           // Seed and aspect are debounced, so dragging the slider or the window builds once.
-          const want = fieldSize(aspect);
-          const size = settledSize.update(want.width * 65536 + want.height, step);
+          const size = settledSize.update(wantSize, step);
           const fw = Math.floor(size / 65536);
           const fh = size % 65536;
           const fieldSeed = settledSeed.update(seed, step);
-          const base = `${String(fieldSeed)}|${String(fw)}x${String(fh)}`;
+          // Seed and size in one number: the size fits in 32 bits.
+          const base = fieldSeed * 4294967296 + size;
           if (appliedBase !== base || appliedCycle !== s.cycle) {
             if (next?.base === base && next.cycle === s.cycle) {
               applyField(next.field, base, s.cycle);

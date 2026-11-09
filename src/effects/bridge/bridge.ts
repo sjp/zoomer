@@ -104,6 +104,7 @@ import { createStarfield, type StarFrame } from "../warp/warp-sim";
 import { defineEffect } from "../types";
 import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 import { HASH_CELL_GLSL } from "../noise";
+import { createChangeKey } from "../change-key";
 
 /** Most glass rects the room pass draws (every panel and the band). */
 const MAX_GLASS = 8;
@@ -999,8 +1000,9 @@ export const bridge = defineEffect(bridgeMeta, {
       let width = 1;
       let height = 1;
       let time = 0;
-      let layoutKey = "";
-      let atlasKey = "";
+      const layoutKey = createChangeKey(5);
+      /** The atlas follows the layout and the canvas height. */
+      const atlasKey = createChangeKey(1);
       let roomDrawn = false;
       let disposed = false;
       scope.defer(() => {
@@ -1014,7 +1016,7 @@ export const bridge = defineEffect(bridgeMeta, {
           .then((loaded) => {
             document.fonts.add(loaded);
             if (!disposed) {
-              atlasKey = "";
+              atlasKey.invalidate();
             }
             return loaded;
           })
@@ -1153,7 +1155,7 @@ export const bridge = defineEffect(bridgeMeta, {
           widgetInfo.set([w.kind === "sweep" ? 0 : 1, w.block], i * 2);
         });
         roomDrawn = false;
-        atlasKey = "";
+        atlasKey.invalidate();
       };
 
       /** Rasterises the atlas and index at the current size and uploads them. */
@@ -1215,7 +1217,7 @@ export const bridge = defineEffect(bridgeMeta, {
           room?.dispose();
           room = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
           roomDrawn = false;
-          atlasKey = "";
+          atlasKey.invalidate();
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -1223,9 +1225,12 @@ export const bridge = defineEffect(bridgeMeta, {
           time += step;
           const showView = p.exterior !== "off";
           const display = p.display === "right" ? "right" : "left";
-          const key = `${display}|${String(showView)}|${String(Math.floor(p.seed))}|${String(p.showTime)}|${String(p.showDate)}`;
-          if (key !== layoutKey) {
-            layoutKey = key;
+          layoutKey.setText(0, display);
+          layoutKey.set(1, showView ? 1 : 0);
+          layoutKey.set(2, Math.floor(p.seed));
+          layoutKey.set(3, p.showTime ? 1 : 0);
+          layoutKey.set(4, p.showDate ? 1 : 0);
+          if (layoutKey.take()) {
             const hidden = new Set<LiveKey>();
             if (!p.showTime) {
               hidden.add("time");
@@ -1235,9 +1240,8 @@ export const bridge = defineEffect(bridgeMeta, {
             }
             rebuildLayout(display, showView, Math.floor(p.seed), hidden);
           }
-          const aKey = `${key}|${String(height)}`;
-          if (aKey !== atlasKey) {
-            atlasKey = aKey;
+          atlasKey.set(0, height);
+          if (atlasKey.take()) {
             rebuildAtlas();
           }
           if (!room || !glow || !atlasTex || !indexTex || !stateTex) {

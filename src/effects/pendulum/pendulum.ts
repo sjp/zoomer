@@ -20,6 +20,7 @@ import { MAX_PENDULUMS, pendulumMeta } from "./pendulum.meta";
 import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Studio backdrop: a charcoal gradient with a soft pool of light behind the rig. */
 const BACKDROP_TOP: Rgb = [0.105, 0.11, 0.122];
@@ -181,7 +182,7 @@ export const pendulum = defineEffect(pendulumMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
-      let builtKey = "";
+      const builtKey = createChangeKey(4);
 
       return {
         resize(v) {
@@ -190,9 +191,11 @@ export const pendulum = defineEffect(pendulumMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const refWidth = width / scale;
-          const key = `${String(p.count)}:${p.view}:${p.placement}:${String(refWidth)}`;
-          if (key !== builtKey) {
-            builtKey = key;
+          builtKey.set(0, p.count);
+          builtKey.setText(1, p.view);
+          builtKey.setText(2, p.placement);
+          builtKey.set(3, refWidth);
+          if (builtKey.take()) {
             rig.configure({ count: p.count, view: p.view, placement: p.placement, refWidth });
           }
           rig.update(dt, { cycle: p.cycle, amplitude: p.amplitude });

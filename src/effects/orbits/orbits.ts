@@ -30,6 +30,7 @@ import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
 import { createStarDraw, createStarSprites } from "../starfield";
 import { seedSalt } from "../starfield-sim";
 import { defineEffect } from "../types";
+import { createChangeKey } from "../change-key";
 
 /** Points along a trail strip and around an orbit line. */
 const TRAIL_SAMPLES = 96;
@@ -315,8 +316,8 @@ export const orbits = defineEffect(orbitsMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
-      let starsKey = "";
-      let sysKey = "";
+      const starsKey = createChangeKey(2);
+      const sysKey = createChangeKey(3);
       let sys: OrbitSystem | null = null;
       let gpuCount = 0;
       let elementsDirty = true;
@@ -334,16 +335,17 @@ export const orbits = defineEffect(orbitsMeta, {
           beginFrame(gl, width, height);
           const seed = Math.floor(p.seed);
           const kind = resolveKind(p.system, seed);
-          const key = `${kind}:${String(Math.round(p.planets))}:${String(seed)}`;
-          if (key !== sysKey || !sys) {
-            sysKey = key;
+          sysKey.setText(0, kind);
+          sysKey.set(1, Math.round(p.planets));
+          sysKey.set(2, seed);
+          if (sysKey.take() || !sys) {
             sys = createSystem(kind, p.planets, seed);
             elementsDirty = true;
           }
           const refWidth = width / scale;
-          const sk = `${String(seed)}:${String(refWidth)}`;
-          if (sk !== starsKey) {
-            starsKey = sk;
+          starsKey.set(0, seed);
+          starsKey.set(1, refWidth);
+          if (starsKey.take()) {
             pole[0] = refWidth / 2;
             pole[1] = REF_HEIGHT / 2;
             stars.build({

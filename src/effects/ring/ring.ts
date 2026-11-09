@@ -598,7 +598,9 @@ export const ring = defineEffect(ringMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
-      let roomKey = "";
+      // What the corridor was last drawn for; NaN forces a redraw of it and its wash.
+      let roomMirror = Number.NaN;
+      let roomAccent = "";
       let time = 0;
       let phase = START_PHASE;
       const lamp: [number, number, number] = [0, 0, 0];
@@ -617,7 +619,7 @@ export const ring = defineEffect(ringMeta, {
             Math.max(1, Math.ceil(height / WASH_DIVISOR)),
             gl.R8,
           );
-          roomKey = "";
+          roomMirror = Number.NaN;
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -630,12 +632,11 @@ export const ring = defineEffect(ringMeta, {
           const mirror = p.windows === "left" ? -1 : 1;
 
           // 1. The corridor and its wash mask, when they may have changed.
-          const key = `${String(mirror)}|${p.accent}`;
-          if (key !== roomKey) {
+          if (mirror !== roomMirror || p.accent !== roomAccent) {
             gl.useProgram(roomProgram);
             ru.f1("uMirror", mirror);
             ru.rgb("uAccent", p.accent);
-            if (!roomKey.startsWith(`${String(mirror)}|`)) {
+            if (mirror !== roomMirror) {
               washTarget.bind();
               ru.f2("uResolution", washTarget.width, washTarget.height);
               ru.i1("uPass", 1);
@@ -647,7 +648,8 @@ export const ring = defineEffect(ringMeta, {
             triangle.draw();
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.viewport(0, 0, width, height);
-            roomKey = key;
+            roomMirror = mirror;
+            roomAccent = p.accent;
           }
 
           // 2. The body's textures, when first needed.

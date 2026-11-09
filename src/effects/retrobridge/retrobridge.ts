@@ -60,6 +60,7 @@ import {
 } from "./retrobridge-sim";
 import { type Lighting, retrobridgeMeta } from "./retrobridge.meta";
 import { SDF2D_GLSL } from "../sdf-glsl";
+import { createChangeKey } from "../change-key";
 
 const g = glslFloat;
 
@@ -1070,7 +1071,7 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
       });
       let width = 1;
       let height = 1;
-      let roomKey = "";
+      const roomKey = createChangeKey(3);
 
       let time = 0;
       let alert = 0;
@@ -1085,7 +1086,7 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
           live?.dispose();
           room = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
           live = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
-          roomKey = "";
+          roomKey.invalidate();
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -1100,9 +1101,10 @@ export const retrobridge = defineEffect(retrobridgeMeta, {
             p.lighting === "cool" || p.lighting === "warm" ? p.lighting : "classic";
 
           // 1. The room and its live map, when the size or a setting that shapes it changes.
-          const key = `${String(seed)}|${String(mirror)}|${lighting}`;
-          if (key !== roomKey) {
-            roomKey = key;
+          roomKey.set(0, seed);
+          roomKey.set(1, mirror);
+          roomKey.setText(2, lighting);
+          if (roomKey.take()) {
             gl.useProgram(roomProgram);
             ru.f2("uRes", width, height);
             ru.u1("uSalt", hash32(seed + 0x3c6ef372));

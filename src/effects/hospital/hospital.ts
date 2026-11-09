@@ -39,12 +39,12 @@ import {
   stepMonitor,
   TRACE_CHANNELS,
   TRACE_COLUMNS,
-  vitalsKey,
 } from "./hospital-sim";
 import { hospitalMeta } from "./hospital.meta";
 import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
 import { clockHands, CLOCK_HANDS_GLSL, CLOCK_MARKS_GLSL } from "../wall-clock";
 import { createCanvasTexture, paintCanvas, type CanvasTexture } from "../canvas-texture";
+import { createChangeKey } from "../change-key";
 
 const g = glslFloat;
 
@@ -963,7 +963,7 @@ export const hospital = defineEffect(hospitalMeta, {
       let boardText: string | null = null;
       /** Set when only the board's writing changed: the room is redrawn round the board alone. */
       let boardOnly = false;
-      let screenKey: string | null = null;
+      const screenKey = createChangeKey(7);
 
       let time = 0;
       let monitor: Monitor | null = null;
@@ -981,7 +981,7 @@ export const hospital = defineEffect(hospitalMeta, {
           layout = roomLayout(width / height);
           roomSide = Number.NaN;
           boardText = null;
-          screenKey = null;
+          screenKey.invalidate();
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -999,7 +999,7 @@ export const hospital = defineEffect(hospitalMeta, {
           if (!monitor || p.seed !== monitorSeed) {
             monitorSeed = p.seed;
             monitor = createMonitor(p.seed, p.heartRate);
-            screenKey = null;
+            screenKey.invalidate();
           } else {
             stepMonitor(monitor, step, p.heartRate);
           }
@@ -1057,10 +1057,15 @@ export const hospital = defineEffect(hospitalMeta, {
           const [scx, scy, shw, shh] = layout.screen;
           const spw = px(shw);
           const sph = px(shh);
-          const sKey = `${String(spw)}x${String(sph)}|${vitalsKey(monitor.vitals)}`;
-          if (sKey !== screenKey) {
-            screenKey = sKey;
-            const vitals = monitor.vitals;
+          const vitals = monitor.vitals;
+          screenKey.set(0, spw);
+          screenKey.set(1, sph);
+          screenKey.set(2, vitals.hr);
+          screenKey.set(3, vitals.spo2);
+          screenKey.set(4, vitals.rr);
+          screenKey.set(5, vitals.sys);
+          screenKey.set(6, vitals.dia);
+          if (screenKey.take()) {
             paint(screen, spw, sph, (ctx) => {
               drawScreen(ctx, spw, sph, vitals);
             });

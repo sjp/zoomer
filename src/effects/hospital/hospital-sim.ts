@@ -368,11 +368,6 @@ export function sweepPosition(m: Monitor): number {
   return (m.cursor + clamp(m.carry / COLUMN_SECONDS, 0, 1)) / TRACE_COLUMNS;
 }
 
-/** A key that changes whenever a number on the monitor does. */
-export function vitalsKey(v: Vitals): string {
-  return `${String(v.hr)}|${String(v.spo2)}|${String(v.rr)}|${String(v.sys)}|${String(v.dia)}`;
-}
-
 // ---------------------------------------------------------------------------
 // The IV drip
 // ---------------------------------------------------------------------------

@@ -51,6 +51,7 @@ import {
   slotRate,
 } from "./cockpit-sim";
 import { VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
+import { createChangeKey } from "../change-key";
 
 const f = glslFloat;
 
@@ -748,7 +749,7 @@ export const cockpit = defineEffect(cockpitMeta, {
       const screenData = new Float32Array(MAX_SCREENS * 4);
 
       const jump = createJumpState();
-      let scheduleKey = "";
+      const scheduleKey = createChangeKey(3);
       let epoch = 0;
       let legBase = 0;
       let leg = Number.NaN;
@@ -797,9 +798,10 @@ export const cockpit = defineEffect(cockpitMeta, {
           }
 
           // The jump schedule restarts when its settings change, keeping the scenery.
-          const key = `${p.view}|${String(p.jumpGap)}|${String(seed)}`;
-          if (key !== scheduleKey) {
-            scheduleKey = key;
+          scheduleKey.setText(0, p.view);
+          scheduleKey.set(1, p.jumpGap);
+          scheduleKey.set(2, seed);
+          if (scheduleKey.take()) {
             legBase += jump.leg;
             epoch = time;
           }

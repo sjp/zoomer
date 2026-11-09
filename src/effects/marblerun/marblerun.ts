@@ -390,7 +390,7 @@ export const marblerun = defineEffect(marblerunMeta, {
       const marbles = createMarbles(MAX_MARBLES);
       const point = new Float64Array(2);
       let run: Run | null = null;
-      let runKey = "";
+      const runKey = createChangeKey(3);
       let placed = -1;
       let backCount = 0;
       let boardCount = 0;
@@ -413,10 +413,11 @@ export const marblerun = defineEffect(marblerunMeta, {
           beginFrame(gl, width, height);
           const aspect = width / height;
           const side: MarbleSide = p.side === "left" ? "left" : "right";
-          const key = `${String(p.levels)}|${side}|${String(aspect)}`;
-          if (key !== runKey || !run) {
+          runKey.set(0, p.levels);
+          runKey.setText(1, side);
+          runKey.set(2, aspect);
+          if (runKey.take() || !run) {
             run = buildRun(p.levels, side, aspect);
-            runKey = key;
             placed = -1;
             backCount = writeBoards(boardBatch.data, boardBatch.stride, 0, run.back);
             boardCount = writeBoards(boardBatch.data, boardBatch.stride, backCount, run.front);
