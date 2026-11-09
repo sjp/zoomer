@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mainFragment, tileFragment } from "./caustics";
+import { mainFragment } from "./caustics";
 import {
   advancePhases,
   BUBBLE_MAX_R,
@@ -206,13 +206,6 @@ describe("bubbles", () => {
 });
 
 describe("shaders", () => {
-  it("generates one unrolled warp iteration per rate", () => {
-    const src = tileFragment(CAUSTIC_RATES.length);
-    expect(src.startsWith("#version 300 es")).toBe(true);
-    expect(src.match(/inversesqrt/g)?.length).toBe(CAUSTIC_RATES.length);
-    expect(src).toContain(`uniform float uT[${String(CAUSTIC_RATES.length)}];`);
-  });
-
   it("samples the tile 2 or 4 times, plus the ray table in deep water with rays", () => {
     const count = (s: string, re: RegExp) => s.match(re)?.length ?? 0;
     expect(count(mainFragment(false, false), /texture\(/g)).toBe(2);

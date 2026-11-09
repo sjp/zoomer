@@ -1,11 +1,9 @@
-import { tileFragment } from "../caustics/caustics";
-import { advancePhases, CAUSTIC_RATES } from "../caustics/caustics-sim";
+import { CAUSTIC_RATES } from "../caustics/caustics-sim";
 import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
@@ -40,11 +38,11 @@ import {
 } from "./koi-sim";
 import { fanStrip } from "../leaves/leaves-sim";
 import { createLowResTarget, qualityDivisor } from "../lowres";
-import { wrap } from "../math";
 import { createNoise, createRng, HASH32_GLSL } from "../noise";
 import { createSpriteBatch, polygonStrip, SPRITE_SPIN_GLSL } from "../sprites";
 import { koiMeta, MAX_FISH, MAX_PADS } from "./koi.meta";
 import { defineEffect } from "../types";
+import { createCausticTile } from "../caustic-tile";
 
 /** Pebble texture: texels per side, pebbles per side, and its on-screen period in reference px. */
 const PEBBLE_SIZE = 256;
@@ -369,23 +367,18 @@ export const koi = defineEffect(koiMeta, {
         },
       );
 
-      // Caustic tile, borrowed from the caustics effect at fewer iterations.
-      const tileProgram = scopedProgram(
-        gl,
-        scope,
-        FULLSCREEN_VERTEX,
-        tileFragment(CAUSTIC_ITERATIONS),
+      // Caustic tile, as in the caustics effect but with fewer iterations.
+      const tile = scope.own(
+        createCausticTile(gl, triangle, {
+          interval: CAUSTIC_INTERVAL,
+          rate: CAUSTIC_RATE,
+          driftA: CAUSTIC_DRIFT,
+          rates: CAUSTIC_RATES_3,
+        }),
       );
-      const uT = gl.getUniformLocation(tileProgram, "uT");
-      const tile = createRenderTarget(gl, CAUSTIC_TILE, CAUSTIC_TILE, gl.R8, { wrap: gl.REPEAT });
-      if (!tile) {
+      if (!tile.resize(CAUSTIC_TILE)) {
         throw new Error("Koi: R8 caustic tile is not renderable");
       }
-      scope.own(tile);
-      const phases = new Float32Array(CAUSTIC_ITERATIONS);
-      let tileAge = Infinity;
-      let causticX = 0;
-      let causticY = 0;
       const causticMat = new Float32Array(4);
 
       // Fish: one strip per fish in a shared dynamic buffer.
@@ -477,18 +470,8 @@ export const koi = defineEffect(koiMeta, {
 
           // 2. Caustic tile, at most every CAUSTIC_INTERVAL.
           const caustics = Math.max(0, p.caustics);
-          advancePhases(phases, dt * CAUSTIC_RATE, CAUSTIC_RATES_3);
-          causticX = wrap(causticX + CAUSTIC_DRIFT[0] * dt, 0, 1);
-          causticY = wrap(causticY + CAUSTIC_DRIFT[1] * dt, 0, 1);
-          tileAge += dt;
-          if (caustics > 0 && tileAge >= CAUSTIC_INTERVAL * 0.9) {
-            tileAge = 0;
-            tile.bind();
-            gl.useProgram(tileProgram);
-            gl.uniform1fv(uT, phases);
-            triangle.draw();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          }
+          tile.advance(dt);
+          tile.update(dt, true, caustics > 0);
 
           // 3. Floor, at reduced resolution.
           target.resize(width, height, qualityDivisor(p.quality));
@@ -512,7 +495,7 @@ export const koi = defineEffect(koiMeta, {
             gl.uniformMatrix2fv(floorU.loc.uCausticMat, false, causticMat);
             floorU.f2("uRipple", 1 / (RIPPLE_WIDTH * scale), RIPPLE_WARP * scale);
           }
-          floorU.f2("uCausticOff", causticX, causticY);
+          floorU.f2("uCausticOff", tile.offsets[0], tile.offsets[1]);
           if (p.water !== lastWater || caustics !== lastCaustics) {
             lastWater = p.water;
             lastCaustics = caustics;

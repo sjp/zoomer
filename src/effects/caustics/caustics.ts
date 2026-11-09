@@ -1,10 +1,8 @@
 import { hexToUnitRgb } from "../color";
 import {
-  advancePhases,
   bubbleX,
   rescaleBubbles,
   tileMatrices,
-  CAUSTIC_RATES,
   createBubbleState,
   createRays,
   fillRayTable,
@@ -17,11 +15,8 @@ import {
   createColumnTable,
   createFullscreenTriangle,
   createUniforms,
-  createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
-  glslFloat,
-  type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
   scopedProgram,
@@ -30,8 +25,8 @@ import { createRng } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { causticsMeta, MAX_BUBBLES } from "./caustics.meta";
 import { defineEffect, type ParamValues } from "../types";
-import { wrap } from "../math";
 import { growLive, trimLive } from "../fade";
+import { createCausticTile } from "../caustic-tile";
 
 /** On-screen size of one caustic tile period in reference px at scale 1. */
 const TILE_REF_PX = 900;
@@ -50,42 +45,6 @@ const TILE_INTERVAL = 1 / 60;
 const RAY_COLUMNS = 256;
 const RAY_COUNT = 7;
 const RAY_STRENGTH = 0.22;
-
-/**
- * One period of the iterated sine-warp caustic (after Dave Hoskins' tileable water
- * caustic), into an R8 tile. Every term is 2π-periodic in `p`, so the tile repeats
- * seamlessly. The original `1 / length(p * k / sin, p * k / cos)` uses the
- * near-constant `p * k` (about 1.23) and is rewritten as
- * `|s c| / (k * sqrt(s² + c²))`, which has no division by zero.
- */
-export function tileFragment(iterations: number): string {
-  let body = "";
-  for (let n = 0; n < iterations; n++) {
-    body += `
-  t = uT[${String(n)}];
-  i = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));
-  s = sin(i.x + t);
-  k = cos(i.y + t);
-  c += abs(s * k) * inversesqrt(s * s + k * k + 1e-6);`;
-  }
-  return /* glsl */ `#version 300 es
-precision highp float;
-in vec2 vUv;
-uniform float uT[${String(iterations)}];
-out vec4 outColor;
-void main() {
-  vec2 p = vUv * 6.28318530718;
-  vec2 i = p;
-  float c = 0.0;
-  float t;
-  float s;
-  float k;${body}
-  c = (1.0 + c * ${glslFloat(1 / 1.23)}) * ${glslFloat(1 / iterations)};
-  float v = pow(max(1.17 - pow(c, 1.4), 0.0), 8.0);
-  outColor = vec4(clamp(v * 0.75 - 0.08, 0.0, 1.0), 0.0, 0.0, 1.0);
-}
-`;
-}
 
 /**
  * Full-screen composite: two REPEAT samples of the tile at different scales,
@@ -209,16 +168,14 @@ export const caustics = defineEffect(causticsMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       // Caustic tile: R8 is colour-renderable and filterable in core WebGL2.
-      const tileProgram = scopedProgram(
-        gl,
-        scope,
-        FULLSCREEN_VERTEX,
-        tileFragment(CAUSTIC_RATES.length),
+      const tile = scope.own(
+        createCausticTile(gl, triangle, {
+          interval: TILE_INTERVAL,
+          rate: TIME_RATE,
+          driftA: DRIFT_A,
+          driftB: DRIFT_B,
+        }),
       );
-      const uT = gl.getUniformLocation(tileProgram, "uT");
-      let tile: RenderTarget | null = null;
-      // `ensureTile` replaces the tile, so dispose whichever one is current.
-      scope.defer(() => tile?.dispose());
 
       // Six variants: [pool, deep, deep + rays] x [mono, chromatic];
       // index = scene * 2 + chromatic, so deep water without rays skips the ray fetch.
@@ -257,16 +214,9 @@ export const caustics = defineEffect(causticsMeta, {
       let refWidth = 1920;
       seedBubbles(bubbles, rng, refWidth);
 
-      const phases = new Float32Array(CAUSTIC_RATES.length);
-      let tileAge = Infinity;
-      let tileDirty = true;
       let clock = 0;
       /** The clock the ray table was last filled for (NaN: never). */
       let rayClock = Number.NaN;
-      let offAx = 0;
-      let offAy = 0;
-      let offBx = 0;
-      let offBy = 0;
 
       // Derived static uniforms, recomputed only when an input changes.
       const matA = new Float32Array(4);
@@ -293,16 +243,9 @@ export const caustics = defineEffect(causticsMeta, {
       };
 
       const ensureTile = (res: number) => {
-        if (res === tile?.width) {
-          return;
-        }
-        tile?.dispose();
-        tile = null;
-        tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
-        if (!tile) {
+        if (!tile.resize(res)) {
           throw new Error("Caustics: R8 tile is not renderable");
         }
-        tileDirty = true;
       };
 
       /** Recomputes the static uniforms if any input changed; returns true if so. */
@@ -379,24 +322,12 @@ export const caustics = defineEffect(causticsMeta, {
           const speed = Math.max(0, p.speed);
           const sdt = dt * speed;
           clock += sdt;
-          advancePhases(phases, sdt * TIME_RATE);
-          offAx = wrap(offAx + DRIFT_A[0] * sdt, 0, 1);
-          offAy = wrap(offAy + DRIFT_A[1] * sdt, 0, 1);
-          offBx = wrap(offBx + DRIFT_B[0] * sdt, 0, 1);
-          offBy = wrap(offBy + DRIFT_B[1] * sdt, 0, 1);
+          tile.advance(sdt);
           updateStatics(p);
           const deep = p.scene === "deep";
 
           // 1. Caustic tile, at most every TILE_INTERVAL while moving.
-          tileAge += dt;
-          if (tileDirty || (sdt > 0 && tileAge >= TILE_INTERVAL * 0.9)) {
-            tileAge = 0;
-            tileDirty = false;
-            tile?.bind();
-            gl.useProgram(tileProgram);
-            gl.uniform1fv(uT, phases);
-            triangle.draw();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          if (tile.update(dt, sdt > 0)) {
             gl.viewport(0, 0, width, height);
           }
 
@@ -410,7 +341,7 @@ export const caustics = defineEffect(causticsMeta, {
             rayTable.upload();
           }
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, tile?.texture ?? null);
+          gl.bindTexture(gl.TEXTURE_2D, tile.texture);
 
           // 3. Full-screen composite.
           const main = mains[(deep ? (p.rays ? 4 : 2) : 0) + (p.chromatic > 0 ? 1 : 0)];
@@ -427,8 +358,9 @@ export const caustics = defineEffect(causticsMeta, {
             gl.uniform3fv(loc.uGrid, grid);
             gl.uniform3fv(loc.uRayColor, rayColor);
           }
-          main.u.f2("uOffA", offAx, offAy);
-          main.u.f2("uOffB", offBx, offBy);
+          const off = tile.offsets;
+          main.u.f2("uOffA", off[0], off[1]);
+          main.u.f2("uOffB", off[2], off[3]);
           triangle.draw();
 
           // 4. Bubbles (deep water only).

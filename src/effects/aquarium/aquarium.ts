@@ -29,32 +29,24 @@ import { FISH_FRAGMENT, FISH_VERTEX, WATER_GLSL } from "./aquarium-fish";
 import { aquariumMeta, MAX_FISH, SPECIES_OPTIONS, type SpeciesId } from "./aquarium.meta";
 import { BUBBLE_FRAGMENT, bubbleVertex } from "../bubble-sprites";
 import { type BubbleFrame, createBubbles } from "../bubbles/bubbles-sim";
-import { tileFragment } from "../caustics/caustics";
-import {
-  advancePhases,
-  CAUSTIC_RATES,
-  tileMatrices,
-  tileResolution,
-} from "../caustics/caustics-sim";
+import { tileMatrices, tileResolution } from "../caustics/caustics-sim";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
   scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
-import { wrap } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { advanceSwell, swayGlsl } from "../sway";
 import { defineEffect } from "../types";
 import { lookup } from "../lookup";
+import { createCausticTile } from "../caustic-tile";
 
 const isSpeciesId = (v: string): v is SpeciesId => SPECIES_OPTIONS.some((o) => o.value === v);
 const f = glslFloat;
@@ -369,15 +361,14 @@ export const aquarium = defineEffect(aquariumMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       // Caustic tile (R8, REPEAT), re-rendered at most every TILE_INTERVAL.
-      const tileProgram = scopedProgram(
-        gl,
-        scope,
-        FULLSCREEN_VERTEX,
-        tileFragment(CAUSTIC_RATES.length),
+      const tile = scope.own(
+        createCausticTile(gl, triangle, {
+          interval: TILE_INTERVAL,
+          rate: CAUSTIC_RATE,
+          driftA: DRIFT_A,
+          driftB: DRIFT_B,
+        }),
       );
-      const uT = gl.getUniformLocation(tileProgram, "uT");
-      let tile: RenderTarget | null = null;
-      scope.defer(() => tile?.dispose());
 
       const back = scope.own(createLowResTarget(gl));
       const backProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACK_FRAGMENT);
@@ -440,7 +431,6 @@ export const aquarium = defineEffect(aquariumMeta, {
       const uBub = createUniforms(gl, bubbleProgram, ["uResolution", "uLight", "uShade"]);
       gl.useProgram(null);
 
-      const phases = new Float32Array(CAUSTIC_RATES.length);
       const matA = new Float32Array(4);
       const matB = new Float32Array(4);
       const matFA = new Float32Array(4);
@@ -449,12 +439,6 @@ export const aquarium = defineEffect(aquariumMeta, {
       const rocks = new Float32Array(MAX_ROCKS * 4);
       const woods = new Float32Array(MAX_WOOD * 4);
       const shade: [number, number, number] = [0, 0, 0];
-      let tileAge = Infinity;
-      let tileDirty = true;
-      let offAx = 0;
-      let offAy = 0;
-      let offBx = 0;
-      let offBy = 0;
 
       let width = 1;
       let height = 1;
@@ -490,16 +474,9 @@ export const aquarium = defineEffect(aquariumMeta, {
       let bubbleFade = 1;
 
       const ensureTile = (res: number) => {
-        if (res === tile?.width) {
-          return;
-        }
-        tile?.dispose();
-        tile = null;
-        tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
-        if (!tile) {
+        if (!tile.resize(res)) {
           throw new Error("Aquarium: R8 tile is not renderable");
         }
-        tileDirty = true;
       };
 
       const updateStatics = () => {
@@ -592,21 +569,8 @@ export const aquarium = defineEffect(aquariumMeta, {
           }
 
           // 1. Caustic tile.
-          advancePhases(phases, sdt * CAUSTIC_RATE);
-          offAx = wrap(offAx + DRIFT_A[0] * sdt, 0, 1);
-          offAy = wrap(offAy + DRIFT_A[1] * sdt, 0, 1);
-          offBx = wrap(offBx + DRIFT_B[0] * sdt, 0, 1);
-          offBy = wrap(offBy + DRIFT_B[1] * sdt, 0, 1);
-          tileAge += step;
-          if (tileDirty || (sdt > 0 && tileAge >= TILE_INTERVAL * 0.9)) {
-            tileAge = 0;
-            tileDirty = false;
-            tile?.bind();
-            gl.useProgram(tileProgram);
-            gl.uniform1fv(uT, phases);
-            triangle.draw();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          }
+          tile.advance(sdt);
+          tile.update(step, sdt > 0);
 
           // 2. Background, at reduced resolution.
           back.resize(width, height, qualityDivisor(p.quality, BACK_DIVISORS));
@@ -660,10 +624,11 @@ export const aquarium = defineEffect(aquariumMeta, {
             lc[2] * light.caustics,
           );
           ub.f3("uRayCol", lc[0] * light.rays, lc[1] * light.rays, lc[2] * light.rays);
-          ub.f2("uOffA", offAx, offAy);
-          ub.f2("uOffB", offBx, offBy);
+          const off = tile.offsets;
+          ub.f2("uOffA", off[0], off[1]);
+          ub.f2("uOffB", off[2], off[3]);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, tile?.texture ?? null);
+          gl.bindTexture(gl.TEXTURE_2D, tile.texture);
           triangle.draw();
           gl.bindFramebuffer(gl.FRAMEBUFFER, null);
           back.blit();

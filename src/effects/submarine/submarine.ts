@@ -2,13 +2,7 @@ import { FISH_FRAGMENT, FISH_VERTEX } from "../aquarium/aquarium-fish";
 import { createFishSim, type FishEnv, fishInstances, stepFishSim } from "../aquarium/aquarium-sim";
 import { GLOW_CAP } from "../biolum/biolum-sim";
 import { advanceGraph, createGraphWalk, walkWander } from "../graph-walk";
-import { tileFragment } from "../caustics/caustics";
-import {
-  advancePhases,
-  CAUSTIC_RATES,
-  tileMatrices,
-  tileResolution,
-} from "../caustics/caustics-sim";
+import { tileMatrices, tileResolution } from "../caustics/caustics-sim";
 import type { Rgb } from "../color";
 import {
   beginFrame,
@@ -77,6 +71,7 @@ import {
   whaleX,
   zonesAt,
 } from "./submarine-sim";
+import { createCausticTile } from "../caustic-tile";
 
 const v3 = (c: Rgb | readonly number[]) => `vec3(${F(c[0])}, ${F(c[1])}, ${F(c[2])})`;
 
@@ -884,8 +879,6 @@ export const submarine = defineEffect(submarineMeta, {
         "uGlass",
         "uSpill",
       ]);
-      const tileProgram = program(FULLSCREEN_VERTEX, tileFragment(CAUSTIC_RATES.length));
-      const uT = gl.getUniformLocation(tileProgram, "uT");
 
       // Fish from the Aquarium, jellyfish from Jellyfish, both drawn into the view outside.
       const fishProgram = program(FISH_VERTEX, FISH_FRAGMENT);
@@ -928,25 +921,25 @@ export const submarine = defineEffect(submarineMeta, {
 
       let room: RenderTarget | null = null;
       let outside: RenderTarget | null = null;
-      let tile: RenderTarget | null = null;
+      const tile = scope.own(
+        createCausticTile(gl, triangle, {
+          interval: TILE_INTERVAL,
+          rate: CAUSTIC_RATE,
+          driftA: DRIFT_A,
+          driftB: DRIFT_B,
+        }),
+      );
       let labels: WebGLTexture | null = null;
       scope.defer(() => {
         room?.dispose();
         outside?.dispose();
-        tile?.dispose();
         gl.deleteTexture(labels);
       });
       /** The side the room cache was drawn for; "" when it must be redrawn. */
       let roomSide = "";
 
-      const phases = new Float32Array(CAUSTIC_RATES.length);
       const matA = new Float32Array(4);
       const matB = new Float32Array(4);
-      let offAx = 0;
-      let offAy = 0;
-      let offBx = 0;
-      let offBy = 0;
-      let tileAge = Infinity;
 
       const top = [0, 0, 0];
       const deep = [0, 0, 0];
@@ -1002,13 +995,7 @@ export const submarine = defineEffect(submarineMeta, {
           outside = null;
           outside = createRenderTarget(gl, outSize, outSize, gl.RGBA8);
           const tilePx = (CAUSTIC_PERIOD * outSize) / (2 * SPAN);
-          const res = tileResolution(tilePx);
-          if (res !== tile?.width) {
-            tile?.dispose();
-            tile = null;
-            tile = createRenderTarget(gl, res, res, gl.R8, { wrap: gl.REPEAT });
-            tileAge = Infinity;
-          }
+          tile.resize(tileResolution(tilePx));
           tileMatrices(tilePx, true, matA, matB);
           swarmFrame.scale = outSize / 1080;
           roomSide = "";
@@ -1082,20 +1069,8 @@ export const submarine = defineEffect(submarineMeta, {
           const L = layout;
 
           // 2. The caustic tile, while the shallows show.
-          advancePhases(phases, step * CAUSTIC_RATE);
-          offAx = wrap(offAx + DRIFT_A[0] * step, 0, 1);
-          offAy = wrap(offAy + DRIFT_A[1] * step, 0, 1);
-          offBx = wrap(offBx + DRIFT_B[0] * step, 0, 1);
-          offBy = wrap(offBy + DRIFT_B[1] * step, 0, 1);
-          tileAge += step;
-          if (tile && zones.shallows > 0.002 && tileAge >= TILE_INTERVAL * 0.9) {
-            tileAge = 0;
-            tile.bind();
-            gl.useProgram(tileProgram);
-            gl.uniform1fv(uT, phases);
-            triangle.draw();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          }
+          tile.advance(step);
+          tile.update(step, true, zones.shallows > 0.002);
 
           // 3. The sea, at reduced resolution.
           const pass = stepWhales(whales, time);
@@ -1107,7 +1082,7 @@ export const submarine = defineEffect(submarineMeta, {
           outside.bind();
           gl.useProgram(waterProgram);
           gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, tile?.texture ?? null);
+          gl.bindTexture(gl.TEXTURE_2D, tile.texture);
           wu.f2("uRes", outSize, outSize);
           wu.f3("uTop", top[0], top[1], top[2]);
           wu.f3("uDeep", deep[0], deep[1], deep[2]);
@@ -1125,8 +1100,9 @@ export const submarine = defineEffect(submarineMeta, {
           wu.f2("uWhale2", strokePhase(time), pass.fog);
           gl.uniformMatrix2fv(wu.loc.uMatA, false, matA);
           gl.uniformMatrix2fv(wu.loc.uMatB, false, matB);
-          wu.f2("uOffA", offAx, offAy);
-          wu.f2("uOffB", offBx, offBy);
+          const off = tile.offsets;
+          wu.f2("uOffA", off[0], off[1]);
+          wu.f2("uOffB", off[2], off[3]);
           triangle.draw();
 
           gl.enable(gl.BLEND);
