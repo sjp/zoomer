@@ -107,8 +107,10 @@ export interface LowResTarget {
   bind: () => void;
   /**
    * Draws the low-res texture to the currently bound framebuffer, filling the
-   * full-size viewport, with blending disabled and sub-LSB dither. Binds the
-   * low-res texture to texture unit 0 and leaves the active unit at 0.
+   * full-size viewport, with sub-LSB dither and blending disabled (or, for a
+   * `premultiplied` target, blended over the framebuffer, leaving blending
+   * disabled afterwards). Binds the low-res texture to texture unit 0 and
+   * leaves the active unit at 0.
    * Callers must unbind the FBO from `bind()` before calling this.
    *
    * The viewport defaults to the full size passed to `resize`. Pass an explicit
@@ -162,6 +164,12 @@ export interface LowResOptions {
   /** Adds +-0.5 LSB of dither to the blit output. Defaults to true. */
   dither?: boolean;
   /**
+   * Blit the texture as premultiplied colour and alpha over what is already in
+   * the framebuffer (blend ONE, ONE_MINUS_SRC_ALPHA) instead of replacing it with
+   * opaque colour. Defaults to false.
+   */
+  premultiplied?: boolean;
+  /**
    * Never render direct, even at full size, so the texture keeps its image
    * between frames and `needsRedraw` can skip an unchanged one. Defaults to false.
    */
@@ -172,7 +180,11 @@ const DEFAULT_COMPOSITE = /* glsl */ `
 vec4 composite(vec2 uv) { return texture(uLowRes, uv); }
 `;
 
-const blitFragment = (composite: string, dither: boolean) => /* glsl */ `#version 300 es
+const blitFragment = (
+  composite: string,
+  dither: boolean,
+  premultiplied: boolean,
+) => /* glsl */ `#version 300 es
 precision highp float;
 precision highp sampler2D;
 uniform sampler2D uLowRes;
@@ -189,7 +201,7 @@ ${
   c.rgb += dither8(gl_FragCoord.xy);`
     : ""
 }
-  outColor = vec4(c.rgb, 1.0);
+  outColor = ${premultiplied ? "c" : "vec4(c.rgb, 1.0)"};
 }
 `;
 
@@ -205,11 +217,12 @@ function buildLowResTarget(
   opts: LowResOptions,
   scope: Scope,
 ): LowResTarget {
+  const premultiplied = opts.premultiplied === true;
   const program = scopedProgram(
     gl,
     scope,
     FULLSCREEN_VERTEX,
-    blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
+    blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true, premultiplied),
   );
   const uTex = gl.getUniformLocation(program, "uLowRes");
   // Only custom composites read the low-res size; the default one leaves it unused.
@@ -231,7 +244,7 @@ function buildLowResTarget(
   let isFloat = false;
   let direct = false;
   // Keeping the image needs a texture, as a composite does.
-  const needsTexture = opts.composite !== undefined || opts.keep === true;
+  const needsTexture = opts.composite !== undefined || opts.keep === true || premultiplied;
   /** Set when `resize` changes a size, cleared by `needsRedraw`. */
   let stale = true;
 
@@ -290,11 +303,19 @@ function buildLowResTarget(
         return;
       }
       gl.viewport(0, 0, outWidth, outHeight);
-      gl.disable(gl.BLEND);
+      if (premultiplied) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      } else {
+        gl.disable(gl.BLEND);
+      }
       gl.useProgram(program);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, rt?.texture ?? null);
       triangle.draw();
+      if (premultiplied) {
+        gl.disable(gl.BLEND);
+      }
     },
     get width() {
       return direct ? fullWidth : (rt?.width ?? 0);

@@ -98,7 +98,7 @@ describe("needsRedraw", () => {
     target.dispose();
   });
 
-  it("always redraws when rendering direct, unless the image is kept", () => {
+  it("always redraws when rendering direct, unless the image is kept or blended", () => {
     const { gl } = createFakeGl();
     const direct = createLowResTarget(gl);
     direct.resize(800, 600, 1);
@@ -111,7 +111,11 @@ describe("needsRedraw", () => {
     expect(kept.texture).not.toBe(null);
     expect(kept.needsRedraw()).toBe(true);
     expect(kept.needsRedraw()).toBe(false);
+    const over = createLowResTarget(gl, { premultiplied: true });
+    over.resize(800, 600, 1);
+    expect(over.direct).toBe(false);
     direct.dispose();
     kept.dispose();
+    over.dispose();
   });
 });
