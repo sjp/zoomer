@@ -177,7 +177,12 @@ export function createSmokeField(
   const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, advectFragment(quantise)), (p) => {
     gl.deleteProgram(p);
   });
-  const uniforms = createUniforms(gl, program, SMOKE_FIELD_UNIFORMS);
+  // Only the 8-bit variant declares uSeed (for its dither).
+  const uniforms = createUniforms<SmokeFieldUniform>(
+    gl,
+    program,
+    quantise ? SMOKE_FIELD_UNIFORMS : SMOKE_FIELD_UNIFORMS.filter((n) => n !== "uSeed"),
+  );
   const triangle = scope.own(createFullscreenTriangle(gl));
   const prevProgram = typedParameters(gl).getParameter(gl.CURRENT_PROGRAM);
   gl.useProgram(program);
