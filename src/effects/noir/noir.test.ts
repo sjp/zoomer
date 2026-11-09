@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl } from "../../test/fake-gl";
 import { FakeOffscreenCanvas } from "../../test/offscreen-canvas";
 import { defaults } from "../params";
-import type { EffectWebGL2 } from "../types";
+import type { EffectDefinition } from "../types";
 import { noir } from "./noir";
 
 beforeAll(() => {
@@ -15,7 +15,7 @@ afterAll(() => {
 /** Clears of the drop map over `frames` frames at `rain`. */
 function runRain(rain: number, frames: number) {
   const fake = createFakeGl({ record: true });
-  const effect: EffectWebGL2 = noir;
+  const effect: EffectDefinition = noir;
   const instance = effect.create(fake.gl);
   instance.resize({ width: 640, height: 360, scale: 1 / 3 });
   const params = { ...defaults(effect.params), rain };

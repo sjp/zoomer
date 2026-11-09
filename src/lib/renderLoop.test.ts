@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AnyParamValues, EffectWebGL2, Viewport } from "../effects/types";
+import type { AnyParamValues, EffectDefinition, Viewport } from "../effects/types";
 import { createFakeGl } from "../test/fake-gl";
 import type { FrameRate } from "./frameRate";
 import {
@@ -102,7 +102,7 @@ function fakeEffect() {
     context: "webgl2",
     params: {},
     create,
-  } satisfies EffectWebGL2;
+  } satisfies EffectDefinition;
   return { effect, instance, create };
 }
 

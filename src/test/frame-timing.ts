@@ -1,5 +1,5 @@
 import { defaults } from "../effects/params";
-import type { AnyParamValues, EffectWebGL2, Viewport } from "../effects/types";
+import type { AnyParamValues, EffectDefinition, Viewport } from "../effects/types";
 import { createFakeGl } from "./fake-gl";
 
 const viewport = (width: number, height: number): Viewport => ({
@@ -27,7 +27,7 @@ interface TimedRun {
  * a garbage-collection pause or first-run compilation lands on different frames.
  */
 export function timeFrames(
-  effect: EffectWebGL2,
+  effect: EffectDefinition,
   frames: number,
   dt: number,
   script: (
@@ -53,7 +53,7 @@ export function timeFrames(
 const RUNS = 3;
 
 function runFrames(
-  effect: EffectWebGL2,
+  effect: EffectDefinition,
   frames: number,
   dt: number,
   script: (i: number, base: AnyParamValues) => { params?: AnyParamValues; viewport?: Viewport },

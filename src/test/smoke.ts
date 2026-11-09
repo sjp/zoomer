@@ -12,7 +12,7 @@
 import { WEBGL_OPTIONS } from "../lib/webgl";
 import { describeError } from "../lib/errors";
 import { effects } from "../effects/registry";
-import { contextKind, type AnyParamValues, type EffectInstance } from "../effects/types";
+import type { AnyParamValues, EffectInstance } from "../effects/types";
 import { paramSets } from "./param-sets";
 
 export interface SmokeOptions {
@@ -100,9 +100,6 @@ async function smoke(id: string, options: SmokeOptions): Promise<SmokeResult> {
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
-  if (contextKind(effect) !== "webgl2" || effect.context !== "webgl2") {
-    return { errors: ["only WebGL2 effects are smoke-tested"], missingUniforms: [], flat, ms: 0 };
-  }
   const gl = canvas.getContext("webgl2", WEBGL_OPTIONS);
   if (!gl) {
     return { errors: ["WebGL2 is unavailable"], missingUniforms: [], flat, ms: 0 };
@@ -218,9 +215,6 @@ async function capture(id: string, frames: number, width = 480, height = 270): P
     throw new Error(`no effect "${id}"`);
   }
   const effect = await meta.load();
-  if (effect.context !== "webgl2") {
-    throw new Error("only WebGL2 effects can be captured");
-  }
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;

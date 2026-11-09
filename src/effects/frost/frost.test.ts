@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeGl } from "../../test/fake-gl";
 import { lowResSize } from "../lowres";
 import { defaults } from "../params";
-import type { EffectWebGL2 } from "../types";
+import type { EffectDefinition } from "../types";
 import { frost } from "./frost";
 
 afterEach(() => {
@@ -32,7 +32,7 @@ describe("frost", () => {
         return value;
       },
     });
-    const effect: EffectWebGL2 = frost;
+    const effect: EffectDefinition = frost;
     const instance = effect.create(gl);
     const params = defaults(effect.params);
     instance.resize({ width: 640, height: 360, scale: 1 / 3 });

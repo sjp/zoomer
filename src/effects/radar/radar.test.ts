@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl } from "../../test/fake-gl";
 import { FakeOffscreenCanvas } from "../../test/offscreen-canvas";
 import { defaults } from "../params";
-import type { EffectWebGL2 } from "../types";
+import type { EffectDefinition } from "../types";
 import { radar } from "./radar";
 
 beforeAll(() => {
@@ -15,7 +15,7 @@ afterAll(() => {
 describe("radar", () => {
   it("keeps no canvas-sized label texture after baking the map", () => {
     const fake = createFakeGl({ record: true });
-    const effect: EffectWebGL2 = radar;
+    const effect: EffectDefinition = radar;
     const instance = effect.create(fake.gl);
     const params = defaults(effect.params);
     expect(params.region).not.toBe("world");

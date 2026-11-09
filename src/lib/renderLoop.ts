@@ -134,7 +134,7 @@ function getWebGl(canvas: LoopCanvas): WebGL2RenderingContext | null {
 }
 
 /**
- * Gets the context the effect asks for and creates its renderer. Returns null if the
+ * Gets the WebGL2 context and creates the effect's renderer. Returns null if the
  * context is unavailable or the renderer fails to build (e.g. a shader error), so a
  * broken effect leaves a blank canvas rather than crashing the app. Failures are
  * logged and passed to `onError` as a message for the user.
@@ -153,16 +153,12 @@ function createInstance(
     return null;
   };
   try {
-    if (effect.context === "webgl2") {
-      const gl = getWebGl(canvas);
-      if (!gl) {
-        return fail("WebGL2 is unavailable in this browser.");
-      }
-      // A lost context is restored later, which retries creation; not an error.
-      return gl.isContextLost() ? null : effect.create(gl);
+    const gl = getWebGl(canvas);
+    if (!gl) {
+      return fail("WebGL2 is unavailable in this browser.");
     }
-    const ctx = canvas.getContext("2d", { alpha: false });
-    return ctx ? effect.create(ctx) : fail("a 2D canvas is unavailable in this browser.");
+    // A lost context is restored later, which retries creation; not an error.
+    return gl.isContextLost() ? null : effect.create(gl);
   } catch (err) {
     return fail(describeError(err), err);
   }
@@ -180,7 +176,7 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
   // Times the effect's GL commands on the GPU, when the browser allows it.
   let gpuTimer: GpuTimer | undefined;
   const startGpuTimer = () => {
-    if (!instance || effect.context !== "webgl2") {
+    if (!instance) {
       return;
     }
     try {
@@ -218,15 +214,13 @@ export function createRenderLoop(options: RenderLoopOptions): RenderLoop {
     // A throw midway through a frame can leave an FBO bound, scissor or blending
     // on, and so on. Every frame starts with beginFrame anyway; resetting here as
     // well means whatever runs next on this context never inherits that state.
-    if (effect.context === "webgl2") {
-      try {
-        const gl = getWebGl(canvas);
-        if (gl && !gl.isContextLost()) {
-          beginFrame(gl, canvas.width, canvas.height);
-        }
-      } catch {
-        // Best effort: the next effect resets its own state each frame.
+    try {
+      const gl = getWebGl(canvas);
+      if (gl && !gl.isContextLost()) {
+        beginFrame(gl, canvas.width, canvas.height);
       }
+    } catch {
+      // Best effort: the next effect resets its own state each frame.
     }
     reportError(`This effect stopped after an error: ${describeError(err)}`);
   };

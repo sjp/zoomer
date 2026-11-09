@@ -10,7 +10,7 @@ import { createFakeGl, type FakeGl, type FakeGlOptions } from "../test/fake-gl";
 import { FakeOffscreenCanvas } from "../test/offscreen-canvas";
 import { paramSets } from "../test/param-sets";
 import { effects } from "./registry";
-import type { AnyParamValues, EffectWebGL2, Viewport } from "./types";
+import type { AnyParamValues, EffectDefinition, Viewport } from "./types";
 
 beforeAll(() => {
   vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
@@ -20,7 +20,6 @@ afterAll(() => {
 });
 
 const loaded = await Promise.all(effects.map((e) => e.load()));
-const webgl = loaded.filter((e): e is EffectWebGL2 => e.context === "webgl2");
 
 const viewport = (width: number, height: number): Viewport => ({
   width,
@@ -44,7 +43,7 @@ function frameEndProblems(fake: FakeGl): string[] {
   return out;
 }
 
-function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
+function run(effect: EffectDefinition, options: FakeGlOptions = {}) {
   const fake = createFakeGl(options);
   const instance = effect.create(fake.gl);
   const problems: string[] = [];
@@ -90,7 +89,7 @@ function run(effect: EffectWebGL2, options: FakeGlOptions = {}) {
  * heavy effect takes seconds once the full suite shares the CPUs.
  */
 const EFFECT_TIMEOUT = 60_000;
-const cases = webgl.map((e) => [e.id, e] as const);
+const cases = loaded.map((e) => [e.id, e] as const);
 
 describe.each(cases)("%s", { timeout: EFFECT_TIMEOUT }, (_, effect) => {
   it.each([
