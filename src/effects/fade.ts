@@ -1,3 +1,5 @@
+import { wrap } from "./math";
+
 /**
  * Count fades: when a count param rises, the added items start at life 0 and fade
  * in; when it falls, the removed items fade out before they stop being simulated,
@@ -50,4 +52,31 @@ export function trimLive(life: Float32Array, live: number, target: number): numb
     live--;
   }
   return live;
+}
+
+/**
+ * Moves point `i` by (`dx`, `dy`) and wraps it into `[minX, minX + spanX) ×
+ * [minY, minY + spanY)`, typically the frame plus a margin, so the jump happens
+ * off-screen. Returns whether it wrapped: if the margin shrinks (with a size
+ * param, say), a wrap can land a point on-screen, so the caller should fade it
+ * in again by setting its life to 0.
+ */
+export function driftPoint(
+  xs: Float32Array,
+  ys: Float32Array,
+  i: number,
+  dx: number,
+  dy: number,
+  minX: number,
+  minY: number,
+  spanX: number,
+  spanY: number,
+): boolean {
+  const x = xs[i] + dx;
+  const y = ys[i] + dy;
+  const wx = wrap(x, minX, spanX);
+  const wy = wrap(y, minY, spanY);
+  xs[i] = wx;
+  ys[i] = wy;
+  return wx !== x || wy !== y;
 }

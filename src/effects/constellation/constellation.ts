@@ -11,8 +11,7 @@ import { createSpriteBatch, polygonStrip } from "../sprites";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { constellationMeta, MAX_POINTS } from "./constellation.meta";
 import { defineEffect } from "../types";
-import { wrap } from "../math";
-import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
+import { FADE_OUT, growLive, stepLife, trimLive, driftPoint } from "../fade";
 import { unitRgbMemo } from "../color";
 
 /** Most links drawn per frame; beyond this, the rest are dropped. */
@@ -55,31 +54,6 @@ export function linkDistanceFor(count: number, wanted: number, refWidth: number)
 export function linkFalloff(t: number): number {
   const u = 1 - t;
   return u > 0 ? u * u : 0;
-}
-
-/**
- * Moves point `i` by (`dx`, `dy`) and wraps it into `[minX, minX + spanX) ×
- * [minY, minY + spanY)`. Returns whether it wrapped: the domain shrinks with the
- * link distance, so a wrap can land a point on-screen, and it must then fade in.
- */
-export function driftPoint(
-  xs: Float32Array,
-  ys: Float32Array,
-  i: number,
-  dx: number,
-  dy: number,
-  minX: number,
-  minY: number,
-  spanX: number,
-  spanY: number,
-): boolean {
-  const x = xs[i] + dx;
-  const y = ys[i] + dy;
-  const wx = wrap(x, minX, spanX);
-  const wy = wrap(y, minY, spanY);
-  xs[i] = wx;
-  ys[i] = wy;
-  return wx !== x || wy !== y;
 }
 
 /**
