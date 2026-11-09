@@ -66,6 +66,25 @@ describe("buildFronds", () => {
     }
   });
 
+  it("keeps each layer's fronds as the first of its fronds at a higher density", () => {
+    for (const seed of [0, 7, 42]) {
+      const high = layout(seed, DENSITY_MAX);
+      for (const density of [0.3, 1, 1.05, 2]) {
+        const low = layout(seed, density);
+        for (let l = 0; l < LAYERS.length; l++) {
+          const at = (x: typeof low, k: number) =>
+            x.data.subarray(
+              (x.layout.starts[l] + k) * FROND_FLOATS,
+              (x.layout.starts[l] + k + 1) * FROND_FLOATS,
+            );
+          for (let k = 0; k < low.layout.counts[l]; k++) {
+            expect(at(low, k)).toEqual(at(high, k));
+          }
+        }
+      }
+    }
+  });
+
   it("scales with density and never drops a layer", () => {
     expect(layout(1, 2).layout.total).toBeGreaterThan(layout(1, 1).layout.total);
     for (const c of layout(1, 0).layout.counts) {

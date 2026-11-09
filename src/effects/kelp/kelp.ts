@@ -13,12 +13,16 @@ import {
   buildBladeProfiles,
   buildFronds,
   createFish,
+  DENSITY_MAX,
+  FROND_FADE_IN,
+  FROND_FLOATS,
   createSnow,
   fishInstances,
   FISH_PER_SCHOOL,
   FROND_STRIP,
   type FrondLayout,
   KELP_SWELL,
+  layerCount,
   LAYERS,
   MAX_FRONDS,
   MAX_SHAFTS,
@@ -35,6 +39,7 @@ import {
   SWAY_MAX,
 } from "./kelp-sim";
 import { kelpMeta } from "./kelp.meta";
+import { createCountFade } from "../fade";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { advanceSwell, swayGlsl } from "../sway";
 import { createSpriteBatch, QUAD } from "../sprites";
@@ -118,6 +123,8 @@ layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aFrond;
 /** Swell phase offset (periods), lag (s), lean (fraction of the height), tone 0..1. */
 layout(location = 2) in vec4 aTraits;
+/** Opacity: below 1 while a density change fades the frond in or out. */
+layout(location = 3) in float aOpacity;
 uniform vec2 uResolution;
 uniform float uScale;
 uniform float uPhase;
@@ -167,7 +174,7 @@ void main() {
   vBlade = mix(uBlade * tone * light, water, uLayer.w);
   vRim = uRim * (1.0 - smoothstep(0.1, 0.9, v));
   // Bases melt into the dark floor; the tip ends softly.
-  vFade = smoothstep(0.0, 0.08, t) * (1.0 - smoothstep(0.93, 1.0, t));
+  vFade = smoothstep(0.0, 0.08, t) * (1.0 - smoothstep(0.93, 1.0, t)) * aOpacity;
 }
 `;
 
@@ -341,17 +348,41 @@ export const kelp = defineEffect(kelpMeta, {
           data: buildBladeProfiles(PROFILE_SEED),
         }),
       );
-      const fronds = scope.own(createSpriteBatch(gl, MAX_FRONDS, [4, 4], [FROND_STRIP]));
+      const fronds = scope.own(createSpriteBatch(gl, MAX_FRONDS, [4, 4, 1], [FROND_STRIP]));
       const fishBatch = scope.own(createSpriteBatch(gl, FISH_PER_SCHOOL, [4, 2]));
       const snowBatch = scope.own(createSpriteBatch(gl, SNOW_COUNT, [4], [QUAD]));
 
       const shafts = new Float32Array(MAX_SHAFTS * 4);
+      // Every frond the density can reach, built once per seed. Each layer's fronds
+      // are a prefix of its full set, so a density change only fades fronds in or
+      // out at the end of each layer.
+      const full = new Float32Array(MAX_FRONDS * FROND_FLOATS);
       let layout: FrondLayout | null = null;
       let builtSeed = Number.NaN;
-      let builtDensity = Number.NaN;
+      const fades = LAYERS.map((l) => createCountFade(layerCount(l, DENSITY_MAX)));
       let fish = createFish(0);
       let snow = createSnow(0);
       let simSeed = Number.NaN;
+
+      /** Copies each layer's live fronds from `full` into the batch, with their fades. */
+      const writeFronds = (all: FrondLayout) => {
+        const d = fronds.data;
+        const stride = fronds.stride;
+        let end = 0;
+        for (let l = 0; l < LAYERS.length; l++) {
+          const { life, live } = fades[l];
+          for (let k = 0; k < live; k++) {
+            const i = all.starts[l] + k;
+            for (let c = 0; c < FROND_FLOATS; c++) {
+              d[i * stride + c] = full[i * FROND_FLOATS + c];
+            }
+            const a = life[k];
+            d[i * stride + FROND_FLOATS] = a * a * (3 - 2 * a);
+          }
+          end = Math.max(end, all.starts[l] + live);
+        }
+        fronds.upload(end);
+      };
 
       let width = 1;
       let height = 1;
@@ -372,11 +403,22 @@ export const kelp = defineEffect(kelpMeta, {
           ripple -= Math.floor(ripple);
           const aspect = width / Math.max(1, height);
 
-          if (p.seed !== builtSeed || p.density !== builtDensity) {
-            layout = buildFronds(p.seed, p.density, fronds.data);
-            fronds.upload(layout.total);
+          let rewrite = false;
+          if (p.seed !== builtSeed || !layout) {
+            layout = buildFronds(p.seed, DENSITY_MAX, full);
             builtSeed = p.seed;
-            builtDensity = p.density;
+            for (let l = 0; l < LAYERS.length; l++) {
+              fades[l].snap(layerCount(LAYERS[l], p.density));
+            }
+            rewrite = true;
+          }
+          for (let l = 0; l < LAYERS.length; l++) {
+            if (fades[l].step(layerCount(LAYERS[l], p.density), step, FROND_FADE_IN)) {
+              rewrite = true;
+            }
+          }
+          if (rewrite) {
+            writeFronds(layout);
           }
           if (p.seed !== simSeed) {
             fish = createFish(p.seed);
@@ -440,9 +482,7 @@ export const kelp = defineEffect(kelpMeta, {
             uf.v3("uDeep", pal.deep);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, profile.texture);
-            if (layout) {
-              fronds.draw(layout.starts[l], layout.counts[l]);
-            }
+            fronds.draw(layout.starts[l], fades[l].live);
 
             if (l === FISH_LAYER && fishCount > 0) {
               gl.useProgram(fishProgram);

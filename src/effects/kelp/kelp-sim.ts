@@ -117,6 +117,9 @@ export const MAX_FRONDS = LAYERS.reduce((n, l) => n + Math.round(l.count * DENSI
 /** Base x stays this far inside the frame (fraction of the width). */
 export const X_MARGIN = 0.01;
 
+/** Seconds a frond added by a higher density takes to fade in. */
+export const FROND_FADE_IN = 1.5;
+
 /** Fronds in a layer at `density` (clamped to [0, DENSITY_MAX]); at least 1. */
 export function layerCount(layer: KelpLayer, density: number): number {
   const d = clamp(Number.isFinite(density) ? density : 1, 0, DENSITY_MAX);
@@ -194,6 +197,8 @@ export interface FrondLayout {
  * Fills `out` (`FROND_FLOATS` per frond, layer by layer, far first) with a
  * seeded layout at `density`. Rejection sampling keeps fronds denser at the
  * edges and sparse in the centre third. Deterministic per (seed, density).
+ * Each layer draws from its own stream, so its fronds at a lower density are
+ * the first of its fronds at a higher one.
  */
 export function buildFronds(seed: number, density: number, out: Float32Array): FrondLayout {
   const counts: number[] = [];
