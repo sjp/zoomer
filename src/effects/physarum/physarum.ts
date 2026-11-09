@@ -58,6 +58,18 @@ const GAIN = 0.45;
 const MIN_DEPOSIT_8BIT = 1.5 / 255;
 const DECAY_FLOOR_8BIT = 1 / 255;
 
+/** Copies the old trail onto a new grid, bilinearly (the trail texture filters linearly). */
+const RESAMPLE_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+uniform sampler2D uTrail;
+/** 1 / the new grid's size. */
+uniform vec2 uInvSize;
+out vec4 outColor;
+void main() {
+  outColor = texture(uTrail, gl_FragCoord.xy * uInvSize);
+}
+`;
+
 /** GLSL twin of `calmMask` in physarum-sim.ts. */
 const CALM_GLSL = /* glsl */ `
 float calmMask(vec2 uv) {
@@ -210,8 +222,9 @@ void main() {
  *
  * Steps run at a fixed STEP_RATE (30 per second, at most MAX_STEPS a frame), below
  * the display rate. A full-resolution composite maps the trail through a palette
- * lookup with a glow. A resize, scale change or agent-tier change reseeds the
- * network rather than resampling it.
+ * lookup with a glow. A resize or scale change resamples the trail onto the new
+ * grid with one bilinear draw and keeps the agents (their positions are in uv),
+ * so the network carries on; only an agent-tier change reseeds it.
  */
 export const physarum = defineEffect(physarumMeta, {
   create(gl) {
@@ -225,6 +238,8 @@ export const physarum = defineEffect(physarumMeta, {
       const program = (fragment: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fragment);
       const diffuseProgram = program(DIFFUSE_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);
+      const resampleProgram = program(RESAMPLE_FRAGMENT);
+      const resample = createUniforms(gl, resampleProgram, ["uTrail", "uInvSize"]);
       const agentProgram = scopedProgram(gl, scope, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]);
       const diffuse = createUniforms(gl, diffuseProgram, [
         "uTrail",
@@ -260,6 +275,8 @@ export const physarum = defineEffect(physarumMeta, {
       composite.i1("uTrail", 0);
       composite.i1("uPalette", 1);
       composite.f1("uGain", GAIN * range);
+      gl.useProgram(resampleProgram);
+      resample.i1("uTrail", 0);
       gl.useProgram(agentProgram);
       agent.i1("uTrail", 0);
       agent.f1("uRange", range);
@@ -308,9 +325,24 @@ export const physarum = defineEffect(physarumMeta, {
         agentPair.seed(seedAgents(++seedNo, agents, new Float32Array(agents * AGENT_FLOATS)));
       };
 
-      /** New, cleared trail targets of `w` x `h`; a failed allocation leaves none. */
+      /**
+       * Moves the trail onto a `w` x `h` grid, resampled from the old one if there
+       * is one (else cleared). A failed allocation keeps the old grid (or none).
+       */
       const regrid = (w: number, h: number) => {
-        if (!trail.resize(w, h)) {
+        const ok = trail.resize(w, h, {
+          carry: (old, into) => {
+            into.bind();
+            gl.invalidateFramebuffer(gl.FRAMEBUFFER, INVALIDATE);
+            gl.useProgram(resampleProgram);
+            resample.f2("uInvSize", 1 / into.width, 1 / into.height);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, old.texture);
+            triangle.draw();
+            gl.bindTexture(gl.TEXTURE_2D, null);
+          },
+        });
+        if (!ok) {
           console.warn(`physarum: can't allocate a ${String(w)}x${String(h)} trail grid`);
         }
       };
@@ -327,8 +359,9 @@ export const physarum = defineEffect(physarumMeta, {
           const count = agentCount(p.agents);
           let reseed = false;
           if (w !== trail.width || h !== trail.height) {
+            // The first grid starts empty and needs agents; later ones carry the network over.
+            reseed = !trail.ready;
             regrid(w, h);
-            reseed = true;
           }
           if (count !== agents) {
             agents = count;
