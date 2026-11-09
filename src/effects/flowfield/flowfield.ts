@@ -8,7 +8,6 @@ import {
   TO_CLIP_GLSL,
   withScope,
   scopedProgram,
-  createPingPong,
 } from "../gl";
 import { createFlowField } from "./flowfield-field";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "../noise";
@@ -16,6 +15,7 @@ import { flowfieldMeta, MAX_PARTICLES } from "./flowfield.meta";
 import { defineEffect } from "../types";
 import { smoothstep } from "../math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
+import { createPingPong } from "../gpu-sim";
 
 /** Reference particle speed in px/s at 1080p for a speed of 1. */
 const SPEED_PX = 90;

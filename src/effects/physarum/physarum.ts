@@ -10,8 +10,6 @@ import {
   withScope,
   scopedProgram,
   floatRenderable,
-  createPingPong,
-  createFeedbackPair,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import {
@@ -42,6 +40,7 @@ import {
 } from "./physarum-sim";
 import { physarumMeta } from "./physarum.meta";
 import { defineEffect } from "../types";
+import { createPingPong, createFeedbackPair } from "../gpu-sim";
 
 /** Offset of the four glow taps from the centre tap, in trail cells (diagonally). */
 const GLOW_CELLS = 2.5;

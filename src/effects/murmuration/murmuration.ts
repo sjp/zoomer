@@ -9,8 +9,6 @@ import {
   withScope,
   scopedProgram,
   floatRenderable,
-  createPingPong,
-  createFeedbackPair,
 } from "../gl";
 import {
   ATTRACT_MAX,
@@ -45,6 +43,7 @@ import {
 import { MAX_BIRDS, murmurationMeta } from "./murmuration.meta";
 import { HASH32_GLSL, hash32 } from "../noise";
 import { defineEffect } from "../types";
+import { createPingPong, createFeedbackPair } from "../gpu-sim";
 
 /** Bird dot diameter at 1080p, device pixels, before the per-bird 0.7-1.3 size jitter. */
 const BIRD_PX = 1.6;

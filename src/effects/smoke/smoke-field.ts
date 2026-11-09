@@ -20,10 +20,10 @@ import {
   type Uniforms,
   scopedProgram,
   floatRenderable,
-  createPingPong,
 } from "../gl";
 import { hash32, HASH32_GLSL } from "../noise";
 import { SIM_DT, SPLAT_CUTOFF, WAVE_COUNT, waveAmp, WAVES } from "./smoke-sim";
+import { createPingPong } from "../gpu-sim";
 
 const vec4Of = (f: (i: number) => number) =>
   `vec4(${Array.from({ length: WAVE_COUNT }, (_, i) => glslFloat(f(i))).join(", ")})`;

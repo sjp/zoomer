@@ -13,7 +13,6 @@ import {
   withScope,
   scopedProgram,
   floatRenderable,
-  createFeedbackPair,
 } from "../gl";
 import {
   advanceOrbit,
@@ -44,6 +43,7 @@ import {
 import { lorenzMeta, MAX_PARTICLES } from "./lorenz.meta";
 import { hash32, HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
+import { createFeedbackPair } from "../gpu-sim";
 
 /** The trail layer is this many times smaller than the canvas on each axis. */
 const TRAIL_DIVISOR = 2;

@@ -12,7 +12,6 @@ import {
   updateDataTexture,
   withScope,
   scopedProgram,
-  createPingPong,
 } from "../gl";
 import {
   advanceLife,
@@ -46,6 +45,7 @@ import {
 import { leniaMeta } from "./lenia.meta";
 import { createRng } from "../noise";
 import { defineEffect } from "../types";
+import { createPingPong } from "../gpu-sim";
 
 /**
  * Decoding the RGBA8 state: A is 16 bits (r = high byte, g = low byte), b is the
