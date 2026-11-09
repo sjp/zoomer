@@ -91,6 +91,26 @@ describe("createFakeGl", () => {
     expect(errors).toEqual(["bufferSubData writes 16 bytes at 4 of 16"]);
   });
 
+  it("reports NaN and infinite uniform and buffer uploads", () => {
+    const { gl, errors } = createFakeGl();
+    const program = gl.createProgram();
+    gl.useProgram(program);
+    const loc = gl.getUniformLocation(program, "uA");
+    gl.uniform2f(loc, 1, Number.NaN);
+    gl.uniform4fv(loc, new Float32Array([0, 1, Infinity, 2]));
+    gl.uniform1f(loc, 0.5);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1, Number.NaN]), gl.STATIC_DRAW);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([-Infinity]));
+    expect(errors).toEqual([
+      "uniform2f(uA): non-finite value NaN",
+      "uniform4fv(uA): non-finite value Infinity at index 2",
+      "bufferData(ARRAY_BUFFER): non-finite value NaN at index 1",
+      "bufferSubData(ARRAY_BUFFER): non-finite value -Infinity at index 0",
+    ]);
+  });
+
   it("records calls when asked", () => {
     const { gl, calls } = createFakeGl({ record: true });
     gl.clearColor(0, 0, 0, 1);

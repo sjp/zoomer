@@ -194,18 +194,43 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
     }
   };
 
-  const uniform = (name: string) => (loc: FakeLocation | null) => {
-    if (loc === null) {
-      return;
-    }
-    if (state.program === null) {
-      errors.push(`${name}(${loc.name}) with no program bound`);
-    } else if (loc.program !== state.program) {
-      errors.push(
-        `${name}(${loc.name}) belongs to program ${String(loc.program.id)} but program ${String(state.program.id)} is bound`,
-      );
+  /** Reports a NaN or infinity among `values` (numbers or arrays of them). */
+  const checkFinite = (call: string, values: readonly unknown[]) => {
+    for (const v of values) {
+      if (typeof v === "number") {
+        if (!Number.isFinite(v)) {
+          errors.push(`${call}: non-finite value ${String(v)}`);
+          return;
+        }
+      } else if (ArrayBuffer.isView(v) && !(v instanceof DataView)) {
+        const arr = v as unknown as ArrayLike<number>;
+        for (let i = 0; i < arr.length; i++) {
+          if (!Number.isFinite(arr[i])) {
+            errors.push(`${call}: non-finite value ${String(arr[i])} at index ${String(i)}`);
+            return;
+          }
+        }
+      } else if (Array.isArray(v)) {
+        checkFinite(call, v);
+      }
     }
   };
+
+  const uniform =
+    (name: string) =>
+    (loc: FakeLocation | null, ...values: unknown[]) => {
+      if (loc === null) {
+        return;
+      }
+      checkFinite(`${name}(${loc.name})`, values);
+      if (state.program === null) {
+        errors.push(`${name}(${loc.name}) with no program bound`);
+      } else if (loc.program !== state.program) {
+        errors.push(
+          `${name}(${loc.name}) belongs to program ${String(loc.program.id)} but program ${String(state.program.id)} is bound`,
+        );
+      }
+    };
 
   const draw = (name: string) => () => {
     draws++;
@@ -279,6 +304,7 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
         return;
       }
       bufferSizes.set(buffer, typeof data === "number" ? data : data.byteLength);
+      checkFinite(`bufferData(${enumName(target)})`, [data]);
     },
     bufferSubData: (
       target: number,
@@ -294,6 +320,11 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
       }
       const bytesPer = "BYTES_PER_ELEMENT" in data ? (data.BYTES_PER_ELEMENT as number) : 1;
       const count = length ?? data.byteLength / bytesPer - srcOffset;
+      if (data instanceof Float32Array || data instanceof Float64Array) {
+        checkFinite(`bufferSubData(${enumName(target)})`, [
+          data.subarray(srcOffset, srcOffset + count),
+        ]);
+      }
       const size = bufferSizes.get(buffer) ?? 0;
       if (offset + count * bytesPer > size || srcOffset + count > data.byteLength / bytesPer) {
         errors.push(
