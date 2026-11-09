@@ -25,6 +25,7 @@ import { advanceRotation, bandThrough, seedSalt, wrapAngle } from "../starfield-
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
 import {
+  angleDiff,
   applyReschedule,
   BAR_REACH,
   CAM_FWD,
@@ -143,6 +144,19 @@ const HALO = 0.3;
 /** Monitor bezel and depth, m. */
 const BEZEL = 0.025;
 const MONITOR_D = 0.03;
+/**
+ * The cached room is redrawn once the telescope or dome has turned far enough
+ * to move something by this many device px. While tracking that is about ten times
+ * a second at 4K rather than every frame.
+ */
+const REDRAW_PX = 0.05;
+/**
+ * Upper bound on how far (device px per radian, in units of the focal length)
+ * a turn of either telescope axis or the dome moves anything on screen: lever
+ * arm over viewing distance, about 2 for the dome's ribs above the camera,
+ * times up to 2 for the projection's stretch towards the frame's edges.
+ */
+const TURN_REACH = 4;
 
 /**
  * The room, ray-traced in one full-resolution pass (telescope on the left; the
@@ -458,6 +472,11 @@ export const observatory = defineEffect(observatoryMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
+      // The room changes only while the telescope slews, the lights fade or the
+      // screen cross-fades; the rest of the time it is cached at full size.
+      const room = scope.own(
+        createLowResTarget(gl, { keep: true, premultiplied: true, dither: false }),
+      );
       const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const pole: [number, number] = [0, 0];
       // The pole sits at the frame's centre x for every width, so the band's
@@ -487,6 +506,9 @@ export const observatory = defineEffect(observatoryMeta, {
 
       const starDraw = createStarDraw();
       const starInputs = createChangeKey(2);
+      /** The room's inputs other than the axes and dome, and the axes and dome it was drawn at. */
+      const roomInputs = createChangeKey(6);
+      const drawn = createPose();
       const scheduled = createPose();
       const shown = createPose();
       const blend = createReschedule();
@@ -513,6 +535,7 @@ export const observatory = defineEffect(observatoryMeta, {
         resize(v) {
           ({ width, height, scale } = v);
           sky.resize(width, height, Math.max(1, SKY_TEXEL_REF * scale));
+          room.resize(width, height, 1);
           gl.useProgram(skyProgram);
           su.f2("uPxToRef", sky.fullWidth / sky.width / scale, sky.fullHeight / sky.height / scale);
         },
@@ -623,19 +646,36 @@ export const observatory = defineEffect(observatoryMeta, {
             gl.disable(gl.BLEND);
           }
 
-          // 3. The room over everything, transparent through the slit.
-          gl.useProgram(roomProgram);
-          ru.f4("uFrame", width / 2, height / 2, p.side === "right" ? -1 : 1, FOCAL * height);
-          ru.f3("uTube", tube[0], tube[1], tube[2]);
-          ru.f3("uDec", dec[0], dec[1], dec[2]);
-          ru.f3("uDome", Math.sin(shown.dome), -Math.cos(shown.dome), lights);
-          ru.f4("uImgA", imgA.kind, imgA.angle, imgA.shapeA, imgA.shapeB);
-          ru.f4("uImgB", imgB.kind, imgB.angle, imgB.shapeA, imgB.shapeB);
-          ru.f1("uImgMix", shown.image);
-          gl.enable(gl.BLEND);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          triangle.draw();
-          gl.disable(gl.BLEND);
+          // 3. The room over everything, transparent through the slit: redrawn
+          // into its cache when it has changed, then blended over the sky.
+          roomInputs.setText(0, p.side);
+          roomInputs.set(1, lights);
+          roomInputs.set(2, schedSeed);
+          roomInputs.set(3, shown.from);
+          roomInputs.set(4, shown.to);
+          roomInputs.set(5, shown.image);
+          const turn = Math.max(
+            Math.abs(angleDiff(drawn.ha, shown.ha)),
+            Math.abs(shown.dec - drawn.dec),
+            Math.abs(angleDiff(drawn.dome, shown.dome)),
+          );
+          if (room.needsRedraw(roomInputs) || turn * TURN_REACH * FOCAL * height > REDRAW_PX) {
+            room.bind();
+            gl.useProgram(roomProgram);
+            ru.f4("uFrame", width / 2, height / 2, p.side === "right" ? -1 : 1, FOCAL * height);
+            ru.f3("uTube", tube[0], tube[1], tube[2]);
+            ru.f3("uDec", dec[0], dec[1], dec[2]);
+            ru.f3("uDome", Math.sin(shown.dome), -Math.cos(shown.dome), lights);
+            ru.f4("uImgA", imgA.kind, imgA.angle, imgA.shapeA, imgA.shapeB);
+            ru.f4("uImgB", imgB.kind, imgB.angle, imgB.shapeA, imgB.shapeB);
+            ru.f1("uImgMix", shown.image);
+            triangle.draw();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            drawn.ha = shown.ha;
+            drawn.dec = shown.dec;
+            drawn.dome = shown.dome;
+          }
+          room.blit();
         },
         dispose: () => {
           scope.dispose();
