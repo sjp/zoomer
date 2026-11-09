@@ -10,7 +10,15 @@
 import { createRng } from "../noise";
 import { clamp, smoothstep } from "../math";
 import { MAX_INTERVAL, MIN_INTERVAL } from "./biolum.meta";
-import { T_ACTIVE, T_APPROACH, T_DRY, T_STOP, washFront, washSinceUncovered } from "../wash";
+import {
+  T_ACTIVE,
+  T_APPROACH,
+  T_DRY,
+  T_STOP,
+  washFront,
+  washSinceUncovered,
+  createWaveSlots,
+} from "../wash";
 
 /** Horizon height (height units, y up). */
 export const HORIZON = 0.58;
@@ -133,61 +141,44 @@ export interface BiolumScheduler {
 
 export function createBiolumScheduler(seed: number): BiolumScheduler {
   let rng = createRng(seed);
-  const waves: BiolumWave[] = [];
-  for (let i = 0; i < MAX_WAVES; i++) {
-    waves.push({ start: 0, reach: 0, peelDir: 1, peelSpan: PEEL_MIN, offX: 0, offY: 0 });
-  }
-  let count = 0;
-  let time = 0;
   let spawned = 0;
-  /** When the next wave is due; the first one starts straight away. */
-  let nextAt = 0;
-
-  const spawn = (interval: number) => {
-    const w = waves[count++];
-    w.start = time;
-    w.reach = REACH_MIN + (REACH_MAX - REACH_MIN) * rng();
-    w.peelDir = rng() < 0.5 ? 1 : -1;
-    w.peelSpan = PEEL_MIN + (PEEL_MAX - PEEL_MIN) * rng();
-    w.offX = rng();
-    w.offY = rng();
-    spawned++;
-    nextAt = time + interval * (SPACING_MIN + (SPACING_MAX - SPACING_MIN) * rng());
-  };
+  /** The step's interval, for `spawn`. */
+  let interval = 0;
+  const slots = createWaveSlots<BiolumWave>(
+    MAX_WAVES,
+    LIFETIME,
+    () => ({ start: 0, reach: 0, peelDir: 1, peelSpan: PEEL_MIN, offX: 0, offY: 0 }),
+    (w) => {
+      w.reach = REACH_MIN + (REACH_MAX - REACH_MIN) * rng();
+      w.peelDir = rng() < 0.5 ? 1 : -1;
+      w.peelSpan = PEEL_MIN + (PEEL_MAX - PEEL_MIN) * rng();
+      w.offX = rng();
+      w.offY = rng();
+      spawned++;
+      return interval * (SPACING_MIN + (SPACING_MAX - SPACING_MIN) * rng());
+    },
+  );
 
   return {
-    waves,
+    waves: slots.waves,
     get count() {
-      return count;
+      return slots.count;
     },
     get time() {
-      return time;
+      return slots.time;
     },
     get spawned() {
       return spawned;
     },
-    step(dt, interval) {
-      time += Math.max(0, dt);
-      // Waves share one lifetime, so they retire in start order from the front.
-      while (count > 0 && time - waves[0].start >= LIFETIME) {
-        const done = waves[0];
-        for (let i = 1; i < count; i++) {
-          waves[i - 1] = waves[i];
-        }
-        waves[count - 1] = done;
-        count--;
-      }
-      // Never reached with valid intervals (see MAX_WAVES), but stay safe if one is.
-      if (time >= nextAt && count < MAX_WAVES) {
-        spawn(clamp(interval, MIN_INTERVAL, MAX_INTERVAL));
-      }
+    // With valid intervals a slot is always free when a wave is due (see MAX_WAVES).
+    step(dt, i) {
+      interval = clamp(i, MIN_INTERVAL, MAX_INTERVAL);
+      slots.step(dt);
     },
     reset(s) {
       rng = createRng(s);
-      count = 0;
-      time = 0;
       spawned = 0;
-      nextAt = 0;
+      slots.reset();
     },
   };
 }

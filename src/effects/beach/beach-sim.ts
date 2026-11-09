@@ -15,6 +15,7 @@ import {
   T_STOP,
   washFront,
   washSinceUncovered,
+  createWaveSlots,
 } from "../wash";
 
 export { T_ACTIVE, T_APPROACH, T_DRAIN, T_DRY, T_RUNUP, T_STOP } from "../wash";
@@ -146,58 +147,44 @@ export interface WaveScheduler {
 
 export function createWaveScheduler(seed: number): WaveScheduler {
   const rng = createRng(seed);
-  const waves: Wave[] = [];
-  for (let i = 0; i < MAX_WAVES; i++) {
-    waves.push({ start: 0, reach: 0, weights: new Float64Array(4), offX: 0, offY: 0 });
-  }
-  let count = 0;
-  let time = 0;
-  /** When the next wave is due; the first one starts straight away. */
-  let nextAt = 0;
-
-  const spawn = (waveTime: number, reach: number) => {
-    const w = waves[count++];
-    w.start = time;
-    w.reach = reach * (REACH_MIN + (REACH_MAX - REACH_MIN) * rng());
-    let len = 0;
-    for (let k = 0; k < 4; k++) {
-      const v = rng() * 2 - 1;
-      w.weights[k] = v;
-      len += v * v;
-    }
-    // Unit length, so every front wiggles about as much as one channel does.
-    const inv = len > 1e-6 ? 1 / Math.sqrt(len) : 1;
-    for (let k = 0; k < 4; k++) {
-      w.weights[k] = len > 1e-6 ? w.weights[k] * inv : k === 0 ? 1 : 0;
-    }
-    w.offX = rng();
-    w.offY = rng();
-    nextAt = time + waveTime * (SPACING_MIN + (SPACING_MAX - SPACING_MIN) * rng());
-  };
+  /** The step's arguments, for `spawn`. */
+  let waveTime = 0;
+  let reach = 0;
+  const slots = createWaveSlots<Wave>(
+    MAX_WAVES,
+    LIFETIME,
+    () => ({ start: 0, reach: 0, weights: new Float64Array(4), offX: 0, offY: 0 }),
+    (w) => {
+      w.reach = reach * (REACH_MIN + (REACH_MAX - REACH_MIN) * rng());
+      let len = 0;
+      for (let k = 0; k < 4; k++) {
+        const v = rng() * 2 - 1;
+        w.weights[k] = v;
+        len += v * v;
+      }
+      // Unit length, so every front wiggles about as much as one channel does.
+      const inv = len > 1e-6 ? 1 / Math.sqrt(len) : 1;
+      for (let k = 0; k < 4; k++) {
+        w.weights[k] = len > 1e-6 ? w.weights[k] * inv : k === 0 ? 1 : 0;
+      }
+      w.offX = rng();
+      w.offY = rng();
+      return waveTime * (SPACING_MIN + (SPACING_MAX - SPACING_MIN) * rng());
+    },
+  );
 
   return {
-    waves,
+    waves: slots.waves,
     get count() {
-      return count;
+      return slots.count;
     },
     get time() {
-      return time;
+      return slots.time;
     },
-    step(dt, waveTime, reach) {
-      time += Math.max(0, dt);
-      // Waves share one lifetime, so they retire in start order from the front.
-      while (count > 0 && time - waves[0].start >= LIFETIME) {
-        const done = waves[0];
-        for (let i = 1; i < count; i++) {
-          waves[i - 1] = waves[i];
-        }
-        waves[count - 1] = done;
-        count--;
-      }
-      // When every slot is busy, the next wave waits for one to free up.
-      if (time >= nextAt && count < MAX_WAVES) {
-        spawn(clamp(waveTime, MIN_WAVE_TIME, MAX_WAVE_TIME), reach);
-      }
+    step(dt, wt, r) {
+      waveTime = clamp(wt, MIN_WAVE_TIME, MAX_WAVE_TIME);
+      reach = r;
+      slots.step(dt);
     },
   };
 }
