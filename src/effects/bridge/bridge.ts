@@ -69,7 +69,15 @@ import {
 } from "../gl";
 import { approach } from "../math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "../ship-shapes";
-import { createShipPose, SHIP_KINDS, SHIP_SCALE, shipAt, type ShipPlan } from "./bridge-ships";
+import {
+  ARRIVE,
+  createShipPose,
+  setShipGap,
+  SHIP_KINDS,
+  SHIP_SCALE,
+  shipAt,
+  type ShipPlan,
+} from "./bridge-ships";
 import {
   advanceGraph,
   createGraphWalk,
@@ -1321,9 +1329,14 @@ export const bridge = defineEffect(bridgeMeta, {
                 shipEpoch = time;
                 // Options after "cycle" and "none" are in `SHIP_KINDS` order; cycling is -1.
                 shipPlan.kind = Math.max(-1, SHIP_OPTIONS.findIndex((o) => o.value === p.ship) - 2);
+                shipPlan.stay = p.shipStay;
+                shipPlan.gap = p.shipGap;
+                shipPlan.baseVisit = 0;
+                shipPlan.baseStart = ARRIVE;
+                shipPlan.gapFrom = undefined;
               }
-              shipPlan.stay = p.shipStay;
-              shipPlan.gap = p.shipGap;
+              // A new gap waits for the ship in view (if any) to finish its visit.
+              setShipGap(shipPlan, p.shipGap, time - shipEpoch);
               if (p.ship === "none") {
                 ship.kind = -1;
               } else {

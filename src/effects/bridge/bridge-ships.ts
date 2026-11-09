@@ -66,9 +66,12 @@ function rand(a: number, b: number, c: number): number {
   return hash32(a ^ hash32(Math.imul(b, 0x9e3779b1) ^ hash32(c + 0x632be5ab))) / 4294967296;
 }
 
-/** Start (s) of visit `visit` (0 is the first), with `gap` seconds between visits. */
-export function visitStart(visit: number, gap: number): number {
-  return ARRIVE + visit * (VISIT + Math.max(0, gap));
+/**
+ * Start (s) of visit `visit` (0 is the first), with `gap` seconds between visits
+ * from visit `baseVisit` on, which starts at `baseStart` (see `ShipPlan`).
+ */
+export function visitStart(visit: number, gap: number, baseVisit = 0, baseStart = ARRIVE): number {
+  return baseStart + (visit - baseVisit) * (VISIT + Math.max(0, gap));
 }
 
 /** Which ship comes on visit `visit` when cycling, as an index into `SHIP_KINDS`. */
@@ -91,6 +94,55 @@ export interface ShipPlan {
   stay: boolean;
   /** Seconds between one ship leaving and the next arriving. */
   gap: number;
+  /**
+   * The visit `gap` applies from, and its start (s): earlier visits kept the
+   * gap they had (see `setShipGap`). Default to the first visit, at `ARRIVE`.
+   */
+  baseVisit?: number;
+  baseStart?: number;
+  /**
+   * When the visit before `baseVisit` ended, so a gap change before it starts
+   * can time it again; unset before the first visit, whose arrival is fixed.
+   */
+  gapFrom?: number | undefined;
+}
+
+/** The visit under way (or the last one, during a gap) at `t`, and when it starts. */
+function visitAt(t: number, plan: ShipPlan): number {
+  const gap = Math.max(0, plan.gap);
+  const base = plan.baseVisit ?? 0;
+  const start = plan.baseStart ?? ARRIVE;
+  return plan.stay ? 0 : base + Math.max(0, Math.floor((t - start) / (VISIT + gap)));
+}
+
+/**
+ * Changes the gap between visits at `t` without disturbing the ship in view:
+ * the gap is latched at each visit's start, so the visit under way (or about
+ * to start) keeps its time, and only the visits after it use the new gap. In a
+ * gap, the next ship comes the new gap after the last one left, or now if that
+ * has passed.
+ */
+export function setShipGap(plan: ShipPlan, gap: number, t: number): void {
+  const g = Math.max(0, gap);
+  if (plan.stay || g === Math.max(0, plan.gap)) {
+    plan.gap = gap;
+    return;
+  }
+  const visit = visitAt(t, plan);
+  const start = visitStart(visit, plan.gap, plan.baseVisit, plan.baseStart);
+  if (t < start) {
+    // Waiting for the next ship: time it from when the last one left.
+    plan.baseVisit = visit;
+    plan.baseStart = plan.gapFrom === undefined ? start : Math.max(t, plan.gapFrom + g);
+  } else if (t - start < VISIT) {
+    plan.baseVisit = visit;
+    plan.baseStart = start;
+  } else {
+    plan.gapFrom = start + VISIT;
+    plan.baseVisit = visit + 1;
+    plan.baseStart = Math.max(t, plan.gapFrom + g);
+  }
+  plan.gap = gap;
 }
 
 function clear(out: ShipPose): ShipPose {
@@ -106,9 +158,10 @@ function clear(out: ShipPose): ShipPose {
  * changed), written into `out`. Allocates nothing.
  */
 export function shipAt(t: number, seed: number, plan: ShipPlan, out: ShipPose): ShipPose {
-  const gap = Math.max(0, plan.gap);
-  const visit = plan.stay ? 0 : Math.max(0, Math.floor((t - ARRIVE) / (VISIT + gap)));
-  const local = t - visitStart(visit, gap);
+  const visit = visitAt(t, plan);
+  const local = plan.stay
+    ? t - ARRIVE
+    : t - visitStart(visit, plan.gap, plan.baseVisit, plan.baseStart);
   if (!(local >= 0 && (plan.stay || local < VISIT))) {
     return clear(out);
   }

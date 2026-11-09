@@ -6,6 +6,7 @@ import {
   CRUISE,
   GAP,
   HOLD,
+  setShipGap,
   SHIP_KINDS,
   shipAt,
   type ShipPlan,
@@ -67,6 +68,47 @@ describe("bridge visiting ships", () => {
       const pose = createShipPose();
       expect(shipAt(visitStart(1, gap) - gap / 2, SEED, { ...CYCLE, gap }, pose).kind).toBe(-1);
     }
+  });
+
+  it("keep the ship in view when the gap changes mid-visit", () => {
+    for (const [from, to] of [
+      [240, 10],
+      [10, 600],
+      [60, 5],
+    ]) {
+      for (const visit of [0, 1, 3]) {
+        const plan: ShipPlan = { kind: -1, stay: false, gap: from };
+        const t0 = visitStart(visit, from);
+        const pose = createShipPose();
+        const before = { ...shipAt(t0 + VISIT / 3, SEED, plan, pose) };
+        setShipGap(plan, to, t0 + VISIT / 3);
+        // The same ship, in the same place, for the rest of its visit.
+        expect(shipAt(t0 + VISIT / 3, SEED, plan, pose)).toEqual(before);
+        for (let t = t0 + VISIT / 3; t < t0 + VISIT; t += 1) {
+          expect(shipAt(t, SEED, plan, pose).kind).toBe(visitKind(visit, SEED));
+        }
+        // The next comes the new gap after it leaves.
+        expect(shipAt(t0 + VISIT + to - 0.01, SEED, plan, pose).kind).toBe(-1);
+        expect(shipAt(t0 + VISIT + to + 1, SEED, plan, pose).kind).toBe(visitKind(visit + 1, SEED));
+      }
+    }
+  });
+
+  it("bring the next ship the new gap after the last left, or now if that has passed", () => {
+    const pose = createShipPose();
+    const plan: ShipPlan = { kind: -1, stay: false, gap: 240 };
+    const left = visitStart(0, 240) + VISIT;
+    setShipGap(plan, 100, left + 30);
+    expect(shipAt(left + 99, SEED, plan, pose).kind).toBe(-1);
+    shipAt(left + 100, SEED, plan, pose);
+    expect(pose.kind).toBe(visitKind(1, SEED));
+    expect(Math.abs(pose.across)).toBeCloseTo(1, 6);
+    setShipGap(plan, 240, left + 30);
+    setShipGap(plan, 10, left + 30);
+    // Already past the new gap: the next ship sets off now, from off-screen.
+    shipAt(left + 30, SEED, plan, pose);
+    expect(pose.kind).toBe(visitKind(1, SEED));
+    expect(Math.abs(pose.across)).toBeCloseTo(1, 6);
   });
 
   it("bring every ship before any comes twice", () => {
