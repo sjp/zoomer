@@ -227,6 +227,30 @@ export function asteroidAt(t: number, seed: number, rate: number, out: Asteroid)
   return out;
 }
 
+/** The asteroid rate each slot was decided with; see `slotRate`. */
+export interface RateLatch {
+  slot: number;
+  rate: number;
+}
+
+export function createRateLatch(): RateLatch {
+  return { slot: Number.NaN, rate: 0 };
+}
+
+/**
+ * The asteroid rate for the slot at `t`: `rate` as it was when the slot began,
+ * so moving the slider never adds or removes an asteroid mid-pass. The change
+ * takes effect from the next slot.
+ */
+export function slotRate(latch: RateLatch, t: number, rate: number): number {
+  const slot = Math.floor(t / ASTEROID_SLOT);
+  if (slot !== latch.slot) {
+    latch.slot = slot;
+    latch.rate = rate;
+  }
+  return latch.rate;
+}
+
 /* ----- Console lamps ----- */
 
 /** Lamp colours, in `cockpit-layout.ts` colour order: red, amber, white and green. */

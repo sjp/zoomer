@@ -3,6 +3,7 @@ import {
   ASTEROID_SLOT,
   asteroidAt,
   createAsteroid,
+  createRateLatch,
   createJumpState,
   createLampScratch,
   createScenery,
@@ -16,6 +17,7 @@ import {
   LEAVE_SECONDS,
   sceneryAt,
   screenSetup,
+  slotRate,
   SCREEN_KINDS,
   TUNNEL_MAX,
   TUNNEL_MIN,
@@ -153,6 +155,26 @@ describe("asteroids", () => {
     for (let t = 0; t < 3000; t += 0.5) {
       expect(asteroidAt(t, 4, 0, a).visible).toBe(false);
     }
+  });
+
+  it("keep the rate each slot began with, so a slider drag never pops one in or out", () => {
+    const a = createAsteroid();
+    const latch = createRateLatch();
+    let alpha = 0;
+    let jump = 0;
+    let seen = 0;
+    const dt = 0.05;
+    for (let t = 0; t < 60 * ASTEROID_SLOT; t += dt) {
+      // The slider swings between none and every slot, three times a slot.
+      const rate = Math.floor(t / (ASTEROID_SLOT / 3)) % 2;
+      asteroidAt(t, 9, slotRate(latch, t, rate), a);
+      const now = a.visible ? a.alpha : 0;
+      jump = Math.max(jump, Math.abs(now - alpha));
+      seen += a.visible ? 1 : 0;
+      alpha = now;
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(jump).toBeLessThan(dt);
   });
 
   it("are deterministic, slow, and fade in and out", () => {

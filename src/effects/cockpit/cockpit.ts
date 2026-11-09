@@ -38,6 +38,7 @@ import {
 } from "./cockpit-layout";
 import {
   asteroidAt,
+  createRateLatch,
   createAsteroid,
   jumpAt,
   createJumpState,
@@ -47,6 +48,7 @@ import {
   lampStates,
   sceneryAt,
   screenSetup,
+  slotRate,
 } from "./cockpit-sim";
 import { VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
 
@@ -755,6 +757,7 @@ export const cockpit = defineEffect(cockpitMeta, {
       let tunnel = -1;
       const scenery = createScenery();
       const rock = createAsteroid();
+      const rockRate = createRateLatch();
       let swayPhase = 0;
 
       return {
@@ -874,7 +877,7 @@ export const cockpit = defineEffect(cockpitMeta, {
           updateDataTexture(gl, lampTex, MAX_LIGHTS + 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, lampBytes);
 
           // 5. Composite over the stars.
-          asteroidAt(time, seed, p.asteroids, rock);
+          asteroidAt(time, seed, slotRate(rockRate, time, p.asteroids), rock);
           // Asteroids keep clear of jumps.
           const rockAlpha = rock.visible ? rock.alpha * (1 - stretch) : 0;
           swayPhase = (swayPhase + step / SWAY_SWELL.period) % 1;
