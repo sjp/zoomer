@@ -14,7 +14,7 @@
     "test:perf": "vitest run --config vitest.perf.config.ts"
   },
   "dependencies": {
-    "mediabunny": "^1.65.0",
+    "mediabunny": "^1.65.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
@@ -25,14 +25,14 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.2.1",
     "happy-dom": "^21.0.4",
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0",
+    "oxfmt": "^0.77.0",
+    "oxlint": "^1.92.0",
     "oxlint-tsgolint": "^7.0.2006",
     "typescript": "^7.0.2",
-    "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=26"
