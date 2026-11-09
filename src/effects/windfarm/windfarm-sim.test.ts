@@ -58,9 +58,9 @@ describe("palettes", () => {
     const out = new Float32Array(PALETTE_FLOATS).fill(Number.NaN);
     const pal = PALETTES.evening;
     packPalette(out, pal);
-    expect(out.every(Number.isFinite)).toBe(true);
+    expect(out.every((x) => Number.isFinite(x))).toBe(true);
     expect(Array.from(out.subarray(PACKED.haze, PACKED.haze + 3))).toEqual(
-      pal.haze.map(Math.fround),
+      pal.haze.map((c) => Math.fround(c)),
     );
     const hills = new Float32Array(HILL_LAYERS * 3);
     fillHillColors(hills, pal);
