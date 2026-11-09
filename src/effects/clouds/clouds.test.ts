@@ -7,6 +7,9 @@ import {
   coverageThreshold,
   createPresetTransition,
   layerUniforms,
+  advanceCloudDrift,
+  createCloudDrift,
+  type CloudDrift,
   LIGHT_BLEND,
   lightWeight,
   lerpPreset,
@@ -203,6 +206,9 @@ describe("preset interpolation", () => {
   });
 });
 
+/** No wind. */
+const still: CloudDrift = createCloudDrift(0);
+
 describe("layerUniforms", () => {
   const offA = new Float32Array(8);
   const detail = new Float32Array(8);
@@ -210,12 +216,14 @@ describe("layerUniforms", () => {
 
   it("keeps offsets wrapped and cross-fade weights in range", () => {
     const bad: string[] = [];
+    const drifts = [createCloudDrift(0), createCloudDrift(1)];
     for (let t = 0; t < 2000; t += 0.37) {
       for (const [o, layer] of [
         [0, 0],
         [4, 1],
       ]) {
-        layerUniforms(offA, detail, params, o, layer, t * 0.01, t, 1.2, 0.8);
+        advanceCloudDrift(drifts[layer], 0.37 * 0.01, 1.2);
+        layerUniforms(offA, detail, params, o, layer, drifts[layer], t, 1.2, 0.8);
         // Texture offsets, wrapped to [0, 1): the base pair and the detail layer's.
         for (const v of [...offA.subarray(o, o + 4), detail[o], detail[o + 1]]) {
           if (!(v >= 0 && v < 1)) {
@@ -241,16 +249,34 @@ describe("layerUniforms", () => {
     expect(bad).toEqual([]);
   });
 
+  it("doesn't move the clouds when the size slider changes, even after a day", () => {
+    const drift = createCloudDrift(0);
+    for (let i = 0; i < 24 * 3600; i++) {
+      advanceCloudDrift(drift, 0.012, 1.2);
+    }
+    const day = 24 * 3600;
+    const before = new Float32Array(8);
+    const beforeDetail = new Float32Array(8);
+    layerUniforms(before, beforeDetail, params, 0, 0, drift, day, 1.2, 1);
+    // One slider step of cloud size.
+    layerUniforms(offA, detail, params, 0, 0, drift, day, 1.2 / 1.05, 1);
+    for (let i = 0; i < 4; i++) {
+      expect(Math.abs(offA[i] - before[i])).toBeLessThan(1e-3);
+    }
+    expect(Math.abs(detail[0] - beforeDetail[0])).toBeLessThan(1e-3);
+    expect(Math.abs(detail[1] - beforeDetail[1])).toBeLessThan(1e-3);
+  });
+
   it("only re-randomises a sample while its weight is zero", () => {
     // With no wind, a sample's x offset only changes when it re-randomises,
     // and its weight must be ~0 at that moment.
     let prev = new Float32Array(8);
-    layerUniforms(prev, detail, params, 0, 0, 0, 0, 1, 1);
+    layerUniforms(prev, detail, params, 0, 0, still, 0, 1, 1);
     let prevW = params[1];
     let jumps = 0;
     let worst = 0;
     for (let t = 0.01; t < 120; t += 0.01) {
-      layerUniforms(offA, detail, params, 0, 0, 0, t, 1, 1);
+      layerUniforms(offA, detail, params, 0, 0, still, t, 1, 1);
       const wa = params[1];
       const jumpA = offA[0] !== prev[0] ? 1 : 0;
       const jumpB = offA[2] !== prev[2] ? 1 : 0;
@@ -293,7 +319,7 @@ describe("lightWeight", () => {
     let n = 0;
     let worst = 0;
     for (let t = 0; t < 280; t += 0.05, n++) {
-      layerUniforms(offA, detail, params, 0, 0, 0, t, 1, 1);
+      layerUniforms(offA, detail, params, 0, 0, still, t, 1, 1);
       worst = Math.max(worst, Math.abs(detail[3] - lightWeight(params[1])));
       if (detail[3] > 0 && detail[3] < 1) {
         both++;

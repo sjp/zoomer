@@ -6,6 +6,8 @@ import {
   createPresetTransition,
   LAYER_FLOATS,
   layerUniforms,
+  advanceCloudDrift,
+  createCloudDrift,
   P,
   presetIndex,
   STRETCH_X,
@@ -218,8 +220,8 @@ export const clouds = defineEffect(cloudsMeta, {
       let lastTime = "";
       let timeIndex = 0;
       /** Wind travel per layer (frame heights) and evolution time; float64. */
-      let driftNear = 0;
-      let driftFar = 0;
+      const driftNear = createCloudDrift(0);
+      const driftFar = createCloudDrift(1);
       let evolve = 0;
       /** Far layer's fade, 0..1; NaN before the first frame, which starts at its target. */
       let farFade = Number.NaN;
@@ -233,8 +235,6 @@ export const clouds = defineEffect(cloudsMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
           const step = Math.max(0, dt) * p.speed;
-          driftNear += step * WIND;
-          driftFar += step * WIND * FAR_SPEED;
           evolve += step;
           const farTarget = p.layers >= 1.5 ? 1 : 0;
           if (Number.isNaN(farFade)) {
@@ -245,6 +245,8 @@ export const clouds = defineEffect(cloudsMeta, {
           // The far layer costs its fetches only while it is at all visible.
           const layers = farFade > 0 ? 2 : 1;
           const freq = BASE_FREQ / Math.max(0.1, p.scale);
+          advanceCloudDrift(driftNear, step * WIND, freq);
+          advanceCloudDrift(driftFar, step * WIND * FAR_SPEED, freq * FAR_FREQ);
 
           target.resize(width, height, qualityDivisor(p.quality));
 

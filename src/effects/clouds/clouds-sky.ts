@@ -67,9 +67,36 @@ export const LAYER_FLOATS = 4;
 const hash = (k: number) => fract(Math.sin(k * 12.9898 + 4.1414) * 43758.5453);
 
 /**
+ * One layer's wind travel, kept as texture offsets wrapped to [0, 1) and advanced
+ * at the current frequency every frame. A change of frequency (the cloud size
+ * slider) then only changes how fast the clouds move from here on, never where
+ * they are: an offset found by multiplying the total distance travelled by the
+ * frequency would jump further with every hour the page has been open.
+ */
+export interface CloudDrift {
+  /** Coarse noise offset in tiles. */
+  coarse: number;
+  /** Detail noise offset in tiles. */
+  detail: number;
+}
+
+export function createCloudDrift(layer: number): CloudDrift {
+  return { coarse: 0, detail: fract(layer * 0.37) };
+}
+
+/**
+ * Moves `drift` by `distance` frame heights of wind at coarse frequency `freq`
+ * (repeats per frame height). Allocates nothing.
+ */
+export function advanceCloudDrift(drift: CloudDrift, distance: number, freq: number): void {
+  drift.coarse = fract(drift.coarse - distance * STRETCH_X * freq);
+  drift.detail = fract(drift.detail - distance * DETAIL_DRIFT * STRETCH_X * freq * DETAIL_MUL);
+}
+
+/**
  * Computes one layer's uniforms (writing 4 floats at `o` in each array).
  *
- * - `drift`: accumulated wind travel in frame heights (float64, unbounded).
+ * - `drift`: the layer's wind travel (see `advanceCloudDrift`).
  * - `evolve`: accumulated evolution time in seconds.
  * - `freq`: coarse texture repeats per frame height.
  *
@@ -86,12 +113,12 @@ export function layerUniforms(
   params: Float32Array,
   o: number,
   layer: number,
-  drift: number,
+  drift: CloudDrift,
   evolve: number,
   freq: number,
   opacity: number,
 ): void {
-  const dx = -drift * STRETCH_X * freq;
+  const dx = drift.coarse;
   const phase = evolve / EVOLVE_PERIOD + layer * 0.31;
   const phaseB = phase + 0.5;
   const ka = Math.floor(phase);
@@ -105,7 +132,7 @@ export function layerUniforms(
   offA[o + 2] = fract(dx + hash(seedB));
   offA[o + 3] = fract(hash(seedB + 0.5) - MORPH * fb);
   const dfreq = freq * DETAIL_MUL;
-  detail[o] = fract(-drift * DETAIL_DRIFT * STRETCH_X * dfreq + layer * 0.37);
+  detail[o] = drift.detail;
   detail[o + 1] = fract(layer * 0.61);
   detail[o + 2] = dfreq;
   const wa = 1 - Math.abs(2 * fa - 1);

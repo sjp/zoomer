@@ -4,6 +4,8 @@ import {
   coverageThreshold,
   LAYER_FLOATS,
   layerUniforms,
+  advanceCloudDrift,
+  createCloudDrift,
   PRESETS,
   STRETCH_X,
 } from "../clouds/clouds-sky";
@@ -259,7 +261,7 @@ export const kite = defineEffect(kiteMeta, {
       let width = 1;
       let height = 1;
       /** Cloud travel (frame heights, signed) and evolution time; float64. */
-      let drift = 0;
+      const drift = createCloudDrift(0);
       let evolve = 0;
 
       return {
@@ -273,7 +275,11 @@ export const kite = defineEffect(kiteMeta, {
           const aspect = width / height;
           const shape = shapeFor(p.kite);
           stepKite(state, dt, shape, p.wind, p.corner, aspect);
-          drift += step * (DRIFT0 + DRIFT1 * state.wind) * -state.windDir;
+          advanceCloudDrift(
+            drift,
+            step * (DRIFT0 + DRIFT1 * state.wind) * -state.windDir,
+            CLOUD_FREQ,
+          );
           evolve += step * (0.6 + 0.8 * state.wind);
 
           // 1. Clouds into the low-res target, then the sky composite to the canvas.
