@@ -5,7 +5,7 @@ import {
   type Beam,
   layoutBeams,
   writeBeamInstance,
-} from "../fireflies/fireflies";
+} from "../light-beams";
 import {
   beginFrame,
   createGradientBackground,

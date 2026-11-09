@@ -1,6 +1,6 @@
 import { createBubbles, MODES, type BubbleFrame } from "./bubbles-sim";
 import { unitRgbMemo } from "../color";
-import { type Beam, BEAM_FRAGMENT, BEAM_VERTEX, writeBeamInstance } from "../fireflies/fireflies";
+import { type Beam, BEAM_FRAGMENT, BEAM_VERTEX, writeBeamInstance } from "../light-beams";
 import {
   beginFrame,
   createGradientBackground,
