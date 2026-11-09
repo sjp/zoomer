@@ -14,8 +14,8 @@ import { HASH32_GLSL } from "../noise";
 import {
   advancePhase,
   bodyFromView,
-  buildClouds,
-  buildSurface,
+  buildCloudsSteps,
+  buildSurfaceSteps,
   CLOUD_H,
   CLOUD_RATE,
   CLOUD_SOFT,
@@ -31,12 +31,17 @@ import {
   worldStyle,
 } from "./planet-sim";
 import { planetMeta } from "./planet.meta";
+import { createBackgroundBuild, createSettledValue, type BuildSteps } from "../rebuild";
 import { defineEffect } from "../types";
 
 const f = glslFloat;
 
 /** Halo e-folding width outside the disc, as a fraction of the planet radius. */
 const HALO_WIDTH = 0.018;
+/** Seconds the world and seed inputs must hold still before the textures are rebuilt. */
+const INPUT_SETTLE = 0.3;
+/** CPU milliseconds per frame spent rebuilding the textures. */
+const BUILD_BUDGET_MS = 2;
 /** Star grid cell (1080p px; at most one star per cell) and the share of cells with a star. */
 const STAR_CELL = 9;
 const STAR_SHARE = 0.08;
@@ -227,8 +232,19 @@ export const planet = defineEffect(planetMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
+      /** The world and seed the textures hold, as `world|seed`, and the world alone. */
+      let builtKey = "";
       let builtWorld = "";
-      let builtSeed = Number.NaN;
+      // Dragging the seed slider or flicking through worlds builds once, when it settles,
+      // and the build (tens of ms) is spread over frames while the old world keeps turning.
+      const settledWorld = createSettledValue<string>(INPUT_SETTLE);
+      const settledSeed = createSettledValue<number>(INPUT_SETTLE);
+      const build = createBackgroundBuild<string, string>();
+      function* buildWorld(world: string, seed: number): BuildSteps<string> {
+        yield* buildSurfaceSteps(world, seed, surfaceData);
+        yield* buildCloudsSteps(world, seed, cloudData);
+        return world;
+      }
       /** Rotation phases in turns, wrapped to [0, 1) every frame. */
       let surfacePhase = 0;
       let cloudPhase = 0;
@@ -242,25 +258,40 @@ export const planet = defineEffect(planetMeta, {
         frame(dt, p) {
           beginFrame(gl, width, height);
 
-          // Rebuild the textures (tens of ms) only when the world or seed changes.
-          if (p.world !== builtWorld || p.seed !== builtSeed) {
-            builtWorld = p.world;
-            builtSeed = p.seed;
-            buildSurface(p.world, p.seed, surfaceData);
-            buildClouds(p.world, p.seed, cloudData);
-            gl.activeTexture(gl.TEXTURE0);
-            updateDataTexture(
-              gl,
-              surfaceTex,
-              SURFACE_W,
-              SURFACE_H,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              surfaceData,
-            );
-            gl.generateMipmap(gl.TEXTURE_2D);
-            updateDataTexture(gl, cloudTex, CLOUD_W, CLOUD_H, gl.RGBA, gl.UNSIGNED_BYTE, cloudData);
-            gl.generateMipmap(gl.TEXTURE_2D);
+          // Rebuild the textures only when the world or seed changes. The first build
+          // runs at once so the planet never opens blank.
+          const wantWorld = settledWorld.update(p.world, dt);
+          const wantSeed = settledSeed.update(p.seed, dt);
+          const key = `${wantWorld}|${String(wantSeed)}`;
+          if (key !== builtKey) {
+            const make = () => buildWorld(wantWorld, wantSeed);
+            build.request(key, make);
+            const done = builtKey === "" ? build.finish() : build.step(BUILD_BUDGET_MS);
+            if (done !== undefined) {
+              builtKey = key;
+              builtWorld = done;
+              gl.activeTexture(gl.TEXTURE0);
+              updateDataTexture(
+                gl,
+                surfaceTex,
+                SURFACE_W,
+                SURFACE_H,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                surfaceData,
+              );
+              gl.generateMipmap(gl.TEXTURE_2D);
+              updateDataTexture(
+                gl,
+                cloudTex,
+                CLOUD_W,
+                CLOUD_H,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                cloudData,
+              );
+              gl.generateMipmap(gl.TEXTURE_2D);
+            }
           }
 
           // Negative speeds spin the planet the other way.
@@ -268,7 +299,8 @@ export const planet = defineEffect(planetMeta, {
           surfacePhase = advancePhase(surfacePhase, turns);
           cloudPhase = advancePhase(cloudPhase, turns * CLOUD_RATE);
 
-          const world = worldStyle(p.world);
+          // The shading follows the world the textures hold, not one still building.
+          const world = worldStyle(builtWorld);
           planetLayout(p.framing, p.size, width / height, layout);
           sunSide(p.framing, side);
           sunDirection(p.sunAngle, side[0], sun, side[1]);
