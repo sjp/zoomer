@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParamDef, ParamValue } from "../effects/types";
 import { ParamControl } from "./ParamControl";
@@ -74,6 +75,52 @@ describe("ParamControl", () => {
       expect(area.getAttribute("rows")).toBe("2");
       fireEvent.change(area, { target: { value: "abcdefgh\nij\nkl‮" } });
       expect(onChange).toHaveBeenCalledExactlyOnceWith("abcde\nij");
+    });
+
+    /** Types into the textarea the way a browser does: a new value, then the caret. */
+    function edit(area: HTMLTextAreaElement, text: string, caret: number) {
+      // The prototype's setter, so React's value tracker sees a real edit.
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(
+        area,
+        text,
+      );
+      area.setSelectionRange(caret, caret);
+      fireEvent.input(area);
+    }
+
+    /** A text control whose parent keeps the value, as the app does. */
+    function renderStateful(initial: string) {
+      function Host() {
+        const [value, setValue] = useState<ParamValue>(initial);
+        return <ParamControl id="p" def={def} value={value} onChange={setValue} />;
+      }
+      render(<Host />);
+      return screen.getByLabelText<HTMLTextAreaElement>("Sign");
+    }
+
+    it("keeps the caret in place when sanitising strips a character before it", () => {
+      const area = renderStateful("abd");
+      // "c" typed after a bidi override that was pasted after "ab": caret after the "c".
+      edit(area, "ab\u202ecd", 4);
+      expect(area.value).toBe("abcd");
+      expect(area.selectionStart).toBe(3);
+      expect(area.selectionEnd).toBe(3);
+    });
+
+    it("keeps the caret in place when a typed character overfills the line", () => {
+      const area = renderStateful("abcde\nfg");
+      // "x" typed after "ab" on a full line pushes the last character off the end.
+      edit(area, "abxcde\nfg", 3);
+      expect(area.value).toBe("abxcd\nfg");
+      expect(area.selectionStart).toBe(3);
+    });
+
+    it("keeps the caret in place when the sanitised text is unchanged", () => {
+      const area = renderStateful("abcd");
+      // A stripped character typed after "ab": React puts the old value back.
+      edit(area, "ab\u202ecd", 3);
+      expect(area.value).toBe("abcd");
+      expect(area.selectionStart).toBe(2);
     });
 
     it("holds raw text while an input method composes, then sanitises once", () => {

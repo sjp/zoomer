@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { sanitizeText, stepDecimals } from "../effects/params";
 import type { ParamDef, ParamValue, TextParam } from "../effects/types";
 
@@ -97,13 +97,41 @@ interface TextProps {
  * A textarea kept sanitised on every edit. While an input method is composing, the
  * raw text is held locally, since normalising or truncating it mid-composition
  * would break the IME; it is sanitised once composition ends.
+ *
+ * When sanitising changes the text (a stripped character, an over-long line), React
+ * writes the new value into the textarea, which moves the caret to the end; it is put
+ * back where it was, less whatever was removed before it.
  */
 function TextControl({ inputId, def, value, onChange }: TextProps) {
   const [composing, setComposing] = useState<string | null>(null);
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  const caretRef = useRef<number | null>(null);
+  // Re-renders even when the sanitised value equals the current one, so the caret
+  // is still restored after React puts the old value back.
+  const [, setCaretRequests] = useState(0);
+  useLayoutEffect(() => {
+    const caret = caretRef.current;
+    if (caret !== null && areaRef.current) {
+      caretRef.current = null;
+      areaRef.current.setSelectionRange(caret, caret);
+    }
+  });
+  const commit = (area: HTMLTextAreaElement) => {
+    const raw = area.value;
+    const clean = sanitizeText(def, raw);
+    if (clean !== raw) {
+      // Sanitising the text before the caret gives the text before it afterwards.
+      const before = sanitizeText(def, raw.slice(0, area.selectionStart));
+      caretRef.current = Math.min(before.length, clean.length);
+      setCaretRequests((n) => n + 1);
+    }
+    onChange(clean);
+  };
   return (
     <div className="control">
       <label htmlFor={inputId}>{def.label}</label>
       <textarea
+        ref={areaRef}
         id={inputId}
         rows={def.maxLines}
         cols={def.maxLength}
@@ -115,13 +143,13 @@ function TextControl({ inputId, def, value, onChange }: TextProps) {
         }}
         onCompositionEnd={(e) => {
           setComposing(null);
-          onChange(sanitizeText(def, e.currentTarget.value));
+          commit(e.currentTarget);
         }}
         onChange={(e) => {
           if (composing !== null) {
             setComposing(e.target.value);
           } else {
-            onChange(sanitizeText(def, e.target.value));
+            commit(e.target);
           }
         }}
       />
