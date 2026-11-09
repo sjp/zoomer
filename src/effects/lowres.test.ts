@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { lowResSize, qualityDivisor, rendersDirect } from "./lowres";
+import { createFakeGl } from "../test/fake-gl";
+import { createChangeKey } from "./change-key";
+import { createLowResTarget, lowResSize, qualityDivisor, rendersDirect } from "./lowres";
 
 describe("lowResSize", () => {
   it("divides and rounds up", () => {
@@ -63,5 +65,53 @@ describe("rendersDirect", () => {
     expect(rendersDirect(1081, 7, lowResSize(1081, 1.01), lowResSize(7, 1), false, false)).toBe(
       false,
     );
+  });
+});
+
+describe("needsRedraw", () => {
+  it("asks once after each size change, then only when the key changes", () => {
+    const target = createLowResTarget(createFakeGl().gl);
+    const key = createChangeKey(1);
+    key.set(0, 1);
+    target.resize(800, 600, 2);
+    expect(target.needsRedraw(key)).toBe(true);
+    expect(target.needsRedraw(key)).toBe(false);
+    target.resize(800, 600, 2);
+    expect(target.needsRedraw(key)).toBe(false);
+    key.set(0, 2);
+    expect(target.needsRedraw(key)).toBe(true);
+    expect(target.needsRedraw()).toBe(false);
+    // Same low-res size, new aspect: the image may depend on it.
+    target.resize(801, 600, 2);
+    expect(target.needsRedraw(key)).toBe(true);
+    target.resize(1600, 1200, 2);
+    expect(target.needsRedraw()).toBe(true);
+    target.dispose();
+  });
+
+  it("takes the key even when a redraw is already due", () => {
+    const target = createLowResTarget(createFakeGl().gl);
+    const key = createChangeKey(1);
+    target.resize(800, 600, 2);
+    expect(target.needsRedraw(key)).toBe(true);
+    expect(key.take()).toBe(false);
+    target.dispose();
+  });
+
+  it("always redraws when rendering direct, unless the image is kept", () => {
+    const { gl } = createFakeGl();
+    const direct = createLowResTarget(gl);
+    direct.resize(800, 600, 1);
+    expect(direct.direct).toBe(true);
+    expect(direct.needsRedraw()).toBe(true);
+    expect(direct.needsRedraw()).toBe(true);
+    const kept = createLowResTarget(gl, { keep: true });
+    kept.resize(800, 600, 1);
+    expect(kept.direct).toBe(false);
+    expect(kept.texture).not.toBe(null);
+    expect(kept.needsRedraw()).toBe(true);
+    expect(kept.needsRedraw()).toBe(false);
+    direct.dispose();
+    kept.dispose();
   });
 });

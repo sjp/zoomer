@@ -30,6 +30,7 @@
  * divisor table, e.g. `qualityDivisor(q, { high: 4, balanced: 6, low: 8 })`.
  */
 
+import type { ChangeKey } from "./change-key";
 import {
   createFullscreenTriangle,
   createRenderTarget,
@@ -134,6 +135,14 @@ export interface LowResTarget {
   readonly isFloat: boolean;
   /** True while `bind` targets the canvas directly and `blit` does nothing. */
   readonly direct: boolean;
+  /**
+   * For a target that caches an image between frames: whether it must be drawn
+   * this frame. True while rendering direct (the canvas keeps nothing), on the
+   * first call after `resize` changed the full or low-res size (a new texture
+   * starts black, and the image may depend on the aspect), and when `key`
+   * reports a change. Always takes `key`, so its flag is clear afterwards.
+   */
+  needsRedraw: (key?: ChangeKey) => boolean;
   dispose: () => void;
 }
 
@@ -152,6 +161,11 @@ export interface LowResOptions {
   composite?: string;
   /** Adds +-0.5 LSB of dither to the blit output. Defaults to true. */
   dither?: boolean;
+  /**
+   * Never render direct, even at full size, so the texture keeps its image
+   * between frames and `needsRedraw` can skip an unchanged one. Defaults to false.
+   */
+  keep?: boolean;
 }
 
 const DEFAULT_COMPOSITE = /* glsl */ `
@@ -216,15 +230,23 @@ function buildLowResTarget(
   let fullHeight = 1;
   let isFloat = false;
   let direct = false;
-  const hasComposite = opts.composite !== undefined;
+  // Keeping the image needs a texture, as a composite does.
+  const needsTexture = opts.composite !== undefined || opts.keep === true;
+  /** Set when `resize` changes a size, cleared by `needsRedraw`. */
+  let stale = true;
 
   const target: LowResTarget = {
     resize(w, h, divisor) {
-      fullWidth = Math.max(1, Math.floor(w));
-      fullHeight = Math.max(1, Math.floor(h));
+      const fw = Math.max(1, Math.floor(w));
+      const fh = Math.max(1, Math.floor(h));
+      if (fw !== fullWidth || fh !== fullHeight) {
+        stale = true;
+      }
+      fullWidth = fw;
+      fullHeight = fh;
       const lw = lowResSize(w, divisor);
       const lh = lowResSize(h, divisor);
-      direct = rendersDirect(fullWidth, fullHeight, lw, lh, hasComposite, wantFloat);
+      direct = rendersDirect(fullWidth, fullHeight, lw, lh, needsTexture, wantFloat);
       if (direct) {
         // No texture needed: free it rather than keep a full-size copy around.
         rt?.dispose();
@@ -237,6 +259,7 @@ function buildLowResTarget(
       }
       rt?.dispose();
       rt = null;
+      stale = true;
       if (wantFloat) {
         rt = createRenderTarget(gl, lw, lh, gl.RGBA16F);
         // 16F not renderable after all: stop trying and use 8-bit from now on.
@@ -293,6 +316,12 @@ function buildLowResTarget(
     },
     get direct() {
       return direct;
+    },
+    needsRedraw(key) {
+      const changed = key?.take() ?? false;
+      const redraw = direct || stale || changed;
+      stale = false;
+      return redraw;
     },
     program,
     dispose: () => {
