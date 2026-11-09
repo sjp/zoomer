@@ -41,6 +41,7 @@ import {
 import { createLowResTarget } from "../lowres";
 import { approach } from "../math";
 import { defineEffect } from "../types";
+import { PAINT_OVER_GLSL } from "../sdf-glsl";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -146,7 +147,7 @@ ${DITHER_GLSL}
 /** One device px in cradle units, set by main. */
 float pxU;
 float cov(float sd) { return clamp(0.5 - sd / pxU, 0.0, 1.0); }
-void over(inout vec4 acc, vec3 c, float a) { acc = vec4(c, 1.0) * a + acc * (1.0 - a); }
+${PAINT_OVER_GLSL}
 
 vec3 envLight(vec3 r, int k) {
   float d = dot(r, uLDir[k]);

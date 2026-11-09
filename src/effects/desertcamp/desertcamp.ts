@@ -61,6 +61,7 @@ import { advanceRotation, seedSalt } from "../starfield-sim";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
 import { createSettledValue } from "../rebuild";
+import { COVERAGE_GLSL } from "../sdf-glsl";
 
 /** Sky pass: about 3 reference px per texel. The sky is all soft haze and gradient. */
 const SKY_TEXEL_REF = 3;
@@ -169,10 +170,7 @@ const float TL[${String(TONGUES)}] = float[](${TONGUE_L.map((v) => glslFloat(v))
 const float TW[${String(TONGUES)}] = float[](${TONGUE_W.map((v) => glslFloat(v)).join(", ")});
 
 /** Coverage of a silhouette whose top is \`d\` device px above this pixel. */
-float coverage(float d) {
-  float g = length(vec2(dFdx(d), dFdy(d)));
-  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
-}
+${COVERAGE_GLSL}
 
 float falloff(vec2 e) {
   float q = 1.0 + dot(e, e);

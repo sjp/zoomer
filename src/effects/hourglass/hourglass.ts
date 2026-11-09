@@ -49,6 +49,7 @@ import { createLowResTarget } from "../lowres";
 import { smoothstep } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
+import { PAINT_OVER_GLSL } from "../sdf-glsl";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -157,7 +158,7 @@ const vec3 SKY = ${vec3Hex(SKY)};
 /** One device px in glass units, set by main. */
 float pxU;
 float cov(float sdf) { return clamp(0.5 - sdf / pxU, 0.0, 1.0); }
-void over(inout vec4 acc, vec3 c, float a) { acc = vec4(c, 1.0) * a + acc * (1.0 - a); }
+${PAINT_OVER_GLSL}
 /** A Gaussian bump of width w centred on c. */
 float bump(float x, float c, float w) {
   float u = (x - c) / w;

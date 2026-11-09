@@ -101,6 +101,7 @@ import {
   WIN_Y0,
   WIN_Y1,
 } from "./diningcar-sim";
+import { COVERAGE_GLSL } from "../sdf-glsl";
 
 /** The landscape renders at about 2 reference px per texel: it is dark, soft and seen through glass. */
 const LAND_TEXEL_REF = 2;
@@ -624,10 +625,7 @@ ${VALUE_NOISE_GLSL}
 const vec3 WARM = vec3(1.0, 0.7, 0.36);
 float sq(float x) { return x * x; }
 
-float coverage(float d) {
-  float g = length(vec2(dFdx(d), dFdy(d)));
-  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
-}
+${COVERAGE_GLSL}
 
 void main() {
   vec2 p = gl_FragCoord.xy * uPxToRef;

@@ -43,7 +43,7 @@ import {
   vitalsKey,
 } from "./hospital-sim";
 import { hospitalMeta } from "./hospital.meta";
-import { SDF2D_GLSL } from "../sdf-glsl";
+import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 const vec3 = (c: readonly [number, number, number]) => `vec3(${g(c[0])}, ${g(c[1])}, ${g(c[2])})`;
@@ -759,9 +759,7 @@ const float X0 = ${g(WAVE_X0)};
 const float X1 = ${g(WAVE_X1)};
 
 /** Premultiplied src over dst. */
-vec4 over(vec4 src, vec4 dst) {
-  return src + dst * (1.0 - src.a);
-}
+${OVER_GLSL}
 
 float dot2(vec2 v) {
   return dot(v, v);

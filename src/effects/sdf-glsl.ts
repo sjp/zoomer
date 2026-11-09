@@ -23,3 +23,26 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 }
 const float TAU = 6.28318530718;
 `;
+
+/** Premultiplied `src` over premultiplied `dst`: `over(src, dst)`. */
+export const OVER_GLSL = /* glsl */ `
+vec4 over(vec4 src, vec4 dst) {
+  return src + dst * (1.0 - src.a);
+}
+`;
+
+/** Paints colour `c` at coverage `a` over the premultiplied `acc`: `over(acc, c, a)`. */
+export const PAINT_OVER_GLSL = /* glsl */ `
+void over(inout vec4 acc, vec3 c, float a) { acc = vec4(c, 1.0) * a + acc * (1.0 - a); }
+`;
+
+/**
+ * Pixel coverage of a shape at signed distance `d` (positive inside), from the
+ * screen-space rate of change of `d`, so it needs no pixel size: `coverage(d)`.
+ */
+export const COVERAGE_GLSL = /* glsl */ `
+float coverage(float d) {
+  float g = length(vec2(dFdx(d), dFdy(d)));
+  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
+}
+`;

@@ -38,6 +38,7 @@ import { globeMeta, MAX_FLAKES } from "./globe.meta";
 import { createLowResTarget } from "../lowres";
 import { createSpriteBatch } from "../sprites";
 import { defineEffect } from "../types";
+import { PAINT_OVER_GLSL } from "../sdf-glsl";
 
 /** Room pass: about 4 reference px per texel. The room is all out of focus. */
 const ROOM_TEXEL_REF = 4;
@@ -145,7 +146,7 @@ vec2 localPos() {
   pxU = uPx / uGlobe.z;
   return q;
 }
-void over(inout vec4 acc, vec3 c, float a) { acc = vec4(c, 1.0) * a + acc * (1.0 - a); }
+${PAINT_OVER_GLSL}
 `;
 
 /**

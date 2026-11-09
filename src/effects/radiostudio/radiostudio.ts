@@ -37,7 +37,7 @@ import {
   WINDOW_FRAME,
 } from "./radiostudio-sim";
 import { radiostudioMeta } from "./radiostudio.meta";
-import { SDF2D_GLSL } from "../sdf-glsl";
+import { SDF2D_GLSL, OVER_GLSL } from "../sdf-glsl";
 
 const g = glslFloat;
 
@@ -668,9 +668,7 @@ ${SHARED_GLSL}
 const float VU_PIVOT = ${g(VU_PIVOT)};
 
 /** Premultiplied src over dst. */
-vec4 over(vec4 src, vec4 dst) {
-  return src + dst * (1.0 - src.a);
-}
+${OVER_GLSL}
 
 /** The sign's face: dark red glass with grey letters, lit up to red with white letters by uVal.x. */
 vec4 signFace(vec2 q) {

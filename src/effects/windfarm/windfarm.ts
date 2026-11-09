@@ -37,6 +37,7 @@ import {
   YAW_COS,
 } from "./windfarm-sim";
 import { MAX_TURBINES, SIDE_OPTIONS, windfarmMeta } from "./windfarm.meta";
+import { PAINT_OVER_GLSL } from "../sdf-glsl";
 
 const f = glslFloat;
 
@@ -365,10 +366,7 @@ float blade(vec2 r, vec2 dir) {
   return max(abs(s - 0.3 * w) - w, max(0.5 * HUB_R - t, t - BLADE));
 }
 
-/** Premultiplied "over": paints col at coverage a onto acc. */
-void over(inout vec4 acc, vec3 col, float a) {
-  acc = vec4(col * a + acc.rgb * (1.0 - a), a + acc.a * (1.0 - a));
-}
+${PAINT_OVER_GLSL}
 
 void main() {
   vec2 q = vLocal;

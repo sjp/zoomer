@@ -47,6 +47,7 @@ import {
 import { seedSalt } from "../starfield-sim";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { defineEffect } from "../types";
+import { COVERAGE_GLSL } from "../sdf-glsl";
 
 /** Most point stars; a 21:9 frame at the effect's density stays well under it. */
 const MAX_STARS = 16000;
@@ -124,10 +125,7 @@ const vec3 DOOR = ${C("#ffb468", 0.32)};
 const vec3 POOL = ${C("#ff9a50", 0.05)};
 
 /** Coverage of a silhouette whose top is \`d\` device px above this pixel. */
-float coverage(float d) {
-  float g = length(vec2(dFdx(d), dFdy(d)));
-  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
-}
+${COVERAGE_GLSL}
 
 /** Isosceles triangle (apex up at height h, base half-width w): signed distance, from Inigo Quilez. */
 float triangleDist(vec2 p, float w, float h) {

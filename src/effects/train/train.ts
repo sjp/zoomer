@@ -80,6 +80,7 @@ import {
 } from "./train-sim";
 import { trainMeta } from "./train.meta";
 import { defineEffect } from "../types";
+import { COVERAGE_GLSL } from "../sdf-glsl";
 
 /** Sky and hills pass: about 2 reference px per texel. Everything in it is soft or distant. */
 const SKY_TEXEL_REF = 2;
@@ -157,10 +158,7 @@ out vec4 outColor;
 const vec4 OCT = vec4(0.5, 0.25, 0.125, 0.0625);
 const float MEAN = 0.46875;
 
-float coverage(float d) {
-  float g = length(vec2(dFdx(d), dFdy(d)));
-  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
-}
+${COVERAGE_GLSL}
 
 void main() {
   vec2 p = gl_FragCoord.xy * uPxToRef;
@@ -237,10 +235,7 @@ uniform int uHouseCount;
 out vec4 outColor;
 ${DITHER_GLSL}
 
-float coverage(float d) {
-  float g = length(vec2(dFdx(d), dFdy(d)));
-  return clamp(d / max(g, 0.001) + 0.5, 0.0, 1.0);
-}
+${COVERAGE_GLSL}
 
 vec3 fieldColor(float tone) {
   return tone < 0.5 ? mix(uField0, uField1, tone * 2.0) : mix(uField1, uField2, tone * 2.0 - 1.0);
