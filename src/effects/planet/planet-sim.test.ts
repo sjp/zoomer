@@ -27,6 +27,7 @@ import {
 } from "./planet-sim";
 import { FRAMING_OPTIONS, WORLD_OPTIONS } from "./planet.meta";
 import type { BuildSteps } from "../rebuild";
+import { firstDifference } from "../../test/bytes";
 
 /**
  * Nearest non-negative distance along a unit ray (origin o, direction d) to a
@@ -387,15 +388,11 @@ describe("stepped texture builds", () => {
     }
   }
 
-  /** Whether two byte arrays match (toEqual is slow on megabyte arrays). */
-  const sameBytes = (a: Uint8Array, b: Uint8Array) =>
-    a.length === b.length && a.every((v, i) => v === b[i]);
-
   it.each(["earth", "gas"])("gives exactly the one-shot %s textures, in small steps", (world) => {
     const built = run(buildSurfaceSteps(world, 3));
-    expect(sameBytes(built.data, buildSurface(world, 3))).toBe(true);
+    expect(firstDifference(built.data, surface(world, 3))).toBe(-1);
     expect(built.yields).toBeGreaterThan(100);
     const clouds = run(buildCloudsSteps(world, 3));
-    expect(sameBytes(clouds.data, buildClouds(world, 3))).toBe(true);
+    expect(firstDifference(clouds.data, buildClouds(world, 3))).toBe(-1);
   });
 });

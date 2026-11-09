@@ -41,13 +41,19 @@ describe("plume lifecycle", () => {
   it("is continuous over the whole life", () => {
     const step = 0.01;
     let prev = plumeIntensity(-step);
+    let maxJump = 0;
+    let min = Infinity;
+    let max = -Infinity;
     for (let a = 0; a <= PLUME_LIFE + step; a += step) {
       const v = plumeIntensity(a);
-      expect(Math.abs(v - prev)).toBeLessThan(0.03);
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(1);
+      maxJump = Math.max(maxJump, Math.abs(v - prev));
+      min = Math.min(min, v);
+      max = Math.max(max, v);
       prev = v;
     }
+    expect(maxJump).toBeLessThan(0.03);
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeLessThanOrEqual(1);
   });
 
   it("grows monotonically from a small start", () => {

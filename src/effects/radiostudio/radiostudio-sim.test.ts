@@ -94,11 +94,15 @@ describe("the ON AIR light", () => {
   it("is deterministic and on for most of the time in Auto", () => {
     let on = 0;
     let n = 0;
+    let differsAt: number | undefined;
     for (let t = 0; t < 7200; t += 0.25) {
-      expect(autoOnAir(t)).toBe(autoOnAir(t));
+      if (differsAt === undefined && !Object.is(autoOnAir(t), autoOnAir(t))) {
+        differsAt = t;
+      }
       on += autoOnAir(t) ? 1 : 0;
       n++;
     }
+    expect(differsAt).toBeUndefined();
     expect(on / n).toBeGreaterThan(0.94);
     expect(on / n).toBeLessThan(1);
   });

@@ -27,6 +27,7 @@ import {
   JITTER,
 } from "./physarum-sim";
 import { AGENT_OPTIONS, PALETTE_OPTIONS } from "./physarum.meta";
+import { firstDifference } from "../../test/bytes";
 
 const W = 48;
 const H = 27;
@@ -63,27 +64,31 @@ describe("physarumStep", () => {
   it("keeps agents in bounds, wrapping at the edges", () => {
     // Fast agents cross the edges many times in 200 steps.
     const { agents, count } = run(1, 200, { speed: 1.5 });
-    for (let i = 0; i < count; i++) {
+    let firstBad: { i: number; x: number; y: number; angle: number } | undefined;
+    for (let i = 0; i < count && !firstBad; i++) {
       const o = i * AGENT_FLOATS;
-      expect(agents[o]).toBeGreaterThanOrEqual(0);
-      expect(agents[o]).toBeLessThan(1);
-      expect(agents[o + 1]).toBeGreaterThanOrEqual(0);
-      expect(agents[o + 1]).toBeLessThan(1);
-      expect(agents[o + 2]).toBeGreaterThanOrEqual(0);
-      expect(agents[o + 2]).toBeLessThan(Math.PI * 2);
+      const [x, y, angle] = [agents[o], agents[o + 1], agents[o + 2]];
+      if (!(x >= 0 && x < 1 && y >= 0 && y < 1 && angle >= 0 && angle < Math.PI * 2)) {
+        firstBad = { i, x, y, angle };
+      }
     }
+    expect(firstBad).toBeUndefined();
   });
 
   it("keeps the trail bounded and non-negative under decay", () => {
     const { trail, maxes, cfg, count } = run(2, 300);
+    let min = Infinity;
+    let nonFinite = 0;
     for (const v of trail) {
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(Number.isFinite(v)).toBe(true);
+      min = Math.min(min, v);
+      if (!Number.isFinite(v)) {
+        nonFinite++;
+      }
     }
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(nonFinite).toBe(0);
     // The diffuse pass clamps to TRAIL_MAX; at most every agent's deposit lands on top.
-    for (const m of maxes) {
-      expect(m).toBeLessThanOrEqual(TRAIL_MAX + count * cfg.deposit);
-    }
+    expect(Math.max(...maxes)).toBeLessThanOrEqual(TRAIL_MAX + count * cfg.deposit);
     // The deposit normalisation holds the mean near MEAN_TRAIL (the calm centre's extra decay
     // pulls it a little lower).
     const mean = trail.reduce((a, b) => a + b, 0) / trail.length;
@@ -112,9 +117,9 @@ describe("physarumStep", () => {
     const a = run(7, 50);
     const b = run(7, 50);
     const c = run(8, 50);
-    expect(a.agents).toEqual(b.agents);
-    expect(a.trail).toEqual(b.trail);
-    expect(a.agents).not.toEqual(c.agents);
+    expect(firstDifference(a.agents, b.agents)).toBe(-1);
+    expect(firstDifference(a.trail, b.trail)).toBe(-1);
+    expect(firstDifference(a.agents, c.agents)).not.toBe(-1);
   });
 
   it("thins the calm centre", () => {

@@ -206,12 +206,17 @@ describe("localTime", () => {
   it("is continuous and increasing everywhere on the frame", () => {
     for (const u of [0, 0.3, 1]) {
       let prev = localTime(wave, 10, u);
+      // Math.min and Math.max pass a NaN through, so one still fails below.
+      let minStep = Infinity;
+      let maxStep = -Infinity;
       for (let t = 10.01; t < 10 + LIFETIME; t += 0.01) {
         const tau = localTime(wave, t, u);
-        expect(tau - prev).toBeGreaterThan(0);
-        expect(tau - prev).toBeLessThan(0.02);
+        minStep = Math.min(minStep, tau - prev);
+        maxStep = Math.max(maxStep, tau - prev);
         prev = tau;
       }
+      expect(minStep).toBeGreaterThan(0);
+      expect(maxStep).toBeLessThan(0.02);
     }
   });
 

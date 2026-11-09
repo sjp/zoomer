@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { firstDifference } from "../../test/bytes";
 import {
   BEND_BASE,
   BEND_GUST,
@@ -67,8 +68,8 @@ describe("buildBlades", () => {
   it("is deterministic per seed and writes the configured count", () => {
     const a = build(5, 3000);
     expect(a.n).toBe(3000);
-    expect(build(5, 3000).out).toEqual(a.out);
-    expect(build(6, 3000).out).not.toEqual(a.out);
+    expect(firstDifference(build(5, 3000).out, a.out)).toBe(-1);
+    expect(firstDifference(build(6, 3000).out, a.out)).not.toBe(-1);
   });
 
   it("clamps to the output's size", () => {
@@ -204,7 +205,7 @@ describe("selectBlades", () => {
       const direct = new Float32Array(3000 * BLADE_FLOATS);
       expect(selectBlades(field, count, picked)).toBe(count);
       expect(buildBlades(5, count, direct)).toBe(count);
-      expect(picked).toEqual(direct);
+      expect(firstDifference(picked, direct)).toBe(-1);
     }
   });
 

@@ -36,6 +36,18 @@ const buildTable = (seed: number) => {
   return out;
 };
 
+// Building a table is the slow part of these tests, and nothing writes to one, so the
+// tests that only read a table share one per seed. The determinism test builds its own.
+const tables = new Map<number, Float32Array>();
+const tableFor = (seed: number) => {
+  let t = tables.get(seed);
+  if (!t) {
+    t = buildTable(seed);
+    tables.set(seed, t);
+  }
+  return t;
+};
+
 const ASPECTS = [16 / 9, 4 / 3, 21 / 9];
 const SIDES = SIDE_OPTIONS.map((o) => o.value);
 
@@ -94,7 +106,7 @@ describe("hill table", () => {
   });
 
   it("wraps with its span", () => {
-    const t = buildTable(1);
+    const t = tableFor(1);
     let worst = 0;
     for (let x = 0; x < SPAN; x += 0.137) {
       for (let i = 0; i < HILL_LAYERS; i++) {
@@ -134,7 +146,7 @@ describe("turbinesClash", () => {
 
 describe("layoutFarm", () => {
   it("is deterministic per seed", () => {
-    const t = buildTable(5);
+    const t = tableFor(5);
     const a = createFarm();
     const b = createFarm();
     layoutFarm(a, t, 16 / 9, 9, "spread", 5);
@@ -149,7 +161,7 @@ describe("layoutFarm", () => {
     let failures = 0;
     let placedTotal = 0;
     for (let seed = 0; seed < 8; seed++) {
-      const t = buildTable(seed);
+      const t = tableFor(seed);
       for (const aspect of ASPECTS) {
         for (const side of SIDES) {
           for (const n of [MIN_TURBINES, 9, MAX_TURBINES]) {
@@ -198,7 +210,7 @@ describe("layoutFarm", () => {
     const farm = createFarm();
     let failures = 0;
     for (let seed = 0; seed < 12; seed++) {
-      const t = buildTable(seed);
+      const t = tableFor(seed);
       for (const aspect of ASPECTS) {
         const placed = layoutFarm(farm, t, aspect, MAX_TURBINES, side, seed);
         for (let i = 0; i < placed; i++) {
@@ -220,7 +232,7 @@ describe("layoutFarm", () => {
 
   it("places a fair number even on one side", () => {
     const farm = createFarm();
-    const t = buildTable(7);
+    const t = tableFor(7);
     expect(layoutFarm(farm, t, 16 / 9, MAX_TURBINES, "left", 7)).toBeGreaterThanOrEqual(6);
     expect(layoutFarm(farm, t, 16 / 9, MAX_TURBINES, "spread", 7)).toBeGreaterThanOrEqual(10);
   });
@@ -233,8 +245,9 @@ describe("layoutFarm", () => {
       }
       return m;
     };
+    let firstMoved: object | undefined;
     for (let seed = 0; seed < 6; seed++) {
-      const t = buildTable(seed);
+      const t = tableFor(seed);
       for (const side of SIDES) {
         for (let n = MIN_TURBINES; n < MAX_TURBINES; n++) {
           const a = createFarm();
@@ -243,15 +256,19 @@ describe("layoutFarm", () => {
           layoutFarm(b, t, 16 / 9, n + 1, side, seed);
           const more = byId(b);
           for (const [id, where] of byId(a)) {
-            expect(more.get(id)).toEqual(where);
+            const got = more.get(id);
+            if (!firstMoved && (!got || got.some((v, k) => !Object.is(v, where[k])))) {
+              firstMoved = { seed, side, n, id, where, got };
+            }
           }
         }
       }
     }
+    expect(firstMoved).toBeUndefined();
   });
 
   it("carries rotor angles across a relayout and fades new turbines in", () => {
-    const t = buildTable(3);
+    const t = tableFor(3);
     const farm = createFarm();
     layoutFarm(farm, t, 16 / 9, 8, "spread", 3);
     expect(farm.shown.subarray(0, farm.count).every((v) => v === 1)).toBe(true);
@@ -306,7 +323,7 @@ describe("layoutFarm", () => {
 describe("rotors", () => {
   it("turn continuously, stay wrapped, and stop without wind", () => {
     const farm = createFarm();
-    layoutFarm(farm, buildTable(2), 16 / 9, 9, "spread", 2);
+    layoutFarm(farm, tableFor(2), 16 / 9, 9, "spread", 2);
     const TAU = Math.PI * 2;
     const prev = Float64Array.from(farm.angle);
     let failures = 0;
@@ -339,7 +356,7 @@ describe("rotors", () => {
 
   it("stays well under one turn per second at the default wind", () => {
     const farm = createFarm();
-    layoutFarm(farm, buildTable(2), 16 / 9, 9, "spread", 2);
+    layoutFarm(farm, tableFor(2), 16 / 9, 9, "spread", 2);
     const before = Float64Array.from(farm.angle);
     advanceRotors(farm, 1, 1);
     let worst = 0;
@@ -353,7 +370,7 @@ describe("rotors", () => {
 
   it("writes one instance per turbine", () => {
     const farm = createFarm();
-    const placed = layoutFarm(farm, buildTable(2), 16 / 9, 9, "spread", 2);
+    const placed = layoutFarm(farm, tableFor(2), 16 / 9, 9, "spread", 2);
     const out = new Float32Array(MAX_TURBINES * TURBINE_FLOATS);
     expect(writeTurbines(farm, out, 1080)).toBe(placed);
     expect(out[0]).toBeCloseTo(farm.x[0] * 1080, 2);

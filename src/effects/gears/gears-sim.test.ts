@@ -320,15 +320,21 @@ describe("driveOmega", () => {
   const { speed } = gearsMeta.params;
 
   it("keeps every gear's teeth under MAX_PATTERN_HZ at any speed", () => {
-    for (const { gears } of trains) {
+    let firstFast:
+      | { layout: string; aspect: number; seed: number; rpm: number; hz: number }
+      | undefined;
+    for (const { layout, aspect, seed, gears } of trains) {
       const teeth = teethPerDriveTurn(gears.slice(0, MAX_GEARS));
       for (let rpm = speed.min; rpm <= speed.max + 1e-9; rpm += speed.step) {
         for (const g of gears.slice(0, MAX_GEARS)) {
           const hz = (driveOmega(rpm, teeth) / TAU) * Math.abs(g.ratio) * g.teeth;
-          expect(hz).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
+          if (!firstFast && !(hz <= MAX_PATTERN_HZ + 1e-9)) {
+            firstFast = { layout, aspect, seed, rpm, hz };
+          }
         }
       }
     }
+    expect(firstFast).toBeUndefined();
   });
 
   it("leaves the default speed alone", () => {

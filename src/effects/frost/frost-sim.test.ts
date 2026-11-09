@@ -293,6 +293,6 @@ describe("buildFrostFieldSteps", () => {
       }
     }
     expect(yields).toBeGreaterThan(20);
-    expect(result.data).toEqual(buildFrostField(11, 160, 90).data);
+    expect(firstDiff(result.data, buildFrostField(11, 160, 90).data)).toBe(-1);
   });
 });

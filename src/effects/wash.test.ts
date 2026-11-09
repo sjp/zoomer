@@ -22,13 +22,19 @@ describe("washFront", () => {
 
   it("is continuous and bounded", () => {
     let prev = washFront(0, reach, brk, approach);
+    let maxStep = 0;
+    let lo = Infinity;
+    let hi = -Infinity;
     for (let t = 0.001; t < T_ACTIVE + 1; t += 0.001) {
       const v = washFront(t, reach, brk, approach);
-      expect(Math.abs(v - prev)).toBeLessThan(0.002);
-      expect(v).toBeGreaterThanOrEqual(-approach - 1e-9);
-      expect(v).toBeLessThanOrEqual(reach + 1e-9);
+      maxStep = Math.max(maxStep, Math.abs(v - prev));
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
       prev = v;
     }
+    expect(maxStep).toBeLessThan(0.002);
+    expect(lo).toBeGreaterThanOrEqual(-approach - 1e-9);
+    expect(hi).toBeLessThanOrEqual(reach + 1e-9);
   });
 });
 

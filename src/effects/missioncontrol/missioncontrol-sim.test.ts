@@ -51,17 +51,23 @@ describe("ground track", () => {
       let wraps = 0;
       let travelled = 0;
       const dt = 0.5;
+      let minLon = Infinity;
+      let maxLon = -Infinity;
+      let maxAbsLat = 0;
+      let maxLonStep = 0;
+      let maxLatStep = 0;
+      let minDLon = Infinity;
       for (let t = dt; t < o.period * 3; t += dt) {
         groundTrack(o, t, pos);
-        expect(pos.lon).toBeGreaterThanOrEqual(-180);
-        expect(pos.lon).toBeLessThan(180);
-        expect(Math.abs(pos.lat)).toBeLessThanOrEqual(maxLat + 1e-9);
+        minLon = Math.min(minLon, pos.lon);
+        maxLon = Math.max(maxLon, pos.lon);
+        maxAbsLat = Math.max(maxAbsLat, Math.abs(pos.lat));
         // Small steps everywhere, including across the date line.
         const dLon = lonDiff(pos.lon, prev.lon);
-        expect(Math.abs(dLon)).toBeLessThan(2);
-        expect(Math.abs(pos.lat - prev.lat)).toBeLessThan(1);
+        maxLonStep = Math.max(maxLonStep, Math.abs(dLon));
+        maxLatStep = Math.max(maxLatStep, Math.abs(pos.lat - prev.lat));
         // Always eastward over the ground.
-        expect(dLon).toBeGreaterThan(0);
+        minDLon = Math.min(minDLon, dLon);
         if (pos.lon < prev.lon) {
           wraps++;
         }
@@ -69,6 +75,12 @@ describe("ground track", () => {
         prev.lat = pos.lat;
         prev.lon = pos.lon;
       }
+      expect(minLon).toBeGreaterThanOrEqual(-180);
+      expect(maxLon).toBeLessThan(180);
+      expect(maxAbsLat).toBeLessThanOrEqual(maxLat + 1e-9);
+      expect(maxLonStep).toBeLessThan(2);
+      expect(maxLatStep).toBeLessThan(1);
+      expect(minDLon).toBeGreaterThan(0);
       // The wrapped steps add up to the unwrapped longitude, once round per wrap.
       const tEnd = Math.floor((o.period * 3) / dt - 1e-9) * dt;
       expect(travelled).toBeCloseTo(unwrappedLon(o, tEnd) - unwrappedLon(o, 0), 6);

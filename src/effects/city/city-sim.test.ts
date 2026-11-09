@@ -17,6 +17,7 @@ import {
   strobe,
 } from "./city-sim";
 import { MAX_TOGGLE_RATE } from "./city.meta";
+import { firstDifference } from "../../test/bytes";
 
 describe("generateCity", () => {
   it("is deterministic for a seed", () => {
@@ -25,7 +26,7 @@ describe("generateCity", () => {
     expect(b.quadCount).toBe(a.quadCount);
     expect(b.windowCount).toBe(a.windowCount);
     expect(b.buildings).toEqual(a.buildings);
-    expect(b.quads).toEqual(a.quads);
+    expect(firstDifference(b.quads, a.quads)).toBe(-1);
     expect(b.beacons).toEqual(a.beacons);
     expect(generateCity(8, 0.5, 1920).buildings).not.toEqual(a.buildings);
   });

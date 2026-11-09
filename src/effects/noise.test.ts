@@ -198,13 +198,20 @@ describe("fbm", () => {
   const noise = createNoise(6);
 
   it("stays roughly within [-1, 1]", () => {
+    // The largest magnitude of each; Math.max passes a NaN through, so one still fails.
+    let max2 = 0;
+    let max3 = 0;
+    let maxPeriodic = 0;
     for (let i = 0; i < 2000; i++) {
       const x = i * 0.311;
       const y = i * -0.177;
-      expect(Math.abs(fbm2(noise, x, y, 5))).toBeLessThanOrEqual(1);
-      expect(Math.abs(fbm3(noise, x, y, i * 0.05, 4))).toBeLessThanOrEqual(1);
-      expect(Math.abs(fbmPeriodic2(noise, x, y, 16, 4))).toBeLessThanOrEqual(1);
+      max2 = Math.max(max2, Math.abs(fbm2(noise, x, y, 5)));
+      max3 = Math.max(max3, Math.abs(fbm3(noise, x, y, i * 0.05, 4)));
+      maxPeriodic = Math.max(maxPeriodic, Math.abs(fbmPeriodic2(noise, x, y, 16, 4)));
     }
+    expect(max2).toBeLessThanOrEqual(1);
+    expect(max3).toBeLessThanOrEqual(1);
+    expect(maxPeriodic).toBeLessThanOrEqual(1);
   });
 
   it("returns 0 for zero octaves rather than NaN", () => {

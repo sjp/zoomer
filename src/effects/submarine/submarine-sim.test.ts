@@ -44,15 +44,17 @@ describe("depthAt", () => {
     let prev = depthAt("descend", 0);
     let lo = Infinity;
     let hi = -Infinity;
+    let maxStep = 0;
     const dt = 0.25;
     for (let t = dt; t <= 2 * DESCEND_PERIOD; t += dt) {
       const d = depthAt("descend", t);
-      // Never faster than the surfacing's peak slope, the cycle's steepest.
-      expect(Math.abs(d - prev)).toBeLessThanOrEqual(PEAK_RISE * dt * 1.01 + 1e-12);
+      maxStep = Math.max(maxStep, Math.abs(d - prev));
       lo = Math.min(lo, d);
       hi = Math.max(hi, d);
       prev = d;
     }
+    // Never faster than the surfacing's peak slope, the cycle's steepest.
+    expect(maxStep).toBeLessThanOrEqual(PEAK_RISE * dt * 1.01 + 1e-12);
     expect(lo).toBeCloseTo(CYCLE_TOP, 9);
     expect(hi).toBeCloseTo(CYCLE_BOTTOM, 9);
   });

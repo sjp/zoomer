@@ -112,19 +112,30 @@ describe("flutter", () => {
     const step = 0.005;
     let sum = 0;
     let n = 0;
+    // Worst values over the loop, asserted once after it.
+    let maxSway = 0;
+    let maxSwayStep = 0;
+    let minFall = Infinity;
+    let maxFall = -Infinity;
+    let maxFallStep = 0;
     // Whole periods, so the mean comes out exact.
     for (let psi = -2 * Math.PI; psi < 2 * Math.PI; psi += step) {
       for (const fn of [swayOffset, swayTilt]) {
-        expect(Math.abs(fn(psi))).toBeLessThanOrEqual(1);
-        expect(Math.abs(fn(psi + step) - fn(psi))).toBeLessThan(step * 1.01);
+        maxSway = Math.max(maxSway, Math.abs(fn(psi)));
+        maxSwayStep = Math.max(maxSwayStep, Math.abs(fn(psi + step) - fn(psi)));
       }
       const f = fallFactor(psi);
-      expect(f).toBeGreaterThanOrEqual(0.55 - 1e-12);
-      expect(f).toBeLessThanOrEqual(1.45 + 1e-12);
-      expect(Math.abs(fallFactor(psi + step) - f)).toBeLessThan(step);
+      minFall = Math.min(minFall, f);
+      maxFall = Math.max(maxFall, f);
+      maxFallStep = Math.max(maxFallStep, Math.abs(fallFactor(psi + step) - f));
       sum += f;
       n++;
     }
+    expect(maxSway).toBeLessThanOrEqual(1);
+    expect(maxSwayStep).toBeLessThan(step * 1.01);
+    expect(minFall).toBeGreaterThanOrEqual(0.55 - 1e-12);
+    expect(maxFall).toBeLessThanOrEqual(1.45 + 1e-12);
+    expect(maxFallStep).toBeLessThan(step);
     expect(sum / n).toBeCloseTo(1, 2);
     // Fastest fall at the bottom of the swing, where the offset crosses zero.
     expect(fallFactor(0)).toBeCloseTo(1.45, 12);
@@ -224,17 +235,27 @@ describe("createPieces", () => {
         next += pieces.groupCount[g];
       }
       expect(next).toBe(n);
+      let maxAlpha = -Infinity;
+      let minColour = Infinity;
+      let maxColour = -Infinity;
+      let minFlip = Infinity;
+      let maxFlip = -Infinity;
       for (let i = 0; i < n; i++) {
         const o = i * PIECE_FLOATS;
-        expect(data[o + 3]).toBeLessThanOrEqual(1);
+        maxAlpha = Math.max(maxAlpha, data[o + 3]);
         for (let k = 4; k < 7; k++) {
-          expect(data[o + k]).toBeGreaterThanOrEqual(0);
-          expect(data[o + k]).toBeLessThanOrEqual(1);
+          minColour = Math.min(minColour, data[o + k]);
+          maxColour = Math.max(maxColour, data[o + k]);
         }
         const flip = Math.abs(data[o + 9]);
-        expect(flip).toBeGreaterThanOrEqual(0.06 - 1e-6);
-        expect(flip).toBeLessThanOrEqual(1);
+        minFlip = Math.min(minFlip, flip);
+        maxFlip = Math.max(maxFlip, flip);
       }
+      expect(maxAlpha).toBeLessThanOrEqual(1);
+      expect(minColour).toBeGreaterThanOrEqual(0);
+      expect(maxColour).toBeLessThanOrEqual(1);
+      expect(minFlip).toBeGreaterThanOrEqual(0.06 - 1e-6);
+      expect(maxFlip).toBeLessThanOrEqual(1);
       // The far layer comes first and the near layer last: every far piece is
       // smaller than every near one.
       const radii = (g: number) =>

@@ -42,6 +42,7 @@ import {
 } from "./lenia-sim";
 import { PALETTE_OPTIONS, SPECIES_OPTIONS } from "./lenia.meta";
 import { createRng } from "../noise";
+import { firstDifference } from "../../test/bytes";
 
 /**
  * Centre of mass on the wrapping grid, in cells: each axis is the angle of the
@@ -287,8 +288,8 @@ describe("seeding", () => {
     const a = seedField(5, "orbium", false, 6, w, h, new Float32Array(w * h));
     const b = seedField(5, "orbium", false, 6, w, h, new Float32Array(w * h));
     const c = seedField(6, "orbium", false, 6, w, h, new Float32Array(w * h));
-    expect(a).toEqual(b);
-    expect(a).not.toEqual(c);
+    expect(firstDifference(a, b)).toBe(-1);
+    expect(firstDifference(a, c)).not.toBe(-1);
     let bad = 0;
     for (const v of a) {
       if (!(v >= 0 && v <= 1)) {

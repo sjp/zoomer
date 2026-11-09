@@ -75,25 +75,42 @@ describe("search bound", () => {
     const b = createVoronoiSample();
     let nearLead = 0;
     let worstEdge = 0;
+    // The first sample where the searches disagree or the edge leaves its bounds.
+    let bad: { n: number; what: string; a: number; b: number } | undefined;
+    const fail = (n: number, what: string, x: number, y: number) => {
+      bad ??= { n, what, a: x, b: y };
+    };
     for (let n = 0; n < 4000; n++) {
       const gx = GRID_ORIGIN - 10 + rng() * 20;
       const gy = GRID_ORIGIN - 6 + rng() * 12;
       driftUniform(rng() * DRIFT_PERIOD, 1, d);
       voronoi(gx, gy, d, a, 1);
       voronoi(gx, gy, d, b, 3);
-      expect(a.hash).toBe(b.hash);
-      expect(a.f1).toBeCloseTo(b.f1, 12);
-      expect(a.f2).toBeCloseTo(b.f2, 12);
+      if (!Object.is(a.hash, b.hash)) {
+        fail(n, "hash", a.hash, b.hash);
+      }
+      // toBeCloseTo(_, 12): within half of 1e-12.
+      if (!(Math.abs(a.f1 - b.f1) < 0.5e-12)) {
+        fail(n, "f1", a.f1, b.f1);
+      }
+      if (!(Math.abs(a.f2 - b.f2) < 0.5e-12)) {
+        fail(n, "f2", a.f2, b.f2);
+      }
       // Exact wherever a lead could be drawn (half of 14 px lead in 100 px cells, plus AA).
       if (b.edge < 0.15) {
         nearLead++;
         worstEdge = Math.max(worstEdge, Math.abs(a.edge - b.edge));
       }
-      expect(a.edge).toBeGreaterThanOrEqual(0);
+      if (!(a.edge >= 0)) {
+        fail(n, "edge >= 0", a.edge, 0);
+      }
       // At most the distance to the bisector with the second-nearest seed,
       // (f2² - f1²) / (2|a - b|), which is at most (f1 + f2) / 2 as |a - b| >= f2 - f1.
-      expect(a.edge).toBeLessThanOrEqual((a.f1 + a.f2) / 2 + 1e-12);
+      if (!(a.edge <= (a.f1 + a.f2) / 2 + 1e-12)) {
+        fail(n, "edge <= (f1 + f2) / 2", a.edge, (a.f1 + a.f2) / 2 + 1e-12);
+      }
     }
+    expect(bad).toBeUndefined();
     expect(nearLead).toBeGreaterThan(500);
     expect(worstEdge).toBeLessThan(1e-12);
   });

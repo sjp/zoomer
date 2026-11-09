@@ -37,6 +37,7 @@ import {
   X_MARGIN,
 } from "./kelp-sim";
 import { advanceSwell } from "../sway";
+import { firstDifference } from "../../test/bytes";
 
 const layout = (seed: number, density: number) => {
   const data = new Float32Array(MAX_FRONDS * FROND_FLOATS);
@@ -72,14 +73,18 @@ describe("buildFronds", () => {
       for (const density of [0.3, 1, 1.05, 2]) {
         const low = layout(seed, density);
         for (let l = 0; l < LAYERS.length; l++) {
-          const at = (x: typeof low, k: number) =>
+          // The layer's first counts[l] fronds, as one run of floats.
+          const run = (x: typeof low) =>
             x.data.subarray(
-              (x.layout.starts[l] + k) * FROND_FLOATS,
-              (x.layout.starts[l] + k + 1) * FROND_FLOATS,
+              x.layout.starts[l] * FROND_FLOATS,
+              (x.layout.starts[l] + low.layout.counts[l]) * FROND_FLOATS,
             );
-          for (let k = 0; k < low.layout.counts[l]; k++) {
-            expect(at(low, k)).toEqual(at(high, k));
-          }
+          const at = firstDifference(run(low), run(high));
+          const frond = at === -1 ? -1 : Math.floor(at / FROND_FLOATS);
+          expect(
+            frond,
+            `seed ${String(seed)}, density ${String(density)}, layer ${String(l)}`,
+          ).toBe(-1);
         }
       }
     }
@@ -152,17 +157,25 @@ describe("edgeWeight", () => {
 
 describe("frondSway", () => {
   it("is zero at the base and bounded by the swell", () => {
+    let baseMoves: { phase: number; sway: number } | undefined;
+    let tooFar: { phase: number; t: number; swell: number; sway: number } | undefined;
     for (let i = 0; i < 300; i++) {
       const phase = i / 300;
-      expect(Math.abs(frondSway(phase, 0.2, 3, 0, 1, 1))).toBe(0);
+      const base = Math.abs(frondSway(phase, 0.2, 3, 0, 1, 1));
+      if (!(base === 0) && baseMoves === undefined) {
+        baseMoves = { phase, sway: base };
+      }
       for (let t = 0; t <= 1; t += 0.05) {
         for (const swell of [0, 0.3, 1]) {
-          expect(Math.abs(frondSway(phase, 0.2, 3, t, swell, 0.8))).toBeLessThanOrEqual(
-            swell * SWAY_MAX * 0.8 + 1e-12,
-          );
+          const sway = Math.abs(frondSway(phase, 0.2, 3, t, swell, 0.8));
+          if (!(sway <= swell * SWAY_MAX * 0.8 + 1e-12) && tooFar === undefined) {
+            tooFar = { phase, t, swell, sway };
+          }
         }
       }
     }
+    expect(baseMoves).toBeUndefined();
+    expect(tooFar).toBeUndefined();
   });
 
   it("is continuous in time", () => {

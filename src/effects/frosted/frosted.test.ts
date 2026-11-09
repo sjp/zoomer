@@ -75,15 +75,24 @@ describe("shape paths", () => {
 
   it("keep centres inside the frame", () => {
     const out = [0, 0, 0];
+    // The extremes over every path and time; Math.min and Math.max pass a NaN through.
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
     for (const path of SHAPE_PATHS) {
       for (let t = 0; t < 900; t += 0.71) {
         shapeAt(path, t, 16 / 9, out);
-        expect(out[0]).toBeGreaterThan(0.05 * (16 / 9));
-        expect(out[0]).toBeLessThan(0.95 * (16 / 9));
-        expect(out[1]).toBeGreaterThan(0.05);
-        expect(out[1]).toBeLessThan(0.95);
+        minX = Math.min(minX, out[0]);
+        maxX = Math.max(maxX, out[0]);
+        minY = Math.min(minY, out[1]);
+        maxY = Math.max(maxY, out[1]);
       }
     }
+    expect(minX).toBeGreaterThan(0.05 * (16 / 9));
+    expect(maxX).toBeLessThan(0.95 * (16 / 9));
+    expect(minY).toBeGreaterThan(0.05);
+    expect(maxY).toBeLessThan(0.95);
   });
 
   it("loop in 30-90 s at speed 1", () => {

@@ -303,13 +303,21 @@ describe("bridge panels", () => {
 });
 
 describe("live readout redraws", () => {
+  // Only the atlases' sizes are read here (no test draws into them), so each
+  // height's atlas is made once.
+  const atlases = new Map<number, ReturnType<typeof createAtlasImage>>();
   const atlasFor = (height: number) => {
-    const tpm = atlasTexelsPerMetre(height);
-    return createAtlasImage(
-      Math.ceil((ATLAS_S1 - ATLAS_S0) * tpm),
-      Math.ceil((ATLAS_Y1 - ATLAS_Y0) * tpm),
-      tpm,
-    );
+    let atlas = atlases.get(height);
+    if (!atlas) {
+      const tpm = atlasTexelsPerMetre(height);
+      atlas = createAtlasImage(
+        Math.ceil((ATLAS_S1 - ATLAS_S0) * tpm),
+        Math.ceil((ATLAS_Y1 - ATLAS_Y0) * tpm),
+        tpm,
+      );
+      atlases.set(height, atlas);
+    }
+    return atlas;
   };
 
   /** Static text runs whose ink reaches into a readout's redrawn texels. */
@@ -380,8 +388,10 @@ describe("live readout redraws", () => {
     for (const side of ["left", "right"] as const) {
       for (const view of [true, false]) {
         for (const seed of [0, 12, 77]) {
+          // erased only reads the set, so one build serves every height.
+          const set = buildPanels(bridgeLayout(side, view), seed);
           for (const height of [360, 480, 720, 1080, 2160]) {
-            hits.push(...erased(buildPanels(bridgeLayout(side, view), seed), height));
+            hits.push(...erased(set, height));
           }
         }
       }

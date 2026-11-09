@@ -53,6 +53,7 @@ import {
   WIRE_Y,
   wireHeight,
 } from "./train-sim";
+import { firstDifference } from "../../test/bytes";
 
 const hillTable = (seed: number) => {
   const t = new Float32Array(HILL_COLUMNS * HILL_CHANNELS);
@@ -170,12 +171,11 @@ describe("tables", () => {
   });
 
   it("are deterministic per seed and differ between seeds", () => {
-    expect(fieldTable(7)).toEqual(fieldTable(7));
-    expect(hillTable(7)).toEqual(hillTable(7));
-    expect(bankTable(7)).toEqual(bankTable(7));
-    expect(fieldTable(7)).not.toEqual(fieldTable(8));
-    expect(hillTable(7)).not.toEqual(hillTable(8));
-    expect(bankTable(7)).not.toEqual(bankTable(8));
+    for (const table of [fieldTable, hillTable, bankTable]) {
+      const a = table(7);
+      expect(firstDifference(a, table(7))).toBe(-1);
+      expect(firstDifference(a, table(8))).not.toBe(-1);
+    }
   });
 
   it("keep heights in their bands", () => {

@@ -690,13 +690,17 @@ describe("capacity", () => {
 
   it("keeps runner radii within bounds", () => {
     const sim = make({ ...SMALL, maxStatic: 3000, maxRunners: 32 });
+    let firstBad: { t: number; i: number; r: number } | undefined;
     for (let t = 0; t < 400; t++) {
       stepRainSim(sim, 0.05, { rain: 1, speed: 2 });
       for (let i = 0; i < sim.runnerCount; i++) {
-        expect(sim.rr[i]).toBeLessThanOrEqual(MAX_RUNNER_R);
-        expect(sim.rr[i]).toBeGreaterThan(0);
+        const r = sim.rr[i];
+        if (!firstBad && !(r <= MAX_RUNNER_R && r > 0)) {
+          firstBad = { t, i, r };
+        }
       }
     }
+    expect(firstBad).toBeUndefined();
   });
 
   it("writes at most instanceCapacity instances, runners last", () => {

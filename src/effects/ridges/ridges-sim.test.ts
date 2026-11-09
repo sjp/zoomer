@@ -23,6 +23,7 @@ import {
   writeBirds,
 } from "./ridges-sim";
 import { PALETTE_OPTIONS, MAX_LAYERS, MIN_LAYERS } from "./ridges.meta";
+import { firstDifference } from "../../test/bytes";
 
 const buildTable = (count: number, seed: number, peaks: number) => {
   const out = new Float32Array(MAX_LAYERS * COLUMNS);
@@ -85,9 +86,14 @@ describe("fillRidgeTable", () => {
         expect(lo).toBeCloseTo(base, 5);
         expect(hi).toBeCloseTo(base + amp, 5);
       }
-      for (let c = 0; c < (MAX_LAYERS - n) * COLUMNS; c++) {
-        expect(t[n * COLUMNS + c]).toBe(0);
+      // The unused layers stay zero: the first one that isn't, if any.
+      let nonZero: { c: number; value: number } | undefined;
+      for (let c = 0; c < (MAX_LAYERS - n) * COLUMNS && !nonZero; c++) {
+        if (!Object.is(t[n * COLUMNS + c], 0)) {
+          nonZero = { c, value: t[n * COLUMNS + c] };
+        }
       }
+      expect(nonZero).toBeUndefined();
     }
   });
 
@@ -108,8 +114,9 @@ describe("fillRidgeTable", () => {
   });
 
   it("is deterministic and depends on the seed", () => {
-    expect(buildTable(5, 2, 0.5)).toEqual(buildTable(5, 2, 0.5));
-    expect(buildTable(5, 2, 0.5)).not.toEqual(buildTable(5, 3, 0.5));
+    const a = buildTable(5, 2, 0.5);
+    expect(firstDifference(a, buildTable(5, 2, 0.5))).toBe(-1);
+    expect(firstDifference(a, buildTable(5, 3, 0.5))).not.toBe(-1);
   });
 });
 
@@ -143,12 +150,20 @@ describe("fogDensity", () => {
   it("is continuous and falls monotonically", () => {
     const d = 1e-4;
     let prev = fogDensity(-0.1);
+    let jump: { t: number; prev: number; v: number } | undefined;
+    let rise: { t: number; prev: number; v: number } | undefined;
     for (let t = -0.1 + d; t <= 1.1; t += d) {
       const v = fogDensity(t);
-      expect(Math.abs(v - prev)).toBeLessThan(2 * d);
-      expect(v).toBeLessThanOrEqual(prev + 1e-12);
+      if (!jump && !(Math.abs(v - prev) < 2 * d)) {
+        jump = { t, prev, v };
+      }
+      if (!rise && !(v <= prev + 1e-12)) {
+        rise = { t, prev, v };
+      }
       prev = v;
     }
+    expect(jump).toBeUndefined();
+    expect(rise).toBeUndefined();
   });
 });
 

@@ -61,12 +61,15 @@ describe("buildRayTable", () => {
   const rays = buildRayTable(cols);
 
   it("is normalised to 0..1", () => {
+    // Math.min and Math.max pass a NaN through, so one still fails here.
+    let min = Infinity;
     let max = 0;
     for (const v of rays) {
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(1);
+      min = Math.min(min, v);
       max = Math.max(max, v);
     }
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeLessThanOrEqual(1);
     expect(max).toBeCloseTo(1, 5);
   });
 

@@ -36,11 +36,15 @@ describe("swayOffset", () => {
     for (let layer = 0; layer < LAYER_COUNT; layer++) {
       for (const gust of [1, 1 + GUST_MAX]) {
         const bound = swayBound(layer, gust);
+        let maxX = 0;
+        let maxY = 0;
         for (let t = 0; t < 600; t += 0.37) {
           swayOffset(out, noise, layer, t, 1, gust);
-          expect(Math.abs(out[0])).toBeLessThanOrEqual(bound);
-          expect(Math.abs(out[1])).toBeLessThanOrEqual(bound);
+          maxX = Math.max(maxX, Math.abs(out[0]));
+          maxY = Math.max(maxY, Math.abs(out[1]));
         }
+        expect(maxX).toBeLessThanOrEqual(bound);
+        expect(maxY).toBeLessThanOrEqual(bound);
       }
     }
   });
@@ -92,13 +96,15 @@ describe("gustLevel", () => {
 
   it("stays in [1, 1 + GUST_MAX * gusts] and reaches gusts now and then", () => {
     for (const g of [0.3, 1]) {
+      let lo = Infinity;
       let hi = 0;
       for (let t = 0; t < 2000; t += 0.5) {
         const v = gustLevel(noise, t, g);
-        expect(v).toBeGreaterThanOrEqual(1);
-        expect(v).toBeLessThanOrEqual(1 + GUST_MAX * g + 1e-12);
+        lo = Math.min(lo, v);
         hi = Math.max(hi, v);
       }
+      expect(lo).toBeGreaterThanOrEqual(1);
+      expect(hi).toBeLessThanOrEqual(1 + GUST_MAX * g + 1e-12);
       expect(hi).toBeGreaterThan(1 + 0.5 * GUST_MAX * g);
     }
   });
@@ -237,16 +243,18 @@ describe("regionMask", () => {
     for (const { value } of POSITION_OPTIONS) {
       const r = layout(value);
       const maxStep = (1.5 / (2 * REGION_SOFT)) * 2;
+      let worst = 0;
       for (let x = 0; x < W; x += 2) {
         for (const y of [100, 540, 900]) {
-          expect(Math.abs(regionMask(x + 2, y, r) - regionMask(x, y, r))).toBeLessThan(maxStep);
+          worst = Math.max(worst, Math.abs(regionMask(x + 2, y, r) - regionMask(x, y, r)));
         }
       }
       for (let y = 0; y < 1080; y += 2) {
         for (const x of [100, W / 2, W - 100]) {
-          expect(Math.abs(regionMask(x, y + 2, r) - regionMask(x, y, r))).toBeLessThan(maxStep);
+          worst = Math.max(worst, Math.abs(regionMask(x, y + 2, r) - regionMask(x, y, r)));
         }
       }
+      expect(worst).toBeLessThan(maxStep);
     }
   });
 

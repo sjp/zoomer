@@ -78,10 +78,16 @@ describe("shelfSideWidth", () => {
 });
 
 describe("bakeShelves", () => {
+  /** The oak bake of seed 1, built once and shared by the tests (which only read it). */
+  let oak: Uint8Array | undefined;
+  const oakBake = () => {
+    oak ??= bakeShelves(layoutShelves(1), OAK);
+    return oak;
+  };
+
   it("fills the whole texture, deterministically, and mirrors the right bookcase", () => {
-    const palette = OAK;
-    const a = bakeShelves(layoutShelves(1), palette);
-    const b = bakeShelves(layoutShelves(1), palette);
+    const a = oakBake();
+    const b = bakeShelves(layoutShelves(1), OAK);
     expect(a.length).toBe(SHELF_TEX_W * SHELF_TEX_H * 4);
     let diff = 0;
     let opaque = 0;
@@ -105,9 +111,8 @@ describe("bakeShelves", () => {
   });
 
   it("changes with the palette", () => {
-    const spines = layoutShelves(1);
-    const a = bakeShelves(spines, OAK);
-    const b = bakeShelves(spines, GREY);
+    const a = oakBake();
+    const b = bakeShelves(layoutShelves(1), GREY);
     let diff = 0;
     for (let i = 0; i < a.length; i++) {
       if (a[i] !== b[i]) {

@@ -24,6 +24,7 @@ import {
   starBrightness,
   starDim,
 } from "./nebula-sim";
+import { firstDifference } from "../../test/bytes";
 import { createRng } from "../noise";
 
 describe("paletteColor", () => {
@@ -84,7 +85,7 @@ describe("buildStars", () => {
     const b = make(3, 0.5, 16 / 9);
     const c = make(4, 0.5, 16 / 9);
     expect(a.count).toBeGreaterThan(100);
-    expect(a.out).toEqual(b.out);
+    expect(firstDifference(a.out, b.out)).toBe(-1);
     expect(a.out.slice(0, 20)).not.toEqual(c.out.slice(0, 20));
   });
 

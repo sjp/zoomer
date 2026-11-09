@@ -171,13 +171,17 @@ describe("blindsLight", () => {
   it("stays in [0, 1] everywhere", () => {
     for (const soft of [0, 1]) {
       const sh = shape("left", 60, 20, soft);
+      let min = Infinity;
+      let max = -Infinity;
       for (let xn = -1.4; xn <= 1.4; xn += 0.07) {
         for (let w = -0.7; w <= 0.7; w += 0.013) {
           const v = blindsLightBand(xn, w, sh);
-          expect(v).toBeGreaterThanOrEqual(0);
-          expect(v).toBeLessThanOrEqual(1);
+          min = Math.min(min, v);
+          max = Math.max(max, v);
         }
       }
+      expect(min).toBeGreaterThanOrEqual(0);
+      expect(max).toBeLessThanOrEqual(1);
     }
   });
 });

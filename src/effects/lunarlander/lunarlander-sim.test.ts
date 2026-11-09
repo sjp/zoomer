@@ -92,15 +92,19 @@ describe("ascent", () => {
       const dt = 0.05;
       let prev = ascentAt(start - dt);
       let peak = 0;
+      let low = Infinity;
+      let maxStep = 0;
       for (let t = start; t <= start + ASCENT_LENGTH + 10; t += dt) {
         const a = ascentAt(t);
-        expect(a).toBeGreaterThanOrEqual(0);
-        expect(a).toBeLessThanOrEqual(1);
-        // Gentle: no step bigger than the eased climb's steepest (1.875 per rise).
-        expect(Math.abs(a - prev)).toBeLessThan((1.9 * dt) / ASCENT_RISE);
+        low = Math.min(low, a);
+        maxStep = Math.max(maxStep, Math.abs(a - prev));
         peak = Math.max(peak, a);
         prev = a;
       }
+      expect(low).toBeGreaterThanOrEqual(0);
+      expect(peak).toBeLessThanOrEqual(1);
+      // Gentle: no step bigger than the eased climb's steepest (1.875 per rise).
+      expect(maxStep).toBeLessThan((1.9 * dt) / ASCENT_RISE);
       expect(peak).toBe(1);
       expect(ascentAt(start + ASCENT_RISE + 1)).toBe(1);
       // Back on the ground: exactly zero, until the next lift-off.

@@ -67,27 +67,47 @@ describe("cockpit layout", () => {
   });
 
   it("has two or three screens, levers on one side, and lamps that fit", () => {
+    const bad: string[] = [];
     for (let seed = 0; seed < 1000; seed++) {
       const { panels, lamps, screens } = cockpitLayout(seed);
-      expect(screens).toBeGreaterThanOrEqual(2);
-      expect(screens).toBeLessThanOrEqual(MAX_SCREENS);
+      if (screens < 2 || screens > MAX_SCREENS) {
+        bad.push(`seed ${String(seed)}: ${String(screens)} screens`);
+      }
       const shown = panels.filter((p) => p.kind === PANEL_SCREEN).map((p) => p.variant);
-      expect(shown.toSorted((x, y) => x - y)).toEqual([0, 1, 2].slice(0, screens));
-      expect(panels.filter((p) => p.kind === PANEL_LEVERS)).toHaveLength(1);
-      expect(lamps.length).toBeLessThanOrEqual(MAX_LIGHTS);
+      const sorted = shown.toSorted((x, y) => x - y).join(",");
+      if (sorted !== [0, 1, 2].slice(0, screens).join(",")) {
+        bad.push(`seed ${String(seed)}: screen variants ${sorted}`);
+      }
+      const levers = panels.filter((p) => p.kind === PANEL_LEVERS).length;
+      if (levers !== 1) {
+        bad.push(`seed ${String(seed)}: ${String(levers)} lever panels`);
+      }
+      if (lamps.length > MAX_LIGHTS) {
+        bad.push(`seed ${String(seed)}: ${String(lamps.length)} lamps`);
+      }
       // Lamp indices run 1..lamps.length without gaps or overlaps.
       let next = 1;
       const grids = panels.filter((p) => p.kind === PANEL_LAMPS || p.kind === PANEL_TOGGLES);
       for (const p of grids) {
-        expect(p.base).toBe(next);
-        expect(p.cols * p.rows).toBeGreaterThan(0);
+        if (p.base !== next) {
+          bad.push(`seed ${String(seed)}: grid base ${String(p.base)}, expected ${String(next)}`);
+        }
+        if (!(p.cols * p.rows > 0)) {
+          bad.push(`seed ${String(seed)}: empty grid`);
+        }
         // The grid fits inside the panel.
-        expect(p.cols * p.cellW).toBeLessThanOrEqual(p.x1 - p.x0);
-        expect(p.rows * p.cellH).toBeLessThanOrEqual(p.y1 - p.y0);
+        if (!(p.cols * p.cellW <= p.x1 - p.x0) || !(p.rows * p.cellH <= p.y1 - p.y0)) {
+          bad.push(`seed ${String(seed)}: grid overflows its panel`);
+        }
         next += p.cols * p.rows;
       }
-      expect(next - 1).toBe(lamps.length);
+      if (next - 1 !== lamps.length) {
+        bad.push(
+          `seed ${String(seed)}: grids hold ${String(next - 1)} of ${String(lamps.length)} lamps`,
+        );
+      }
     }
+    expect(bad).toEqual([]);
   });
 
   it("packs panels into the shader's uniform arrays", () => {

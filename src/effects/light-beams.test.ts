@@ -166,6 +166,10 @@ describe("beam quad on the GPU", () => {
     const inst = new Float32Array(6);
     const rng = createRng(12);
     let lit = 0;
+    // The first sample off by 1e-4 or more, asserted once after the loop.
+    let firstBad:
+      | { angle: number; scale: number; b: number; px: number; py: number; err: number }
+      | undefined;
     for (const angle of [-45, -24, -5, 0, 10, 24, 45]) {
       for (const scale of [1, 2, 0.5]) {
         const n = layoutBeams(MAX_LAYOUT_BEAMS, angle, 1920, beams);
@@ -177,7 +181,10 @@ describe("beam quad on the GPU", () => {
             const py = (rng() * 1200 - 60) * scale;
             const want = beamMembership(px / scale, py / scale, beams[b]);
             const got = gpuBeam(inst, px, py);
-            expect(Math.abs(got - want)).toBeLessThan(1e-4);
+            const err = Math.abs(got - want);
+            if (!(err < 1e-4) && !firstBad) {
+              firstBad = { angle, scale, b, px, py, err };
+            }
             if (want > 0) {
               lit++;
             }
@@ -185,6 +192,7 @@ describe("beam quad on the GPU", () => {
         }
       }
     }
+    expect(firstBad).toBeUndefined();
     expect(lit).toBeGreaterThan(1000);
   });
 

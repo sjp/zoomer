@@ -71,17 +71,24 @@ describe("projectBeam", () => {
     const b = createBeamProjection();
     projectBeam(angle(-1), b);
     let prev = { ...b, wedge: b.dirX * (1 - b.roundness) };
+    // The biggest step of each, checked once after the turn.
+    const most = { brightness: 0, length: 0, cosHalf: 0, roundness: 0, wedge: 0 };
     for (let i = 0; i <= TURN; i++) {
       projectBeam(angle(i), b);
       const wedge = b.dirX * (1 - b.roundness);
-      expect(Math.abs(b.brightness - prev.brightness)).toBeLessThan(0.01);
-      expect(Math.abs(b.length - prev.length)).toBeLessThan(0.01);
-      expect(Math.abs(b.cosHalf - prev.cosHalf)).toBeLessThan(0.05);
-      expect(Math.abs(b.roundness - prev.roundness)).toBeLessThan(0.01);
-      // The direction only matters as much as the wedge is not round.
-      expect(Math.abs(wedge - prev.wedge)).toBeLessThan(0.01);
+      most.brightness = Math.max(most.brightness, Math.abs(b.brightness - prev.brightness));
+      most.length = Math.max(most.length, Math.abs(b.length - prev.length));
+      most.cosHalf = Math.max(most.cosHalf, Math.abs(b.cosHalf - prev.cosHalf));
+      most.roundness = Math.max(most.roundness, Math.abs(b.roundness - prev.roundness));
+      most.wedge = Math.max(most.wedge, Math.abs(wedge - prev.wedge));
       prev = { ...b, wedge };
     }
+    expect(most.brightness).toBeLessThan(0.01);
+    expect(most.length).toBeLessThan(0.01);
+    expect(most.cosHalf).toBeLessThan(0.05);
+    expect(most.roundness).toBeLessThan(0.01);
+    // The direction only matters as much as the wedge is not round.
+    expect(most.wedge).toBeLessThan(0.01);
   });
 });
 
@@ -180,15 +187,19 @@ describe("flare", () => {
   it("is bounded and peaks once per turn per beam", () => {
     for (const beams of [1, 2]) {
       let peaks = 0;
+      let lo = Infinity;
+      let hi = -Infinity;
       const at = (i: number) => flareTotal(((i % TURN) + TURN) / TURN, beams);
       for (let i = 0; i < TURN; i++) {
         const v = at(i);
-        expect(v).toBeGreaterThanOrEqual(0);
-        expect(v).toBeLessThanOrEqual(1);
+        lo = Math.min(lo, v);
+        hi = Math.max(hi, v);
         if (v > 0.5 && v >= at(i - 1) && v > at(i + 1)) {
           peaks++;
         }
       }
+      expect(lo).toBeGreaterThanOrEqual(0);
+      expect(hi).toBeLessThanOrEqual(1);
       expect(peaks).toBe(beams);
     }
   });

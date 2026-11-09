@@ -18,6 +18,7 @@ import {
 } from "./coral-sim";
 import { PALETTE_OPTIONS } from "./coral.meta";
 import { createRng } from "../noise";
+import { firstDifference } from "../../test/bytes";
 
 const ASPECT = 16 / 9;
 const HEIGHT = 0.45;
@@ -76,9 +77,12 @@ describe("buildReef", () => {
   it("is deterministic per seed and differs between seeds", () => {
     const again = buildReef(SEEDS[0], ASPECT, 1, HEIGHT);
     expect(again.count).toBe(reefs[0].count);
-    expect(Array.from(again.data.subarray(0, again.count * INSTANCE_FLOATS))).toEqual(
-      Array.from(reefs[0].data.subarray(0, again.count * INSTANCE_FLOATS)),
-    );
+    expect(
+      firstDifference(
+        again.data.subarray(0, again.count * INSTANCE_FLOATS),
+        reefs[0].data.subarray(0, again.count * INSTANCE_FLOATS),
+      ),
+    ).toBe(-1);
     expect(reefs[1].count).not.toBe(reefs[0].count);
   });
 

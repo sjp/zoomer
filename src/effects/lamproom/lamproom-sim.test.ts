@@ -82,9 +82,12 @@ describe("beam brightness", () => {
       expect(worst).toBeLessThan(0.03 * BEAM_PEAK);
     }
     // And as a function of angle, across the wrap.
+    let worstStep = 0;
     for (let a = -7; a < 7; a += 0.001) {
-      expect(Math.abs(beamLevel(a + 0.001, 1) - beamLevel(a, 1))).toBeLessThan(0.01 * BEAM_PEAK);
+      // Math.max passes a NaN through, so a NaN step still fails below.
+      worstStep = Math.max(worstStep, Math.abs(beamLevel(a + 0.001, 1) - beamLevel(a, 1)));
     }
+    expect(worstStep).toBeLessThan(0.01 * BEAM_PEAK);
   });
 
   it("is capped at BEAM_PEAK, whatever the params", () => {

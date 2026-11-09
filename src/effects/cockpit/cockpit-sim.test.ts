@@ -28,6 +28,7 @@ import {
 } from "./cockpit-sim";
 import { cockpitLayout, MAX_LIGHTS } from "./cockpit-layout";
 import { MAX_JUMP_GAP, MIN_JUMP_GAP } from "./cockpit.meta";
+import { firstDifference } from "../../test/bytes";
 
 const NEXT: Record<JumpPhase, JumpPhase> = {
   sublight: "entering",
@@ -141,13 +142,19 @@ describe("jump schedule", () => {
       ["sublight", "sublight", 0],
       ["hyperspace", "tunnel", 1],
     ] as const) {
+      let firstBad:
+        | { t: number; phase: JumpPhase; stretch: number; tunnel: number; leg: number }
+        | undefined;
       for (let t = -5; t < 5000; t += 0.37) {
         jumpAt(t, view, MIN_JUMP_GAP, 7, s);
-        expect(s.phase).toBe(phase);
-        expect(s.stretch).toBe(level);
-        expect(s.tunnel).toBe(level);
-        expect(s.leg).toBe(0);
+        if (
+          firstBad === undefined &&
+          (s.phase !== phase || s.stretch !== level || s.tunnel !== level || s.leg !== 0)
+        ) {
+          firstBad = { t, phase: s.phase, stretch: s.stretch, tunnel: s.tunnel, leg: s.leg };
+        }
       }
+      expect(firstBad, `view ${view}`).toBeUndefined();
     }
   });
 });
@@ -259,9 +266,12 @@ describe("console lamps", () => {
 
   it("burn steadily at activity 0, with some lit and some dark", () => {
     const first = states(0, 0);
-    for (let t = 0.5; t < 600; t += 7.3) {
-      expect(states(0, t)).toEqual(first);
+    let firstChange: { t: number; at: number } | undefined;
+    for (let t = 0.5; t < 600 && firstChange === undefined; t += 7.3) {
+      const at = firstDifference(states(0, t), first);
+      firstChange = at === -1 ? undefined : { t, at };
     }
+    expect(firstChange).toBeUndefined();
     let lit = 0;
     for (let i = 1; i <= layout.lamps.length; i++) {
       lit += first[i * 4] + first[i * 4 + 1] + first[i * 4 + 2] > 0 ? 1 : 0;
@@ -338,10 +348,14 @@ describe("screen picture time", () => {
     expect(advanceScreenTime(10, 1.2, 0.5)).toBeCloseTo(10.6, 9);
     expect(advanceScreenTime(SCREEN_PERIOD - 0.1, 1, 0.3)).toBeCloseTo(0.2, 9);
     let t = 0;
+    let lowest = Infinity;
+    let highest = -Infinity;
     for (let i = 0; i < 100_000; i++) {
       t = advanceScreenTime(t, 1.3, 1 / 60);
-      expect(t).toBeGreaterThanOrEqual(0);
-      expect(t).toBeLessThan(SCREEN_PERIOD);
+      lowest = Math.min(lowest, t);
+      highest = Math.max(highest, t);
     }
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThan(SCREEN_PERIOD);
   });
 });

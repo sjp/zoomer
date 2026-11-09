@@ -198,12 +198,19 @@ describe("createHarmonograph", () => {
       h.step(0.1, { ...settings, drawTime: 10 });
     }
     expect(h.live).toBeGreaterThan(0);
+    let oldest = -Infinity;
+    let worstBirth = 0;
     for (let i = 0; i < h.live; i++) {
       const slot = (h.head - 1 - i + h.capacity) % h.capacity;
-      const age = h.time - h.births[slot];
-      expect(age).toBeLessThan(h.fadeAge);
-      expect(h.data[slot * SEG_FLOATS + 4]).toBeCloseTo(h.births[slot] % TIME_PERIOD, 2);
+      oldest = Math.max(oldest, h.time - h.births[slot]);
+      worstBirth = Math.max(
+        worstBirth,
+        Math.abs(h.data[slot * SEG_FLOATS + 4] - (h.births[slot] % TIME_PERIOD)),
+      );
     }
+    expect(oldest).toBeLessThan(h.fadeAge);
+    // toBeCloseTo(_, 2): within half of 1e-2.
+    expect(worstBirth).toBeLessThan(10 ** -2 / 2);
     // At most about two figures are visible.
     expect(h.live).toBeLessThan(2.5 * FIGURE_SEGMENTS);
   });

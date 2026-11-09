@@ -93,11 +93,15 @@ describe("the swell", () => {
 
   it("is bounded by its amplitude at every swell setting", () => {
     for (const gain of [0, 0.5, 1, STORM_SWELL]) {
+      let maxRoll = 0;
+      let maxPitch = 0;
       for (let i = 0; i < N; i++) {
         motionAt(i / N, gain, m);
-        expect(Math.abs(m.roll)).toBeLessThanOrEqual(gain * MAX_ROLL + 1e-12);
-        expect(Math.abs(m.pitch)).toBeLessThanOrEqual(gain * MAX_PITCH + 1e-12);
+        maxRoll = Math.max(maxRoll, Math.abs(m.roll));
+        maxPitch = Math.max(maxPitch, Math.abs(m.pitch));
       }
+      expect(maxRoll).toBeLessThanOrEqual(gain * MAX_ROLL + 1e-12);
+      expect(maxPitch).toBeLessThanOrEqual(gain * MAX_PITCH + 1e-12);
     }
     // A few degrees at most, even in a storm.
     expect(STORM_SWELL * MAX_ROLL).toBeLessThan(5 * DEG);
@@ -186,10 +190,12 @@ describe("the lantern", () => {
 
   it("swings a bounded amount, and not at all on a flat sea", () => {
     for (const gain of [0, 1, STORM_SWELL]) {
+      let maxLantern = 0;
       for (let i = 0; i < N; i++) {
         motionAt(i / N, gain, m);
-        expect(Math.abs(m.lantern)).toBeLessThanOrEqual(gain * LANTERN_GAIN * MAX_ROLL + 1e-12);
+        maxLantern = Math.max(maxLantern, Math.abs(m.lantern));
       }
+      expect(maxLantern).toBeLessThanOrEqual(gain * LANTERN_GAIN * MAX_ROLL + 1e-12);
     }
     expect(STORM_SWELL * LANTERN_GAIN * MAX_ROLL).toBeLessThan(7 * DEG);
   });
@@ -249,17 +255,19 @@ describe("lightning", () => {
     const storm = createLightning(5);
     let calmMax = 0;
     let starts = 0;
+    let stormMax = 0;
     let lit = false;
     const dt = 1 / 30;
     for (let t = 0; t < 600; t += dt) {
       calmMax = Math.max(calmMax, stepLightning(calm, dt, 0));
       const v = stepLightning(storm, dt, 1);
-      expect(v).toBeLessThanOrEqual(1);
+      stormMax = Math.max(stormMax, v);
       if (v > 0 && !lit) {
         starts++;
       }
       lit = v > 0;
     }
+    expect(stormMax).toBeLessThanOrEqual(1);
     expect(calmMax).toBe(0);
     // At most one glow every LIGHTNING_MIN_GAP (18 s) over ten minutes, and some.
     expect(starts).toBeGreaterThan(5);

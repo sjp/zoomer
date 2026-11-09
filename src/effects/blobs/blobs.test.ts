@@ -45,17 +45,23 @@ describe("blob paths", () => {
 
   it("stay near the frame with radius 30-60% of height (x1.15 breathing)", () => {
     const out = [0, 0, 0];
+    const lo = [Infinity, Infinity, Infinity];
+    const hi = [-Infinity, -Infinity, -Infinity];
     for (const path of BLOB_PATHS) {
       for (let t = 0; t < 600; t += 0.37) {
         blobAt(path, t, 16 / 9, 1, out);
-        expect(out[0]).toBeGreaterThanOrEqual(0);
-        expect(out[0]).toBeLessThanOrEqual(16 / 9);
-        expect(out[1]).toBeGreaterThanOrEqual(0);
-        expect(out[1]).toBeLessThanOrEqual(1);
-        expect(out[2]).toBeGreaterThanOrEqual(0.3 * 0.85 - 1e-9);
-        expect(out[2]).toBeLessThanOrEqual(0.6 * 1.15 + 1e-9);
+        for (let k = 0; k < 3; k++) {
+          lo[k] = Math.min(lo[k], out[k]);
+          hi[k] = Math.max(hi[k], out[k]);
+        }
       }
     }
+    expect(lo[0]).toBeGreaterThanOrEqual(0);
+    expect(hi[0]).toBeLessThanOrEqual(16 / 9);
+    expect(lo[1]).toBeGreaterThanOrEqual(0);
+    expect(hi[1]).toBeLessThanOrEqual(1);
+    expect(lo[2]).toBeGreaterThanOrEqual(0.3 * 0.85 - 1e-9);
+    expect(hi[2]).toBeLessThanOrEqual(0.6 * 1.15 + 1e-9);
   });
 
   it("move slowly: under 0.6 frame heights per second at speed 1", () => {

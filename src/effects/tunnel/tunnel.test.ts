@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMipChain, buildTexture, downsample2x, TEX, wrapTexels } from "./tunnel";
+import { firstDifference } from "../../test/bytes";
 
 describe("downsample2x", () => {
   it("box-filters each 2x2 block", () => {
@@ -49,7 +50,7 @@ describe("buildTexture", () => {
   it("is deterministic and stays within [0, 1]", () => {
     const again = new Float32Array(TEX * TEX);
     buildTexture(again, 1337);
-    expect(again).toEqual(tex);
+    expect(firstDifference(again, tex)).toBe(-1);
     let lo = Infinity;
     let hi = -Infinity;
     for (const v of tex) {

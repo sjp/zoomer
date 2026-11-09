@@ -14,6 +14,13 @@ function trace(seconds: number, seed = 12, row = 0): number[] {
   return out;
 }
 
+/** Ten minutes of row 0 at the default seed, traced once and only read by the tests. */
+let tenMinutes: number[] | undefined;
+const traceTenMinutes = () => {
+  tenMinutes ??= trace(600);
+  return tenMinutes;
+};
+
 describe("bridge POWER graph", () => {
   it("is the same for the same seed and differs between seeds and rows", () => {
     expect(trace(10)).toEqual(trace(10));
@@ -31,7 +38,7 @@ describe("bridge POWER graph", () => {
   });
 
   it("stays on the graph, wanders over it, and is noisy from sample to sample", () => {
-    const t = trace(600);
+    const t = traceTenMinutes();
     const min = Math.min(...t);
     const max = Math.max(...t);
     expect(min).toBeGreaterThanOrEqual(Math.round(0.08 * 255));
@@ -45,11 +52,19 @@ describe("bridge POWER graph", () => {
   });
 
   it("never repeats", () => {
-    const t = trace(600);
-    const window = t.slice(0, N);
-    for (let lag = 1; lag + N <= t.length; lag++) {
-      expect(t.slice(lag, lag + N)).not.toEqual(window);
+    const t = traceTenMinutes();
+    // The first lag at which the opening graph's worth of samples comes round again.
+    let repeatsAt: number | undefined;
+    for (let lag = 1; lag + N <= t.length && repeatsAt === undefined; lag++) {
+      let k = 0;
+      while (k < N && t[lag + k] === t[k]) {
+        k++;
+      }
+      if (k === N) {
+        repeatsAt = lag;
+      }
     }
+    expect(repeatsAt).toBeUndefined();
   });
 
   it("catches up after a long pause with only a graph's worth of new samples", () => {

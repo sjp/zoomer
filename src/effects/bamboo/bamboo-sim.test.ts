@@ -33,6 +33,7 @@ import {
   X_MARGIN,
 } from "./bamboo-sim";
 import { advanceSwell } from "../sway";
+import { firstDifference } from "../../test/bytes";
 
 const stems = (seed: number, density: number, opening: OpeningId = "centre") => {
   const data = new Float32Array(MAX_STEMS * STEM_FLOATS);
@@ -287,7 +288,7 @@ describe("buildLeaves", () => {
     const a = new Float32Array(MAX_LEAVES * LEAF_FLOATS);
     const b = new Float32Array(MAX_LEAVES * LEAF_FLOATS);
     expect(buildLeaves(5, s.data, s.layout, a)).toEqual(buildLeaves(5, s.data, s.layout, b));
-    expect(a).toEqual(b);
+    expect(firstDifference(a, b)).toBe(-1);
     const small = new Float32Array(20 * LEAF_FLOATS);
     expect(buildLeaves(5, s.data, s.layout, small).total).toBeLessThanOrEqual(20);
   });

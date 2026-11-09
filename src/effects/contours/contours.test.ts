@@ -356,14 +356,20 @@ describe("noise z wrapping", () => {
     let z = 0;
     let unwrapped = 0;
     const dz = 0.37;
+    let lo = Infinity;
+    let hi = -Infinity;
+    let worstOffset = 0;
     for (let k = 0; k < 10000; k++) {
       z = advanceZ(z, dz);
       unwrapped += dz;
-      expect(z).toBeGreaterThanOrEqual(-Z_PERIOD / 2);
-      expect(z).toBeLessThan(Z_PERIOD / 2);
+      lo = Math.min(lo, z);
+      hi = Math.max(hi, z);
       const offset = (unwrapped - z) / Z_PERIOD;
-      expect(Math.abs(offset - Math.round(offset))).toBeLessThan(1e-9);
+      worstOffset = Math.max(worstOffset, Math.abs(offset - Math.round(offset)));
     }
+    expect(lo).toBeGreaterThanOrEqual(-Z_PERIOD / 2);
+    expect(hi).toBeLessThan(Z_PERIOD / 2);
+    expect(worstOffset).toBeLessThan(1e-9);
     expect(advanceZ(1, 0.5)).toBe(1.5);
   });
 });

@@ -54,6 +54,7 @@ describe("car lanes", () => {
   });
 
   it("never overlap cars in the same lane", () => {
+    let firstOverlap: { seed: number; t: number; a: number; b: number; gap: number } | undefined;
     for (const seed of [1, 7, 99]) {
       const lanes = carLanes(seed, W);
       const out = new Float32Array(MAX_CARS * CAR_STRIDE);
@@ -67,11 +68,15 @@ describe("car lanes", () => {
             if (out[oa + 2] !== out[ob + 2]) {
               continue;
             }
-            expect(Math.abs(out[oa] - out[ob])).toBeGreaterThan(CAR_LENGTH * 2);
+            const gap = Math.abs(out[oa] - out[ob]);
+            if (!firstOverlap && !(gap > CAR_LENGTH * 2)) {
+              firstOverlap = { seed, t, a, b, gap };
+            }
           }
         }
       }
     }
+    expect(firstOverlap).toBeUndefined();
   });
 
   it("move smoothly, appearing and vanishing only off screen", () => {

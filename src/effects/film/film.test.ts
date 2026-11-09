@@ -86,13 +86,17 @@ describe("buildFilmTable", () => {
     for (const mode of MODES) {
       for (const sat of [0, 0.85, 1]) {
         const t = buildFilmTable(mode, sat);
+        let maxJump = 0;
+        let maxAlphaJump = 0;
         for (let i = 1; i < TABLE_SIZE; i++) {
           for (let c = 0; c < 3; c++) {
             const jump = Math.abs(srgbToLinear(t[i * 4 + c]) - srgbToLinear(t[i * 4 - 4 + c]));
-            expect(jump).toBeLessThan(0.08);
+            maxJump = Math.max(maxJump, jump);
           }
-          expect(Math.abs(t[i * 4 + 3] - t[i * 4 - 1])).toBeLessThan(30);
+          maxAlphaJump = Math.max(maxAlphaJump, Math.abs(t[i * 4 + 3] - t[i * 4 - 1]));
         }
+        expect(maxJump).toBeLessThan(0.08);
+        expect(maxAlphaJump).toBeLessThan(30);
       }
     }
   });

@@ -32,6 +32,7 @@ import {
   windSpan,
   writeStormCells,
 } from "./radar-sim";
+import { firstDifference } from "../../test/bytes";
 import { defined } from "../../test/defined";
 
 const TAU = Math.PI * 2;
@@ -234,8 +235,9 @@ describe("terrain and labels", () => {
 
   it("is deterministic per seed", () => {
     const a = buildTerrain("islands", 9, new Float32Array(TERRAIN_COLS * TERRAIN_ROWS));
-    expect(a).toEqual(buildTerrain("islands", 9, new Float32Array(TERRAIN_COLS * TERRAIN_ROWS)));
-    expect(a).not.toEqual(terrains.get("islands"));
+    const b = buildTerrain("islands", 9, new Float32Array(TERRAIN_COLS * TERRAIN_ROWS));
+    expect(firstDifference(a, b)).toBe(-1);
+    expect(firstDifference(a, defined(terrains.get("islands")))).not.toBe(-1);
   });
 
   it("places made-up labels on land, clear of the speaker and each other", () => {

@@ -166,8 +166,9 @@ describe("balloons", () => {
       }
       return [...b.x, ...b.y, ...b.burnTimer, ...b.burnAge];
     };
-    expect(run(7)).toEqual(run(7));
-    expect(run(7)).not.toEqual(run(8));
+    const a = run(7);
+    expect(a).toEqual(run(7));
+    expect(a).not.toEqual(run(8));
   });
 
   it("are drawn farthest first, with distinct gore colours that close round", () => {

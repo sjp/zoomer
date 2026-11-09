@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { firstDifference } from "../../test/bytes";
 import { MAX_PEAKS } from "./cloudsea.meta";
 import {
   BILLOW_CELLS,
@@ -179,8 +180,8 @@ describe("buildBillowTexture", () => {
   };
 
   it("is deterministic and uses the byte range", () => {
-    expect(buildBillowTexture(size, 5).data).toEqual(data);
-    expect(buildBillowTexture(size, 6).data).not.toEqual(data);
+    expect(firstDifference(buildBillowTexture(size, 5).data, data)).toBe(-1);
+    expect(firstDifference(buildBillowTexture(size, 6).data, data)).not.toBe(-1);
     const heights = data.filter((_, i) => i % 4 === 0);
     expect(Math.max(...heights) === 255 || Math.min(...heights) === 0).toBe(true);
     expect(slopeScale).toBeGreaterThan(0);
@@ -253,6 +254,7 @@ describe("peaks", () => {
   });
 
   it("keeps the skyline under the cloud line across the centre third at any aspect", () => {
+    let firstRise: { aspect: number; seed: number; c: number; value: number } | undefined;
     for (const aspect of [4 / 3, 16 / 10, 16 / 9, 21 / 9, 32 / 9]) {
       for (let seed = 0; seed < 20; seed++) {
         fillPeakTable(table, layoutPeaks(MAX_PEAKS, seed), aspect);
@@ -260,10 +262,14 @@ describe("peaks", () => {
         const first = Math.ceil(CENTRE_LO * PEAK_COLUMNS - 0.5);
         const last = Math.floor(CENTRE_HI * PEAK_COLUMNS - 0.5);
         for (let c = first; c <= last; c++) {
-          expect(table[c * PEAK_FLOATS]).toBe(none);
+          const value = table[c * PEAK_FLOATS];
+          if (!firstRise && !Object.is(value, none)) {
+            firstRise = { aspect, seed, c, value };
+          }
         }
       }
     }
+    expect(firstRise).toBeUndefined();
   });
 
   it("rises above the cloud line at each crest and is empty with no peaks", () => {

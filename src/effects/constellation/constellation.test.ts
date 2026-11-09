@@ -45,13 +45,18 @@ function gridLinks(
   const t = new Float32Array(cap);
   const count = findLinks(grid, xs, ys, maxDist, a, b, t, cap);
   const pairs: string[] = [];
+  // Each link's t is its length over maxDist, to toBeCloseTo(_, 5)'s tolerance.
+  let badT: { l: number; t: number; want: number } | undefined;
   for (let l = 0; l < count; l++) {
     const i = Math.min(a[l], b[l]);
     const j = Math.max(a[l], b[l]);
     pairs.push(`${String(i)},${String(j)}`);
     const d = Math.hypot(xs[j] - xs[i], ys[j] - ys[i]);
-    expect(t[l]).toBeCloseTo(d / maxDist, 5);
+    if (badT === undefined && !(Math.abs(t[l] - d / maxDist) < 0.5e-5)) {
+      badT = { l, t: t[l], want: d / maxDist };
+    }
   }
+  expect(badT).toBeUndefined();
   return { count, pairs };
 }
 

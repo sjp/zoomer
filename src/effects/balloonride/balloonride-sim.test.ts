@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { firstDifference } from "../../test/bytes";
 import { BALLOON_FLOATS, paletteFor } from "../balloons/balloons-sim";
 import { MAX_OTHERS } from "./balloonride.meta";
 import {
@@ -185,8 +186,8 @@ describe("landscape", () => {
   it("is deterministic per seed, and differs between seeds", () => {
     const a = buildLandscape(5, SIZE);
     expect(a.length).toBe(SIZE * SIZE * 4);
-    expect(buildLandscape(5, SIZE)).toEqual(a);
-    expect(buildLandscape(6, SIZE)).not.toEqual(a);
+    expect(firstDifference(buildLandscape(5, SIZE), a)).toBe(-1);
+    expect(firstDifference(buildLandscape(6, SIZE), a)).not.toBe(-1);
   });
 
   it("has the river where the shader's mist expects it, and it tiles", () => {

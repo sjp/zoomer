@@ -83,8 +83,19 @@ describe("flame motion", () => {
   const DT = 1 / 120;
   const T = 120;
 
-  /** Samples one flame's curves for `T` seconds at full flicker and draft. */
+  /** One flame's curves, sampled once and shared by the tests (which only read them). */
+  const samples = new Map<number, ReturnType<typeof sampleFlame>>();
   const sample = (i: number) => {
+    let s = samples.get(i);
+    if (!s) {
+      s = sampleFlame(i);
+      samples.set(i, s);
+    }
+    return s;
+  };
+
+  /** Samples one flame's curves for `T` seconds at full flicker and draft. */
+  function sampleFlame(i: number) {
     const m = createFlameMotion();
     const sway: number[] = [];
     const bright: number[] = [];
@@ -99,7 +110,7 @@ describe("flame motion", () => {
       lean.push(l);
     }
     return { sway, bright, stretch, lean };
-  };
+  }
 
   /** Largest |dv/dt| over the samples. */
   const maxRate = (v: number[]) => {

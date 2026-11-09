@@ -21,6 +21,7 @@ import {
 } from "./clouds-sky";
 import { buildPeriodicNoiseTexture } from "../noise";
 import { TIME_OPTIONS } from "./clouds.meta";
+import { firstDifference } from "../../test/bytes";
 
 const buildNoiseTexture = (size: number, seed: number) =>
   buildPeriodicNoiseTexture(size, cloudNoiseChannels(seed));
@@ -92,7 +93,7 @@ describe("cloud noise texture", () => {
         expect(Math.abs(r)).toBeLessThan(0.2);
       }
     }
-    expect(buildNoiseTexture(SIZE, 3)).toEqual(tex);
+    expect(firstDifference(buildNoiseTexture(SIZE, 3), tex)).toBe(-1);
   });
 });
 

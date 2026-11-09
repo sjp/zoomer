@@ -46,16 +46,23 @@ describe("bridge visiting ships", () => {
       const pose = createShipPose();
       const t0 = visitStart(0, GAP);
       let prev = { ...shipAt(t0, SEED, plan, pose) };
-      for (let t = t0; t < t0 + VISIT * 2; t += 1 / 60) {
+      // The first frame-to-frame jump, with the poses either side of it.
+      let jump: { t: number; prev: typeof prev; pose: typeof prev } | undefined;
+      for (let t = t0; t < t0 + VISIT * 2 && !jump; t += 1 / 60) {
         shipAt(t, SEED, plan, pose);
         if (pose.kind < 0) {
           break;
         }
-        expect(Math.abs(pose.across - prev.across)).toBeLessThan(0.01);
-        expect(Math.abs(pose.yaw - prev.yaw)).toBeLessThan(0.02);
-        expect(Math.abs(pose.bob - prev.bob)).toBeLessThan(0.001);
+        if (
+          !(Math.abs(pose.across - prev.across) < 0.01) ||
+          !(Math.abs(pose.yaw - prev.yaw) < 0.02) ||
+          !(Math.abs(pose.bob - prev.bob) < 0.001)
+        ) {
+          jump = { t, prev, pose: { ...pose } };
+        }
         prev = { ...pose };
       }
+      expect(jump).toBeUndefined();
     }
   });
 

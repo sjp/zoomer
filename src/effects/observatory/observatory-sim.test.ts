@@ -184,11 +184,15 @@ describe("slew schedule", () => {
     const starts: number[] = [];
     // Fastest an axis can turn: a full turn eased over the shortest slew.
     const maxStep = (2 * Math.PI * 1.875 * dt) / SLEW_MIN;
+    // The biggest step of each axis, checked once after the run.
+    let ha = 0;
+    let dec = 0;
+    let dome = 0;
     for (let t = dt; t < 12 * gap; t += dt) {
       poseAt(3, gap, t, pose);
-      expect(Math.abs(angleDiff(prev.ha, pose.ha))).toBeLessThan(maxStep);
-      expect(Math.abs(pose.dec - prev.dec)).toBeLessThan(maxStep);
-      expect(Math.abs(angleDiff(prev.dome, pose.dome))).toBeLessThan(maxStep);
+      ha = Math.max(ha, Math.abs(angleDiff(prev.ha, pose.ha)));
+      dec = Math.max(dec, Math.abs(pose.dec - prev.dec));
+      dome = Math.max(dome, Math.abs(angleDiff(prev.dome, pose.dome)));
       if (pose.to !== prev.to) {
         // Each new slew follows the last and has only just begun.
         starts.push(pose.to - prev.to, pose.slew);
@@ -198,6 +202,9 @@ describe("slew schedule", () => {
       prev.dome = pose.dome;
       prev.to = pose.to;
     }
+    expect(ha).toBeLessThan(maxStep);
+    expect(dec).toBeLessThan(maxStep);
+    expect(dome).toBeLessThan(maxStep);
     expect(starts.length / 2).toBeGreaterThanOrEqual(11);
     for (let i = 0; i < starts.length; i += 2) {
       expect(starts[i]).toBe(1);

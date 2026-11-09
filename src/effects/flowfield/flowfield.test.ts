@@ -28,13 +28,17 @@ describe("flowfield trail fade", () => {
         let frameNo = 0;
         // Six time constants of decay plus a minute of the clean pull, generously.
         const limit = Math.ceil((60 + 6 * 0.1 * 30 ** trail) / dt);
+        let firstBad: { frames: number; v: number; next: number } | undefined;
         while (v > 0 && frames < limit) {
           const next = fadePixel(v, terms, levels, (frameNo = (frameNo + 1) >>> 0) * 7919);
-          expect(next).toBeLessThanOrEqual(v);
-          expect(next).toBeGreaterThanOrEqual(0);
+          // Never brightens and never goes negative.
+          if (!(next <= v && next >= 0) && firstBad === undefined) {
+            firstBad = { frames, v, next };
+          }
           v = next;
           frames++;
         }
+        expect(firstBad, `dt ${String(dt)}, trail ${String(trail)}`).toBeUndefined();
         expect(v).toBe(0);
       }
     }

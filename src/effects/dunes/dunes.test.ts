@@ -20,6 +20,7 @@ import {
   TABLE_COLUMNS,
 } from "./dunes-sim";
 import { MAX_RIDGES, MIN_RIDGES, MAX_CREST_SOFTNESS } from "./dunes.meta";
+import { firstDifference } from "../../test/bytes";
 
 const tableSize = TABLE_COLUMNS * MAX_RIDGES * TABLE_CHANNELS;
 const buildTable = (count: number, aspect: number, seed: number) => {
@@ -42,13 +43,13 @@ describe("duneShape", () => {
 
   it.each([0.3, 1, 1.5, 2, 4])("rounds the crest at softness %f", (s) => {
     const d = 1e-4;
+    let min = Infinity;
     let max = 0;
     let maxJump = 0;
     let sharpJump = 0;
     for (let u = d; u < 1 - d; u += d) {
       const v = duneShape(u, s);
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(1 + 1e-12);
+      min = Math.min(min, v);
       max = Math.max(max, v);
       // Change in slope across one step: the sharp crest flips it at once.
       const jump = Math.abs(duneShape(u + d, s) - 2 * v + duneShape(u - d, s)) / d;
@@ -60,6 +61,8 @@ describe("duneShape", () => {
         sharpJump = Math.max(sharpJump, sharp);
       }
     }
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeLessThanOrEqual(1 + 1e-12);
     expect(max).toBeCloseTo(1, 6);
     expect(maxJump).toBeLessThan(0.05);
     expect(sharpJump).toBeGreaterThan(1);
@@ -73,14 +76,14 @@ describe("duneShape", () => {
 describe("fillRidgeTable", () => {
   it("is deterministic for a seed and differs between seeds", () => {
     const a = buildTable(4, 16 / 9, 1);
-    expect(buildTable(4, 16 / 9, 1)).toEqual(a);
+    expect(firstDifference(buildTable(4, 16 / 9, 1), a)).toBe(-1);
     // Reusing scratch buffers gives the same result.
     const scratch = createTableScratch();
     const b = new Float32Array(tableSize);
     fillRidgeTable(b, 4, 4 / 3, 1, scratch);
     fillRidgeTable(b, 4, 16 / 9, 1, scratch);
-    expect(b).toEqual(a);
-    expect(buildTable(4, 16 / 9, 2)).not.toEqual(a);
+    expect(firstDifference(b, a)).toBe(-1);
+    expect(firstDifference(buildTable(4, 16 / 9, 2), a)).not.toBe(-1);
     expect(a.every((v) => Number.isFinite(v))).toBe(true);
   });
 

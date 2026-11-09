@@ -26,19 +26,29 @@ describe("bridge planets", () => {
   });
 
   it("keep every look in range", () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    let radiusLo = Infinity;
+    let radiusHi = -Infinity;
+    let topHi = -Infinity;
     for (let loc = 0; loc < LOCATIONS.length; loc++) {
       for (let visit = 0; visit < 20; visit++) {
         const s = planetStyle(loc, visit, 7);
         for (const c of [s.ocean, s.landLow, s.landHigh, s.cloud, s.atmosphere]) {
           for (const x of c) {
-            expect(x).toBeGreaterThanOrEqual(0);
-            expect(x).toBeLessThanOrEqual(1);
+            lo = Math.min(lo, x);
+            hi = Math.max(hi, x);
           }
         }
-        expect(s.radius).toBeGreaterThan(0.85);
-        expect(s.radius).toBeLessThan(1.25);
-        expect(s.top).toBeLessThan(-0.1);
+        radiusLo = Math.min(radiusLo, s.radius);
+        radiusHi = Math.max(radiusHi, s.radius);
+        topHi = Math.max(topHi, s.top);
       }
     }
+    expect(lo).toBeGreaterThanOrEqual(0);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(radiusLo).toBeGreaterThan(0.85);
+    expect(radiusHi).toBeLessThan(1.25);
+    expect(topHi).toBeLessThan(-0.1);
   });
 });

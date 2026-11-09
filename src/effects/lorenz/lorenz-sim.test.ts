@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { firstDifference } from "../../test/bytes";
 import {
   advanceOrbit,
   anchorX,
@@ -144,7 +145,7 @@ describe("buildTrajectory", () => {
 
   it("is deterministic", () => {
     const again = buildTrajectory(SYSTEMS.thomas);
-    expect(again.points).toEqual(trajOf("thomas").points);
+    expect(firstDifference(again.points, trajOf("thomas").points)).toBe(-1);
     expect(again.norm).toBe(trajOf("thomas").norm);
   });
 });

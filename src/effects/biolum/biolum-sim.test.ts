@@ -71,14 +71,22 @@ describe("biolumFront", () => {
 
 describe("biolumWetness", () => {
   it("is bounded, wets only covered sand and is gone by the end of the tail", () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    let firstUncoveredWet: { t: number; n: number; w: number } | undefined;
     for (let t = 0; t < LIFETIME; t += 0.05) {
       for (let n = -0.1; n < 0.25; n += 0.01) {
         const w = biolumWetness(n, t, 0.15);
-        expect(w).toBeGreaterThanOrEqual(0);
-        expect(w).toBeLessThanOrEqual(1);
-        expect(n > 0.15 + 1e-9 && w !== 0).toBe(false);
+        lo = Math.min(lo, w);
+        hi = Math.max(hi, w);
+        if (!firstUncoveredWet && n > 0.15 + 1e-9 && w !== 0) {
+          firstUncoveredWet = { t, n, w };
+        }
       }
     }
+    expect(lo).toBeGreaterThanOrEqual(0);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(firstUncoveredWet).toBeUndefined();
     expect(biolumWetness(0.1, T_STOP, 0.15)).toBeCloseTo(1);
     expect(biolumWetness(0.05, T_ACTIVE + WET_TAIL, 0.15)).toBe(0);
   });
