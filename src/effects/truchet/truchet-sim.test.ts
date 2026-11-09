@@ -7,6 +7,7 @@ import {
   FADE_DURATION,
   FLIP_DURATION,
   gridLayout,
+  initialOrientation,
   labelPaths,
   MAX_FLIPS,
   MIN_TILE_PX,
@@ -387,5 +388,39 @@ describe("colours and encoding", () => {
     expect(palette("nope")).toBe(PALETTES.slate);
     expect(styleIndex("shaded")).toBe(2);
     expect(styleIndex("nope")).toBe(0);
+  });
+});
+
+describe("initialOrientation", () => {
+  const grid = (cols: number, rows: number, seed: number) =>
+    Array.from({ length: rows }, (_, j) =>
+      Array.from({ length: cols }, (__, i) => initialOrientation(i, j, cols, rows, seed)),
+    );
+
+  it("is 0 or 1, about half each, and the same for the same seed", () => {
+    const g = grid(40, 24, 3).flat();
+    expect(g.every((o) => o === 0 || o === 1)).toBe(true);
+    const ones = g.filter((o) => o === 1).length / g.length;
+    expect(ones).toBeGreaterThan(0.4);
+    expect(ones).toBeLessThan(0.6);
+    expect(grid(40, 24, 3)).toEqual(grid(40, 24, 3));
+    expect(grid(40, 24, 4)).not.toEqual(grid(40, 24, 3));
+  });
+
+  it("keeps each tile's orientation when the grid grows or shrinks round it", () => {
+    // Grids stay even (see gridLayout), so they grow by whole tiles on every side.
+    const small = grid(20, 12, 7);
+    for (const [cols, rows] of [
+      [24, 12],
+      [20, 18],
+      [64, 36],
+    ]) {
+      const big = grid(cols, rows, 7);
+      const di = (cols - 20) / 2;
+      const dj = (rows - 12) / 2;
+      for (let j = 0; j < 12; j++) {
+        expect(big[j + dj].slice(di, di + 20)).toEqual(small[j]);
+      }
+    }
   });
 });
