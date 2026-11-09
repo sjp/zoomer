@@ -25,6 +25,7 @@ import {
   SEA_SKY_UNIFORMS,
 } from "../sea/sea-water";
 import { defineEffect } from "../types";
+import { createSettledValue } from "../rebuild";
 import { T_DRAIN, T_DRY } from "../wash";
 import {
   APPROACH_DIST,
@@ -70,6 +71,8 @@ const vec3 = (c: readonly number[]) => `vec3(${c.map((v) => f(v)).join(", ")})`;
 
 /** The water renders at this divisor; the wash, sand and sky are full resolution. */
 const WATER_DIVISOR = 2;
+/** Seconds the Variation slider must hold still before the scene is rebuilt for it. */
+const SEED_SETTLE = 0.3;
 /** Strength of the glitter path at a preset's `glitter` = 1. */
 const GLITTER_GAIN = 0.55;
 /** Cap on the water's reflectance, so the far sea stays a shade darker than the sky. */
@@ -617,6 +620,10 @@ export const beachday = defineEffect(beachdayMeta, {
       let preset = beachPreset("afternoon");
       let presetIndex = -1;
       let seed = Number.NaN;
+      // Each Variation step re-primes the waves, rebuilds the clouds and the headland
+      // and redraws the cached scene, so a slider drag rebuilds once, when it settles.
+      const settledSeed = createSettledValue<number>(SEED_SETTLE);
+      const cloudData = new Uint8Array(CLOUD_W * CLOUD_H * 2);
       /** Unwrapped clock for the gulls (CPU only). */
       let clock = 0;
       let cloudU = 0;
@@ -650,9 +657,10 @@ export const beachday = defineEffect(beachdayMeta, {
             beachSky(preset, sky);
             headlandColor(sky, preset, landRgb);
           }
-          const mirror = (hash32(Math.floor(p.seed) + 77) & 1) === 1;
-          if (p.seed !== seed) {
-            seed = p.seed;
+          const wantSeed = settledSeed.update(p.seed, step);
+          const mirror = (hash32(Math.floor(wantSeed) + 77) & 1) === 1;
+          if (wantSeed !== seed) {
+            seed = wantSeed;
             sched.reset(seed);
             for (let t = 0; t < PRIME_SECONDS; t += PRIME_STEP) {
               sched.step(PRIME_STEP, waves);
@@ -667,7 +675,7 @@ export const beachday = defineEffect(beachdayMeta, {
               CLOUD_H,
               gl.RG,
               gl.UNSIGNED_BYTE,
-              buildClouds(seed),
+              buildClouds(seed, cloudData),
             );
           }
 

@@ -687,9 +687,12 @@ export function layoutClouds(seed: number): CloudPuff[] {
 /**
  * Builds the cloud strip (CLOUD_W x CLOUD_H, RG8, row 0 at the bottom): R is
  * density, G how sunlit it is (bright tops, shaded bases). It tiles seamlessly
- * along u, for sampling with REPEAT.
+ * along u, for sampling with REPEAT. Writes every byte of `out`.
  */
-export function buildClouds(seed: number): Uint8Array {
+export function buildClouds(
+  seed: number,
+  out: Uint8Array = new Uint8Array(CLOUD_W * CLOUD_H * 2),
+): Uint8Array {
   const puffs = layoutClouds(seed);
   const noise = createNoise(hash32(Math.floor(seed) + 911));
   const dens = new Float32Array(CLOUD_W * CLOUD_H);
@@ -722,7 +725,6 @@ export function buildClouds(seed: number): Uint8Array {
       }
     }
   }
-  const out = new Uint8Array(CLOUD_W * CLOUD_H * 2);
   // Periodic noise along u (whole cells per repeat) breaks up the puffs' edges.
   const cells = 48;
   for (let j = 0; j < CLOUD_H; j++) {
