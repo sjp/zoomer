@@ -12,7 +12,7 @@ const FONT_FAMILY = SANS_FONT_STACK;
 /** Capital height as a share of the font size, for centring text in a bar. */
 const CAP_RATIO = 0.72;
 /** Tallest texture the ticker's rows may stack to. */
-const MAX_TICKER_TEXELS = 4096;
+export const MAX_TICKER_TEXELS = 4096;
 /** Widest any other graphic may be, in texels. */
 const MAX_GRAPHIC_TEXELS = 4096;
 /** The ticker's stories repeat with this between the end and the start. */
