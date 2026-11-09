@@ -12,6 +12,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scissorBox,
 } from "../gl";
 import { HALF_DUTY, SLAT_GAP_GLSL } from "../blinds/blinds-sim";
 import {
@@ -1328,12 +1329,7 @@ export const bedroom80s = defineEffect(bedroom80sMeta, {
             const h = hh * k;
             gu.i1("uKind", kind);
             gu.f4("uBox", x, y, w, h);
-            const x0 = Math.max(0, Math.floor((x - w) * height + width / 2) - 1);
-            const y0 = Math.max(0, Math.floor((y - h) * height + height / 2) - 1);
-            const x1 = Math.min(width, Math.ceil((x + w) * height + width / 2) + 1);
-            const y1 = Math.min(height, Math.ceil((y + h) * height + height / 2) + 1);
-            if (x1 > x0 && y1 > y0) {
-              gl.scissor(x0, y0, x1 - x0, y1 - y0);
+            if (scissorBox(gl, width, height, x, y, w, h)) {
               triangle.draw();
             }
           };

@@ -8,6 +8,7 @@ import {
   createUniforms,
   glslFloat,
   withScope,
+  scissorBox,
 } from "./gl";
 import { createFakeGl } from "../test/fake-gl";
 import { defined } from "../test/defined";
@@ -461,5 +462,21 @@ describe("createUniforms", () => {
     gl.useProgram(program);
     loseContext();
     expect(() => u.f1("uA", 1)).not.toThrow();
+  });
+});
+
+describe("scissorBox", () => {
+  it("scissors a padded, clamped box in frame units and reports when it's off screen", () => {
+    const fake = createFakeGl({ record: true });
+    // A 0.1 x 0.1 box at the centre of a 1920x1080 canvas: 108 px, plus 1 px each side.
+    expect(scissorBox(fake.gl, 1920, 1080, 0, 0, 0.05, 0.05)).toBe(true);
+    expect(fake.calls.at(-1)).toEqual({ name: "scissor", args: [905, 485, 110, 110] });
+    // Clamped at the left edge.
+    expect(scissorBox(fake.gl, 1920, 1080, -0.9, 0, 0.05, 0.05, 2)).toBe(true);
+    expect(fake.calls.at(-1)?.args[0]).toBe(0);
+    // Entirely off screen: no scissor call.
+    const calls = fake.calls.length;
+    expect(scissorBox(fake.gl, 1920, 1080, 2, 0, 0.05, 0.05)).toBe(false);
+    expect(fake.calls.length).toBe(calls);
   });
 });

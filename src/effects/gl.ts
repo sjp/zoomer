@@ -756,3 +756,31 @@ export function createRenderTarget(
     dispose,
   };
 }
+
+/**
+ * Sets the scissor rectangle to the box centred on (`cx`, `cy`) with half size
+ * (`hw`, `hh`), in frame units (frame heights from the canvas centre, y up), padded
+ * by `pad` pixels and clamped to the `width` x `height` canvas. Returns false, and
+ * leaves the scissor alone, when none of the box is on the canvas, so the caller
+ * can skip its draw. Enable `SCISSOR_TEST` first.
+ */
+export function scissorBox(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number,
+  cx: number,
+  cy: number,
+  hw: number,
+  hh: number,
+  pad = 1,
+): boolean {
+  const x0 = Math.max(0, Math.floor((cx - hw) * height + width / 2) - pad);
+  const y0 = Math.max(0, Math.floor((cy - hh) * height + height / 2) - pad);
+  const x1 = Math.min(width, Math.ceil((cx + hw) * height + width / 2) + pad);
+  const y1 = Math.min(height, Math.ceil((cy + hh) * height + height / 2) + pad);
+  if (x1 <= x0 || y1 <= y0) {
+    return false;
+  }
+  gl.scissor(x0, y0, x1 - x0, y1 - y0);
+  return true;
+}

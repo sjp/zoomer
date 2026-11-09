@@ -13,6 +13,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scissorBox,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
 import { approach, smoothstep, wrap } from "../math";
@@ -892,12 +893,7 @@ export const newsdesk = defineEffect(newsdeskMeta, {
       const pxY = (y: number) => y * height + height / 2;
       /** Draws the bound gadget program over a scissor round box (cx, cy, hw, hh). */
       const drawGadget = (cx: number, cy: number, hw: number, hh: number) => {
-        const x0 = Math.max(0, Math.floor(pxX(cx - hw)) - 1);
-        const y0 = Math.max(0, Math.floor(pxY(cy - hh)) - 1);
-        const x1 = Math.min(width, Math.ceil(pxX(cx + hw)) + 1);
-        const y1 = Math.min(height, Math.ceil(pxY(cy + hh)) + 1);
-        if (x1 > x0 && y1 > y0) {
-          gl.scissor(x0, y0, x1 - x0, y1 - y0);
+        if (scissorBox(gl, width, height, cx, cy, hw, hh)) {
           triangle.draw();
         }
       };

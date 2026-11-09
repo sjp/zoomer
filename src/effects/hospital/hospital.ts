@@ -10,6 +10,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scissorBox,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
 import { HASH32_GLSL } from "../noise";
@@ -1069,12 +1070,7 @@ export const hospital = defineEffect(hospitalMeta, {
             const x = side * cx;
             gu.i1("uKind", kind);
             gu.f4("uBox", x, cy, hw, hh);
-            const x0 = Math.max(0, Math.floor((x - hw) * height + width / 2) - 1);
-            const y0 = Math.max(0, Math.floor((cy - hh) * height + height / 2) - 1);
-            const x1 = Math.min(width, Math.ceil((x + hw) * height + width / 2) + 1);
-            const y1 = Math.min(height, Math.ceil((cy + hh) * height + height / 2) + 1);
-            if (x1 > x0 && y1 > y0) {
-              gl.scissor(x0, y0, x1 - x0, y1 - y0);
+            if (scissorBox(gl, width, height, x, cy, hw, hh)) {
               triangle.draw();
             }
           };
