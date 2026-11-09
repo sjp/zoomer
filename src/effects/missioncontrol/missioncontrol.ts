@@ -442,12 +442,17 @@ ${SUPERSAMPLE4_GLSL}
 void main() {
   float aspect = uResolution.x / uResolution.y;
   vec3 acc = vec3(0.0);
+  float code = 0.0;
   for (int i = 0; i < 4; i++) {
     vec2 ndc = (gl_FragCoord.xy + SS4_OFFSETS[i]) / uResolution * 2.0 - 1.0;
-    acc += shade(rayDir(ndc, aspect)).rgb * 0.25;
+    vec4 s = shade(rayDir(ndc, aspect));
+    acc += s.rgb * 0.25;
+    // The material code isn't averaged: the first sample's stands for the pixel.
+    if (i == 0) {
+      code = s.a;
+    }
   }
-  vec2 ndc = gl_FragCoord.xy / uResolution * 2.0 - 1.0;
-  outColor = vec4(acc, shade(rayDir(ndc, aspect)).a);
+  outColor = vec4(acc, code);
 }
 `;
 
