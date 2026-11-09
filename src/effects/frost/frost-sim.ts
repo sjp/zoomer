@@ -222,7 +222,7 @@ export function growFrost(seed: number, width: number, height: number): FrostSke
 }
 
 /** Tip steps between yields of `growFrostSteps`. */
-const GROW_CHUNK = 512;
+const GROW_CHUNK = 128;
 
 /** `growFrost` as build steps, yielding every `GROW_CHUNK` tip steps. */
 export function* growFrostSteps(
@@ -500,9 +500,9 @@ export function buildFrostField(seed: number, width: number, height: number): Fr
   return finishBuild(buildFrostFieldSteps(seed, width, height));
 }
 
-/** Branches stamped, and field rows finished, between yields of `buildFrostFieldSteps`. */
-const STAMP_CHUNK = 24;
-const ROW_CHUNK = 16;
+/** Segments stamped, and field rows finished, between yields of `buildFrostFieldSteps`. */
+const STAMP_CHUNK = 64;
+const ROW_CHUNK = 4;
 
 /**
  * `buildFrostField` as build steps, so the effect can spread a build over many
@@ -519,9 +519,6 @@ export function* buildFrostFieldSteps(
 
   let stamped = 0;
   for (const b of skeleton.branches) {
-    if (++stamped % STAMP_CHUNK === 0) {
-      yield;
-    }
     const p = b.points;
     let len = 0;
     for (let i = 3; i < p.length; i += 3) {
@@ -530,6 +527,9 @@ export function* buildFrostFieldSteps(
     let s = 0;
     let w0 = branchHalfWidth(b.depth, 0, len);
     for (let i = 3; i < p.length; i += 3) {
+      if (++stamped % STAMP_CHUNK === 0) {
+        yield;
+      }
       s += Math.hypot(p[i] - p[i - 3], p[i + 1] - p[i - 2]);
       const w1 = branchHalfWidth(b.depth, s, len);
       stampSegment(
