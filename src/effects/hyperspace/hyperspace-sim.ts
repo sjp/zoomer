@@ -1,8 +1,10 @@
 /**
- * Hyperspace's jump cycle, kept free of GL so it can be tested: a linear progress
- * from normal space (0) to full hyperspace (1), driven by the mode or an auto
- * cycle, with a soft bloom as each jump in reaches full speed.
+ * Hyperspace's simulation, kept free of GL so it can be tested: the jump cycle (a
+ * linear progress from normal space (0) to full hyperspace (1), driven by the
+ * mode or an auto cycle, with a soft bloom as each jump in reaches full speed)
+ * and the streaks flying out from the centre.
  */
+import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import { approach, smoothstep } from "../math";
 
 /** Seconds the bloom takes to rise to its peak. */
@@ -79,6 +81,94 @@ export function createJump(): Jump {
       } else {
         level = Math.max(0, level - dt / BLOOM_FALL_SECONDS);
       }
+    },
+  };
+}
+
+/** Seconds a streak added by a higher count takes to fade in. */
+export const STREAK_FADE_IN = 0.8;
+/** Distance (0 = centre, 1 = corner) past which a streak respawns near the centre. */
+export const RESPAWN_DIST = 1.1;
+/** Respawned streaks start between these distances from the centre. */
+export const RESPAWN_MIN = 0.02;
+export const RESPAWN_MAX = 0.27;
+
+export interface StreakField {
+  /** Unit direction of each streak, fixed for its lifetime. */
+  readonly dirX: Float32Array;
+  readonly dirY: Float32Array;
+  /** Distance of each streak's head from the centre (0 = centre, 1 = corner). */
+  readonly dist: Float32Array;
+  /** Each streak's share of the glow colour, 0..1. */
+  readonly mix: Float32Array;
+  /**
+   * Each streak's visibility after the last step: faded in from the centre and
+   * by the count fade.
+   */
+  readonly alpha: Float32Array;
+  /** Streaks simulated: the count plus any still fading out after it dropped. */
+  readonly live: number;
+  /**
+   * Advances `dt` seconds with `wanted` streaks at `velocity` (distance per
+   * second at distance 0.9, scaled by each streak's pace). Streaks that fly off
+   * respawn near the centre; added ones fade in, removed ones fade out. Returns
+   * how many streaks to draw (indices 0 to n - 1). Allocates nothing.
+   */
+  step: (dt: number, wanted: number, velocity: number) => number;
+}
+
+/**
+ * `max` streaks scattered at random distances, laid out by `random` (a seeded
+ * RNG, so the field is the same on every load).
+ */
+export function createStreakField(max: number, random: () => number): StreakField {
+  const dirX = new Float32Array(max);
+  const dirY = new Float32Array(max);
+  const dist = new Float32Array(max);
+  const pace = new Float32Array(max);
+  const mix = new Float32Array(max);
+  const life = new Float32Array(max);
+  const alpha = new Float32Array(max);
+  let live = 0;
+
+  const spawn = (i: number, d: number) => {
+    const angle = random() * Math.PI * 2;
+    dirX[i] = Math.cos(angle);
+    dirY[i] = Math.sin(angle);
+    dist[i] = d;
+    pace[i] = 0.6 + random() * 0.8;
+    mix[i] = random();
+  };
+  for (let i = 0; i < max; i++) {
+    spawn(i, random());
+  }
+
+  return {
+    dirX,
+    dirY,
+    dist,
+    mix,
+    alpha,
+    get live() {
+      return live;
+    },
+    step(dt, wanted, velocity) {
+      const target = Math.max(0, Math.min(max, wanted));
+      const n = (live = growLive(life, live, target));
+      const fadeStep = dt / STREAK_FADE_IN;
+      const outStep = dt / FADE_OUT;
+      for (let i = 0; i < n; i++) {
+        let d = dist[i] + dt * velocity * pace[i] * (0.1 + dist[i]);
+        if (d > RESPAWN_DIST) {
+          spawn(i, RESPAWN_MIN + random() * (RESPAWN_MAX - RESPAWN_MIN));
+          d = dist[i];
+        }
+        dist[i] = d;
+        // Added streaks appear mid-flight, so they fade in rather than pop.
+        alpha[i] = Math.min(1, d * 3) * stepLife(life, i, target, fadeStep, outStep);
+      }
+      live = trimLive(life, live, target);
+      return n;
     },
   };
 }
