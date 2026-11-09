@@ -4,6 +4,7 @@ import { createStreakRenderer } from "../streaks";
 import { warpMeta, MAX_STARS } from "./warp.meta";
 import { defineEffect } from "../types";
 import { unitRgbMemo } from "../color";
+import { createRng } from "../noise";
 import { createStarfield, type StarFrame } from "./warp-sim";
 
 /**
@@ -18,7 +19,7 @@ export const warp = defineEffect(warpMeta, {
       const tintRgb = unitRgbMemo();
       const backgroundRgb = unitRgbMemo();
       const zoom: Rgb = [1, 1, 1];
-      const stars = createStarfield(MAX_STARS);
+      const stars = createStarfield(MAX_STARS, createRng(0x77617270));
       const f: StarFrame = {
         width: 1,
         height: 1,

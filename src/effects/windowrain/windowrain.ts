@@ -193,7 +193,7 @@ vec4 composite(vec2 uv) {
 export const windowRain = defineEffect(windowRainMeta, {
   create(gl) {
     return withScope((scope) => {
-      const rng = createRng(Math.random() * 0xffffffff);
+      const rng = createRng(0x77696e64);
       const sim = createRainSim(1920, 1080, rng);
       const capacity = instanceCapacity(DEFAULT_CONFIG) + wipeStampCapacity(DEFAULT_CONFIG);
 

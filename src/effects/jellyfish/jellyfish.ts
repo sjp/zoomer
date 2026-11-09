@@ -142,7 +142,7 @@ export const jellyfish = defineEffect(jellyfishMeta, {
       let refWidth = 1920;
       // CPU-only, unwrapped in float64.
       let time = 0;
-      const rng = createRng(Math.random() * 0xffffffff);
+      const rng = createRng(0x6a656c6c);
       const swarm = createSwarm(rng, refWidth);
       const frameIn = {
         refWidth,

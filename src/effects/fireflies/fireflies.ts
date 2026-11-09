@@ -147,7 +147,7 @@ export const fireflies = defineEffect(firefliesMeta, {
       // Kept unwrapped: a wrap would jump every phase at once; doubles stay precise for weeks.
       let time = 0;
 
-      const rng = createRng(Math.random() * 0xffffffff);
+      const rng = createRng(0x66697265);
       const newBlink = (i: number) => {
         blinkPeriod[i] = 3 + rng() * 6;
         blinkDuty[i] = (0.5 + rng() * 0.7) / blinkPeriod[i];

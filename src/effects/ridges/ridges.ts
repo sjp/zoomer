@@ -54,6 +54,8 @@ const FOOT_LIGHTEN = 0.3;
 const PINE_CELLS = 160;
 const PINE_MAX = 0.028;
 const PINE_DENSITY = 0.5;
+/** Salts the seed param for the birds, so they don't share a stream with the layout. */
+const BIRD_SEED = 0x62697264;
 /** Birds are a little hazed, as if a way off. */
 const BIRD_HAZE = 0.35;
 const BIRD_ALPHA = 0.9;
@@ -349,7 +351,9 @@ export const ridges = defineEffect(ridgesMeta, {
       const layoutKey = createChangeKey(1);
       const sizeKey = createChangeKey(3);
       const flock = createFlock();
-      const rand = createRng(Math.random() * 0xffffffff);
+      /** The flock's RNG, reseeded from the seed param so a link brings back the same birds. */
+      let rand = createRng(0);
+      let randSeed = Number.NaN;
       const birdColor = new Float32Array(3);
 
       let width = 1;
@@ -457,6 +461,10 @@ export const ridges = defineEffect(ridgesMeta, {
             flock.count = 0;
             flock.wait = 6;
             return;
+          }
+          if (p.seed !== randSeed) {
+            randSeed = p.seed;
+            rand = createRng(BIRD_SEED + p.seed);
           }
           stepFlock(flock, dt, aspect, rand);
           const count = writeBirds(flock, birds.data, height, scale);

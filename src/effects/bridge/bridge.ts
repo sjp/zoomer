@@ -104,7 +104,7 @@ import { createStarfield, type StarFrame } from "../warp/warp-sim";
 import { defineEffect } from "../types";
 import { loadWebFont, webFontLoaded } from "../web-font";
 import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
-import { HASH_CELL_GLSL } from "../noise";
+import { createRng, HASH_CELL_GLSL } from "../noise";
 import { createChangeKey } from "../change-key";
 
 /** Most glass rects the room pass draws (every panel and the band). */
@@ -920,7 +920,7 @@ export const bridge = defineEffect(bridgeMeta, {
         "uLinePx",
       ]);
       const streaks = scope.own(createStreakRenderer(gl, WARP_STARS, { chromatic: true }));
-      const starfield = createStarfield(WARP_STARS);
+      const starfield = createStarfield(WARP_STARS, createRng(0x62726467));
       const warpZoom: Rgb = [1 + WARP_ABERRATION, 1, 1 - WARP_ABERRATION];
       const warpFrame: StarFrame = {
         width: 1,

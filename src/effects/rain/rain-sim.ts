@@ -87,7 +87,7 @@ export interface RainSim {
   ) => number;
 }
 
-export function createRainSim(random: () => number = Math.random): RainSim {
+export function createRainSim(random: () => number): RainSim {
   let cols = 0;
   let rows = 0;
   let heads = new Float32Array(0);

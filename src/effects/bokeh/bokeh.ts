@@ -12,6 +12,7 @@ import { createSpriteBatch, polygonStrip } from "../sprites";
 import { bokehMeta, MAX_LIGHTS } from "./bokeh.meta";
 import { defineEffect } from "../types";
 import { unitRgbMemo } from "../color";
+import { createRng } from "../noise";
 import { createLights, type LightFrame } from "./bokeh-sim";
 
 /** Hexagon apothem relative to the light radius, as the old pre-rendered sprite had. */
@@ -152,7 +153,7 @@ export const bokeh = defineEffect(bokehMeta, {
       let width = 1;
       let height = 1;
       let refWidth = 1920;
-      const lights = createLights(MAX_LIGHTS, refWidth);
+      const lights = createLights(MAX_LIGHTS, refWidth, createRng(0x626f6b65));
       const f: LightFrame = {
         refWidth,
         scale: 1,

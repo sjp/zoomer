@@ -48,11 +48,7 @@ export interface Lights {
   step: (dt: number, f: LightFrame, data: Float32Array, stride: number) => number;
 }
 
-export function createLights(
-  max: number,
-  refWidth: number,
-  random: () => number = Math.random,
-): Lights {
+export function createLights(max: number, refWidth: number, random: () => number): Lights {
   const xs = new Float32Array(max);
   const ys = new Float32Array(max);
   /** 0 = far/small, 1 = near/large. */

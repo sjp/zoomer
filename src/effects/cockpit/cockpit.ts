@@ -56,7 +56,7 @@ import {
   SWEEP_RATE,
   TRACE_RATES,
 } from "./cockpit-sim";
-import { VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
+import { createRng, VALUE_NOISE_GLSL, VALUE_FBM_GLSL } from "../noise";
 import { createChangeKey } from "../change-key";
 
 const f = glslFloat;
@@ -715,7 +715,7 @@ export const cockpit = defineEffect(cockpitMeta, {
       cu.i1("uLamps", 3);
 
       const streaks = scope.own(createStreakRenderer(gl, MAX_STARS));
-      const stars = createStarfield(MAX_STARS);
+      const stars = createStarfield(MAX_STARS, createRng(0x636f636b));
       const sf: StarFrame = {
         width: 1,
         height: 1,

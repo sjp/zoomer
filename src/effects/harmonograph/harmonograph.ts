@@ -161,7 +161,7 @@ export const harmonograph = defineEffect(harmonographMeta, {
         "uPalette",
       ]);
       const backgroundRgb = unitRgbMemo();
-      const rng = createRng(Math.floor(Math.random() * 0x100000000));
+      const rng = createRng(0x6861726d);
       const sim = createHarmonograph(MAX_SEGMENTS, rng, 0.4);
       const data = sim.data;
 

@@ -10,7 +10,7 @@ import {
 import { createSpriteBatch, type SpriteBatch } from "../sprites";
 import { rainMeta } from "./rain.meta";
 import { defineEffect } from "../types";
-import { HASH32_GLSL } from "../noise";
+import { createRng, HASH32_GLSL } from "../noise";
 import { has } from "../lookup";
 import { createRainSim } from "./rain-sim";
 
@@ -138,7 +138,7 @@ export const rain = defineEffect(rainMeta, {
       let batch: SpriteBatch | undefined;
       scope.defer(() => batch?.dispose());
       let capacity = 0;
-      const sim = createRainSim();
+      const sim = createRainSim(createRng(0x7261696e));
 
       let width = 1;
       let height = 1;

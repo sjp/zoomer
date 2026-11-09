@@ -50,7 +50,7 @@ export interface Starfield {
   step: (dt: number, f: StarFrame, data: Float32Array) => number;
 }
 
-export function createStarfield(max: number, random: () => number = Math.random): Starfield {
+export function createStarfield(max: number, random: () => number): Starfield {
   const xs = new Float32Array(max);
   const ys = new Float32Array(max);
   const zs = new Float32Array(max);
