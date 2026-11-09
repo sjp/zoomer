@@ -14,7 +14,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -22,6 +21,7 @@ import {
   glslFloat as F,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BELL_FRAGMENT,
@@ -845,10 +845,7 @@ export const submarine = defineEffect(submarineMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [
         "uScale",

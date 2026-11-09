@@ -2,12 +2,12 @@ import { hexToUnitRgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BASE_BOT,
@@ -388,10 +388,7 @@ export const globe = defineEffect(globeMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const batch = scope.own(createSpriteBatch(gl, MAX_FLAKES, [FLAKE_STRIDE]));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uPxToH", "uFrame", "uSide"]);

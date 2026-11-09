@@ -4,13 +4,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   advancePhase,
@@ -336,12 +336,8 @@ void main() {
 export const lighthouse = defineEffect(lighthouseMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const flareProgram = scope.add(createProgram(gl, FLARE_VERTEX, FLARE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const scene = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
+      const flareProgram = scopedProgram(gl, scope, FLARE_VERTEX, FLARE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const noiseTexture = scope.add(
         createDataTexture(gl, {

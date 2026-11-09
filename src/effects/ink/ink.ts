@@ -3,12 +3,12 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createDropState,
@@ -196,15 +196,8 @@ export const ink = defineEffect(inkMeta, {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl));
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const dropsProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, DROPS_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const marbleProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, MARBLE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const dropsProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, DROPS_FRAGMENT);
+      const marbleProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, MARBLE_FRAGMENT);
       const du = createUniforms(gl, dropsProgram, [
         ...COMMON_UNIFORMS,
         "uCount",

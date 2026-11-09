@@ -3,7 +3,6 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   type RenderTarget,
   withScope,
   scissorBox,
+  scopedProgram,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
 import { smoothstep } from "../math";
@@ -814,10 +814,7 @@ function packLayout(l: StudioLayout, showClock: boolean, out: Float32Array): voi
 export const radiostudio = defineEffect(radiostudioMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const roomProgram = program(ROOM_FRAGMENT);
       const compProgram = program(COMPOSITE_FRAGMENT);
       const gadgetProgram = program(GADGET_FRAGMENT);

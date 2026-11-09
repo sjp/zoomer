@@ -15,10 +15,10 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { clamp } from "../math";
 import { createSpriteBatch } from "../sprites";
@@ -77,9 +77,7 @@ export const city = defineEffect(cityMeta, {
   create(gl) {
     return withScope((scope) => {
       const skyline = scope.own(createSkyline(gl));
-      const lightProgram = scope.add(createProgram(gl, LIGHT_VERTEX, LIGHT_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const lightProgram = scopedProgram(gl, scope, LIGHT_VERTEX, LIGHT_FRAGMENT);
       const lu = createUniforms(gl, lightProgram, ["uResolution", "uScale"]);
       const background = scope.own(createGradientBackground(gl));
       const lights = scope.own(createSpriteBatch(gl, MAX_LIGHTS, [4, 3]));

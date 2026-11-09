@@ -2,11 +2,11 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { createRng } from "../noise";
@@ -339,9 +339,7 @@ vec4 composite(vec2 uv) {
 export const blobs = defineEffect(blobsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BLOB_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BLOB_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const mainT = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       // Sampled by mainT's composite, so it must never render direct: DIVISORS are all > 1.

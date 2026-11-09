@@ -13,12 +13,12 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { buildPeriodicNoiseTexture, HASH32_GLSL } from "../noise";
 import { glassMeta } from "./glass.meta";
@@ -173,9 +173,7 @@ export function leadStyle(leadWidth: number, scale: number): [number, number, nu
 export const glass = defineEffect(glassMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uGlass",
         "uPix",

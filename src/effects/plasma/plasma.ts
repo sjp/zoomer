@@ -2,12 +2,12 @@ import type { Rgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import {
@@ -286,10 +286,7 @@ export const plasma = defineEffect(plasmaMeta, {
       const target = scope.own(createLowResTarget(gl));
       const streaks = scope.own(createStreakRenderer(gl, MAX_STREAKS, { blend: "max" }));
       const sprites = scope.own(createSpriteBatch(gl, MAX_SPRITES, SPRITE_ATTRS));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uPxToH", "uFrame", "uGlobe", "uGlow"]);

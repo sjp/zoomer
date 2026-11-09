@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   resetUnpackState,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   advanceLife,
@@ -228,10 +228,7 @@ const TRAIL_WEIGHT = 0.5;
 export const lenia = defineEffect(leniaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fragment: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fragment);
       const stepProgram = program(STEP_FRAGMENT);
       const statsProgram = program(STATS_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);

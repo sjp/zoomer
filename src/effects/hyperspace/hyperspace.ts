@@ -1,11 +1,11 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
 import { hyperspaceMeta, MAX_STREAKS } from "./hyperspace.meta";
@@ -89,12 +89,7 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
       const streaks = scope.own(createStreakRenderer(gl, MAX_STREAKS));
       const data = streaks.data;
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const bgProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const bgProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT);
       const bgU = createUniforms(gl, bgProgram, [
         "uResolution",
         "uBackground",

@@ -5,13 +5,13 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildFadeMask,
@@ -447,10 +447,7 @@ export const hotspring = defineEffect(hotspringMeta, {
           gl.deleteTexture(t);
         },
       );
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
 
       const skyProgram = program(SKY_FRAGMENT);
       const ku = createUniforms(gl, skyProgram, [

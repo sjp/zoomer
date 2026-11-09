@@ -3,11 +3,11 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { snowMeta, MAX_FLAKES } from "./snow.meta";
 import { defineEffect } from "../types";
@@ -45,9 +45,7 @@ export const snow = defineEffect(snowMeta, {
   create(gl) {
     return withScope((scope) => {
       const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_FLAKES));
-      const mistProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MIST_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const mistProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, MIST_FRAGMENT);
       const mistU = createUniforms(gl, mistProgram, ["uHeight", "uMist", "uAmount"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const background = scope.own(createGradientBackground(gl));

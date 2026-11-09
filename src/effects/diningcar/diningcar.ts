@@ -4,7 +4,6 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   glslFloat as F,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { approach, fract, smoothstep, wrap } from "../math";
@@ -793,10 +793,7 @@ export const diningcar = defineEffect(diningcarMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const land = scope.own(createLowResTarget(gl));
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const landProgram = program(LAND_FRAGMENT);
       const lu = createUniforms(gl, landProgram, [
         "uHills",

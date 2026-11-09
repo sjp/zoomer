@@ -2,7 +2,6 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -10,6 +9,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { clamp } from "../math";
 import {
@@ -250,10 +250,7 @@ export const reaction = defineEffect(reactionMeta, {
       const format = packed ? gl.RGBA8 : gl.RG16F;
       const filter = packed ? gl.NEAREST : gl.LINEAR;
 
-      const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fragment: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fragment);
       const stepProgram = program(stepFragment(codec));
       const seedProgram = program(seedFragment(codec));
       const resampleProgram = program(resampleFragment(codec));

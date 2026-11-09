@@ -7,12 +7,12 @@
 import type { Rgb } from "../color";
 import {
   createDataTexture,
-  createProgram,
   createUniforms,
   resetUnpackState,
   TO_CLIP_GLSL,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSpriteBatch } from "../sprites";
 import {
@@ -155,9 +155,7 @@ export interface Skyline {
 
 export function createSkyline(gl: WebGL2RenderingContext): Skyline {
   return withScope((scope) => {
-    const program = scope.add(createProgram(gl, BUILDING_VERTEX, BUILDING_FRAGMENT), (p) => {
-      gl.deleteProgram(p);
-    });
+    const program = scopedProgram(gl, scope, BUILDING_VERTEX, BUILDING_FRAGMENT);
     const u = createUniforms(gl, program, [
       "uResolution",
       "uScale",

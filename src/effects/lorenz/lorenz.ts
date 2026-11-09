@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   updateDataTexture,
   type Uniforms,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   advanceOrbit,
@@ -352,9 +352,7 @@ export const lorenz = defineEffect(lorenzMeta, {
         gl.getExtension("EXT_color_buffer_half_float") !== null;
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
-        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => {
-          gl.deleteProgram(p);
-        });
+        scopedProgram(gl, scope, vertex, fragment, varyings);
       const updateProgram = program(UPDATE_VERTEX, NULL_FRAGMENT, ["vParticle"]);
       const fadeProgram = program(FULLSCREEN_VERTEX, FADE_FRAGMENT);
       const segmentProgram = program(SEGMENT_VERTEX, SEGMENT_FRAGMENT);

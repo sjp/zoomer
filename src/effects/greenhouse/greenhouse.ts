@@ -1,12 +1,12 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildLeaves,
@@ -309,14 +309,8 @@ void main() {
 export const greenhouse = defineEffect(greenhouseMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => {
-        gl.deleteProgram(p);
-      };
       const background = scope.own(createLowResTarget(gl));
-      const bgProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT),
-        deleteProgram,
-      );
+      const bgProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT);
       const ub = createUniforms(gl, bgProgram, [
         "uAspect",
         "uEave",
@@ -329,13 +323,13 @@ export const greenhouse = defineEffect(greenhouseMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       const barBatch = scope.own(createSpriteBatch(gl, MAX_BARS, [4, 4], [QUAD]));
-      const barProgram = scope.add(createProgram(gl, BAR_VERTEX, BAR_FRAGMENT), deleteProgram);
+      const barProgram = scopedProgram(gl, scope, BAR_VERTEX, BAR_FRAGMENT);
       const ubar = createUniforms(gl, barProgram, ["uResolution", "uScale", "uBar"]);
 
       const streaks = scope.own(createStreakRenderer(gl, MAX_RIVULETS * TRAIL_SEGS + MAX_DRIPS));
 
       const leafBatch = scope.own(createSpriteBatch(gl, MAX_LEAVES, [4, 4, 4, 4], [LEAF_STRIP]));
-      const leafProgram = scope.add(createProgram(gl, LEAF_VERTEX, LEAF_FRAGMENT), deleteProgram);
+      const leafProgram = scopedProgram(gl, scope, LEAF_VERTEX, LEAF_FRAGMENT);
       const ul = createUniforms(gl, leafProgram, [
         "uResolution",
         "uPhase",

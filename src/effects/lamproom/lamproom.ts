@@ -4,7 +4,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   glslFloat as F,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSkyState } from "../horizon/horizon-sim";
 import { lowResSize } from "../lowres";
@@ -693,10 +693,7 @@ void main() {
 export const lamproom = defineEffect(lamproomMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const water = scope.own(createSeaWater(gl, triangle, 128));
 

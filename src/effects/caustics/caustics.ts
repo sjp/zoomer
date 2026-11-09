@@ -16,7 +16,6 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   createRenderTarget,
   DITHER_GLSL,
@@ -25,6 +24,7 @@ import {
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createRng } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
@@ -209,11 +209,11 @@ export const caustics = defineEffect(causticsMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       // Caustic tile: R8 is colour-renderable and filterable in core WebGL2.
-      const tileProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, tileFragment(CAUSTIC_RATES.length)),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const tileProgram = scopedProgram(
+        gl,
+        scope,
+        FULLSCREEN_VERTEX,
+        tileFragment(CAUSTIC_RATES.length),
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       let tile: RenderTarget | null = null;
@@ -224,11 +224,11 @@ export const caustics = defineEffect(causticsMeta, {
       // index = scene * 2 + chromatic, so deep water without rays skips the ray fetch.
       const mains = [0, 1, 2].flatMap((scene) =>
         [false, true].map((chroma) => {
-          const program = scope.add(
-            createProgram(gl, FULLSCREEN_VERTEX, mainFragment(scene > 0, chroma, scene > 1)),
-            (p) => {
-              gl.deleteProgram(p);
-            },
+          const program = scopedProgram(
+            gl,
+            scope,
+            FULLSCREEN_VERTEX,
+            mainFragment(scene > 0, chroma, scene > 1),
           );
           const u = createUniforms(gl, program, MAIN_UNIFORMS);
           gl.useProgram(program);
@@ -243,9 +243,7 @@ export const caustics = defineEffect(causticsMeta, {
       const rng = createRng(0xc0a5);
       const rays = createRays(rng, RAY_COUNT);
 
-      const bubbleProgram = scope.add(createProgram(gl, BUBBLE_VERTEX, BUBBLE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const bubbleProgram = scopedProgram(gl, scope, BUBBLE_VERTEX, BUBBLE_FRAGMENT);
       const bubbleU = createUniforms(gl, bubbleProgram, ["uResolution", "uColor"]);
       // Per bubble: centre x, centre y, radius (device px, y down), then alpha.
       const batch = scope.own(createSpriteBatch(gl, MAX_BUBBLES, [3, 1], [polygonStrip(8)]));

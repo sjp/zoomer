@@ -2,11 +2,11 @@ import type { Rgb } from "../color";
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { bokehMeta, MAX_LIGHTS } from "./bokeh.meta";
@@ -119,9 +119,7 @@ export const bokeh = defineEffect(bokehMeta, {
       // One program per aperture shape; uniforms are set only when they change
       // (uniforms are per-program state, and these programs are ours alone).
       const variants = [false, true].map((hexagon) => {
-        const program = scope.add(createProgram(gl, VERTEX, fragment(hexagon)), (p) => {
-          gl.deleteProgram(p);
-        });
+        const program = scopedProgram(gl, scope, VERTEX, fragment(hexagon));
         const u = createUniforms(gl, program, [
           "uResolution",
           "uColors",

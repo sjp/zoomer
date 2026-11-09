@@ -25,11 +25,11 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { clamp, smoothstep, wrap } from "../math";
@@ -225,9 +225,7 @@ vec4 composite(vec2 uv) {
 export const cloudsea = defineEffect(cloudseaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const scene = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const peakTable = scope.own(createColumnTable(gl, PEAK_COLUMNS, 4));

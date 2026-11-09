@@ -3,11 +3,11 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createChangeKey } from "../change-key";
 import { createLowResTarget, qualityDivisor } from "../lowres";
@@ -288,12 +288,8 @@ const BIRD_STRIP = [-1, -0.5, 0, 0.5, 1].flatMap((x) => [x, 1, x, -1]);
 export const ridges = defineEffect(ridgesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const birdProgram = scope.add(createProgram(gl, BIRD_VERTEX, BIRD_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const scene = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
+      const birdProgram = scopedProgram(gl, scope, BIRD_VERTEX, BIRD_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, COLUMNS, 1, { rows: MAX_LAYERS, wrap: gl.REPEAT }),

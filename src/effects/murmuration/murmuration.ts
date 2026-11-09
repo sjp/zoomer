@@ -2,7 +2,6 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -10,6 +9,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   ATTRACT_MAX,
@@ -290,9 +290,7 @@ export const murmuration = defineEffect(murmurationMeta, {
       const fieldFormat = float ? gl.RGBA16F : gl.RGBA8;
 
       const program = (vertex: string, fragment: string, varyings?: string[]) =>
-        scope.add(createProgram(gl, vertex, fragment, varyings), (p) => {
-          gl.deleteProgram(p);
-        });
+        scopedProgram(gl, scope, vertex, fragment, varyings);
       const splatProgram = program(SPLAT_VERTEX, SPLAT_FRAGMENT);
       const blurProgram = program(FULLSCREEN_VERTEX, BLUR_FRAGMENT);
       const updateProgram = program(UPDATE_VERTEX, NULL_FRAGMENT, ["vBird"]);

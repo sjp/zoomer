@@ -3,7 +3,6 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
@@ -11,6 +10,7 @@ import {
   resetUnpackState,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { synthwaveMeta } from "./synthwave.meta";
 import { defineEffect } from "../types";
@@ -543,9 +543,7 @@ export function mountainTop(hy: number, width: number, height: number, scale: nu
 export const synthwave = defineEffect(synthwaveMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ridge = scope.own(
         createColumnTable(gl, RIDGE_POINTS, 1, { rows: 2, data: getRidgeData() }),

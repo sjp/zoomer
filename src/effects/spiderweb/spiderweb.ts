@@ -1,12 +1,12 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { createSpriteBatch, polygonStrip } from "../sprites";
@@ -144,10 +144,7 @@ export const spiderweb = defineEffect(spiderwebMeta, {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl));
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const backdropProgram = program(FULLSCREEN_VERTEX, BACKDROP_FRAGMENT);
       const bu = createUniforms(gl, backdropProgram, [
         "uRefSize",

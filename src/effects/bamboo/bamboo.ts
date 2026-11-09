@@ -24,12 +24,12 @@ import { bambooMeta } from "./bamboo.meta";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { createSpriteBatch, QUAD } from "../sprites";
@@ -320,15 +320,11 @@ export const bamboo = defineEffect(bambooMeta, {
   create(gl) {
     return withScope((scope) => {
       const haze = scope.own(createLowResTarget(gl));
-      const hazeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, HAZE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const hazeProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, HAZE_FRAGMENT);
       const uh = createUniforms(gl, hazeProgram, ["uResolution", "uShafts", ...HAZE_UNIFORMS]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const stemProgram = scopedProgram(gl, scope, STEM_VERTEX, STEM_FRAGMENT);
       const us = createUniforms(gl, stemProgram, [
         "uResolution",
         "uScale",
@@ -339,9 +335,7 @@ export const bamboo = defineEffect(bambooMeta, {
         "uRing",
         ...HAZE_UNIFORMS,
       ]);
-      const leafProgram = scope.add(createProgram(gl, LEAF_VERTEX, LEAF_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const leafProgram = scopedProgram(gl, scope, LEAF_VERTEX, LEAF_FRAGMENT);
       const ul = createUniforms(gl, leafProgram, [
         "uResolution",
         "uScale",

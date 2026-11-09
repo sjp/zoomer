@@ -3,12 +3,12 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildHearthProfile,
@@ -195,9 +195,7 @@ export const fireplace = defineEffect(fireplaceMeta, {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
 
       // The flame shader ignores vUv; an unused vertex output is fine in GLSL ES 3.00.
-      const flameProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLAME_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const flameProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FLAME_FRAGMENT);
       const fl = createUniforms(gl, flameProgram, [
         "uNoise",
         "uRamp",
@@ -228,9 +226,7 @@ export const fireplace = defineEffect(fireplaceMeta, {
       gl.useProgram(target.program);
       co.i1("uProfile", 1);
 
-      const emberProgram = scope.add(createProgram(gl, EMBER_VERTEX, EMBER_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const emberProgram = scopedProgram(gl, scope, EMBER_VERTEX, EMBER_FRAGMENT);
       const em = createUniforms(gl, emberProgram, ["uInvResolution", "uColor"]);
       const batch = scope.own(createSpriteBatch(gl, MAX_EMBERS, [4]));
 

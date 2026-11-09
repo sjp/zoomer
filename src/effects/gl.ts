@@ -469,9 +469,7 @@ export function createGradientBackground(gl: WebGL2RenderingContext): GradientBa
 }
 
 function buildGradientBackground(gl: WebGL2RenderingContext, scope: Scope): GradientBackground {
-  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT), (p) => {
-    gl.deleteProgram(p);
-  });
+  const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, GRADIENT_FRAGMENT);
   const triangle = scope.own(createFullscreenTriangle(gl));
   const u = createUniforms(gl, program, ["uTop", "uBottom"]);
   return {

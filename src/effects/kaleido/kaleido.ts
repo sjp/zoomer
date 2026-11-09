@@ -1,7 +1,6 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -9,6 +8,7 @@ import {
   glslFloat,
   withScope,
   type RenderTarget,
+  scopedProgram,
 } from "../gl";
 import {
   CHIPS_PER_RADIAN,
@@ -192,16 +192,9 @@ export const kaleido = defineEffect(kaleidoMeta, {
       if (batch.stride !== INSTANCE_STRIDE) {
         throw new Error("kaleido: instance layout mismatch");
       }
-      const chipProgram = scope.add(
-        createProgram(gl, chipVertex(batch.spinLocation), CHIP_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const chipProgram = scopedProgram(gl, scope, chipVertex(batch.spinLocation), CHIP_FRAGMENT);
       const cu = createUniforms(gl, chipProgram, ["uMap", "uPad", "uRimWidth"]);
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
       const u = createUniforms(gl, program, [
         "uSource",
         "uCentre",

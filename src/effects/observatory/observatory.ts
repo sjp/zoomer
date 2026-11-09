@@ -3,12 +3,12 @@ import { createMeteorPose, meteorAt } from "../desertcamp/desertcamp-sim";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat as F,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import {
@@ -458,10 +458,7 @@ export const observatory = defineEffect(observatoryMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const pole: [number, number] = [0, 0];
       // The pole sits at the frame's centre x for every width, so the band's
       // offset from it doesn't depend on the width either.

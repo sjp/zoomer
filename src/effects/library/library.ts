@@ -10,11 +10,11 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BEAM_CORE,
@@ -167,10 +167,7 @@ export const library = defineEffect(libraryMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const shelves = createBookshelfTexture(gl, scope);
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
 
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [

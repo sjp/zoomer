@@ -28,12 +28,12 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { unitRgbMemo } from "../color";
 import { defineEffect } from "../types";
@@ -276,9 +276,7 @@ export const ferro = defineEffect(ferroMeta, {
   create(gl) {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, POOL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, POOL_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uResolution",

@@ -4,12 +4,12 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   arcPosition,
@@ -318,10 +318,7 @@ void main() {
 export const horizon = defineEffect(horizonMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const starProgram = program(STAR_VERTEX, STAR_FRAGMENT);
       const moonProgram = program(MOON_VERTEX, MOON_FRAGMENT);

@@ -3,7 +3,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -13,6 +12,7 @@ import {
   updateDataTexture,
   withScope,
   scissorBox,
+  scopedProgram,
 } from "../gl";
 import { HALF_DUTY, SLAT_GAP_GLSL } from "../blinds/blinds-sim";
 import {
@@ -1093,10 +1093,7 @@ function writeRow(codes: Uint8Array, row: number, text: string): void {
 export const bedroom80s = defineEffect(bedroom80sMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const roomProgram = program(ROOM_FRAGMENT);
       const compProgram = program(COMPOSITE_FRAGMENT);
       const demoProgram = program(DEMO_FRAGMENT);

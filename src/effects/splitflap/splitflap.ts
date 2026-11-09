@@ -1,12 +1,12 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { clamp } from "../math";
 import {
@@ -210,12 +210,7 @@ export const splitflap = defineEffect(splitflapMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const housingProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, HOUSING_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const housingProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, HOUSING_FRAGMENT);
       const hu = createUniforms(gl, housingProgram, [
         "uPx",
         "uFrame",
@@ -225,9 +220,7 @@ export const splitflap = defineEffect(splitflapMeta, {
         "uWallBottom",
         "uHousingCol",
       ]);
-      const cellProgram = scope.add(createProgram(gl, CELL_VERTEX, CELL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const cellProgram = scopedProgram(gl, scope, CELL_VERTEX, CELL_FRAGMENT);
       const cu = createUniforms(gl, cellProgram, [
         "uResolution",
         "uOrigin",

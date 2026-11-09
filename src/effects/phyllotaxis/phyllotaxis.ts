@@ -1,10 +1,10 @@
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createHead,
@@ -221,22 +221,22 @@ export const phyllotaxis = defineEffect(phyllotaxisMeta, {
       const seedBatch = scope.own(
         createSpriteBatch(gl, MAX_SEEDS, [4, 4], undefined, { rotation: true }),
       );
-      const seedProgram = scope.add(
-        createProgram(gl, SEED_VERTEX(seedBatch.spinLocation), SEED_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const seedProgram = scopedProgram(
+        gl,
+        scope,
+        SEED_VERTEX(seedBatch.spinLocation),
+        SEED_FRAGMENT,
       );
       const seedU = createUniforms(gl, seedProgram, ["uResolution", "uAspect", "uStyle"]);
       // Per petal: x, y, half-length, alpha; r, g, b, kind; then the spin pair.
       const petalBatch = scope.own(
         createSpriteBatch(gl, MAX_PETAL_SPRITES, [4, 4], undefined, { rotation: true }),
       );
-      const petalProgram = scope.add(
-        createProgram(gl, PETAL_VERTEX(petalBatch.spinLocation), PETAL_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const petalProgram = scopedProgram(
+        gl,
+        scope,
+        PETAL_VERTEX(petalBatch.spinLocation),
+        PETAL_FRAGMENT,
       );
       const petalU = createUniforms(gl, petalProgram, ["uResolution"]);
       if (seedBatch.stride !== SEED_STRIDE || petalBatch.stride !== PETAL_STRIDE) {

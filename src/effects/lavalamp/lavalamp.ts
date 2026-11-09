@@ -1,7 +1,6 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -10,6 +9,7 @@ import {
   type RenderTarget,
   type Uniforms,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BASE_RADIUS,
@@ -207,12 +207,8 @@ const wrapPhase = (a: number) => ((a % TAU) + TAU) % TAU;
 export const lavalamp = defineEffect(lavalampMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const maskProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MASK_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
+      const maskProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, MASK_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const fieldNames = [
         "uResolution",

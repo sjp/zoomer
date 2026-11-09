@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { approach } from "../math";
@@ -648,10 +648,7 @@ void main() {
 export const cockpit = defineEffect(cockpitMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const cockpitProgram = program(FULLSCREEN_VERTEX, COCKPIT_FRAGMENT);
       const pu = createUniforms(gl, cockpitProgram, [

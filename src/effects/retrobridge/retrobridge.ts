@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { clamp } from "../math";
 import { HASH32_GLSL, hash32 } from "../noise";
@@ -1000,10 +1000,7 @@ void main() {
 export const retrobridge = defineEffect(retrobridgeMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const roomProgram = program(ROOM_FRAGMENT);
       const compProgram = program(COMPOSITE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));

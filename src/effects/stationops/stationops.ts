@@ -9,7 +9,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -18,6 +17,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { approach, clamp, fract } from "../math";
@@ -793,10 +793,7 @@ const AMBIENT_RED = [0.62, 0.3, 0.27];
 export const stationops = defineEffect(stationopsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const roomProgram = program(ROOM_FRAGMENT);
       const outsideProgram = program(OUTSIDE_FRAGMENT);
       const compProgram = program(COMPOSITE_FRAGMENT);

@@ -12,7 +12,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -20,6 +19,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { clamp, wrap } from "../math";
@@ -632,10 +632,7 @@ void main() {
 export const balloonride = defineEffect(balloonrideMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const fgProgram = program(FULLSCREEN_VERTEX, FOREGROUND_FRAGMENT);
       const fu = createUniforms(gl, fgProgram, [

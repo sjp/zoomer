@@ -2,12 +2,12 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildBladeProfiles,
@@ -291,9 +291,7 @@ export const kelp = defineEffect(kelpMeta, {
   create(gl) {
     return withScope((scope) => {
       const water = scope.own(createLowResTarget(gl));
-      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const waterProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WATER_FRAGMENT);
       const uw = createUniforms(gl, waterProgram, [
         "uResolution",
         "uShafts",
@@ -306,9 +304,7 @@ export const kelp = defineEffect(kelpMeta, {
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 
-      const frondProgram = scope.add(createProgram(gl, FROND_VERTEX, FROND_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const frondProgram = scopedProgram(gl, scope, FROND_VERTEX, FROND_FRAGMENT);
       const uf = createUniforms(gl, frondProgram, [
         "uResolution",
         "uScale",
@@ -322,9 +318,7 @@ export const kelp = defineEffect(kelpMeta, {
         "uDeep",
         "uProfile",
       ]);
-      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const fishProgram = scopedProgram(gl, scope, FISH_VERTEX, FISH_FRAGMENT);
       const ufi = createUniforms(gl, fishProgram, [
         "uResolution",
         "uFish",
@@ -333,9 +327,7 @@ export const kelp = defineEffect(kelpMeta, {
         "uMid",
         "uDeep",
       ]);
-      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const snowProgram = scopedProgram(gl, scope, SNOW_VERTEX, SNOW_FRAGMENT);
       const us = createUniforms(gl, snowProgram, ["uResolution", "uScale", "uSnow"]);
       gl.useProgram(frondProgram);
       uf.i1("uProfile", 0);

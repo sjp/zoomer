@@ -1,13 +1,13 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   resetUnpackState,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   breath,
@@ -191,9 +191,7 @@ export const neon = defineEffect(neonMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, NEON_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, NEON_FRAGMENT);
       const u = createUniforms(gl, program, [
         "uRes",
         "uScale",

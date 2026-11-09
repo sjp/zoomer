@@ -4,11 +4,11 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   APPROACH_DIST,
@@ -295,9 +295,7 @@ vec4 composite(vec2 uv) {
 export const biolum = defineEffect(biolumMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const scene = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const noiseTexture = scope.add(
         createDataTexture(gl, {

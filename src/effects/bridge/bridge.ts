@@ -56,7 +56,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -66,6 +65,7 @@ import {
   resetUnpackState,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { approach } from "../math";
 import { SHIP_DISTANCE, SHIP_FOCAL, SHIP_GLSL, SHIP_RADIUS } from "../ship-shapes";
@@ -855,10 +855,7 @@ function drawLive(
 export const bridge = defineEffect(bridgeMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, ["uResolution", "uGlassCount"]);

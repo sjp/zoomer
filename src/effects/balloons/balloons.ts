@@ -19,12 +19,12 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { BACK_BASE, buildHills, HILL_COLUMNS } from "../horizon/horizon-sim";
 import { MAX_LAYERS as HILL_ROWS } from "../horizon/horizon.meta";
@@ -156,10 +156,7 @@ void main() {
 export const balloons = defineEffect(balloonsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const hillProgram = program(HILL_VERTEX, HILL_FRAGMENT);
       const mistProgram = program(FULLSCREEN_VERTEX, MIST_FRAGMENT);

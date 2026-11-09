@@ -4,11 +4,11 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import {
@@ -201,9 +201,7 @@ export const nebula = defineEffect(nebulaMeta, {
     return withScope((scope) => {
       // Half floats keep the dark gradients smooth until the dithered blit.
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f" }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GAS_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, GAS_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uNoise",
@@ -222,9 +220,7 @@ export const nebula = defineEffect(nebulaMeta, {
       gl.useProgram(program);
       u.i1("uNoise", 0);
 
-      const starProgram = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const starProgram = scopedProgram(gl, scope, STAR_VERTEX, STAR_FRAGMENT);
       const su = createUniforms(gl, starProgram, [
         "uResolution",
         "uScale",

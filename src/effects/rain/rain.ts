@@ -1,11 +1,11 @@
 import { unitRgbMemo } from "../color";
 import {
   beginFrame,
-  createProgram,
   createUniforms,
   resetUnpackState,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSpriteBatch, type SpriteBatch } from "../sprites";
 import { rainMeta } from "./rain.meta";
@@ -114,9 +114,7 @@ export const rain = defineEffect(rainMeta, {
     return withScope((scope) => {
       const backgroundRgb = unitRgbMemo();
       const colorRgb = unitRgbMemo();
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uResolution",
         "uCell",

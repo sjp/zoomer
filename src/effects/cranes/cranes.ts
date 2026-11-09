@@ -22,11 +22,11 @@ import { cranesMeta, MOBILE_CRANES } from "./cranes.meta";
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import { createStreakRenderer, STREAK_FLOATS } from "../streaks";
@@ -200,9 +200,7 @@ void main() {
 export const cranes = defineEffect(cranesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, CRANE_VERTEX, CRANE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, CRANE_VERTEX, CRANE_FRAGMENT);
       const u = createUniforms(gl, program, [
         "uResolution",
         "uZScale",

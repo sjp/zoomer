@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { HASH32_GLSL } from "../noise";
 import {
@@ -232,18 +232,10 @@ export const physarum = defineEffect(physarumMeta, {
       /** Trail units per stored unit. */
       const range = r8 ? TRAIL_MAX : 1;
 
-      const program = (fragment: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fragment), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fragment: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fragment);
       const diffuseProgram = program(DIFFUSE_FRAGMENT);
       const compositeProgram = program(COMPOSITE_FRAGMENT);
-      const agentProgram = scope.add(
-        createProgram(gl, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const agentProgram = scopedProgram(gl, scope, AGENT_VERTEX, DEPOSIT_FRAGMENT, ["vAgent"]);
       const diffuse = createUniforms(gl, diffuseProgram, [
         "uTrail",
         "uHalf",

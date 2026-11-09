@@ -14,12 +14,12 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createKiteState,
@@ -206,10 +206,7 @@ export const kite = defineEffect(kiteMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const cloudProgram = program(FULLSCREEN_VERTEX, CLOUD_FRAGMENT);
       const triProgram = program(TRI_VERTEX, TRI_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));

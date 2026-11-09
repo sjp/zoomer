@@ -9,12 +9,12 @@ import type { Rgb } from "../color";
 import {
   createColumnTable,
   createDataTexture,
-  createProgram,
   createUniforms,
   type FullscreenTriangle,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import type { SkyState } from "../horizon/horizon-sim";
 import { wrap } from "../math";
@@ -248,9 +248,7 @@ export function createSeaWater(
   landSeed: number,
 ): SeaWater {
   return withScope((scope) => {
-    const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
-      gl.deleteProgram(p);
-    });
+    const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WATER_FRAGMENT);
     const u = createUniforms(gl, program, [
       "uRipples",
       "uLowToFull",

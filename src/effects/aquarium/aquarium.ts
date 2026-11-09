@@ -39,7 +39,6 @@ import {
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
@@ -47,6 +46,7 @@ import {
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { wrap } from "../math";
@@ -369,20 +369,18 @@ export const aquarium = defineEffect(aquariumMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
 
       // Caustic tile (R8, REPEAT), re-rendered at most every TILE_INTERVAL.
-      const tileProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, tileFragment(CAUSTIC_RATES.length)),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const tileProgram = scopedProgram(
+        gl,
+        scope,
+        FULLSCREEN_VERTEX,
+        tileFragment(CAUSTIC_RATES.length),
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       let tile: RenderTarget | null = null;
       scope.defer(() => tile?.dispose());
 
       const back = scope.own(createLowResTarget(gl));
-      const backProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACK_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const backProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACK_FRAGMENT);
       const ub = createUniforms(gl, backProgram, [
         "uResolution",
         "uScale",
@@ -411,9 +409,7 @@ export const aquarium = defineEffect(aquariumMeta, {
       gl.useProgram(backProgram);
       ub.i1("uTile", 0);
 
-      const plantProgram = scope.add(createProgram(gl, PLANT_VERTEX, PLANT_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const plantProgram = scopedProgram(gl, scope, PLANT_VERTEX, PLANT_FRAGMENT);
       const up = createUniforms(gl, plantProgram, [
         "uResolution",
         "uScale",
@@ -424,9 +420,7 @@ export const aquarium = defineEffect(aquariumMeta, {
         "uTop",
         "uDeep",
       ]);
-      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const fishProgram = scopedProgram(gl, scope, FISH_VERTEX, FISH_FRAGMENT);
       const uf = createUniforms(gl, fishProgram, ["uResolution", "uTop", "uDeep", "uFishLight"]);
 
       const plants = scope.own(createSpriteBatch(gl, MAX_PLANTS, [4, 4], [PLANT_STRIP]));
@@ -437,11 +431,11 @@ export const aquarium = defineEffect(aquariumMeta, {
           rotation: true,
         }),
       );
-      const bubbleProgram = scope.add(
-        createProgram(gl, bubbleVertex(bubbleBatch.spinLocation), BUBBLE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const bubbleProgram = scopedProgram(
+        gl,
+        scope,
+        bubbleVertex(bubbleBatch.spinLocation),
+        BUBBLE_FRAGMENT,
       );
       const uBub = createUniforms(gl, bubbleProgram, ["uResolution", "uLight", "uShade"]);
       gl.useProgram(null);

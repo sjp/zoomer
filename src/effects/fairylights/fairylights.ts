@@ -2,13 +2,13 @@ import { type Rgb, unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createFairyLights,
@@ -125,9 +125,7 @@ void main() {
 export const fairylights = defineEffect(fairylightsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const wallProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WALL_FRAGMENT);
       const wallU = createUniforms(gl, wallProgram, [
         "uTop",
         "uBottom",
@@ -138,9 +136,7 @@ export const fairylights = defineEffect(fairylightsMeta, {
         "uGlowCount",
       ]);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const bulbProgram = scope.add(createProgram(gl, BULB_VERTEX, BULB_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const bulbProgram = scopedProgram(gl, scope, BULB_VERTEX, BULB_FRAGMENT);
       const bulbU = createUniforms(gl, bulbProgram, ["uResolution"]);
       const bulbs = scope.own(
         createSpriteBatch(gl, MAX_BULBS, [4, 4], [polygonStrip(8, Math.PI / 8)]),

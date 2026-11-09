@@ -21,11 +21,11 @@ import { type BlossomId, blossomMeta, type CornerId, type SkyId } from "./blosso
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createPieces, type PieceFrame, SHAPES } from "../leaves/leaves-sim";
 import { PIECE_FRAGMENT, pieceVertex } from "../pieces";
@@ -195,44 +195,34 @@ const blossomOf = (v: string): BlossomId => (v === "white" || v === "deep" ? v :
 export const blossom = defineEffect(blossomMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => {
-        gl.deleteProgram(p);
-      };
       const background = scope.own(createGradientBackground(gl));
 
       const backdropBatch = scope.own(
         createSpriteBatch(gl, MAX_BACKDROP, [4, 3], [polygonStrip(8, Math.PI / 8)]),
       );
-      const backdropProgram = scope.add(
-        createProgram(gl, BACKDROP_VERTEX, BACKDROP_FRAGMENT),
-        deleteProgram,
-      );
+      const backdropProgram = scopedProgram(gl, scope, BACKDROP_VERTEX, BACKDROP_FRAGMENT);
       const backdropU = createUniforms(gl, backdropProgram, ["uResolution"]);
 
       const branchBatch = scope.own(
         createSpriteBatch(gl, MAX_SEGMENTS_PER_BRANCH * 2, [4, 4], [QUAD]),
       );
-      const branchProgram = scope.add(
-        createProgram(gl, BRANCH_VERTEX, BRANCH_FRAGMENT),
-        deleteProgram,
-      );
+      const branchProgram = scopedProgram(gl, scope, BRANCH_VERTEX, BRANCH_FRAGMENT);
       const branchU = createUniforms(gl, branchProgram, ["uResolution", "uBark", "uScale"]);
 
       const bloomBatch = scope.own(
         createSpriteBatch(gl, MAX_BLOSSOMS, [4, 4], [polygonStrip(8, Math.PI / 8)]),
       );
-      const bloomProgram = scope.add(
-        createProgram(gl, BLOSSOM_VERTEX, BLOSSOM_FRAGMENT),
-        deleteProgram,
-      );
+      const bloomProgram = scopedProgram(gl, scope, BLOSSOM_VERTEX, BLOSSOM_FRAGMENT);
       const bloomU = createUniforms(gl, bloomProgram, ["uResolution", "uCentre"]);
 
       const petalBatch = scope.own(
         createSpriteBatch(gl, MAX_PETALS, [4, 4], SHAPES, { rotation: true }),
       );
-      const petalProgram = scope.add(
-        createProgram(gl, pieceVertex(petalBatch.spinLocation), PIECE_FRAGMENT),
-        deleteProgram,
+      const petalProgram = scopedProgram(
+        gl,
+        scope,
+        pieceVertex(petalBatch.spinLocation),
+        PIECE_FRAGMENT,
       );
       const petalU = createUniforms(gl, petalProgram, ["uResolution", "uVein"]);
 

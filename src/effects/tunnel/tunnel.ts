@@ -3,13 +3,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { smoothstep, wrap } from "../math";
 import { createBackgroundBuild, finishBuild, type BuildSteps } from "../rebuild";
@@ -250,9 +250,7 @@ const REVEAL_SECONDS = 0.6;
 export const tunnel = defineEffect(tunnelMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const texture = scope.add(
         createDataTexture(gl, {

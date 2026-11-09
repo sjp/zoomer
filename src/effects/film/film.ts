@@ -11,13 +11,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { clamp, wrap } from "../math";
@@ -148,9 +148,7 @@ vec4 composite(vec2 uv) {
 export const film = defineEffect(filmMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, THICKNESS_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, THICKNESS_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { format: "rgba16f", composite: COMPOSITE }));
       const u = createUniforms(gl, program, [

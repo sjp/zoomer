@@ -4,7 +4,6 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
@@ -12,6 +11,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSkyState } from "../horizon/horizon-sim";
 import { createLowResTarget } from "../lowres";
@@ -519,9 +519,7 @@ export const beachday = defineEffect(beachdayMeta, {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE_GLSL }));
       const triangle = scope.own(createFullscreenTriangle(gl));
       const water = scope.own(createSeaWater(gl, triangle, 0));
-      const cacheProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, CACHE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const cacheProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, CACHE_FRAGMENT);
       const cu = createUniforms(gl, cacheProgram, [
         "uLand",
         "uFrame",

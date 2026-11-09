@@ -4,7 +4,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -12,6 +11,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BASE_RADIUS,
@@ -1064,10 +1064,7 @@ void main() {
 export const chemlab = defineEffect(chemlabMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const roomProgram = program(FULLSCREEN_VERTEX, ROOM_FRAGMENT);
       const lightProgram = program(FULLSCREEN_VERTEX, LIGHT_FRAGMENT);
       const compProgram = program(FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);

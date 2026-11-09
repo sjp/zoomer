@@ -32,7 +32,6 @@
 
 import {
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
@@ -40,6 +39,7 @@ import {
   type Scope,
   typedParameters,
   withScope,
+  scopedProgram,
 } from "./gl";
 
 export type LowResQuality = "high" | "balanced" | "low";
@@ -190,15 +190,11 @@ function buildLowResTarget(
   opts: LowResOptions,
   scope: Scope,
 ): LowResTarget {
-  const program = scope.add(
-    createProgram(
-      gl,
-      FULLSCREEN_VERTEX,
-      blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
-    ),
-    (p) => {
-      gl.deleteProgram(p);
-    },
+  const program = scopedProgram(
+    gl,
+    scope,
+    FULLSCREEN_VERTEX,
+    blitFragment(opts.composite ?? DEFAULT_COMPOSITE, opts.dither ?? true),
   );
   const uTex = gl.getUniformLocation(program, "uLowRes");
   // Only custom composites read the low-res size; the default one leaves it unused.

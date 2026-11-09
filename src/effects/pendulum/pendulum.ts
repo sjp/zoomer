@@ -2,12 +2,12 @@ import type { Rgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BALL_FLOATS,
@@ -155,21 +155,12 @@ void main() {
 export const pendulum = defineEffect(pendulumMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => {
-        gl.deleteProgram(p);
-      };
-      const backdropProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, BACKDROP_FRAGMENT),
-        deleteProgram,
-      );
+      const backdropProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACKDROP_FRAGMENT);
       const bgU = createUniforms(gl, backdropProgram, ["uTop", "uBottom", "uSpotColor", "uSpot"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const shadowProgram = scope.add(
-        createProgram(gl, SHADOW_VERTEX, SHADOW_FRAGMENT),
-        deleteProgram,
-      );
+      const shadowProgram = scopedProgram(gl, scope, SHADOW_VERTEX, SHADOW_FRAGMENT);
       const shU = createUniforms(gl, shadowProgram, ["uResolution"]);
-      const ballProgram = scope.add(createProgram(gl, BALL_VERTEX, BALL_FRAGMENT), deleteProgram);
+      const ballProgram = scopedProgram(gl, scope, BALL_VERTEX, BALL_FRAGMENT);
       const ballU = createUniforms(gl, ballProgram, ["uResolution", "uKey"]);
 
       const shadows = scope.own(createSpriteBatch(gl, MAX_PENDULUMS + 1, [4, 4], [QUAD]));

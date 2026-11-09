@@ -2,7 +2,6 @@ import { hexToUnitRgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -10,6 +9,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createMarble,
@@ -155,9 +155,7 @@ function paletteData(p: MarblePalette): PaletteData {
 export const marble = defineEffect(marbleMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uOpA",
         "uOpB",

@@ -20,13 +20,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { approach, wrap } from "../math";
 import { buildPeriodicNoiseTexture, createNoise, createRng } from "../noise";
@@ -145,9 +145,7 @@ void main() {
 export const blinds = defineEffect(blindsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uPlaster",
         "uPix",
@@ -176,9 +174,7 @@ export const blinds = defineEffect(blindsMeta, {
         },
       );
 
-      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const moteProgram = scopedProgram(gl, scope, MOTE_VERTEX, MOTE_FRAGMENT);
       const moteU = createUniforms(gl, moteProgram, ["uResolution"]);
       const motes = scope.own(
         createSpriteBatch(gl, MAX_MOTES, [3, 3], [polygonStrip(8, Math.PI / 8)]),

@@ -5,11 +5,11 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { clamp, wrap } from "../math";
@@ -433,12 +433,8 @@ function sideIndex(id: string): number {
 export const windfarm = defineEffect(windfarmMeta, {
   create(gl) {
     return withScope((scope) => {
-      const scene = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const turbineProgram = scope.add(createProgram(gl, TURBINE_VERTEX, TURBINE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const scene = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
+      const turbineProgram = scopedProgram(gl, scope, TURBINE_VERTEX, TURBINE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, COLUMNS, 1, { rows: HILL_LAYERS, wrap: gl.REPEAT }),

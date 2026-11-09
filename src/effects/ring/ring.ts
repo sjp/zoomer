@@ -2,7 +2,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { LAND_MASK_BIAS, LAND_MASK_GAIN, loadLandMask, uploadLandMask } from "../land-mask";
 import { HASH32_GLSL } from "../noise";
@@ -517,10 +517,7 @@ const FRAMES = { earth: bodyFrame(BODIES.earth), moon: bodyFrame(BODIES.moon) };
 export const ring = defineEffect(ringMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const roomProgram = program(ROOM_FRAGMENT);
       const compProgram = program(COMPOSITE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));

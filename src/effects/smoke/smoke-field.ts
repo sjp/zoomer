@@ -12,7 +12,6 @@
  */
 import {
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
@@ -21,6 +20,7 @@ import {
   type Scope,
   typedParameters,
   type Uniforms,
+  scopedProgram,
 } from "../gl";
 import { hash32, HASH32_GLSL } from "../noise";
 import { SIM_DT, SPLAT_CUTOFF, WAVE_COUNT, waveAmp, WAVES } from "./smoke-sim";
@@ -174,9 +174,7 @@ export function createSmokeField(
   }
   const format = quantise ? gl.R8 : gl.R16F;
 
-  const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, advectFragment(quantise)), (p) => {
-    gl.deleteProgram(p);
-  });
+  const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, advectFragment(quantise));
   // Only the 8-bit variant declares uSeed (for its dither).
   const uniforms = createUniforms<SmokeFieldUniform>(
     gl,

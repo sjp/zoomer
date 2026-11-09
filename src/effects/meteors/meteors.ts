@@ -3,7 +3,6 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BAND,
@@ -212,10 +212,7 @@ export const meteors = defineEffect(meteorsMeta, {
   create(gl) {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const skyProgram = program(SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, ["uNoise", "uScale", "uPole", "uMilky"]);
       const groundProgram = program(GROUND_FRAGMENT);

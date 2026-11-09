@@ -4,12 +4,12 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { fract } from "../math";
@@ -266,12 +266,7 @@ export const snell = defineEffect(snellMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const programs = [false, true].map((trees) => {
-        const program = scope.add(
-          createProgram(gl, FULLSCREEN_VERTEX, windowFragment(trees)),
-          (p) => {
-            gl.deleteProgram(p);
-          },
-        );
+        const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, windowFragment(trees));
         const u = createUniforms(gl, program, WINDOW_UNIFORMS);
         gl.useProgram(program);
         u.i1("uSlope", 0);
@@ -315,9 +310,7 @@ export const snell = defineEffect(snellMeta, {
       const rng = createRng(0x5e11);
       const shafts = createRays(rng, RAY_COUNT);
 
-      const moteProgram = scope.add(createProgram(gl, MOTE_VERTEX, MOTE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const moteProgram = scopedProgram(gl, scope, MOTE_VERTEX, MOTE_FRAGMENT);
       const moteU = createUniforms(gl, moteProgram, ["uResolution", "uColor"]);
       // Per mote: centre x, centre y, sprite half-size (device px, y down), then glow.
       const batch = scope.own(createSpriteBatch(gl, MOTE_COUNT, [3, 1], [polygonStrip(8)]));

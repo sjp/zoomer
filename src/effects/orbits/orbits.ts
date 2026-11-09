@@ -1,11 +1,11 @@
 import {
   DITHER_GLSL,
   beginFrame,
-  createProgram,
   createUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { approach, clamp } from "../math";
 import {
@@ -277,9 +277,7 @@ void main() {
 export const orbits = defineEffect(orbitsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const trailProgram = scope.add(createProgram(gl, TRAIL_VERTEX, TRAIL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const trailProgram = scopedProgram(gl, scope, TRAIL_VERTEX, TRAIL_FRAGMENT);
       const tu = createUniforms(gl, trailProgram, [
         "uElem",
         "uMotion",
@@ -289,13 +287,9 @@ export const orbits = defineEffect(orbitsMeta, {
         "uStrip",
         "uFirst",
       ]);
-      const bodyProgram = scope.add(createProgram(gl, BODY_VERTEX, BODY_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const bodyProgram = scopedProgram(gl, scope, BODY_VERTEX, BODY_FRAGMENT);
       const bu = createUniforms(gl, bodyProgram, ["uResolution", "uCosTilt"]);
-      const glowProgram = scope.add(createProgram(gl, GLOW_VERTEX, GLOW_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const glowProgram = scopedProgram(gl, scope, GLOW_VERTEX, GLOW_FRAGMENT);
       const gu = createUniforms(gl, glowProgram, ["uResolution"]);
 
       const stripVao = scope.add(gl.createVertexArray(), (v) => {

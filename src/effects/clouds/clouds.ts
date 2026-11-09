@@ -16,11 +16,11 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { cloudsMeta } from "./clouds.meta";
@@ -160,9 +160,7 @@ export const clouds = defineEffect(cloudsMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, CLOUD_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, CLOUD_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const u = createUniforms(gl, program, [
         "uNoise",

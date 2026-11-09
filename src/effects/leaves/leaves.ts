@@ -2,11 +2,11 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createPieces,
@@ -68,20 +68,18 @@ export const leaves = defineEffect(leavesMeta, {
       const pieceBatch = scope.own(
         createSpriteBatch(gl, MAX_PIECES, [4, 4], SHAPES, { rotation: true }),
       );
-      const pieceProgram = scope.add(
-        createProgram(gl, pieceVertex(pieceBatch.spinLocation), PIECE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const pieceProgram = scopedProgram(
+        gl,
+        scope,
+        pieceVertex(pieceBatch.spinLocation),
+        PIECE_FRAGMENT,
       );
       const pieceU = createUniforms(gl, pieceProgram, ["uResolution", "uVein"]);
       // Per blob: x, y, radius, opacity; r, g, b.
       const blobBatch = scope.own(
         createSpriteBatch(gl, MAX_BLOBS, [4, 3], [polygonStrip(8, Math.PI / 8)]),
       );
-      const blobProgram = scope.add(createProgram(gl, BLOB_VERTEX, BLOB_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const blobProgram = scopedProgram(gl, scope, BLOB_VERTEX, BLOB_FRAGMENT);
       const blobU = createUniforms(gl, blobProgram, ["uResolution"]);
       const background = scope.own(createGradientBackground(gl));
       const bgTop = unitRgbMemo();

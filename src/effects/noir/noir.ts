@@ -6,7 +6,6 @@ import type { Rgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -15,6 +14,7 @@ import {
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { lowResSize } from "../lowres";
 import { approach } from "../math";
@@ -503,10 +503,7 @@ void main() {
 export const noir = defineEffect(noirMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const skyline = scope.own(createSkyline(gl));
 

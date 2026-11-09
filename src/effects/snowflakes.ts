@@ -5,13 +5,13 @@
  */
 import type { Rgb } from "./color";
 import {
-  createProgram,
   createUniforms,
   glslFloat,
   type Scope,
   TO_CLIP_GLSL,
   typedParameters,
   withScope,
+  scopedProgram,
 } from "./gl";
 import { PAD_MARGIN } from "./snow/snow-sim";
 import { createSpriteBatch } from "./sprites";
@@ -120,9 +120,7 @@ function buildFlakeRenderer(
   fadeMask: boolean,
   scope: Scope,
 ): FlakeRenderer {
-  const program = scope.add(createProgram(gl, flakeVertex(fadeMask), FLAKE_FRAGMENT), (p) => {
-    gl.deleteProgram(p);
-  });
+  const program = scopedProgram(gl, scope, flakeVertex(fadeMask), FLAKE_FRAGMENT);
   const u = createUniforms(gl, program, ["uResolution", "uColor"]);
   if (fadeMask) {
     const prevProgram = typedParameters(gl).getParameter(gl.CURRENT_PROGRAM);

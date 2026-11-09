@@ -1,12 +1,12 @@
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createNoise, createRng } from "../noise";
 import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
@@ -235,13 +235,9 @@ void main() {
 export const fireflies = defineEffect(firefliesMeta, {
   create(gl) {
     return withScope((scope) => {
-      const speckProgram = scope.add(createProgram(gl, SPECK_VERTEX, SPECK_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const speckProgram = scopedProgram(gl, scope, SPECK_VERTEX, SPECK_FRAGMENT);
       const speckU = createUniforms(gl, speckProgram, ["uResolution"]);
-      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const beamProgram = scopedProgram(gl, scope, BEAM_VERTEX, BEAM_FRAGMENT);
       const beamU = createUniforms(gl, beamProgram, ["uResolution", "uColor"]);
       // Per speck: x, y, extent radius; premultiplied colour.
       const specks = scope.own(

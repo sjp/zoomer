@@ -1,7 +1,6 @@
 import { unitRgbMemo } from "../color";
 import {
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   createDataTexture,
@@ -11,6 +10,7 @@ import {
   glslFloat,
   type RenderTarget,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   advancePulse,
@@ -233,9 +233,7 @@ void main() {
 export const lava = defineEffect(lavaMeta, {
   create(gl) {
     return withScope((scope) => {
-      const skyProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SKY_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const skyProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, [
         "uNoise",
         "uZenith",
@@ -246,9 +244,7 @@ export const lava = defineEffect(lavaMeta, {
       gl.useProgram(skyProgram);
       su.i1("uNoise", 0);
 
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GROUND_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, GROUND_FRAGMENT);
       const u = createUniforms(gl, program, [
         "uNoise",
         "uSky",

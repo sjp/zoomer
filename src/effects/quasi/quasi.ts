@@ -1,11 +1,11 @@
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   advanceDrift,
@@ -67,9 +67,7 @@ void main() {
 export const quasi = defineEffect(quasiMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, ["uWave", "uN", "uTone", "uPal"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
 

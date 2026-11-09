@@ -9,10 +9,10 @@ import {
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   CHAINS_PER_JELLY,
@@ -83,17 +83,15 @@ export const jellyfish = defineEffect(jellyfishMeta, {
       const bellBatch = scope.own(
         createSpriteBatch(gl, MAX_JELLIES, [4, 4], [BELL_SHAPE], { rotation: true }),
       );
-      const bellProgram = scope.add(
-        createProgram(gl, bellVertex(bellBatch.spinLocation), BELL_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const bellProgram = scopedProgram(
+        gl,
+        scope,
+        bellVertex(bellBatch.spinLocation),
+        BELL_FRAGMENT,
       );
       const bellU = createUniforms(gl, bellProgram, ["uResolution", "uGlow"]);
 
-      const stripProgram = scope.add(createProgram(gl, STRIP_VERTEX, STRIP_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const stripProgram = scopedProgram(gl, scope, STRIP_VERTEX, STRIP_FRAGMENT);
       const stripU = createUniforms(gl, stripProgram, ["uResolution"]);
       const strips = new Float32Array(MAX_JELLIES * CHAINS_PER_JELLY * STRIP_VERTS * STRIP_FLOATS);
       const stripVao = scope.add(gl.createVertexArray(), (v) => {
@@ -118,15 +116,11 @@ export const jellyfish = defineEffect(jellyfishMeta, {
       const snowBatch = scope.own(
         createSpriteBatch(gl, MAX_SNOW, [4], [polygonStrip(8, Math.PI / 8)]),
       );
-      const snowProgram = scope.add(createProgram(gl, SNOW_VERTEX, SNOW_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const snowProgram = scopedProgram(gl, scope, SNOW_VERTEX, SNOW_FRAGMENT);
       const snowU = createUniforms(gl, snowProgram, ["uResolution", "uColor"]);
 
       const shaftBatch = scope.own(createSpriteBatch(gl, SHAFTS, [3, 3]));
-      const shaftProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const shaftProgram = scopedProgram(gl, scope, BEAM_VERTEX, BEAM_FRAGMENT);
       const shaftU = createUniforms(gl, shaftProgram, ["uResolution", "uColor"]);
       const shafts: Beam[] = Array.from({ length: SHAFTS }, () => ({
         x0: 0,

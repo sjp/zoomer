@@ -2,13 +2,13 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
 import { vinesMeta, MAX_PLANTS } from "./vines.meta";
@@ -237,9 +237,7 @@ export const vines = defineEffect(vinesMeta, {
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      const stemProgram = scope.add(createProgram(gl, STEM_VERTEX, STEM_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const stemProgram = scopedProgram(gl, scope, STEM_VERTEX, STEM_FRAGMENT);
       const stemU = createUniforms(gl, stemProgram, [
         "uPlant",
         "uResolution",
@@ -255,11 +253,11 @@ export const vines = defineEffect(vinesMeta, {
       const sprites = scope.own(
         createSpriteBatch(gl, MAX_SPRITES, [4, 3], VINE_SHAPES, { rotation: true }),
       );
-      const spriteProgram = scope.add(
-        createProgram(gl, spriteVertex(sprites.spinLocation), SPRITE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const spriteProgram = scopedProgram(
+        gl,
+        scope,
+        spriteVertex(sprites.spinLocation),
+        SPRITE_FRAGMENT,
       );
       const spriteU = createUniforms(gl, spriteProgram, [
         "uResolution",
@@ -270,9 +268,7 @@ export const vines = defineEffect(vinesMeta, {
         "uSoft",
       ]);
 
-      const wallProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const wallProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WALL_FRAGMENT);
       const wallU = createUniforms(gl, wallProgram, ["uColor", "uWood", "uPlank"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const wallColor = unitRgbMemo();

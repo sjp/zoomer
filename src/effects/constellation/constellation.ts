@@ -1,10 +1,10 @@
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createRng } from "../noise";
 import { createSpriteBatch, polygonStrip } from "../sprites";
@@ -339,9 +339,7 @@ export const constellation = defineEffect(constellationMeta, {
   create(gl) {
     return withScope((scope) => {
       const background = scope.own(createGradientBackground(gl));
-      const pointProgram = scope.add(createProgram(gl, POINT_VERTEX, POINT_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const pointProgram = scopedProgram(gl, scope, POINT_VERTEX, POINT_FRAGMENT);
       const pointU = createUniforms(gl, pointProgram, ["uResolution", "uColor"]);
       const points = scope.own(
         createSpriteBatch(gl, MAX_POINTS, [4], [polygonStrip(8, Math.PI / 8)]),

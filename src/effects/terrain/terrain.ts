@@ -4,13 +4,13 @@ import {
   createColumnTable,
   createDataTexture,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   glslFloat,
   resetUnpackState,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildMesh,
@@ -176,9 +176,7 @@ export const terrain = defineEffect(terrainMeta, {
   create(gl) {
     return withScope((scope) => {
       const sky = scope.own(createGradientBackground(gl));
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uOctaves",
         "uRamp",

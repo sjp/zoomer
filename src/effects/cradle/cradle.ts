@@ -31,12 +31,12 @@ import { BALLS_RANGE, cradleMeta } from "./cradle.meta";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { approach } from "../math";
@@ -438,10 +438,7 @@ export const cradle = defineEffect(cradleMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
 
       const roomProgram = program(ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [

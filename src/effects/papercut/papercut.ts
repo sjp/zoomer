@@ -4,12 +4,12 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { clamp } from "../math";
 import { buildPeriodicNoiseTexture, HASH32_GLSL } from "../noise";
@@ -230,9 +230,7 @@ void main() {
 export const papercut = defineEffect(papercutMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const table = scope.own(
         createColumnTable(gl, TABLE_COLUMNS, TABLE_CHANNELS, {

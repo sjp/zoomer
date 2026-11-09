@@ -2,12 +2,12 @@ import { type Rgb, unitRgbMemo } from "../color";
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BODY_HALF_HEIGHT,
@@ -177,10 +177,7 @@ void main() {
 export const lanterns = defineEffect(lanternsMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       // Per lantern: x, y, half-width, opacity; r, g, b, halo; then the spin pair.
       const batch = scope.own(
         createSpriteBatch(gl, MAX_LANTERNS, [4, 4], [BODY_STRIP, polygonStrip(8, Math.PI / 8)], {

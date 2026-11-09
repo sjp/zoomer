@@ -5,13 +5,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { clamp } from "../math";
@@ -362,12 +362,8 @@ void main() {
 export const snowWindow = defineEffect(snowWindowMeta, {
   create(gl) {
     return withScope((scope) => {
-      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const glassProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, GLASS_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const sceneProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
+      const glassProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, GLASS_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const flakeRenderer = scope.own(createFlakeRenderer(gl, MAX_SNOWFALL));

@@ -2,7 +2,6 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -11,6 +10,7 @@ import {
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createMobile,
@@ -181,19 +181,10 @@ void main() {
 export const mobile = defineEffect(mobileMeta, {
   create(gl) {
     return withScope((scope) => {
-      const deleteProgram = (p: WebGLProgram) => {
-        gl.deleteProgram(p);
-      };
-      const wallProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, WALL_FRAGMENT),
-        deleteProgram,
-      );
+      const wallProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WALL_FRAGMENT);
       const wu = createUniforms(gl, wallProgram, ["uWall", "uShadowTint", "uMaskScale", "uMask"]);
       const triangle = scope.own(createFullscreenTriangle(gl));
-      const shapeProgram = scope.add(
-        createProgram(gl, SHAPE_VERTEX, SHAPE_FRAGMENT),
-        deleteProgram,
-      );
+      const shapeProgram = scopedProgram(gl, scope, SHAPE_VERTEX, SHAPE_FRAGMENT);
       const su = createUniforms(gl, shapeProgram, [
         "uResolution",
         "uPxScale",

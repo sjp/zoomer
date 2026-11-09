@@ -2,12 +2,12 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { createRng } from "../noise";
@@ -128,12 +128,7 @@ export const ripples = defineEffect(ripplesMeta, {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const variants = [false, true].map((branches) => {
-        const program = scope.add(
-          createProgram(gl, FULLSCREEN_VERTEX, waterFragment(branches)),
-          (p) => {
-            gl.deleteProgram(p);
-          },
-        );
+        const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, waterFragment(branches));
         const u = createUniforms(gl, program, UNIFORMS);
         gl.useProgram(program);
         u.i1("uBranches", 0);

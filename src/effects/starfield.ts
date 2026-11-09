@@ -6,7 +6,7 @@
  * are in `starfield-sim.ts`.
  */
 import { hexToUnitRgb } from "./color";
-import { createDataTexture, createProgram, createUniforms, glslFloat, withScope } from "./gl";
+import { createDataTexture, createUniforms, glslFloat, withScope, scopedProgram } from "./gl";
 import { clamp } from "./math";
 import { buildPeriodicNoiseTexture } from "./noise";
 import { createSpriteBatch, QUAD } from "./sprites";
@@ -216,9 +216,7 @@ export interface StarSprites {
  */
 export function createStarSprites(gl: WebGL2RenderingContext, maxStars: number): StarSprites {
   return withScope((scope) => {
-    const program = scope.add(createProgram(gl, STAR_VERTEX, STAR_FRAGMENT), (p) => {
-      gl.deleteProgram(p);
-    });
+    const program = scopedProgram(gl, scope, STAR_VERTEX, STAR_FRAGMENT);
     const u = createUniforms(gl, program, ["uPole", "uFrame", "uLook"]);
     const batch = scope.own(createSpriteBatch(gl, maxStars, [4, 2], [QUAD]));
     if (batch.stride !== STAR_FLOATS) {

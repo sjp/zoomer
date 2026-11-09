@@ -1,11 +1,11 @@
 import { unitRgbMemo } from "../color";
 import {
   beginFrame,
-  createProgram,
   createUniforms,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createHarmonograph,
@@ -147,9 +147,7 @@ void main() {
 export const harmonograph = defineEffect(harmonographMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, VERTEX, FRAGMENT);
       const u = createUniforms(gl, program, [
         "uResolution",
         "uCenter",

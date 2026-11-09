@@ -2,12 +2,12 @@ import { BOOKSHELF_GLSL, createBookshelfTexture, shelfBlurLod, shelfSideWidth } 
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget } from "../lowres";
 import { wrap } from "../math";
@@ -280,10 +280,7 @@ export const mug = defineEffect(mugMeta, {
       const field = createSmokeField(gl, scope, "mug");
       const adv = field.uniforms;
       const shelves = createBookshelfTexture(gl, scope);
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
 
       const roomProgram = program(ROOM_FRAGMENT);
       const ru = createUniforms(gl, roomProgram, [

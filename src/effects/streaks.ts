@@ -1,5 +1,5 @@
 import type { Rgb } from "./color";
-import { createProgram, createUniforms, type Scope, TO_CLIP_GLSL, withScope } from "./gl";
+import { createUniforms, type Scope, TO_CLIP_GLSL, withScope, scopedProgram } from "./gl";
 
 /**
  * Instanced WebGL2 renderer for round-capped line segments ("streaks"), shared by
@@ -197,17 +197,11 @@ function buildStreakRenderer(
   if (alpha && options.chromatic === true) {
     throw new Error("Streaks: the chromatic option is additive only");
   }
-  const deleteProgram = (p: WebGLProgram) => {
-    gl.deleteProgram(p);
-  };
-  const program = scope.add(
-    createProgram(gl, capsuleVertex(alpha), capsuleFragment(alpha)),
-    deleteProgram,
-  );
+  const program = scopedProgram(gl, scope, capsuleVertex(alpha), capsuleFragment(alpha));
   const u = createUniforms(gl, program, ["uResolution"]);
   const chromatic =
     options.chromatic === true
-      ? scope.add(createProgram(gl, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT), deleteProgram)
+      ? scopedProgram(gl, scope, CHROMATIC_VERTEX, CHROMATIC_FRAGMENT)
       : null;
   const cu = chromatic ? createUniforms(gl, chromatic, ["uResolution", "uCenter", "uZoom"]) : null;
   const data = new Float32Array(max * STREAK_FLOATS);

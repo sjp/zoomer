@@ -18,7 +18,6 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
@@ -26,6 +25,7 @@ import {
   type RenderTarget,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createGrowthClock, GROWTH_GLSL, meltOffset } from "../growth";
 import { createLowResTarget, lowResSize } from "../lowres";
@@ -221,9 +221,7 @@ vec4 composite(vec2 uv) {
 export const frost = defineEffect(frostMeta, {
   create(gl) {
     return withScope((scope) => {
-      const sceneProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, SCENE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const sceneProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, SCENE_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const su = createUniforms(gl, sceneProgram, [

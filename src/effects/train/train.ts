@@ -5,12 +5,12 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat as F,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createSkyState, sampleSky } from "../horizon/horizon-sim";
 import { createLowResTarget } from "../lowres";
@@ -403,10 +403,7 @@ export const train = defineEffect(trainMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const skyProgram = program(SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, [
         "uHills",

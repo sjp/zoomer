@@ -3,13 +3,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BEND_BASE,
@@ -262,9 +262,7 @@ const mulInto = (out: Rgb, a: Rgb, b: Rgb, k = 1) => {
 export const grass = defineEffect(grassMeta, {
   create(gl) {
     return withScope((scope) => {
-      const bg = scope.add(createProgram(gl, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const bg = scopedProgram(gl, scope, FULLSCREEN_VERTEX, BACKGROUND_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const ub = createUniforms(gl, bg, [
         "uNoise",
@@ -284,9 +282,7 @@ export const grass = defineEffect(grassMeta, {
         "uRootLit",
         "uUnderLit",
       ]);
-      const blade = scope.add(createProgram(gl, BLADE_VERTEX, BLADE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const blade = scopedProgram(gl, scope, BLADE_VERTEX, BLADE_FRAGMENT);
       const ug = createUniforms(gl, blade, [
         "uNoise",
         "uPhase",

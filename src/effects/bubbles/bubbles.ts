@@ -4,9 +4,9 @@ import { type Beam, BEAM_FRAGMENT, BEAM_VERTEX, writeBeamInstance } from "../fir
 import {
   beginFrame,
   createGradientBackground,
-  createProgram,
   createUniforms,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { bubbleVertex, BUBBLE_FRAGMENT } from "../bubble-sprites";
 import { createSpriteBatch, polygonStrip, QUAD } from "../sprites";
@@ -40,16 +40,9 @@ export const bubbles = defineEffect(bubblesMeta, {
           rotation: true,
         }),
       );
-      const program = scope.add(
-        createProgram(gl, bubbleVertex(batch.spinLocation), BUBBLE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const program = scopedProgram(gl, scope, bubbleVertex(batch.spinLocation), BUBBLE_FRAGMENT);
       const u = createUniforms(gl, program, ["uResolution", "uLight", "uShade"]);
-      const beamProgram = scope.add(createProgram(gl, BEAM_VERTEX, BEAM_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const beamProgram = scopedProgram(gl, scope, BEAM_VERTEX, BEAM_FRAGMENT);
       const beamU = createUniforms(gl, beamProgram, ["uResolution", "uColor"]);
       // Per shaft: x0, slope, half-width; y0, y1, intensity.
       const beamBatch = scope.own(createSpriteBatch(gl, SHAFTS, [3, 3], [QUAD]));

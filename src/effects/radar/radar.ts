@@ -4,7 +4,6 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -14,6 +13,7 @@ import {
   resetUnpackState,
   updateDataTexture,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
 import { fract } from "../math";
@@ -315,12 +315,8 @@ vec4 composite(vec2 uv) {
 export const radar = defineEffect(radarMeta, {
   create(gl) {
     return withScope((scope) => {
-      const mapProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, MAP_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const rainProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, RAIN_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const mapProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, MAP_FRAGMENT);
+      const rainProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, RAIN_FRAGMENT);
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
       const triangle = scope.own(createFullscreenTriangle(gl));
       const terrain = scope.own(createColumnTable(gl, TERRAIN_COLS, 1, { rows: TERRAIN_ROWS }));

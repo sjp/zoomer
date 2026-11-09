@@ -5,13 +5,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   buildPebbleTexture,
@@ -335,9 +335,7 @@ export const koi = defineEffect(koiMeta, {
       const target = scope.own(createLowResTarget(gl));
 
       // Floor.
-      const floorProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FLOOR_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const floorProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FLOOR_FRAGMENT);
       const floorU = createUniforms(gl, floorProgram, [
         "uPebbles",
         "uCaustic",
@@ -372,11 +370,11 @@ export const koi = defineEffect(koiMeta, {
       );
 
       // Caustic tile, borrowed from the caustics effect at fewer iterations.
-      const tileProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, tileFragment(CAUSTIC_ITERATIONS)),
-        (p) => {
-          gl.deleteProgram(p);
-        },
+      const tileProgram = scopedProgram(
+        gl,
+        scope,
+        FULLSCREEN_VERTEX,
+        tileFragment(CAUSTIC_ITERATIONS),
       );
       const uT = gl.getUniformLocation(tileProgram, "uT");
       const tile = createRenderTarget(gl, CAUSTIC_TILE, CAUSTIC_TILE, gl.R8, { wrap: gl.REPEAT });
@@ -407,15 +405,11 @@ export const koi = defineEffect(koiMeta, {
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, VERTEX_FLOATS * 4, 16);
       gl.bindVertexArray(null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      const fishProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const fishProgram = scopedProgram(gl, scope, FISH_VERTEX, FISH_FRAGMENT);
       const fishU = createUniforms(gl, fishProgram, ["uResolution", "uOffset", "uFish", "uWater"]);
       gl.useProgram(fishProgram);
       fishU.f3("uOffset", 0, 0, 1);
-      const shadowProgram = scope.add(createProgram(gl, FISH_VERTEX, FISH_SHADOW_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const shadowProgram = scopedProgram(gl, scope, FISH_VERTEX, FISH_SHADOW_FRAGMENT);
       const shadowU = createUniforms(gl, shadowProgram, ["uResolution", "uOffset", "uAlpha"]);
 
       // Lily pads and flowers: x, y, radius, opacity; r, g, b, unused; then the spin pair.
@@ -423,19 +417,13 @@ export const koi = defineEffect(koiMeta, {
         createSpriteBatch(gl, MAX_PADS * 2, [4, 4], PAD_SHAPES, { rotation: true }),
       );
       const padVs = padVertex(pads.spinLocation);
-      const padProgram = scope.add(createProgram(gl, padVs, PAD_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const padProgram = scopedProgram(gl, scope, padVs, PAD_FRAGMENT);
       const padU = createUniforms(gl, padProgram, ["uResolution", "uOffset"]);
       gl.useProgram(padProgram);
       padU.f3("uOffset", 0, 0, 1);
-      const padShadowProgram = scope.add(createProgram(gl, padVs, PAD_SHADOW_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const padShadowProgram = scopedProgram(gl, scope, padVs, PAD_SHADOW_FRAGMENT);
       const padShadowU = createUniforms(gl, padShadowProgram, ["uResolution", "uOffset", "uAlpha"]);
-      const flowerProgram = scope.add(createProgram(gl, padVs, FLOWER_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const flowerProgram = scopedProgram(gl, scope, padVs, FLOWER_FRAGMENT);
       const flowerU = createUniforms(gl, flowerProgram, ["uResolution", "uOffset"]);
       gl.useProgram(flowerProgram);
       flowerU.f3("uOffset", 0, 0, 1);

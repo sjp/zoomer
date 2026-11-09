@@ -5,7 +5,6 @@ import { type Rgb, unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createRenderTarget,
   createUniforms,
   DITHER_GLSL,
@@ -14,6 +13,7 @@ import {
   type RenderTarget,
   withScope,
   scissorBox,
+  scopedProgram,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
 import { approach, smoothstep, wrap } from "../math";
@@ -728,10 +728,7 @@ interface Overlay {
 export const newsdesk = defineEffect(newsdeskMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = (fs: string) =>
-        scope.add(createProgram(gl, FULLSCREEN_VERTEX, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (fs: string) => scopedProgram(gl, scope, FULLSCREEN_VERTEX, fs);
       const setProgram = program(SET_FRAGMENT);
       const skyProgram = program(SKY_FRAGMENT);
       const wallProgram = program(WALL_FRAGMENT);

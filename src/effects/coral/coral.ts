@@ -13,12 +13,12 @@ import { coralMeta, MAX_GROWTH, MIN_GROWTH } from "./coral.meta";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createGrowthClock, GROWTH_GLSL } from "../growth";
 import { createLowResTarget } from "../lowres";
@@ -223,12 +223,8 @@ void main() {
 export const coral = defineEffect(coralMeta, {
   create(gl) {
     return withScope((scope) => {
-      const waterProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, WATER_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const coralProgram = scope.add(createProgram(gl, CORAL_VERTEX, CORAL_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const waterProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, WATER_FRAGMENT);
+      const coralProgram = scopedProgram(gl, scope, CORAL_VERTEX, CORAL_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl));
       const batch = scope.own(createSpriteBatch(gl, MAX_INSTANCES, INSTANCE_ATTRIBUTES, [QUAD]));

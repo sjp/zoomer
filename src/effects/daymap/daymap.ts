@@ -3,13 +3,13 @@ import {
   beginFrame,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   createLatLon,
@@ -322,12 +322,8 @@ void main() {
 export const daymap = defineEffect(daymapMeta, {
   create(gl) {
     return withScope((scope) => {
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const pinProgram = scope.add(createProgram(gl, PIN_VERTEX, PIN_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
+      const pinProgram = scopedProgram(gl, scope, PIN_VERTEX, PIN_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const pins = scope.own(createSpriteBatch(gl, MAX_PINS, [4, 4]));
       // Until the mask loads, a single "far out at sea" texel: day and night over plain ocean.

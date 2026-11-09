@@ -2,7 +2,6 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   createRenderTarget,
   DITHER_GLSL,
@@ -10,6 +9,7 @@ import {
   type RenderTarget,
   TO_CLIP_GLSL,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { createFlowField } from "./flowfield-field";
 import { createNoise, createRng, hash32, HASH32_GLSL } from "../noise";
@@ -207,18 +207,9 @@ export const flowfield = defineEffect(flowfieldMeta, {
       /** `uFade` for this frame, from `fadeTerms`. */
       const fadeOut = new Float64Array(2);
 
-      const segProgram = scope.add(createProgram(gl, SEGMENT_VERTEX, SEGMENT_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const fadeProgram = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
-      const compProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const segProgram = scopedProgram(gl, scope, SEGMENT_VERTEX, SEGMENT_FRAGMENT);
+      const fadeProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FADE_FRAGMENT);
+      const compProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
       const seg = createUniforms(gl, segProgram, [
         "uResolution",
         "uHalfWidth",

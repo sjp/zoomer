@@ -3,12 +3,12 @@ import {
   beginFrame,
   createColumnTable,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BAND,
@@ -295,10 +295,7 @@ export const desertcamp = defineEffect(desertcampMeta, {
     return withScope((scope) => {
       const triangle = scope.own(createFullscreenTriangle(gl));
       const sky = scope.own(createLowResTarget(gl));
-      const program = (vs: string, fs: string) =>
-        scope.add(createProgram(gl, vs, fs), (p) => {
-          gl.deleteProgram(p);
-        });
+      const program = (vs: string, fs: string) => scopedProgram(gl, scope, vs, fs);
       const skyProgram = program(FULLSCREEN_VERTEX, SKY_FRAGMENT);
       const su = createUniforms(gl, skyProgram, ["uNoise", "uPxToRef", "uPole", "uMilky"]);
       const landProgram = program(FULLSCREEN_VERTEX, LAND_FRAGMENT);

@@ -4,11 +4,11 @@ import {
   createColumnTable,
   createDataTexture,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import {
   BREAK,
@@ -213,9 +213,7 @@ export const beach = defineEffect(beachMeta, {
   create(gl) {
     return withScope((scope) => {
       const target = scope.own(createLowResTarget(gl, { composite: COMPOSITE }));
-      const program = scope.add(createProgram(gl, FULLSCREEN_VERTEX, FRAGMENT), (p) => {
-        gl.deleteProgram(p);
-      });
+      const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const shape = scope.own(
         createColumnTable(gl, SHAPE_COLUMNS, 4, { wrap: gl.REPEAT, data: buildShapeTable(54) }),

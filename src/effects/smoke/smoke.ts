@@ -2,12 +2,12 @@ import { unitRgbMemo } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createProgram,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
   withScope,
+  scopedProgram,
 } from "../gl";
 import { lowResSize, qualityDivisor } from "../lowres";
 import { wrap } from "../math";
@@ -152,12 +152,7 @@ export const smoke = defineEffect(smokeMeta, {
     return withScope((scope) => {
       const field = createSmokeField(gl, scope, "smoke");
       const adv = field.uniforms;
-      const compositeProgram = scope.add(
-        createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT),
-        (p) => {
-          gl.deleteProgram(p);
-        },
-      );
+      const compositeProgram = scopedProgram(gl, scope, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT);
       const comp = createUniforms(gl, compositeProgram, [
         "uField",
         "uAspect",
