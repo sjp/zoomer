@@ -86,9 +86,11 @@ float cloudTops(vec2 w, float foot, vec4 offA, vec2 offB, float slope, out vec2 
 `;
 
 /**
- * Moves the cloud tops by (`vx`, `vz`) world units (x across, z away), updating
- * each octave's uv offset in `offsets` (x and y per octave, from index 0),
- * wrapped to one tile of its own uv space.
+ * Drifts the cloud tops by (`vx`, `vz`) world units (x across, z away) of sample
+ * position: each octave's uv offset in `offsets` (x and y per octave, from
+ * index 0) advances by its matrix (the shader's `M0`..`M2`) times (vx, vz), so
+ * every octave samples as if at w + (vx, vz) and they move together. Each
+ * offset is wrapped to one tile of its own uv space, [0, 1).
  */
 export function driftTops(offsets: Float64Array, vx: number, vz: number): void {
   for (let k = 0; k < OCTAVES.length; k++) {
