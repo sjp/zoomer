@@ -295,19 +295,21 @@ const TURBINE_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 aCorner;
 /** Foot x, foot y (px, y up), tower height (px), rotor angle (radians). */
 layout(location = 1) in vec4 aTurbine;
-/** Haze, hill layer, unused, unused. */
+/** Haze, hill layer, opacity (fading in), unused. */
 layout(location = 2) in vec4 aLook;
 uniform vec2 uInvRes;
 out vec2 vLocal;
 flat out vec2 vDir;
 flat out float vPx;
 flat out float vHaze;
+flat out float vOpacity;
 flat out int vLayer;
 void main() {
   vLocal = aCorner;
   vDir = vec2(cos(aTurbine.w), sin(aTurbine.w));
   vPx = 1.0 / aTurbine.z;
   vHaze = aLook.x;
+  vOpacity = aLook.z;
   vLayer = int(aLook.y + 0.5);
   vec2 px = aTurbine.xy + aCorner * aTurbine.z;
   gl_Position = vec4(px * uInvRes * 2.0 - 1.0, 0.0, 1.0);
@@ -328,6 +330,7 @@ in vec2 vLocal;
 flat in vec2 vDir;
 flat in float vPx;
 flat in float vHaze;
+flat in float vOpacity;
 flat in int vLayer;
 uniform sampler2D uTable;
 /** 1 / canvas height, canvas height (px). */
@@ -413,7 +416,7 @@ void main() {
     vis *= clamp((p.y - ridge(p.x, j)) * uNear.y + 0.5, 0.0, 1.0);
   }
   vec3 col = mix(acc.rgb / acc.a, uHaze, vHaze);
-  outColor = vec4(col, acc.a * vis);
+  outColor = vec4(col, acc.a * vis * vOpacity);
 }
 `;
 

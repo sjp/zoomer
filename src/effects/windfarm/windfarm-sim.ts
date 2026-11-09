@@ -9,7 +9,7 @@
  */
 import { hexToUnitRgb, type Rgb } from "../color";
 import { clamp, wrap } from "../math";
-import { createNoise, createRng } from "../noise";
+import { createNoise, createRng, hash32 } from "../noise";
 import { COLUMNS, latticePeriod, ridgeHeightAt, ridgeRaw, SPAN } from "../ridges/ridges-sim";
 import { MAX_TURBINES, MIN_TURBINES, type SIDE_OPTIONS, type TIME_OPTIONS } from "./windfarm.meta";
 import { lookup } from "../lookup";
@@ -331,6 +331,13 @@ export interface Farm {
   /** Rotor speed relative to the farm's, and the current rotor angle (radians, in [0, 2π)). */
   readonly speed: Float64Array;
   readonly angle: Float64Array;
+  /**
+   * Which turbine of the layout each is (its place in the layer sequence,
+   * 0..count-1 before sorting), so a relayout can tell which turbines stay.
+   */
+  readonly id: Int32Array;
+  /** How far each has faded in, 0..1: one a relayout adds starts at 0. */
+  readonly shown: Float64Array;
 }
 
 export function createFarm(): Farm {
@@ -342,6 +349,8 @@ export function createFarm(): Farm {
     layer: new Int32Array(MAX_TURBINES),
     speed: new Float64Array(MAX_TURBINES),
     angle: new Float64Array(MAX_TURBINES),
+    id: new Int32Array(MAX_TURBINES),
+    shown: new Float64Array(MAX_TURBINES),
   };
 }
 
@@ -458,14 +467,47 @@ const NEAR_OUTER = 0.4;
 /** Base rotor speed at `wind` 1, revolutions per second. */
 export const ROTOR_REVS = 0.16;
 
+/** Seconds a turbine a relayout adds takes to fade in. */
+export const TURBINE_FADE = 1.5;
+
+/**
+ * The hill layer (0 = nearest) of each of the first `n` turbines, written to
+ * `out`: the first stands nearest, then each goes to the layer furthest below
+ * its share (`LAYER_SHARE`) of the turbines so far, the nearest holding at most
+ * `nearCap`. A fixed sequence, so a higher count only adds turbines at the end.
+ */
+export function layerSequence(n: number, nearCap: number, out: Int32Array): void {
+  const counts = new Int32Array(HILL_LAYERS);
+  for (let t = 0; t < n; t++) {
+    let best = 0;
+    if (t > 0) {
+      let most = -Infinity;
+      for (let i = 0; i < HILL_LAYERS; i++) {
+        const behind = (t + 1) * LAYER_SHARE[i] - counts[i];
+        if ((i > 0 || counts[0] < nearCap) && behind > most) {
+          most = behind;
+          best = i;
+        }
+      }
+    }
+    out[t] = best;
+    counts[best]++;
+  }
+}
+
 /**
  * Places up to `count` turbines on the hill crests of `table` for a canvas
- * `aspect` wide, deterministically for `seed`: nearest layers first (they need
- * the most room), each turbine on a local crest within the `side` zones, clear of
- * the central band and of every turbine already placed, with nearer hills hiding
- * no more than the foot of its tower. A turbine that finds no room moves back a
- * layer; one that finds none on the farthest is dropped. Sorts the result
- * farthest first and returns how many were placed.
+ * `aspect` wide, deterministically for `seed`: each on a local crest within
+ * the `side` zones of its layer (`layerSequence`), clear of the central band
+ * and of every turbine placed before it, with nearer hills hiding no more than
+ * the foot of its tower. A turbine that finds no room moves back a layer; one
+ * that finds none on the farthest is dropped. Sorts the result farthest first
+ * and returns how many were placed.
+ *
+ * The layout is prefix-stable: each turbine draws from its own random stream
+ * and is placed in sequence order, so raising the count keeps every turbine
+ * already placed. A turbine that was in the farm's previous layout keeps its
+ * rotor angle and fade; a new one fades in from 0 (unless the farm was empty).
  */
 export function layoutFarm(
   farm: Farm,
@@ -476,29 +518,33 @@ export function layoutFarm(
   seed: number,
 ): number {
   const n = turbineCount(count);
-  const rand = createRng((Number.isFinite(seed) ? Math.floor(seed) : 0) * 2654435761 + 97);
+  const base = hash32((Number.isFinite(seed) ? Math.floor(seed) : 0) * 2654435761 + 97);
   const zone = new Float64Array(4);
-  const quota = new Int32Array(HILL_LAYERS);
-  let left = n;
-  for (let i = 0; i < HILL_LAYERS; i++) {
-    quota[i] = i === HILL_LAYERS - 1 ? left : Math.min(left, Math.round(n * LAYER_SHARE[i]));
-    if (i === 0) {
-      quota[i] = Math.max(1, Math.min(quota[i], side === "spread" ? 2 : 1));
-    }
-    left -= quota[i];
+  const layers = new Int32Array(n);
+  layerSequence(n, side === "spread" ? 2 : 1, layers);
+  // The previous layout's rotor angles and fades, by id.
+  const fresh = farm.count === 0;
+  const angle = new Float64Array(MAX_TURBINES).fill(Number.NaN);
+  const shown = new Float64Array(MAX_TURBINES);
+  for (let i = 0; i < farm.count; i++) {
+    angle[farm.id[i]] = farm.angle[i];
+    shown[farm.id[i]] = farm.shown[i];
   }
   let placed = 0;
-  let carry = 0;
-  for (let layer = 0; layer < HILL_LAYERS; layer++) {
-    let want = quota[layer] + carry;
-    carry = 0;
-    while (want > 0) {
-      want--;
-      if (!placeOne(farm, placed, table, aspect, side, layer, rand, zone)) {
-        carry++;
-        continue;
+  for (let t = 0; t < n; t++) {
+    const rand = createRng(hash32(base ^ hash32(t + 1)));
+    for (let layer = layers[t]; layer < HILL_LAYERS; layer++) {
+      if (placeOne(farm, placed, table, aspect, side, layer, rand, zone)) {
+        farm.id[placed] = t;
+        if (!Number.isNaN(angle[t])) {
+          farm.angle[placed] = angle[t];
+          farm.shown[placed] = shown[t];
+        } else {
+          farm.shown[placed] = fresh ? 1 : 0;
+        }
+        placed++;
+        break;
       }
-      placed++;
     }
   }
   farm.count = placed;
@@ -585,6 +631,8 @@ function sortFarthestFirst(f: Farm): void {
       swap(f.layer, j, j - 1);
       swap(f.speed, j, j - 1);
       swap(f.angle, j, j - 1);
+      swap(f.id, j, j - 1);
+      swap(f.shown, j, j - 1);
     }
   }
 }
@@ -608,12 +656,14 @@ const TAU = Math.PI * 2;
 export function advanceRotors(farm: Farm, dt: number, wind: number): void {
   const w = Number.isFinite(wind) ? Math.max(0, wind) : 0;
   const step = -dt * w * ROTOR_REVS * TAU;
+  const fade = Math.max(0, dt) / TURBINE_FADE;
   for (let i = 0; i < farm.count; i++) {
     farm.angle[i] = wrap(farm.angle[i] + step * farm.speed[i], 0, TAU);
+    farm.shown[i] = Math.min(1, farm.shown[i] + fade);
   }
 }
 
-/** Floats per turbine instance: [x, foot y, tower height (px), rotor angle], [haze, layer, 0, 0]. */
+/** Floats per turbine instance: [x, foot y, tower height (px), rotor angle], [haze, layer, opacity, 0]. */
 export const TURBINE_FLOATS = 8;
 
 /** Writes the farm's turbines as instances for a canvas `height` px tall; returns how many. */
@@ -626,7 +676,8 @@ export function writeTurbines(farm: Farm, out: Float32Array, height: number): nu
     out[o + 3] = farm.angle[i];
     out[o + 4] = HILLS[farm.layer[i]].haze;
     out[o + 5] = farm.layer[i];
-    out[o + 6] = 0;
+    const s = farm.shown[i];
+    out[o + 6] = s * s * (3 - 2 * s);
     out[o + 7] = 0;
   }
   return farm.count;

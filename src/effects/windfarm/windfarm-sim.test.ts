@@ -10,7 +10,9 @@ import {
   HILL_LAYERS,
   HILLS,
   hillHeightAt,
+  layerSequence,
   layoutFarm,
+  type Farm,
   PACKED,
   packPalette,
   PALETTE_FLOATS,
@@ -21,6 +23,7 @@ import {
   SPAN,
   turbineCount,
   turbinesClash,
+  TURBINE_FADE,
   TURBINE_FLOATS,
   writeTurbines,
   type Side,
@@ -220,6 +223,76 @@ describe("layoutFarm", () => {
     const t = buildTable(7);
     expect(layoutFarm(farm, t, 16 / 9, MAX_TURBINES, "left", 7)).toBeGreaterThanOrEqual(6);
     expect(layoutFarm(farm, t, 16 / 9, MAX_TURBINES, "spread", 7)).toBeGreaterThanOrEqual(10);
+  });
+
+  it("keeps every turbine in place when the count rises", () => {
+    const byId = (farm: Farm) => {
+      const m = new Map<number, number[]>();
+      for (let i = 0; i < farm.count; i++) {
+        m.set(farm.id[i], [farm.x[i], farm.base[i], farm.size[i], farm.layer[i]]);
+      }
+      return m;
+    };
+    for (let seed = 0; seed < 6; seed++) {
+      const t = buildTable(seed);
+      for (const side of SIDES) {
+        for (let n = MIN_TURBINES; n < MAX_TURBINES; n++) {
+          const a = createFarm();
+          const b = createFarm();
+          layoutFarm(a, t, 16 / 9, n, side, seed);
+          layoutFarm(b, t, 16 / 9, n + 1, side, seed);
+          const more = byId(b);
+          for (const [id, where] of byId(a)) {
+            expect(more.get(id)).toEqual(where);
+          }
+        }
+      }
+    }
+  });
+
+  it("carries rotor angles across a relayout and fades new turbines in", () => {
+    const t = buildTable(3);
+    const farm = createFarm();
+    layoutFarm(farm, t, 16 / 9, 8, "spread", 3);
+    expect(farm.shown.subarray(0, farm.count).every((v) => v === 1)).toBe(true);
+    advanceRotors(farm, 1.3, 1);
+    const angles = new Map<number, number>();
+    for (let i = 0; i < farm.count; i++) {
+      angles.set(farm.id[i], farm.angle[i]);
+    }
+    layoutFarm(farm, t, 16 / 9, 12, "spread", 3);
+    let added = 0;
+    const bad: number[] = [];
+    for (let i = 0; i < farm.count; i++) {
+      const before = angles.get(farm.id[i]);
+      const ok =
+        before === undefined
+          ? farm.shown[i] === 0
+          : farm.angle[i] === before && farm.shown[i] === 1;
+      added += before === undefined ? 1 : 0;
+      if (!ok) {
+        bad.push(farm.id[i]);
+      }
+    }
+    expect(bad).toEqual([]);
+    expect(added).toBeGreaterThan(0);
+    advanceRotors(farm, TURBINE_FADE, 1);
+    expect(farm.shown.subarray(0, farm.count).every((v) => v === 1)).toBe(true);
+  });
+
+  it("puts each layer's share of turbines on it, the first nearest", () => {
+    const out = new Int32Array(MAX_TURBINES);
+    layerSequence(MAX_TURBINES, 2, out);
+    expect(out[0]).toBe(0);
+    const counts = [0, 0, 0, 0];
+    for (const l of out) {
+      counts[l]++;
+    }
+    expect(counts[0]).toBeLessThanOrEqual(2);
+    expect(counts[3]).toBeGreaterThan(counts[1]);
+    const one = new Int32Array(MAX_TURBINES);
+    layerSequence(MAX_TURBINES, 1, one);
+    expect(one.filter((l) => l === 0).length).toBe(1);
   });
 
   it("clamps the count", () => {
