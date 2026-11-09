@@ -17,7 +17,7 @@ import {
   ROW_FLOATS,
   type RowColors,
   sunGaps,
-} from "./synthwave";
+} from "./synthwave-sim";
 
 describe("generateRidge", () => {
   it("spans exactly 0..1", () => {
