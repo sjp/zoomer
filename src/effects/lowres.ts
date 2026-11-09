@@ -201,7 +201,11 @@ function buildLowResTarget(
     },
   );
   const uTex = gl.getUniformLocation(program, "uLowRes");
-  const uSize = gl.getUniformLocation(program, "uLowResSize");
+  // Only custom composites read the low-res size; the default one leaves it unused.
+  const uSize =
+    (opts.composite?.includes("uLowResSize") ?? false)
+      ? gl.getUniformLocation(program, "uLowResSize")
+      : null;
   gl.useProgram(program);
   gl.uniform1i(uTex, 0);
   const triangle = scope.own(createFullscreenTriangle(gl));
