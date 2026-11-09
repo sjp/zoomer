@@ -1,5 +1,6 @@
 import type { Rgb } from "../color";
 import { createChangeKey } from "../change-key";
+import { createSettledValue } from "../rebuild";
 import {
   beginFrame,
   createDataTexture,
@@ -31,6 +32,8 @@ import { defineEffect } from "../types";
 
 /** Low-res divisor at 1080p: the outside scene is about 360 rows tall at any size, so it stays soft. */
 const SCENE_DIVISOR = 3;
+/** Seconds the aspect and the Variation slider must hold still before the mask is rebuilt. */
+const INPUT_SETTLE = 0.3;
 /** Width of the sloped reveal around each pane, height units. */
 const BEVEL = 0.012;
 /** Depth of the sill's top face, height units. */
@@ -405,7 +408,10 @@ export const snowWindow = defineEffect(snowWindowMeta, {
       let paneCount = 0;
       /** Bottom of the window opening, height units. */
       let sill = 0;
-      const layoutKey = createChangeKey(3);
+      const layoutKey = createChangeKey(2);
+      const condKey = createChangeKey(3);
+      const settledAspect = createSettledValue<number>(INPUT_SETTLE);
+      const settledSeed = createSettledValue<number>(INPUT_SETTLE);
       const sceneKey = createChangeKey(4);
 
       let width = 1;
@@ -441,10 +447,11 @@ export const snowWindow = defineEffect(snowWindowMeta, {
           const phase = (seed * 2.39996) % (Math.PI * 2);
           const layout = layoutId(p.layout);
 
-          // Panes and the condensation mask follow the layout, aspect and seed.
+          // Panes follow the layout and aspect at once (cheap). The condensation mask
+          // (tens of ms to build) follows the aspect and seed once they settle, so a
+          // window resize or a seed drag rebuilds it once; it stretches until then.
           layoutKey.set(0, LAYOUTS.indexOf(layout));
           layoutKey.set(1, aspect);
-          layoutKey.set(2, seed);
           if (layoutKey.take()) {
             const panes = windowPanes(layout, aspect);
             paneCount = panes.length;
@@ -453,14 +460,24 @@ export const snowWindow = defineEffect(snowWindowMeta, {
             panes.forEach((r, i) => {
               paneData.set(r, i * 4);
             });
-            const size = condensationSize(aspect);
+            gl.useProgram(glassProgram);
+            gl.uniform4fv(gu.loc.uPane, paneData);
+          }
+          const condAspect = settledAspect.update(aspect, dt);
+          const condSeed = settledSeed.update(seed, dt);
+          condKey.set(0, LAYOUTS.indexOf(layout));
+          condKey.set(1, condAspect);
+          condKey.set(2, condSeed);
+          if (condKey.take()) {
+            const panes = windowPanes(layout, condAspect);
+            const size = condensationSize(condAspect);
             if (size.width !== condWidth || size.height !== condHeight || !condTexture) {
               condWidth = size.width;
               condHeight = size.height;
               condData = new Uint8Array(condWidth * condHeight * 4);
               gl.deleteTexture(condTexture);
               condTexture = null;
-              buildCondensation(condData, condWidth, condHeight, aspect, panes, seed);
+              buildCondensation(condData, condWidth, condHeight, condAspect, panes, condSeed);
               condTexture = createDataTexture(gl, {
                 width: condWidth,
                 height: condHeight,
@@ -470,7 +487,7 @@ export const snowWindow = defineEffect(snowWindowMeta, {
                 data: condData,
               });
             } else {
-              buildCondensation(condData, condWidth, condHeight, aspect, panes, seed);
+              buildCondensation(condData, condWidth, condHeight, condAspect, panes, condSeed);
               gl.activeTexture(gl.TEXTURE0);
               updateDataTexture(
                 gl,
@@ -482,8 +499,6 @@ export const snowWindow = defineEffect(snowWindowMeta, {
                 condData,
               );
             }
-            gl.useProgram(glassProgram);
-            gl.uniform4fv(gu.loc.uPane, paneData);
           }
 
           // The scene outside: static, so drawn only when it changes (or every
