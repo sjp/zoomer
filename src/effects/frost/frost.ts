@@ -1,15 +1,17 @@
 import {
-  buildFrostField,
+  buildFrostFieldSteps,
   cycleSeed,
   fieldSize,
   MAX_LIGHTS,
   MAX_MELT_BIAS,
   MAX_TREES,
   MELT_RADIAL,
+  NEVER,
   reachLimit,
   REACH_PENALTY,
   sceneLayout,
   THICKEN,
+  type FrostField,
 } from "./frost-sim";
 import { frostMeta, MAX_GROWTH, MIN_GROWTH } from "./frost.meta";
 import {
@@ -27,7 +29,8 @@ import {
 } from "../gl";
 import { createGrowthClock, GROWTH_GLSL, meltOffset } from "../growth";
 import { createLowResTarget, lowResSize } from "../lowres";
-import { clamp } from "../math";
+import { clamp, smoothstep } from "../math";
+import { createBackgroundBuild, createSettledValue } from "../rebuild";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
 
@@ -43,6 +46,16 @@ const SCENE_BLUR = 0.012;
 const DIFFUSE_BLUR = 0.05;
 /** Seconds the canvas aspect must hold still before the field is rebuilt for it. */
 const RESIZE_SETTLE = 0.3;
+/** Seconds the Variation slider must hold still before a new pattern is built. */
+const SEED_SETTLE = 0.3;
+/** CPU milliseconds per frame spent building the next field. */
+const BUILD_BUDGET_MS = 2;
+/**
+ * Seconds a newly built pattern takes to grow in to the clock's level when it
+ * replaces another mid-cycle (on open, a new seed or a new aspect), so it never
+ * pops in fully formed.
+ */
+const REVEAL_SECONDS = 1.5;
 /** Sparkle: cell size in 1080p pixels, and the period of each glint's slow rise and fall. */
 const SPARKLE_CELL_PX = 7;
 const SPARKLE_PERIOD = 9;
@@ -246,11 +259,32 @@ export const frost = defineEffect(frostMeta, {
           gl.deleteTexture(fieldTex);
         }
       });
-      let fieldW = 0;
-      let fieldH = 0;
-      let builtSeed = Number.NaN;
-      /** Seconds the wanted field size has differed from the built one. */
-      let resizeWait = 0;
+      /** No frost anywhere: shown until the first field lands, and while a new cycle's builds. */
+      const emptyField = scope.add(
+        createDataTexture(gl, {
+          width: 1,
+          height: 1,
+          internalFormat: gl.RG16F,
+          format: gl.RG,
+          type: gl.FLOAT,
+          data: new Float32Array([NEVER, 0]),
+        }),
+        (t) => {
+          gl.deleteTexture(t);
+        },
+      );
+      let fieldW = 1;
+      let fieldH = 1;
+      /** What the uploaded field was built for: seed and size, and the cycle. */
+      let appliedBase = "";
+      let appliedCycle = Number.NaN;
+      /** The next cycle's field, built ahead so the cycle boundary only uploads it. */
+      let next: { base: string; cycle: number; field: FrostField } | null = null;
+      // The field is built a little each frame (about 100 ms of work in all), never in one go.
+      const build = createBackgroundBuild<string, FrostField>();
+      const settledSeed = createSettledValue<number>(SEED_SETTLE);
+      const settledSize = createSettledValue<number>(RESIZE_SETTLE);
+      let reveal = 0;
 
       const clock = createGrowthClock(CYCLE, START);
       let sparklePhase = 0;
@@ -261,8 +295,8 @@ export const frost = defineEffect(frostMeta, {
       let scale = 1;
       let sceneKey = "";
 
-      const buildField = (seed: number, w: number, h: number) => {
-        const field = buildFrostField(seed, w, h);
+      const applyField = (field: FrostField, base: string, cycle: number) => {
+        const { width: w, height: h } = field;
         if (fieldTex && w === fieldW && h === fieldH) {
           gl.activeTexture(gl.TEXTURE0);
           updateDataTexture(gl, fieldTex, w, h, gl.RG, gl.FLOAT, field.data);
@@ -281,9 +315,20 @@ export const frost = defineEffect(frostMeta, {
             data: field.data,
           });
         }
+        // A different pattern mid-cycle grows in; the next cycle's starts from nothing anyway.
+        if (base !== appliedBase) {
+          reveal = 0;
+        }
         fieldW = w;
         fieldH = h;
-        builtSeed = seed;
+        appliedBase = base;
+        appliedCycle = cycle;
+      };
+      const keyOf = (base: string, cycle: number) => `${base}|${String(cycle)}`;
+      /** Steps the build of `base`'s field for `cycle`, and returns it once it completes. */
+      const stepBuild = (base: string, seed: number, cycle: number, w: number, h: number) => {
+        build.request(keyOf(base, cycle), () => buildFrostFieldSteps(cycleSeed(seed, cycle), w, h));
+        return build.step(BUILD_BUDGET_MS);
       };
 
       const drawScene = (scene: string, seed: number, w: number, h: number) => {
@@ -341,29 +386,49 @@ export const frost = defineEffect(frostMeta, {
           // Growth clock, and the field for this cycle and frame shape.
           const growth = Number.isFinite(p.growth) ? clamp(p.growth, MIN_GROWTH, MAX_GROWTH) : 1;
           const s = clock.advance(step, growth, p.cycle);
+          // Seed and aspect are debounced, so dragging the slider or the window builds once.
           const want = fieldSize(aspect);
-          const cs = cycleSeed(seed, s.cycle);
-          if (want.width !== fieldW || want.height !== fieldH) {
-            resizeWait += step;
-          } else {
-            resizeWait = 0;
+          const size = settledSize.update(want.width * 65536 + want.height, step);
+          const fw = Math.floor(size / 65536);
+          const fh = size % 65536;
+          const fieldSeed = settledSeed.update(seed, step);
+          const base = `${String(fieldSeed)}|${String(fw)}x${String(fh)}`;
+          if (appliedBase !== base || appliedCycle !== s.cycle) {
+            if (next?.base === base && next.cycle === s.cycle) {
+              applyField(next.field, base, s.cycle);
+              next = null;
+            } else {
+              const field = stepBuild(base, fieldSeed, s.cycle, fw, fh);
+              if (field) {
+                applyField(field, base, s.cycle);
+              }
+            }
+          } else if (p.cycle && (next?.base !== base || next.cycle !== s.cycle + 1)) {
+            const field = stepBuild(base, fieldSeed, s.cycle + 1, fw, fh);
+            if (field) {
+              next = { base, cycle: s.cycle + 1, field };
+            }
           }
-          if (!fieldTex || cs !== builtSeed || resizeWait >= RESIZE_SETTLE) {
-            buildField(cs, want.width, want.height);
-            resizeWait = 0;
-          }
+          // The old pattern stays, stretched if need be, until a new seed's or size's lands;
+          // a new cycle's pattern would only regrow the old one, so show none until it lands.
+          const shown =
+            fieldTex !== null && (appliedCycle === s.cycle || appliedBase !== base)
+              ? fieldTex
+              : emptyField;
+          reveal = Math.min(1, reveal + step / REVEAL_SECONDS);
+          const level = s.level * smoothstep(0, 1, reveal);
           sparklePhase = (sparklePhase + step / SPARKLE_PERIOD) % 1;
 
           gl.useProgram(target.program);
           cu.f2("uFieldTexel", 1 / fieldW, 1 / fieldH);
-          cu.f2("uGrowth", s.level, meltOffset(s.melt, MAX_MELT_BIAS));
+          cu.f2("uGrowth", level, meltOffset(s.melt, MAX_MELT_BIAS));
           cu.f3("uReach", reachLimit(p.coverage), REACH_PENALTY, MELT_RADIAL);
           cu.rgb("uTint", p.tint);
           const sparkle = Number.isFinite(p.sparkle) ? clamp(p.sparkle, 0, 1) : 0;
           cu.f3("uSparkle", sparkle, sparklePhase, 1 / (SPARKLE_CELL_PX * scale));
-          cu.u1("uSparkleSeed", cs);
+          cu.u1("uSparkleSeed", cycleSeed(fieldSeed, s.cycle));
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, fieldTex);
+          gl.bindTexture(gl.TEXTURE_2D, shown);
           gl.activeTexture(gl.TEXTURE2);
           gl.bindTexture(gl.TEXTURE_2D, diffuse?.texture ?? null);
           target.blit();
