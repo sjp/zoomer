@@ -1,4 +1,4 @@
-import { hexToUnitRgb, type Rgb } from "../color";
+import { createColorEase, hexToUnitRgb } from "../color";
 import {
   beginFrame,
   createDataTexture,
@@ -161,31 +161,42 @@ void main() {
 }
 `;
 
-interface PaletteData {
-  bands: Float32Array;
-  bgA: Rgb;
-  bgB: Rgb;
-  flat: Rgb;
-  gap: Rgb;
-}
+/** Seconds for a palette change to crossfade. */
+const PALETTE_FADE = 1.5;
 
-/** Every palette's uniforms, built once. */
-const PALETTE_DATA = new Map<TruchetPalette, PaletteData>();
-function paletteData(name: string): PaletteData {
+/**
+ * A palette's uniforms packed as one block, so a change can ease as a whole:
+ * the path tones, then the two background colours, their flat mix and the gap
+ * colour, each RGB.
+ */
+const BG_A = TONES * 3;
+const BG_B = BG_A + 3;
+const FLAT = BG_B + 3;
+const GAP = FLAT + 3;
+const PALETTE_FLOATS = GAP + 3;
+
+/** Every palette's packed uniforms, built once. */
+const PALETTE_DATA = new Map<TruchetPalette, Float32Array>();
+function paletteData(name: string): Float32Array {
   const p = palette(name);
-  let d = PALETTE_DATA.get(p);
-  if (!d) {
-    const bands = new Float32Array(TONES * 3);
-    p.bands.forEach((hex, i) => {
-      bands.set(hexToUnitRgb(hex), i * 3);
-    });
-    const bgA = hexToUnitRgb(p.bgA);
-    const bgB = hexToUnitRgb(p.bgB);
-    const flat: Rgb = [(bgA[0] + bgB[0]) / 2, (bgA[1] + bgB[1]) / 2, (bgA[2] + bgB[2]) / 2];
-    const gap: Rgb = [flat[0] * GAP_SHADE, flat[1] * GAP_SHADE, flat[2] * GAP_SHADE];
-    d = { bands, bgA, bgB, flat, gap };
-    PALETTE_DATA.set(p, d);
+  const cached = PALETTE_DATA.get(p);
+  if (cached) {
+    return cached;
   }
+  const d = new Float32Array(PALETTE_FLOATS);
+  p.bands.forEach((hex, i) => {
+    d.set(hexToUnitRgb(hex), i * 3);
+  });
+  const bgA = hexToUnitRgb(p.bgA);
+  const bgB = hexToUnitRgb(p.bgB);
+  for (let c = 0; c < 3; c++) {
+    const flat = (bgA[c] + bgB[c]) / 2;
+    d[BG_A + c] = bgA[c];
+    d[BG_B + c] = bgB[c];
+    d[FLAT + c] = flat;
+    d[GAP + c] = flat * GAP_SHADE;
+  }
+  PALETTE_DATA.set(p, d);
   return d;
 }
 
@@ -235,7 +246,15 @@ export const truchet = defineEffect(truchetMeta, {
       let scale = 1;
       let layout: GridLayout | undefined;
       let layoutTile = Number.NaN;
-      let lastPalette: PaletteData | undefined;
+      const palEase = createColorEase(PALETTE_FLOATS);
+      const view = (at: number, n = 3) => palEase.value.subarray(at, at + n);
+      const bands = view(0, TONES * 3);
+      const bgA = view(BG_A);
+      const bgB = view(BG_B);
+      const flat = view(FLAT);
+      const gap = view(GAP);
+      /** Whether the tones on the GPU are the settled ones. */
+      let bandsSent = false;
 
       /** Lays the grid out for the current size and tile size, rebuilding the sim if its shape or seed changed. */
       function ensureGrid(tileSize: number, seed: number) {
@@ -314,15 +333,15 @@ export const truchet = defineEffect(truchetMeta, {
           u.f4("uGrid", g.ox, g.oy, 1 / g.tilePx, g.tilePx);
           u.f2("uCells", s.cols, s.rows);
 
-          const pal = paletteData(p.palette);
-          if (pal !== lastPalette) {
-            lastPalette = pal;
-            gl.uniform3fv(u.loc.uBand, pal.bands);
+          palEase.step(paletteData(p.palette), dt, PALETTE_FADE);
+          if (palEase.moving || !bandsSent) {
+            bandsSent = !palEase.moving;
+            gl.uniform3fv(u.loc.uBand, bands);
           }
-          u.v3("uBgA", pal.bgA);
-          u.v3("uBgB", pal.bgB);
-          u.v3("uFlat", pal.flat);
-          u.v3("uGap", pal.gap);
+          u.v3("uBgA", bgA);
+          u.v3("uBgB", bgB);
+          u.v3("uFlat", flat);
+          u.v3("uGap", gap);
           u.i1("uStyle", styleIndex(p.style));
           const band = Math.min(Math.max(p.bandWidth, 0.01), BAND_WIDTH_MAX);
           u.f2("uWidth", band / 2, Math.max(OUTLINE_HALF * scale, OUTLINE_MIN));
