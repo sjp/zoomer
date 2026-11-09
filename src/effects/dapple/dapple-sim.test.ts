@@ -20,6 +20,9 @@ import {
   sunBasis,
   swayBound,
   swayOffset,
+  advanceLayerDrift,
+  layerOffset,
+  DRIFT_SPEED,
 } from "./dapple-sim";
 import { smoothstep } from "../math";
 import { buildPeriodicNoiseTexture, createNoise } from "../noise";
@@ -259,5 +262,42 @@ describe("frameMask", () => {
     expect(frameMask(r.frameX, 500, r)).toBeCloseTo(1 - FRAME_DEPTH, 10);
     expect(frameMask(100, r.frameY, r)).toBeCloseTo(1 - FRAME_DEPTH, 10);
     expect(frameMask(r.frameX - 200, r.frameY + 200, r)).toBe(1);
+  });
+});
+
+describe("layer drift", () => {
+  it("doesn't swing the pattern when the sun angle changes, even after a day", () => {
+    const basis = new Float64Array(4);
+    sunBasis(basis, 20);
+    const drift = new Float64Array(2);
+    const scale = 1 / 300;
+    for (let i = 0; i < 24 * 3600; i++) {
+      advanceLayerDrift(drift, 0, DRIFT_SPEED, scale, basis);
+    }
+    const base = [0.13, 0.57];
+    const before = new Float64Array(2);
+    layerOffset(before, 0, base, drift, scale, basis, 0, 0);
+    sunBasis(basis, 21);
+    const after = new Float64Array(2);
+    layerOffset(after, 0, base, drift, scale, basis, 0, 0);
+    expect(Math.abs(after[0] - before[0])).toBeLessThan(1e-3);
+    expect(Math.abs(after[1] - before[1])).toBeLessThan(1e-3);
+  });
+
+  it("drifts at the same rate as the total distance would give, and wraps", () => {
+    const basis = new Float64Array(4);
+    sunBasis(basis, 0);
+    const drift = new Float64Array(2);
+    for (let i = 0; i < 100; i++) {
+      advanceLayerDrift(drift, 0, 0.5, 0.01, basis);
+    }
+    // 50 ref px at 0.01 tiles per px, straight across: half a tile.
+    expect(drift[0]).toBeCloseTo(0.5, 9);
+    expect(drift[1]).toBeCloseTo(0, 9);
+    for (let i = 0; i < 1000; i++) {
+      advanceLayerDrift(drift, 0, 0.5, 0.01, basis);
+      expect(drift[0]).toBeGreaterThanOrEqual(0);
+      expect(drift[0]).toBeLessThan(1);
+    }
   });
 });

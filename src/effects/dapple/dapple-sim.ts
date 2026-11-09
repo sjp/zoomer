@@ -213,3 +213,39 @@ export function frameMask(x: number, y: number, r: RegionLayout): number {
     1 - smoothstep(FRAME_HALF - FRAME_SOFT, FRAME_HALF + FRAME_SOFT, Math.abs(y - r.frameY));
   return 1 - FRAME_DEPTH * Math.max(bx, by);
 }
+
+/**
+ * Texture offsets (2 per layer, in tiles) of a pattern layer: its base, its wind
+ * drift and its sway, through the sun basis (see `sunBasis`), wrapped to [0, 1).
+ * The drift is integrated here a frame at a time (`advanceLayerDrift`) rather
+ * than recomputed from the total time, so a sun-angle change only turns the
+ * direction of future drift: recomputing it would swing the pattern further the
+ * longer the page has been open.
+ */
+export function advanceLayerDrift(
+  drift: Float64Array,
+  i: number,
+  distance: number,
+  scale: number,
+  basis: ArrayLike<number>,
+): void {
+  drift[i * 2] = fract(drift[i * 2] - scale * basis[0] * distance);
+  drift[i * 2 + 1] = fract(drift[i * 2 + 1] - scale * basis[1] * distance);
+}
+
+/** Writes layer `i`'s offsets to `out`: base plus drift, minus the sway through the basis. */
+export function layerOffset(
+  out: Float32Array | Float64Array,
+  i: number,
+  base: ArrayLike<number>,
+  drift: ArrayLike<number>,
+  scale: number,
+  basis: ArrayLike<number>,
+  swayX: number,
+  swayY: number,
+): void {
+  out[i * 2] = fract(base[i * 2] + drift[i * 2] - scale * (basis[0] * swayX + basis[2] * swayY));
+  out[i * 2 + 1] = fract(
+    base[i * 2 + 1] + drift[i * 2 + 1] - scale * (basis[1] * swayX + basis[3] * swayY),
+  );
+}

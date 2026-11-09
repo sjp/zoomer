@@ -19,6 +19,8 @@ import {
   sunBasis,
   swayOffset,
   DRIFT_SPEED,
+  advanceLayerDrift,
+  layerOffset,
 } from "./dapple-sim";
 import {
   beginFrame,
@@ -31,7 +33,7 @@ import {
   withScope,
 } from "../gl";
 import { createLowResTarget, qualityDivisor } from "../lowres";
-import { approach, fract } from "../math";
+import { approach } from "../math";
 import { buildPeriodicNoiseTexture, createNoise } from "../noise";
 import { dappleMeta } from "./dapple.meta";
 import { defineEffect } from "../types";
@@ -177,6 +179,8 @@ export const dapple = defineEffect(dappleMeta, {
       /** Per-layer uv per px, and a fixed random base offset that decorrelates the layers. */
       const layerScale = LAYERS.map((l) => 1 / (l.cell * NOISE_PERIOD));
       const layerBase = [0.13, 0.57, 0.81, 0.29, 0.44, 0.06];
+      /** Each layer's wind drift in tiles, wrapped (see `advanceLayerDrift`). */
+      const drift = new Float64Array(LAYER_COUNT * 2);
 
       let width = 1;
       let height = 1;
@@ -210,11 +214,9 @@ export const dapple = defineEffect(dappleMeta, {
           for (let i = 0; i < LAYER_COUNT; i++) {
             swayOffset(sway, noise, i, time, swayNow, gust);
             // The pattern moves by +offset on the wall, so sample at p - offset.
-            const ox = sway[0] + time * DRIFT_SPEED * LAYERS[i].drift;
-            const oy = sway[1];
             const s = layerScale[i];
-            off[i * 2] = fract(layerBase[i * 2] - s * (b0 * ox + b2 * oy));
-            off[i * 2 + 1] = fract(layerBase[i * 2 + 1] - s * (b1 * ox + b3 * oy));
+            advanceLayerDrift(drift, i, step * DRIFT_SPEED * LAYERS[i].drift, s, basis);
+            layerOffset(off, i, layerBase, drift, s, basis, sway[0], sway[1]);
           }
 
           target.resize(width, height, qualityDivisor(p.quality, DIVISORS));
