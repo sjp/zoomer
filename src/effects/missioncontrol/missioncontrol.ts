@@ -114,6 +114,7 @@ import {
   uploadLandMask,
 } from "../land-mask";
 import { defineEffect } from "../types";
+import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 
 /** Seconds the shaders' clock repeats over; every periodic motion in them divides it. */
 const SHADER_PERIOD = 1000;
@@ -136,9 +137,7 @@ const SEG_GAP = 0.14;
 const COMMON_GLSL = /* glsl */ `
 const float TAU = 6.28318530718;
 const float EYE_Y = ${g(EYE_Y)};
-const vec3 FORWARD = vec3(0.0, ${g(FORWARD[1])}, ${g(FORWARD[2])});
-const vec3 UPV = vec3(0.0, ${g(UP[1])}, ${g(UP[2])});
-const float TAN_HALF = ${g(TAN_HALF_FOV)};
+${cameraRayGlsl(FORWARD, UP, TAN_HALF_FOV)}
 const float WALL_Z = ${g(WALL_Z)};
 const int ROWS = ${String(ROWS)};
 const int UNITS = ${String(UNITS)};
@@ -152,11 +151,6 @@ const float TOP_Z1 = ${g(TOP_Z1)};
 const float FACE_LEN = ${g(FACE_LEN)};
 // The face's normal, towards the camera and a little up.
 const vec3 FACE_N = vec3(0.0, ${g((FACE_Z1 - DESK_D) / FACE_LEN)}, ${g(-(FACE_Y1 - FACE_Y0) / FACE_LEN)});
-
-vec3 rayDir(vec2 ndc, float aspect) {
-  vec2 a = ndc * vec2(TAN_HALF * aspect, TAN_HALF);
-  return vec3(a.x, FORWARD.y + a.y * UPV.y, FORWARD.z + a.y * UPV.z);
-}
 
 float rowFloor(int k) {
   return ${g(FLOOR0)} - ${g(STEP)} * float(k);
@@ -197,12 +191,7 @@ float faceHit(int k, vec3 d, out float f) {
   return t;
 }
 
-float sdRect(vec2 p, vec4 r, float rad) {
-  vec2 c = 0.5 * (r.xy + r.zw);
-  vec2 h = 0.5 * (r.zw - r.xy) - rad;
-  vec2 q = abs(p - c) - h;
-  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
-}
+${SD_RECT_GLSL}
 
 float hash2(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -449,12 +438,12 @@ vec4 shade(vec3 d) {
   return vec4(col, mask);
 }
 
+${SUPERSAMPLE4_GLSL}
 void main() {
   float aspect = uResolution.x / uResolution.y;
   vec3 acc = vec3(0.0);
-  vec2 offs[4] = vec2[4](vec2(-0.25, -0.125), vec2(0.125, -0.25), vec2(0.25, 0.125), vec2(-0.125, 0.25));
   for (int i = 0; i < 4; i++) {
-    vec2 ndc = (gl_FragCoord.xy + offs[i]) / uResolution * 2.0 - 1.0;
+    vec2 ndc = (gl_FragCoord.xy + SS4_OFFSETS[i]) / uResolution * 2.0 - 1.0;
     acc += shade(rayDir(ndc, aspect)).rgb * 0.25;
   }
   vec2 ndc = gl_FragCoord.xy / uResolution * 2.0 - 1.0;

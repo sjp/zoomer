@@ -62,6 +62,7 @@ import {
   WASH,
 } from "./ring-sim";
 import { ringMeta } from "./ring.meta";
+import { cameraRayGlsl, SUPERSAMPLE4_GLSL } from "../room-ray";
 
 const g = glslFloat;
 const v3 = (v: readonly number[]) => `vec3(${g(v[0])}, ${g(v[1])}, ${g(v[2])})`;
@@ -93,14 +94,7 @@ const float CEIL_R = ${g(RING_R - CEILING_H)};
 const float CEILING_H = ${g(CEILING_H)};
 const float HALF_W = ${g(HALF_W)};
 const float EYE_Y = ${g(EYE_Y)};
-const vec3 FORWARD = vec3(0.0, ${g(FORWARD[1])}, ${g(FORWARD[2])});
-const vec3 UPV = vec3(0.0, ${g(UP[1])}, ${g(UP[2])});
-const float TAN_HALF = ${g(TAN_HALF_FOV)};
-
-vec3 rayDir(vec2 ndc, float aspect) {
-  vec2 a = ndc * vec2(TAN_HALF * aspect, TAN_HALF);
-  return vec3(a.x, FORWARD.y + a.y * UPV.y, FORWARD.z + a.y * UPV.z);
-}
+${cameraRayGlsl(FORWARD, UP, TAN_HALF_FOV)}
 `;
 
 /**
@@ -349,6 +343,7 @@ vec3 shade(vec3 d, out float glass, out float lamp, out float wash) {
   return albedo * light * ao * far;
 }
 
+${SUPERSAMPLE4_GLSL}
 void main() {
   float aspect = uResolution.x / uResolution.y;
   if (uPass == 1) {
@@ -364,9 +359,8 @@ void main() {
   vec3 acc = vec3(0.0);
   float glassAcc = 0.0;
   float lampAcc = 0.0;
-  vec2 offs[4] = vec2[4](vec2(-0.25, -0.125), vec2(0.125, -0.25), vec2(0.25, 0.125), vec2(-0.125, 0.25));
   for (int i = 0; i < 4; i++) {
-    vec2 ndc = (gl_FragCoord.xy + offs[i]) / uResolution * 2.0 - 1.0;
+    vec2 ndc = (gl_FragCoord.xy + SS4_OFFSETS[i]) / uResolution * 2.0 - 1.0;
     ndc.x *= uMirror;
     float glass;
     float lamp;

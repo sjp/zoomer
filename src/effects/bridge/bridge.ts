@@ -94,6 +94,7 @@ import { hexToUnitRgb, type Rgb } from "../color";
 import { createStreakRenderer } from "../streaks";
 import { createStarfield, type StarFrame } from "../warp/warp-sim";
 import { defineEffect } from "../types";
+import { cameraRayGlsl, SUPERSAMPLE4_GLSL, SD_RECT_GLSL } from "../room-ray";
 
 /** Most glass rects the room pass draws (every panel and the band). */
 const MAX_GLASS = 8;
@@ -146,16 +147,9 @@ const KEY = ((v: number[]) => v.map((x) => x / Math.hypot(...v)))([0, 1, -0.45])
 /** Shared GLSL: camera rays, the wall cylinder and small helpers. */
 const COMMON_GLSL = /* glsl */ `
 const float EYE_Y = ${g(EYE_Y)};
-const vec3 FORWARD = vec3(0.0, ${g(FORWARD[1])}, ${g(FORWARD[2])});
-const vec3 UPV = vec3(0.0, ${g(UP[1])}, ${g(UP[2])});
-const float TAN_HALF = ${g(TAN_HALF_FOV)};
+${cameraRayGlsl(FORWARD, UP, TAN_HALF_FOV)}
 const float WALL_CZ = ${g(WALL_CZ)};
 const float WALL_R = ${g(WALL_R)};
-
-vec3 rayDir(vec2 ndc, float aspect) {
-  vec2 a = ndc * vec2(TAN_HALF * aspect, TAN_HALF);
-  return vec3(a.x, FORWARD.y + a.y * UPV.y, FORWARD.z + a.y * UPV.z);
-}
 
 // Far root of a ray from the eye (inside) against a vertical cylinder at z = cz.
 float cylFar(vec3 d, float cz, float r) {
@@ -192,12 +186,7 @@ float vnoise(vec2 p, float period) {
   return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-float sdRect(vec2 p, vec4 r, float rad) {
-  vec2 c = 0.5 * (r.xy + r.zw);
-  vec2 h = 0.5 * (r.zw - r.xy) - rad;
-  vec2 q = abs(p - c) - h;
-  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
-}
+${SD_RECT_GLSL}
 `;
 
 /**
@@ -425,12 +414,12 @@ vec4 shade(vec3 d) {
   return wallShade(wallS(p), p.y, radial(p, WALL_CZ));
 }
 
+${SUPERSAMPLE4_GLSL}
 void main() {
   float aspect = uResolution.x / uResolution.y;
   vec3 acc = vec3(0.0);
-  vec2 offs[4] = vec2[4](vec2(-0.25, -0.125), vec2(0.125, -0.25), vec2(0.25, 0.125), vec2(-0.125, 0.25));
   for (int i = 0; i < 4; i++) {
-    vec2 ndc = (gl_FragCoord.xy + offs[i]) / uResolution * 2.0 - 1.0;
+    vec2 ndc = (gl_FragCoord.xy + SS4_OFFSETS[i]) / uResolution * 2.0 - 1.0;
     acc += shade(rayDir(ndc, aspect)).rgb * 0.25;
   }
   vec2 ndc = gl_FragCoord.xy / uResolution * 2.0 - 1.0;
