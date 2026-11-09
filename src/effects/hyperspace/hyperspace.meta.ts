@@ -52,7 +52,7 @@ export const hyperspaceMeta = defineEffectMeta({
       step: 1,
       default: 16,
     },
-    flash: { kind: "boolean", label: "Flash on jump", default: true },
+    flash: { kind: "boolean", label: "Glow burst on jump", default: true },
     background: { kind: "color", label: "Background", default: "#000005" },
   },
 });

@@ -49,7 +49,8 @@ export function hyperspaceStreakCount(
 
 /**
  * Background colour with a radial glow that fades linearly to nothing at uGlowRadius,
- * with the jump flash folded in (see `frame`).
+ * plus the jump bloom: a soft, centre-weighted brightening that fades to nothing
+ * at the same radius, so the frame's edges never change brightness with it.
  */
 const BACKGROUND_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
@@ -59,8 +60,10 @@ uniform vec3 uBackground;
 uniform vec3 uGlow;
 uniform float uGlowAlpha;
 uniform float uGlowRadius;
-/** Flash amount: white composited over the frame. */
-uniform float uFlash;
+/** Bloom luminance added at the centre (already capped on the CPU). */
+uniform float uBloom;
+/** Bloom colour: the glow colour mixed halfway to white. */
+uniform vec3 uBloomColor;
 
 out vec4 outColor;
 ${DITHER_GLSL}
@@ -68,8 +71,8 @@ ${DITHER_GLSL}
 void main() {
   float r = length(gl_FragCoord.xy - 0.5 * uResolution);
   float a = uGlowAlpha * (1.0 - clamp(r / uGlowRadius, 0.0, 1.0));
-  vec3 c = mix(uBackground, uGlow, a);
-  c = uFlash + (1.0 - uFlash) * c;
+  float w = 1.0 - clamp(r / uGlowRadius, 0.0, 1.0);
+  vec3 c = mix(uBackground, uGlow, a) + uBloom * w * w * uBloomColor;
   // Sub-LSB dither hides banding in the wide, shallow gradient.
   outColor = vec4(c + dither8(gl_FragCoord.xy), 1.0);
 }
@@ -77,7 +80,7 @@ void main() {
 
 /**
  * Radial light streaks with a jump cycle: drifting stars stretch into a tunnel
- * of light with a flash on entry, then drop back to stars. Simulated on the CPU;
+ * of light with a soft bloom on entry, then drop back to stars. Simulated on the CPU;
  * drawn in WebGL2 as a full-screen background pass plus instanced capsules.
  */
 export const hyperspace = defineEffect(hyperspaceMeta, {
@@ -98,11 +101,13 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
         "uGlow",
         "uGlowAlpha",
         "uGlowRadius",
-        "uFlash",
+        "uBloom",
+        "uBloomColor",
       ]);
       const streakRgb = unitRgbMemo();
       const glowRgb = unitRgbMemo();
       const backgroundRgb = unitRgbMemo();
+      const bloomRgb = new Float32Array(3);
 
       /** Unit direction of each streak; fixed for its lifetime. */
       const dirX = new Float32Array(MAX_STREAKS);
@@ -138,18 +143,14 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
           beginFrame(gl, width, height);
           jumpCycle.step(dt, p.mode, p.jumpSeconds, p.cycleSeconds);
           const jump = smoothstep(0, 1, jumpCycle.progress);
-          const flash = jumpCycle.flash;
 
           const cx = width / 2;
           const cy = height / 2;
           const radius = Math.hypot(width, height) / 2;
 
-          // The flash is premultiplied white at amount A composited over the frame:
-          // A + (1 - A) * min(1, bg + streaks) = min(1, A + (1 - A) * bg + (1 - A) * streaks)
-          // for A in [0, 1], so it is folded into the background pass and the streak
-          // colours instead of costing another full-screen blended pass.
-          const flashAmount = p.flash ? flash * 0.6 : 0;
-          const keep = 1 - flashAmount;
+          // The bloom is capped and ramps over more than a second each way (see
+          // hyperspace-sim), so a jump brightens the centre gently, never the whole frame.
+          const bloom = p.flash ? jumpCycle.bloom : 0;
           const glow = glowRgb(p.glowColor);
           const streak = streakRgb(p.color);
           const gr = glow[0];
@@ -177,7 +178,7 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
             const dx = dirX[i] * radius;
             const dy = dirY[i] * radius;
             // Added streaks appear mid-flight, so they fade in rather than pop.
-            const alpha = Math.min(1, d * 3) * keep * stepLife(life, i, wanted, fadeStep, outStep);
+            const alpha = Math.min(1, d * 3) * stepLife(life, i, wanted, fadeStep, outStep);
             const m = mix[i] * 0.5;
             const o = i * STREAK_FLOATS;
             data[o] = cx + dx * t;
@@ -193,7 +194,7 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
 
           const bg = backgroundRgb(p.background);
           const glowAlpha = Math.max(0, p.glow) * (0.15 + 0.5 * jump);
-          if (glowAlpha === 0 && flashAmount === 0) {
+          if (glowAlpha === 0 && bloom === 0) {
             // A flat 8-bit colour plus sub-LSB dither rounds back to itself, so a
             // (typically fast) clear gives the same pixels as the shader pass.
             gl.clearColor(bg[0], bg[1], bg[2], 1);
@@ -205,7 +206,11 @@ export const hyperspace = defineEffect(hyperspaceMeta, {
             bgU.v3("uGlow", glow);
             bgU.f1("uGlowAlpha", glowAlpha);
             bgU.f1("uGlowRadius", Math.max(1, radius * 0.8));
-            bgU.f1("uFlash", flashAmount);
+            bgU.f1("uBloom", bloom);
+            bloomRgb[0] = 0.5 + 0.5 * gr;
+            bloomRgb[1] = 0.5 + 0.5 * gg;
+            bloomRgb[2] = 0.5 + 0.5 * gb;
+            bgU.v3("uBloomColor", bloomRgb);
             triangle.draw();
           }
 
