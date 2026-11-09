@@ -9,6 +9,7 @@ import {
   glslFloat,
   withScope,
   scissorBox,
+  scopedProgram,
 } from "./gl";
 import { createFakeGl } from "../test/fake-gl";
 import { defined } from "../test/defined";
@@ -478,5 +479,16 @@ describe("scissorBox", () => {
     const calls = fake.calls.length;
     expect(scissorBox(fake.gl, 1920, 1080, 2, 0, 0.05, 0.05)).toBe(false);
     expect(fake.calls.length).toBe(calls);
+  });
+});
+
+describe("scopedProgram", () => {
+  it("links a program and deletes it with the scope", () => {
+    const fake = createFakeGl();
+    const scope = createScope();
+    scopedProgram(fake.gl, scope, "vs", "fs");
+    expect(fake.live().filter((o) => o.kind === "Program")).toHaveLength(1);
+    scope.dispose();
+    expect(fake.live()).toEqual([]);
   });
 });

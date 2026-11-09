@@ -228,6 +228,19 @@ export function createProgram(
   return program;
 }
 
+/** `createProgram`, registered with `scope` to be deleted on dispose. */
+export function scopedProgram(
+  gl: WebGL2RenderingContext,
+  scope: Scope,
+  vertexSource: string,
+  fragmentSource: string,
+  feedbackVaryings?: string[],
+): WebGLProgram {
+  return scope.add(createProgram(gl, vertexSource, fragmentSource, feedbackVaryings), (p) => {
+    gl.deleteProgram(p);
+  });
+}
+
 /**
  * Looks up uniform locations by name. Locations are null for uniforms the compiler
  * optimised away; `gl.uniform*` ignores null, so callers need not check.
