@@ -149,6 +149,27 @@ export function sevenSegmentMasks(): number[] {
   return out;
 }
 
+/** The colon's seven-segment mask: drawn as two dots in a narrower cell. */
+export const SEG_COLON_MASK = SEG[":"];
+/** Seven-segment digit width, colon width and gap, in digit heights. */
+export const SEG_DIGIT = 0.55;
+export const SEG_COLON = 0.22;
+export const SEG_GAP = 0.14;
+/** Most characters a seven-segment line shows (the shader's loop bound). */
+export const SEG_LINE_MAX = 12;
+
+/**
+ * The width of a seven-segment line, in digit heights, as the shaders lay it
+ * out: each character a digit wide (a colon narrower), with a gap between.
+ */
+export function sevenSegWidth(text: string): number {
+  let w = 0;
+  for (const ch of text) {
+    w += (ch === ":" ? SEG_COLON : SEG_DIGIT) + SEG_GAP;
+  }
+  return Math.max(0, w - SEG_GAP);
+}
+
 /** Columns and lines of the text page. */
 export const PAGE_COLS = 32;
 export const PAGE_LINES = 48;

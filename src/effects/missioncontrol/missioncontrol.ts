@@ -80,7 +80,13 @@ import {
   PAGE_LINES,
   PATTERN_COUNT,
   RANDOM_DIGIT,
+  SEG_COLON,
+  SEG_COLON_MASK,
+  SEG_DIGIT,
+  SEG_GAP,
+  SEG_LINE_MAX,
   sevenSegmentMasks,
+  sevenSegWidth,
   TELEMETRY_COLS,
   TELEMETRY_LINES,
   WALL_GRAPHS,
@@ -131,10 +137,6 @@ const CRAFTS = 2;
 const g = glslFloat;
 const rect = (r: Rect) => `vec4(${g(r.x0)}, ${g(r.y0)}, ${g(r.x1)}, ${g(r.y1)})`;
 const S = WALL_SCREENS;
-/** Seven-segment digit width, colon width and gap, in digit heights. */
-const SEG_DIGIT = 0.55;
-const SEG_COLON = 0.22;
-const SEG_GAP = 0.14;
 
 /** Shared GLSL: camera rays, the consoles' profile and small helpers. */
 const COMMON_GLSL = /* glsl */ `
@@ -579,7 +581,7 @@ vec2 sevenSeg(int mask, vec2 p, float aa) {
   vec2 b[9] = vec2[9](vec2(W - 0.1, 0.96), vec2(W - 0.04, 0.56), vec2(W - 0.04, 0.44), vec2(W - 0.1, 0.04),
     vec2(0.04, 0.44), vec2(0.04, 0.56), vec2(W - 0.1, 0.5), vec2(0.5 * W, 0.67), vec2(0.5 * W, 0.7));
   vec2 r = vec2(0.0);
-  if (mask == 256) {
+  if (mask == ${String(SEG_COLON_MASK)}) {
     vec2 q = vec2(p.x - ${g(SEG_COLON / 2)}, p.y);
     float dc = min(length(q - vec2(0.0, 0.3)), length(q - vec2(0.0, 0.7)));
     return vec2(1.0 - smoothstep(0.06 - aa, 0.06 + aa, dc), 0.0);
@@ -602,13 +604,13 @@ vec2 sevenSegLine(int line, vec2 info, vec2 p, float aa) {
     return vec2(0.0);
   }
   float at = 0.0;
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < ${String(SEG_LINE_MAX)}; i++) {
     if (i >= int(info.x)) {
       break;
     }
     int code = pageCode(line, i);
     int mask = SEG_MASK[code];
-    float w = mask == 256 ? ${g(SEG_COLON)} : ${g(SEG_DIGIT)};
+    float w = mask == ${String(SEG_COLON_MASK)} ? ${g(SEG_COLON)} : ${g(SEG_DIGIT)};
     if (x < at + w + ${g(SEG_GAP / 2)}) {
       return code == 0 ? vec2(0.0) : sevenSeg(mask, vec2(x - at, p.y), aa);
     }
@@ -946,15 +948,6 @@ void main() {
   outColor = vec4(col + dither8(gl_FragCoord.xy), 1.0);
 }
 `;
-
-/** The width of a seven-segment line, in digit heights, as the shader lays it out. */
-function sevenSegWidth(text: string): number {
-  let w = 0;
-  for (const ch of text) {
-    w += (ch === ":" ? SEG_COLON : SEG_DIGIT) + SEG_GAP;
-  }
-  return Math.max(0, w - SEG_GAP);
-}
 
 /**
  * Mission Control. The camera never moves, so the room is ray-traced once per

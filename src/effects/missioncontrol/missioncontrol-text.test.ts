@@ -16,10 +16,22 @@ import {
   PAGE_LINES,
   PAGE_TEXT,
   RANDOM_DIGIT,
+  SEG_COLON,
+  SEG_COLON_MASK,
+  SEG_DIGIT,
+  SEG_GAP,
+  SEG_LINE_MAX,
   sevenSegmentMasks,
+  sevenSegWidth,
   writeLine,
 } from "../dot-matrix";
-import { countdownText, createLaunchState, missionTimeText } from "./missioncontrol-sim";
+import {
+  countdownText,
+  createLaunchState,
+  launchAt,
+  localTimeText,
+  missionTimeText,
+} from "./missioncontrol-sim";
 
 describe("dot-matrix font", () => {
   it("has seven rows of five dots for every glyph, and a blank space", () => {
@@ -120,5 +132,52 @@ describe("text page", () => {
     const starts = Object.values(LINE).toSorted((a, b) => a - b);
     expect(new Set(starts).size).toBe(starts.length);
     expect(Math.max(...starts)).toBeLessThan(PAGE_LINES);
+  });
+});
+
+describe("sevenSegWidth", () => {
+  const masks = sevenSegmentMasks();
+
+  /**
+   * The shader's `sevenSegLine` layout: each character's cell is a digit wide,
+   * or a colon's width where its mask is the colon, with a gap after each.
+   * Returns where the last character's cell ends.
+   */
+  const shaderWidth = (text: string) => {
+    let at = 0;
+    let end = 0;
+    for (const ch of text) {
+      const w = masks[glyphIndex(ch)] === SEG_COLON_MASK ? SEG_COLON : SEG_DIGIT;
+      end = at + w;
+      at += w + SEG_GAP;
+    }
+    return end;
+  };
+
+  it("is zero for no text and one digit for one", () => {
+    expect(sevenSegWidth("")).toBe(0);
+    expect(sevenSegWidth("7")).toBeCloseTo(SEG_DIGIT, 12);
+    expect(sevenSegWidth(":")).toBeCloseTo(SEG_COLON, 12);
+  });
+
+  it("counts colons narrow and a gap between characters", () => {
+    expect(sevenSegWidth("12:34")).toBeCloseTo(4 * SEG_DIGIT + SEG_COLON + 4 * SEG_GAP, 12);
+  });
+
+  it("matches the shader's layout for the clocks it shows, so they centre", () => {
+    const texts = [
+      missionTimeText(0),
+      missionTimeText(86400 * 999 + 3599),
+      localTimeText(new Date(2026, 0, 1, 23, 59, 58)),
+      countdownText(createLaunchState(), true),
+    ];
+    const launch = createLaunchState();
+    for (let t = 0; t < 2000; t += 7) {
+      texts.push(countdownText(launchAt(t, 600, launch), true));
+    }
+    for (const text of texts) {
+      expect(text.length).toBeLessThanOrEqual(SEG_LINE_MAX);
+      expect(sevenSegWidth(text)).toBeCloseTo(shaderWidth(text), 12);
+    }
   });
 });
