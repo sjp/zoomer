@@ -211,7 +211,7 @@ export function createSkyline(gl: WebGL2RenderingContext): Skyline {
         uploadAll();
       },
       setTarget(fraction) {
-        windows.setTarget(fraction);
+        windows.setTarget(fraction, true);
       },
       step(dt, rate) {
         // The CPU writes a texel only when a fade starts or settles.

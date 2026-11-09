@@ -111,7 +111,7 @@ describe("createWindowState", () => {
   it("reaches a new target through fades even with no activity, a few windows a frame", () => {
     const s = createWindowState(5000);
     s.reset(3000, 3, 0.3);
-    s.setTarget(0.31);
+    s.setTarget(0.31, true);
     let most = 0;
     let t = 0;
     for (; t < 10 && s.litCount !== 930; t += 1 / 60) {
@@ -159,8 +159,7 @@ describe("createWindowState", () => {
     for (let t = 0; t < 60; t += 1 / 30) {
       s.step(1 / 30, 20);
     }
-    // Activity keeps toggling round the target, a window either side.
-    expect(Math.abs(s.litCount - 500)).toBeLessThanOrEqual(1);
+    expect(s.litCount).toBe(500);
   });
 
   it("toggles windows at about the requested rate, and not at all at rate 0", () => {

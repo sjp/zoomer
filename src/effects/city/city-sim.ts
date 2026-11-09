@@ -332,11 +332,12 @@ export interface WindowState {
   /** Assigns new random colours and levels, then lights `litFraction` of the windows. */
   reset: (windowCount: number, seed: number, litFraction: number) => void;
   /**
-   * Moves the lit target to round(fraction * count) without touching any window:
-   * `step` then fades windows on or off towards it through the fade slots,
-   * catching up within about `CATCH_UP_SECONDS` whatever the toggle rate.
+   * Moves the lit target to round(fraction * count) without touching any window,
+   * so `step` fades windows on or off towards it through the fade slots: at its
+   * toggle rate, or with `catchUp` within about `CATCH_UP_SECONDS` whatever the
+   * rate.
    */
-  setTarget: (fraction: number) => void;
+  setTarget: (fraction: number, catchUp?: boolean) => void;
   /**
    * Advances fades and, at `rate` toggles per second, starts new ones that keep
    * the lit count near the target. Fills `dirty` with the texels that changed.
@@ -489,9 +490,9 @@ export function createWindowState(maxWindows = MAX_WINDOWS): WindowState {
       setLit(litFraction);
       fading = true;
     },
-    setTarget(fraction) {
+    setTarget(fraction, catchUp = false) {
       target = Math.round(clamp(fraction, 0, 1) * count);
-      catchingUp = litCount !== target;
+      catchingUp = catchUp && litCount !== target;
     },
     step(dt, rate) {
       dirtyCount = 0;
