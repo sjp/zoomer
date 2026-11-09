@@ -30,4 +30,16 @@ describe("createChangeKey", () => {
     key.invalidate();
     expect(key.take()).toBe(true);
   });
+
+  it("compares strings by value", () => {
+    const key = createChangeKey(1);
+    key.setText(0, "left");
+    key.take();
+    key.setText(0, ["le", "ft"].join(""));
+    expect(key.take()).toBe(false);
+    key.setText(0, "right");
+    expect(key.take()).toBe(true);
+    key.setText(0, "left");
+    expect(key.take()).toBe(true);
+  });
 });
