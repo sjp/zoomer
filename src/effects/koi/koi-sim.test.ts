@@ -13,11 +13,14 @@ import {
   MAX_RIPPLES,
   NOTCH,
   padOutline,
+  rescaleFish,
+  rescalePads,
   RIPPLE_LIFE,
   rippleAge,
   ROWS,
   solveSpine,
   sortByDepth,
+  straightenSpine,
   SPINE_POINTS,
   spawnRipple,
   stepFish,
@@ -319,5 +322,73 @@ describe("pebble texture", () => {
       interior += Math.abs(a[y * size + size / 2] - a[y * size + size / 2 - 1]);
     }
     expect(edge).toBeLessThan(interior * 3 + size * 8);
+  });
+});
+
+describe("straightenSpine", () => {
+  it("lays the spine straight back from the head at the segment length", () => {
+    const s = createFish(4, 1920);
+    s.x[2] = 500;
+    s.y[2] = 300;
+    s.heading[2] = Math.PI / 3;
+    straightenSpine(s, 2, 7);
+    expect(s.segment[2]).toBe(7);
+    const o = 2 * SPINE_POINTS * 2;
+    expect([s.spine[o], s.spine[o + 1]]).toEqual([500, 300]);
+    for (let k = 1; k < SPINE_POINTS; k++) {
+      const dx = s.spine[o + k * 2] - s.spine[o + k * 2 - 2];
+      const dy = s.spine[o + k * 2 + 1] - s.spine[o + k * 2 - 1];
+      expect(Math.hypot(dx, dy)).toBeCloseTo(7, 9);
+      // Each step runs opposite the heading.
+      expect(dx).toBeCloseTo(-7 * Math.cos(Math.PI / 3), 9);
+      expect(dy).toBeCloseTo(-7 * Math.sin(Math.PI / 3), 9);
+    }
+  });
+
+  it("leaves the other fish alone", () => {
+    const s = createFish(3, 1920);
+    const before = Array.from(s.spine);
+    s.heading[1] += 1;
+    straightenSpine(s, 1, 3);
+    const per = SPINE_POINTS * 2;
+    expect(Array.from(s.spine.subarray(0, per))).toEqual(before.slice(0, per));
+    expect(Array.from(s.spine.subarray(2 * per))).toEqual(before.slice(2 * per));
+  });
+});
+
+describe("rescaleFish and rescalePads", () => {
+  it("scale x (and the fish's spines) by k, leaving y alone", () => {
+    const s = createFish(6, 1920);
+    const x = Array.from(s.x);
+    const y = Array.from(s.y);
+    const spine = Array.from(s.spine);
+    rescaleFish(s, 0.75);
+    expect(Array.from(s.x)).toEqual(x.map((v) => v * 0.75));
+    expect(Array.from(s.y)).toEqual(y);
+    expect(Array.from(s.spine)).toEqual(spine.map((v, j) => (j % 2 === 0 ? v * 0.75 : v)));
+
+    const p = createPads(5, 1920);
+    const px = Array.from(p.x);
+    const py = Array.from(p.y);
+    rescalePads(p, 1.5);
+    expect(Array.from(p.x)).toEqual(px.map((v) => v * 1.5));
+    expect(Array.from(p.y)).toEqual(py);
+  });
+
+  it("keep fish and pads at the same share of the width through a resize and back", () => {
+    const s = createFish(6, 1920);
+    const p = createPads(5, 1920);
+    const share = Array.from(s.x, (v) => v / 1920);
+    const padShare = Array.from(p.x, (v) => v / 1920);
+    const drift = (now: Float64Array, width: number, was: number[]) =>
+      Math.max(...Array.from(now, (v, i) => Math.abs(v / width - was[i])));
+    rescaleFish(s, 1440 / 1920);
+    rescalePads(p, 1440 / 1920);
+    expect(drift(s.x, 1440, share)).toBeLessThan(1e-12);
+    expect(drift(p.x, 1440, padShare)).toBeLessThan(1e-12);
+    rescaleFish(s, 1920 / 1440);
+    rescalePads(p, 1920 / 1440);
+    expect(drift(s.x, 1920, share)).toBeLessThan(1e-12);
+    expect(drift(p.x, 1920, padShare)).toBeLessThan(1e-12);
   });
 });
