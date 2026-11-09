@@ -12,7 +12,9 @@ import {
   LAYERS,
   LAYOUT_SPECS,
   MAX_RATIO,
+  meshPhase,
   regionFits,
+  rootAnchors,
   teethPerDriveTurn,
   STYLE_BALANCE,
   TICK_PERIOD,
@@ -339,5 +341,99 @@ describe("driveOmega", () => {
   it("gives 0 for a bad speed", () => {
     expect(driveOmega(Number.NaN, 40)).toBe(0);
     expect(driveOmega(-1, 40)).toBe(0);
+  });
+});
+
+describe("meshPhase", () => {
+  const gear = (teeth: number, phase: number, ratio: number): Gear => ({
+    x: 0,
+    y: 0,
+    teeth,
+    pitchR: teeth / 100,
+    module: 0.02,
+    layer: 1,
+    ratio,
+    phase,
+    style: 0,
+    spokes: 0,
+    screws: 0,
+    metal: 0,
+    tint: 0,
+    parent: -1,
+    axle: false,
+  });
+  /** Tooth pitches from the nearest tooth centre to the contact point at `angle`. */
+  const pitches = (g: Gear, angle: number, drive: number) =>
+    ((angle - gearAngle(g, drive)) * g.teeth) / (2 * Math.PI);
+  const frac = (v: number) => v - Math.floor(v);
+
+  it("puts a tooth of one gear in a gap of the other at the contact, at every drive angle", () => {
+    for (const [ta, tb, alpha, phase] of [
+      [12, 20, 0.3, 0],
+      [24, 9, -2.1, 1.7],
+      [40, 40, Math.PI, 5],
+    ]) {
+      const a = gear(ta, phase, 0.8);
+      const b = gear(tb, 0, (-a.ratio * ta) / tb);
+      b.phase = meshPhase(a, b, alpha);
+      for (const drive of [0, 0.37, 2, -11.5, 400]) {
+        const sum = pitches(a, alpha, drive) + pitches(b, alpha + Math.PI, drive);
+        // Half a pitch apart, to float rounding: tooth meets gap.
+        expect(Math.abs(frac(sum) - 0.5)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it("holds for every meshing pair the trains grow", () => {
+    const off: string[] = [];
+    for (const layout of ["corner", "side", "frame"] as const) {
+      const gears = growTrain(layout, 16 / 9, 5);
+      for (const g of gears) {
+        if (g.parent < 0 || g.axle || g.teeth === 0) {
+          continue;
+        }
+        const p = gears[g.parent];
+        const alpha = Math.atan2(g.y - p.y, g.x - p.x);
+        for (const drive of [0, 1.3, 50]) {
+          const sum = pitches(p, alpha, drive) + pitches(g, alpha + Math.PI, drive);
+          if (Math.abs(frac(sum) - 0.5) > 1e-6) {
+            off.push(`${layout} gear ${String(gears.indexOf(g))} at drive ${String(drive)}`);
+          }
+        }
+      }
+    }
+    expect(off).toEqual([]);
+  });
+});
+
+describe("rootAnchors", () => {
+  it("starts each layout's trains inside its region, the drive first", () => {
+    const counts = { corner: 1, side: 2, frame: 8 };
+    for (const layout of ["corner", "side", "frame"] as const) {
+      for (const aspect of [4 / 3, 16 / 9, 21 / 9, 32 / 9]) {
+        const anchors = rootAnchors(layout, aspect);
+        expect(anchors).toHaveLength(counts[layout]);
+        for (const [x, y] of anchors) {
+          expect(regionFits(layout, aspect, x, y, 0)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("puts the drive at the top right in every layout", () => {
+    for (const layout of ["corner", "side", "frame"] as const) {
+      const [[x, y]] = rootAnchors(layout, 16 / 9);
+      expect(x).toBeGreaterThan(16 / 9 - 0.25);
+      expect(y).toBeGreaterThan(0.7);
+    }
+  });
+
+  it("spreads the frame layout's trains round all four sides", () => {
+    const a = 16 / 9;
+    const anchors = rootAnchors("frame", a);
+    expect(anchors.some(([x]) => x < 0.2)).toBe(true);
+    expect(anchors.some(([x]) => x > a - 0.2)).toBe(true);
+    expect(anchors.some(([, y]) => y < 0.2)).toBe(true);
+    expect(anchors.some(([, y]) => y > 0.8)).toBe(true);
   });
 });
