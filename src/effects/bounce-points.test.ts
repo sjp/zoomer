@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRng } from "../noise";
+import { createRng } from "./noise";
 import {
   BOUNCE_JITTER,
   createBouncePoints,

@@ -10,8 +10,8 @@ import {
   placeBouncePoint,
   stepBouncePoints,
   type BouncePoints,
-} from "./bounce-points";
-import { createEchoRing, type EchoRing } from "./echo-ring";
+} from "../bounce-points";
+import { createEchoRing, type EchoRing } from "../echo-ring";
 import {
   MAX_POINTS,
   MAX_SHAPES,
