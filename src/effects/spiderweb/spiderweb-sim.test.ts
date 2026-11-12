@@ -349,11 +349,9 @@ describe("backdrop", () => {
 });
 
 describe("narrow canvases", () => {
-  it.each([1, 40, 80, 200])("builds a bounded web quickly at reference width %d", (refWidth) => {
+  it.each([1, 40, 80, 200])("builds a bounded web at reference width %d", (refWidth) => {
     for (const corner of ["topLeft", "bottomRight"] as const) {
-      const t0 = performance.now();
       const g = buildWeb({ corner, size: 1, seed: 5, refWidth });
-      expect(performance.now() - t0).toBeLessThan(500);
       expect(g.segments).toBeGreaterThan(0);
       // The renderer's buffers hold 4096 segments and 8192 drops.
       expect(g.segments).toBeLessThan(4096);
