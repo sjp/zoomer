@@ -91,6 +91,7 @@ import { marblerunMeta } from "./marblerun/marblerun.meta";
 import { nebulaMeta } from "./nebula/nebula.meta";
 import { neonMeta } from "./neon/neon.meta";
 import { pipesMeta } from "./pipes/pipes.meta";
+import { mazeMeta } from "./maze/maze.meta";
 import { orbitsMeta } from "./orbits/orbits.meta";
 import { papercutMeta } from "./papercut/papercut.meta";
 import { pendulumMeta } from "./pendulum/pendulum.meta";
@@ -221,6 +222,7 @@ export const effects: readonly EffectEntry[] = [
   },
   { ...toastersMeta, load: () => import("./toasters/toasters").then((m) => m.toasters) },
   { ...pipesMeta, load: () => import("./pipes/pipes").then((m) => m.pipes) },
+  { ...mazeMeta, load: () => import("./maze/maze").then((m) => m.maze) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
   { ...beziersMeta, load: () => import("./beziers/beziers").then((m) => m.beziers) },
