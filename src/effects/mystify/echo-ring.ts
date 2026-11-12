@@ -4,7 +4,7 @@
  * array. Pushing past the capacity overwrites the oldest sample. Allocation-free
  * after creation.
  */
-interface EchoRing {
+export interface EchoRing {
   readonly capacity: number;
   readonly stride: number;
   /** Samples held, up to `capacity`. */

@@ -23,7 +23,7 @@ const MAX_COMPONENT = Math.cos(MIN_AXIS_ANGLE);
 /** Slowest point's speed as a fraction of the fastest: points drift at different rates. */
 export const MIN_SPEED_FACTOR = 0.6;
 
-interface BouncePoints {
+export interface BouncePoints {
   readonly count: number;
   /** Position, normalised to the frame, after the latest step. */
   readonly x: Float32Array;
