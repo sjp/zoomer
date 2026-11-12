@@ -78,6 +78,7 @@ import { mugMeta } from "./mug/mug.meta";
 import { catMeta } from "./cat/cat.meta";
 import { murmurationMeta } from "./murmuration/murmuration.meta";
 import { mystifyMeta } from "./mystify/mystify.meta";
+import { beziersMeta } from "./beziers/beziers.meta";
 import { lorenzMeta } from "./lorenz/lorenz.meta";
 import { lighthouseMeta } from "./lighthouse/lighthouse.meta";
 import { meteorsMeta } from "./meteors/meteors.meta";
@@ -222,6 +223,7 @@ export const effects: readonly EffectEntry[] = [
   { ...pipesMeta, load: () => import("./pipes/pipes").then((m) => m.pipes) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
+  { ...beziersMeta, load: () => import("./beziers/beziers").then((m) => m.beziers) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
