@@ -110,11 +110,9 @@ beforeEach(() => {
   });
   vi.stubGlobal("VideoFrame", FakeVideoFrame);
   vi.stubGlobal("VideoEncoder", vi.fn());
-  vi.useFakeTimers();
 });
 
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 

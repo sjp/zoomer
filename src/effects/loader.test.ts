@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEffectLoader, createLatest, whenIdle, type EffectEntry } from "./loader";
 import { defineEffect, defineEffectMeta, type EffectDefinition } from "./types";
 
@@ -97,14 +97,6 @@ describe("createEffectLoader", () => {
 });
 
 describe("createLatest", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("passes on only the latest request's result when loads finish out of order", async () => {
     const latest = createLatest<string>();
     const a = deferred<string>();
@@ -165,12 +157,10 @@ describe("createLatest", () => {
 
 describe("whenIdle", () => {
   afterEach(() => {
-    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
   it("falls back to a timeout without requestIdleCallback, and can be cancelled", () => {
-    vi.useFakeTimers();
     vi.stubGlobal("requestIdleCallback", undefined);
     const task = vi.fn<() => void>();
     whenIdle(task);

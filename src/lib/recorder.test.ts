@@ -99,12 +99,10 @@ function fakeCanvas() {
 
 describe("recordCanvas", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.stubGlobal("MediaRecorder", FakeRecorder);
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 

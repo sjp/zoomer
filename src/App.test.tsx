@@ -70,8 +70,11 @@ const whenReady = () =>
     );
   });
 
-beforeAll(() => {
+beforeAll(async () => {
   Element.prototype.scrollIntoView = () => undefined;
+  // Load the effects' code up front: an import is module I/O, which fake time can't
+  // move, so the app's own imports then resolve from the module cache.
+  await Promise.all([WARP.load(), SNOW.load()]);
 });
 beforeEach(() => {
   window.localStorage.clear();
@@ -102,7 +105,6 @@ describe("App", () => {
   });
 
   it("writes param changes to the hash once they settle, without looping", () => {
-    vi.useFakeTimers();
     render(<App />);
     act(() => {
       vi.advanceTimersByTime(1000);
@@ -131,7 +133,6 @@ describe("App", () => {
     });
     expect(slider.value).toBe("4");
     expect(replace).toHaveBeenCalledTimes(2);
-    vi.useRealTimers();
   });
 
   it("puts the hash back when a link would switch effect mid-recording", async () => {
