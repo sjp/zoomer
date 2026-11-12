@@ -89,6 +89,7 @@ import { mandelMeta } from "./mandel/mandel.meta";
 import { marblerunMeta } from "./marblerun/marblerun.meta";
 import { nebulaMeta } from "./nebula/nebula.meta";
 import { neonMeta } from "./neon/neon.meta";
+import { pipesMeta } from "./pipes/pipes.meta";
 import { orbitsMeta } from "./orbits/orbits.meta";
 import { papercutMeta } from "./papercut/papercut.meta";
 import { pendulumMeta } from "./pendulum/pendulum.meta";
@@ -218,6 +219,7 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./bouncinglogo/bouncinglogo").then((m) => m.bouncingLogo),
   },
   { ...toastersMeta, load: () => import("./toasters/toasters").then((m) => m.toasters) },
+  { ...pipesMeta, load: () => import("./pipes/pipes").then((m) => m.pipes) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
