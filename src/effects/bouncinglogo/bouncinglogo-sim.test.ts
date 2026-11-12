@@ -169,34 +169,45 @@ describe("motion", () => {
 describe("corner planner", () => {
   const SPEEDS = [20, 45, REFERENCE_SPEED, 135, MAX_LOGO_SPEED];
 
-  for (const mode of ["often", "sometimes"] as const) {
-    it(`hits a corner within the "${mode}" window from any seed and aspect`, () => {
+  // One test per mode, canvas and speed, so no single test runs the whole sweep.
+  const CASES = (["often", "sometimes"] as const).flatMap((mode) =>
+    Object.entries(ASPECTS).flatMap(([name, aspect]) =>
+      SPEEDS.map((speed) => ({ mode, name, aspect, speed })),
+    ),
+  );
+  it.each(CASES)(
+    'hits a corner within the "$mode" window at $name, $speed px/s, from any seed',
+    ({ mode, aspect, speed }) => {
       const [, wMax] = CORNER_WINDOWS[mode];
+      // Slower speeds stretch the window so the travel between corners stays the same.
+      const window = wMax * Math.max(1, REFERENCE_SPEED / speed);
       const bad: string[] = [];
       let largestRate = 0;
-      for (const [name, aspect] of Object.entries(ASPECTS)) {
-        for (const speed of SPEEDS) {
-          // Slower speeds stretch the window so the travel between corners stays the same.
-          const window = wMax * Math.max(1, REFERENCE_SPEED / speed);
-          for (let seed = 0; seed < (mode === "often" ? 40 : 12); seed++) {
-            const [fw, fh] = free(aspect, 0.18);
-            const sim = createLogoSim(seed, fw, fh, mode, speed);
-            const { wait, rate } = longestWait(sim, speed, 4 * window);
-            largestRate = Math.max(largestRate, rate);
-            // One frame of slack for the 30 fps steps.
-            if (wait > window + 1 / 30) {
-              bad.push(
-                `${name} at ${String(speed)} px/s, seed ${String(seed)}: ${wait.toFixed(1)} s`,
-              );
-            }
-          }
+      for (let seed = 0; seed < (mode === "often" ? 40 : 12); seed++) {
+        const [fw, fh] = free(aspect, 0.18);
+        const sim = createLogoSim(seed, fw, fh, mode, speed);
+        const { wait, rate } = longestWait(sim, speed, 4 * window);
+        largestRate = Math.max(largestRate, rate);
+        // One frame of slack for the 30 fps steps.
+        if (wait > window + 1 / 30) {
+          bad.push(`seed ${String(seed)}: ${wait.toFixed(1)} s`);
         }
       }
       expect(bad).toEqual([]);
       expect(largestRate).toBeLessThanOrEqual(PLAN_RATE_CAPS[mode] + 1e-12);
-      expect(largestRate).toBeGreaterThan(0);
-    });
-  }
+    },
+  );
+
+  it.each(["often", "sometimes"] as const)("nudges the speed to plan %s corners", (mode) => {
+    const [, wMax] = CORNER_WINDOWS[mode];
+    let largestRate = 0;
+    for (let seed = 0; seed < 4; seed++) {
+      const [fw, fh] = free(ASPECTS["16:9"], 0.18);
+      const sim = createLogoSim(seed, fw, fh, mode, REFERENCE_SPEED);
+      largestRate = Math.max(largestRate, longestWait(sim, REFERENCE_SPEED, 4 * wMax).rate);
+    }
+    expect(largestRate).toBeGreaterThan(0);
+  });
 
   it("still finds corners soon for any logo size and aspect", () => {
     const rng = createRng(11);
