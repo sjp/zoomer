@@ -20,7 +20,7 @@ import { MAX_SPEED, MAX_TOAST, MAX_TOASTERS } from "./toasters.meta";
 export const SLOTS = MAX_TOASTERS + MAX_TOAST;
 export const REF_HEIGHT = 1080;
 /** Side of a near sprite's square atlas cell, reference px. */
-export const CELL = 150;
+export const CELL = 160;
 
 /** Per depth layer, near to far: size, speed and brightness relative to the near layer. */
 export const LAYER_SIZE = [1, 0.78, 0.6] as const;
@@ -101,16 +101,29 @@ interface Flock {
   started: boolean;
 }
 
+/** Steps of the R2 sequence (from the plastic number) and the jitter around it, in spans. */
+const R2_X = 0.7548776662466927;
+const R2_Y = 0.5698402909980532;
+const LAYOUT_JITTER = 0.12;
+
 /** The slot's own stream: independent of every other slot, and of the counts. */
 const slotRng = (seed: number, slot: number) => createRng(hash32(seed * 977 + slot * 7919 + 13));
 
 /** Fills every slot's layout from `seed`. */
 function layout(f: Flock, seed: number): void {
   const key = new Float32Array(SLOTS);
+  // Toasters and toast each start on their own R2 low-discrepancy sequence, so
+  // any first few are spread evenly over the sky (still prefix-stable), offset
+  // per seed and jittered a little so the flock doesn't look like a lattice.
+  const start = createRng(hash32(seed * 7 + 3));
+  const origins = [start(), start(), start(), start()];
   for (let s = 0; s < SLOTS; s++) {
     const rand = slotRng(seed, s);
-    f.u[s] = rand();
-    f.v[s] = rand();
+    const toast = s >= MAX_TOASTERS;
+    const i = toast ? s - MAX_TOASTERS : s;
+    const o = toast ? 2 : 0;
+    f.u[s] = fract(origins[o] + i * R2_X + (rand() - 0.5) * LAYOUT_JITTER);
+    f.v[s] = fract(origins[o + 1] + i * R2_Y + (rand() - 0.5) * LAYOUT_JITTER);
     // More far sprites than near ones, as in a deep sky.
     const r = rand();
     const layer = r < 0.3 ? 0 : r < 0.65 ? 1 : 2;
