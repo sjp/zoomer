@@ -9,6 +9,7 @@ import { blindsMeta } from "./blinds/blinds.meta";
 import { blobsMeta } from "./blobs/blobs.meta";
 import { blossomMeta } from "./blossom/blossom.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
+import { bouncingLogoMeta } from "./bouncinglogo/bouncinglogo.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { retrobridgeMeta } from "./retrobridge/retrobridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
@@ -210,6 +211,10 @@ export const effects: readonly EffectEntry[] = [
   { ...hourglassMeta, load: () => import("./hourglass/hourglass").then((m) => m.hourglass) },
   { ...splitflapMeta, load: () => import("./splitflap/splitflap").then((m) => m.splitflap) },
   { ...neonMeta, load: () => import("./neon/neon").then((m) => m.neon) },
+  {
+    ...bouncingLogoMeta,
+    load: () => import("./bouncinglogo/bouncinglogo").then((m) => m.bouncingLogo),
+  },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
