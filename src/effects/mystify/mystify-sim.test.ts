@@ -3,14 +3,8 @@ import { defaults } from "../params";
 import { MAX_FEATURE_PX_PER_FRAME, MAX_PATTERN_HZ, pxPerReferenceFrame } from "../motion-limits";
 import { STREAK_FLOATS } from "../streaks";
 import type { ParamValues } from "../types";
-import {
-  createMystify,
-  echoSteps,
-  MAX_STREAKS,
-  MIN_ECHO_STEPS,
-  SIM_RATE,
-  SPEED_UNIT,
-} from "./mystify-sim";
+import { ECHO_SIM_RATE as SIM_RATE, echoSteps, MIN_ECHO_STEPS } from "../echo-lines";
+import { createMystify, MAX_STREAKS, SPEED_UNIT } from "./mystify-sim";
 import { MAX_SPEED, MAX_TRAIL, mystifyMeta } from "./mystify.meta";
 
 type Params = ParamValues<typeof mystifyMeta.params>;

@@ -1,7 +1,6 @@
 import type { Rgb } from "../color";
 import { createCountFade } from "../fade";
 import { approach, clamp } from "../math";
-import { MAX_PATTERN_HZ } from "../motion-limits";
 import { createRng } from "../noise";
 import { takeSteps, type StepClock } from "../step-clock";
 import { STREAK_FLOATS } from "../streaks";
@@ -11,6 +10,16 @@ import {
   stepBouncePoints,
   type BouncePoints,
 } from "../bounce-points";
+import {
+  ECHO_SIM_RATE,
+  echoBrightness,
+  echoColor,
+  echoLineLook,
+  echoSteps,
+  hueRgb,
+  MIN_ECHO_STEPS,
+  type EchoLineLook,
+} from "../echo-lines";
 import { createEchoRing, type EchoRing } from "../echo-ring";
 import {
   MAX_POINTS,
@@ -33,8 +42,6 @@ import {
  * cross-fade to the single edge that replaces them.
  */
 
-/** Simulation steps per second. */
-export const SIM_RATE = 60;
 /** Most steps run in one frame; the rest are dropped rather than caught up. */
 const MAX_STEPS_PER_FRAME = 8;
 
@@ -42,20 +49,6 @@ const MAX_STEPS_PER_FRAME = 8;
 export const SPEED_UNIT = 0.1;
 /** How fast the speed eases to a new slider value, frame heights per second per second. */
 const SPEED_EASE = 0.25;
-
-/**
- * Echoes are sampled about this far apart (frame heights) along a corner's path,
- * as in the original, where a fan of evenly spaced outlines traces each shape.
- */
-const ECHO_SPACING = 0.03;
-/**
- * Steps between echoes, at least: each echo passes a screen point after the one
- * before, so their interval sets the trail's flicker rate, held under the codec's
- * pattern limit.
- */
-export const MIN_ECHO_STEPS = Math.ceil(SIM_RATE / MAX_PATTERN_HZ) + 3;
-/** At most: at the slowest speeds, echoes bunch closer rather than lag for seconds. */
-const MAX_ECHO_STEPS = 90;
 
 /** Each shape's colour goes round the hue wheel once in this many seconds. */
 const HUE_PERIOD = 45;
@@ -72,15 +65,6 @@ const MIRROR_EASE = 1;
 /** Seconds the shapes take to fade out (and back in) when the seed changes. */
 const RESEED_FADE = 0.6;
 
-/** Line half widths in reference px: Classic's crisp 1 px-like line, and Modern's. */
-const CLASSIC_HALF_WIDTH = 0.75;
-const MODERN_HALF_WIDTH = 1;
-/** Modern's glow: a wider, dimmer line under each line. */
-const GLOW_HALF_WIDTH = 4;
-const GLOW_BRIGHTNESS = 0.22;
-/** Colour saturation in each style: the pure spectrum, and a slightly softer one. */
-const CLASSIC_SATURATION = 1;
-const MODERN_SATURATION = 0.8;
 /** Reference px kept clear at the frame's edges, so the lines aren't clipped. */
 const EDGE_INSET = 2;
 
@@ -112,25 +96,6 @@ interface Shape {
   rng: () => number;
   hue: number;
   history: EchoRing;
-}
-
-/** Steps between echoes at `speed` frame heights per second. */
-export function echoSteps(speed: number): number {
-  const perStep = Math.max(speed, 1e-6) / SIM_RATE;
-  return clamp(Math.round(ECHO_SPACING / perStep), MIN_ECHO_STEPS, MAX_ECHO_STEPS);
-}
-
-/** One channel of an HSV colour: `n` is 5 for red, 3 for green, 1 for blue. */
-function hsvChannel(n: number, h: number, s: number): number {
-  const k = (n + (h - Math.floor(h)) * 6) % 6;
-  return 1 - s * Math.max(0, Math.min(k, 4 - k, 1));
-}
-
-function hueRgb(h: number, s: number, out: Rgb): Rgb {
-  out[0] = hsvChannel(5, h, s);
-  out[1] = hsvChannel(3, h, s);
-  out[2] = hsvChannel(1, h, s);
-  return out;
 }
 
 const isMirrored = (mirror: string, axis: "horizontal" | "vertical") =>
@@ -186,10 +151,10 @@ export function createMystify() {
   }
 
   function stepSim() {
-    time += 1 / SIM_RATE;
+    time += 1 / ECHO_SIM_RATE;
     for (let i = 0; i < MAX_SHAPES; i++) {
       const s = shapes[i];
-      stepBouncePoints(s.points, 1 / SIM_RATE, speed, aspect, s.rng);
+      stepBouncePoints(s.points, 1 / ECHO_SIM_RATE, speed, aspect, s.rng);
       s.hue = shapeHue(i);
     }
     sinceSample++;
@@ -228,9 +193,7 @@ export function createMystify() {
   let inset = 0;
   let spanX = 1;
   let spanY = 1;
-  let halfWidth = 1;
-  let glowWidth = 1;
-  let glow = 0;
+  const look: EchoLineLook = { halfWidth: 1, glowWidth: 1, glow: 0, saturation: 1 };
 
   function put(x0: number, y0: number, x1: number, y1: number, bright: number, r: number) {
     const o = count * STREAK_FLOATS;
@@ -257,9 +220,9 @@ export function createMystify() {
     const y0 = inset + (fy ? 1 - ay : ay) * spanY;
     const x1 = inset + (fx ? 1 - bx : bx) * spanX;
     const y1 = inset + (fy ? 1 - by : by) * spanY;
-    put(x0, y0, x1, y1, bright, halfWidth);
-    if (glow > 0) {
-      put(x0, y0, x1, y1, bright * glow, glowWidth);
+    put(x0, y0, x1, y1, bright, look.halfWidth);
+    if (look.glow > 0) {
+      put(x0, y0, x1, y1, bright * look.glow, look.glowWidth);
     }
   }
 
@@ -345,7 +308,7 @@ export function createMystify() {
         }
       }
 
-      const n = takeSteps(clock, SIM_RATE, d, MAX_STEPS_PER_FRAME);
+      const n = takeSteps(clock, ECHO_SIM_RATE, d, MAX_STEPS_PER_FRAME);
       for (let k = 0; k < n; k++) {
         stepSim();
       }
@@ -362,11 +325,8 @@ export function createMystify() {
       inset = Math.min(EDGE_INSET * scale, width / 4, height / 4);
       spanX = width - 2 * inset;
       spanY = height - 2 * inset;
-      halfWidth =
-        (CLASSIC_HALF_WIDTH + (MODERN_HALF_WIDTH - CLASSIC_HALF_WIDTH) * styleMix) * scale;
-      glowWidth = GLOW_HALF_WIDTH * scale;
-      glow = GLOW_BRIGHTNESS * styleMix;
-      const saturation = CLASSIC_SATURATION + (MODERN_SATURATION - CLASSIC_SATURATION) * styleMix;
+      echoLineLook(styleMix, scale, look);
+      const saturation = look.saturation;
       const phase = Math.min(1, (sinceSample + clock.acc) / interval);
       const t = clock.acc;
 
@@ -393,17 +353,12 @@ export function createMystify() {
         const d = s.history.data;
         const echoes = Math.min(Math.ceil(trailMix), s.history.count);
         for (let k = 1; k <= echoes; k++) {
-          const weight = clamp(trailMix - k + 1, 0, 1);
-          const age = Math.max(0, 1 - (k - 1 + phase) / Math.max(trailMix, 1));
-          const b = life * weight * (1 + (age - 1) * styleMix);
+          const b = life * echoBrightness(k, trailMix, phase, styleMix);
           if (b <= 0) {
             continue;
           }
           const o = s.history.offset(k - 1);
-          hueRgb(d[o + SAMPLE_HUE], saturation, then);
-          color[0] = now[0] + (then[0] - now[0]) * styleMix;
-          color[1] = now[1] + (then[1] - now[1]) * styleMix;
-          color[2] = now[2] + (then[2] - now[2]) * styleMix;
+          echoColor(now, hueRgb(d[o + SAMPLE_HUE], saturation, then), styleMix, color);
           outline(d, o, d[o + SAMPLE_POINTS], b);
         }
       }
