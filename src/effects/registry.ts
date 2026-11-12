@@ -116,6 +116,7 @@ import { splitflapMeta } from "./splitflap/splitflap.meta";
 import { startrailsMeta } from "./startrails/startrails.meta";
 import { synthwaveMeta } from "./synthwave/synthwave.meta";
 import { tesseractMeta } from "./tesseract/tesseract.meta";
+import { toastersMeta } from "./toasters/toasters.meta";
 import { trainMeta } from "./train/train.meta";
 import { terrainMeta } from "./terrain/terrain.meta";
 import { truchetMeta } from "./truchet/truchet.meta";
@@ -216,6 +217,7 @@ export const effects: readonly EffectEntry[] = [
     ...bouncingLogoMeta,
     load: () => import("./bouncinglogo/bouncinglogo").then((m) => m.bouncingLogo),
   },
+  { ...toastersMeta, load: () => import("./toasters/toasters").then((m) => m.toasters) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
