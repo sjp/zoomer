@@ -401,7 +401,7 @@ const CRITTER_MARGIN = 16;
 /** Critter atlas frames: eyes open, blinking, and an idle touch. */
 const FRAME_OPEN = 0;
 export const FRAME_BLINK = 1;
-const FRAME_IDLE = 2;
+export const FRAME_IDLE = 2;
 
 /** The critter select's value as its row in the atlas (the Frog for anything unknown). */
 export function critterIndex(value: string): number {

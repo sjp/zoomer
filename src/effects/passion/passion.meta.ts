@@ -15,6 +15,8 @@ export const CRITTER_OPTIONS = [
   { value: "turtle", label: "Turtle" },
 ] as const;
 
+export type CritterId = (typeof CRITTER_OPTIONS)[number]["value"];
+
 const SIDE_OPTIONS = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
