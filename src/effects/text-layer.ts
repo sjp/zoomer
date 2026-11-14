@@ -15,7 +15,8 @@
  * texel for texel; a moved region (a list row sliding in, an axis stepping
  * along) or a scaled one samples bilinearly while it moves.
  */
-import { createUniforms, resetUnpackState, type Scope, scopedProgram } from "./gl";
+import { createCanvasAtlas } from "./canvas-texture";
+import { createUniforms, type Scope, scopedProgram } from "./gl";
 
 /**
  * The fill style for each text role. Drawn on a transparent canvas and uploaded
@@ -38,8 +39,6 @@ export const TEXT_ROLES = {
 /** Floats in the palette `draw` takes: an RGB triple per role, in `TEXT_ROLES` order. */
 export const TEXT_PALETTE_FLOATS = 15;
 
-/** Most dirty rects kept before a flush uploads the whole canvas instead. */
-const MAX_DIRTY = 48;
 /** Floats per region-quad vertex: screen position, canvas position, opacity. */
 const QUAD_STRIDE = 5;
 
@@ -134,17 +133,7 @@ export function createTextLayer(
   u.i1("uTex", 0);
   gl.useProgram(null);
 
-  const texture = scope.add(gl.createTexture(), (t) => {
-    gl.deleteTexture(t);
-  });
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  resetUnpackState(gl);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  const atlas = createCanvasAtlas(gl, scope);
 
   const vao = scope.add(gl.createVertexArray(), (v) => {
     gl.deleteVertexArray(v);
@@ -166,15 +155,6 @@ export function createTextLayer(
   gl.bindVertexArray(null);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-  let canvas: OffscreenCanvas | null = null;
-  let ctx: OffscreenCanvasRenderingContext2D | null = null;
-  let width = 0;
-  let height = 0;
-  /** The texture matches the canvas's size (false until the first full upload). */
-  let allocated = false;
-  let fullDirty = false;
-  const dirty = new Int32Array(MAX_DIRTY * 4);
-  let dirtyCount = 0;
   let quads = 0;
 
   const put = (o: number, x: number, y: number, s: number, t: number, a: number) => {
@@ -187,117 +167,18 @@ export function createTextLayer(
 
   return {
     get ctx() {
-      return ctx;
+      return atlas.ctx;
     },
     get width() {
-      return width;
+      return atlas.width;
     },
     get height() {
-      return height;
+      return atlas.height;
     },
-    resize(w, h) {
-      const nw = Math.max(1, Math.round(w));
-      const nh = Math.max(1, Math.round(h));
-      if (canvas && nw === width && nh === height) {
-        return ctx !== null;
-      }
-      width = nw;
-      height = nh;
-      if (typeof OffscreenCanvas === "undefined") {
-        return false;
-      }
-      canvas = new OffscreenCanvas(width, height);
-      ctx = canvas.getContext("2d");
-      allocated = false;
-      fullDirty = true;
-      dirtyCount = 0;
-      return ctx !== null;
-    },
-    release() {
-      canvas = null;
-      ctx = null;
-      width = 0;
-      height = 0;
-      allocated = false;
-      dirtyCount = 0;
-      fullDirty = false;
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      resetUnpackState(gl);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA8,
-        1,
-        1,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        new Uint8Array(4),
-      );
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    },
-    clear(x, y, w, h) {
-      if (!ctx) {
-        return;
-      }
-      const x0 = Math.max(0, Math.floor(x));
-      const y0 = Math.max(0, Math.floor(y));
-      const x1 = Math.min(width, Math.ceil(x + w));
-      const y1 = Math.min(height, Math.ceil(y + h));
-      if (x1 <= x0 || y1 <= y0) {
-        return;
-      }
-      ctx.clearRect(x0, y0, x1 - x0, y1 - y0);
-      if (fullDirty) {
-        return;
-      }
-      if (dirtyCount >= MAX_DIRTY) {
-        fullDirty = true;
-        return;
-      }
-      const o = dirtyCount * 4;
-      dirty[o] = x0;
-      dirty[o + 1] = y0;
-      dirty[o + 2] = x1 - x0;
-      dirty[o + 3] = y1 - y0;
-      dirtyCount++;
-    },
-    flush() {
-      if (!canvas || (!fullDirty && dirtyCount === 0)) {
-        return;
-      }
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      resetUnpackState(gl);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      if (fullDirty || !allocated) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-        allocated = true;
-      } else {
-        // WebGL2 reads a sub-rectangle of the canvas through the row length and skip settings.
-        gl.pixelStorei(gl.UNPACK_ROW_LENGTH, width);
-        for (let i = 0; i < dirtyCount; i++) {
-          const o = i * 4;
-          gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, dirty[o]);
-          gl.pixelStorei(gl.UNPACK_SKIP_ROWS, dirty[o + 1]);
-          gl.texSubImage2D(
-            gl.TEXTURE_2D,
-            0,
-            dirty[o],
-            dirty[o + 1],
-            dirty[o + 2],
-            dirty[o + 3],
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            canvas,
-          );
-        }
-      }
-      resetUnpackState(gl);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      fullDirty = false;
-      dirtyCount = 0;
-    },
+    resize: atlas.resize,
+    release: atlas.release,
+    clear: atlas.clear,
+    flush: atlas.flush,
     quad(sx, sy, sw, sh, dx, dy, dw, dh, alpha) {
       if (!(alpha > 0) || !(sw > 0) || !(sh > 0) || !(dw > 0) || !(dh > 0) || quads >= maxQuads) {
         return;
@@ -315,18 +196,18 @@ export function createTextLayer(
     draw(targetWidth, targetHeight, palette) {
       const n = quads;
       quads = 0;
-      if (n === 0 || !allocated) {
+      if (n === 0 || !atlas.ready) {
         return;
       }
       gl.useProgram(program);
       u.f2("uResolution", targetWidth, targetHeight);
-      u.f2("uTexSize", width, height);
+      u.f2("uTexSize", atlas.width, atlas.height);
       gl.uniform3fv(u.loc.uRoles, palette, 0, TEXT_PALETTE_FLOATS);
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts, 0, n * 6 * QUAD_STRIDE);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.bindTexture(gl.TEXTURE_2D, atlas.texture);
       gl.bindVertexArray(vao);
       gl.drawArrays(gl.TRIANGLES, 0, n * 6);
       gl.bindVertexArray(null);
