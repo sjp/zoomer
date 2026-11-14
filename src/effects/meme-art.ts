@@ -113,12 +113,12 @@ export function drawOutlinedText(
 type MeasureEm = (text: string) => number | undefined;
 
 /**
- * A measurer in ems of `font` at `weight` (`memeFont` by default), or one that
- * always gives undefined where there is no canvas to measure with.
+ * A measurer in ems of the font `font(px)` gives (the meme stack at normal
+ * weight by default), or one that always gives undefined where there is no
+ * canvas to measure with.
  */
 export function createEmMeasure(
-  weight: number,
-  font: (weight: number, px: number) => string = memeFont,
+  font: (px: number) => string = (px) => memeFont(400, px),
 ): MeasureEm {
   let ctx: Ctx | null | undefined;
   return (text) => {
@@ -129,7 +129,7 @@ export function createEmMeasure(
     if (!ctx) {
       return undefined;
     }
-    ctx.font = font(weight, 100);
+    ctx.font = font(100);
     // Undefined from the tests' stand-in context, whose methods return nothing.
     const metrics = ctx.measureText(text) as TextMetrics | undefined;
     return metrics === undefined ? undefined : metrics.width / 100;

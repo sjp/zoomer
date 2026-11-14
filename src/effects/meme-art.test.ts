@@ -34,7 +34,7 @@ describe("meme text on a canvas", () => {
   });
 
   it("measures in ems", () => {
-    expect(createEmMeasure(400)("abcd")).toBeCloseTo(2.4);
+    expect(createEmMeasure()("abcd")).toBeCloseTo(2.4);
   });
 
   it("strokes the outline before filling", () => {

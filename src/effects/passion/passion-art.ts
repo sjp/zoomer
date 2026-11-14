@@ -274,7 +274,7 @@ export function paintMiscAtlas(cell: number): OffscreenCanvas | null {
  * where there is no canvas to measure with.
  */
 export function createMeasure(style: CaptionStyle): MeasureWord {
-  return createEmMeasure(CAPTION_WEIGHT[style]);
+  return createEmMeasure((px) => font(style, px));
 }
 
 interface CaptionArt {
