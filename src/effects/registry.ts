@@ -142,6 +142,7 @@ import { createEffectLoader, type EffectEntry } from "./loader";
 import { standbyMeta } from "./standby/standby.meta";
 import { stonksMeta } from "./stonks/stonks.meta";
 import { suchwowMeta } from "./suchwow/suchwow.meta";
+import { thisisfineMeta } from "./thisisfine/thisisfine.meta";
 import { vaporwaveMeta } from "./vaporwave/vaporwave.meta";
 
 /**
@@ -253,6 +254,10 @@ export const effects: readonly EffectEntry[] = [
   { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
   { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
   { ...vaporwaveMeta, load: () => import("./vaporwave/vaporwave").then((m) => m.vaporwave) },
+  {
+    ...thisisfineMeta,
+    load: () => import("./thisisfine/thisisfine").then((m) => m.thisisfine),
+  },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
