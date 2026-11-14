@@ -82,7 +82,7 @@ export const bridgeMeta = defineEffectMeta({
     showDate: { kind: "boolean", label: "Show local date", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 12 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["sci-fi", "spaceship", "control room", "console", "command deck", "television", "future"],
   cost: "low",
   context: "webgl2",

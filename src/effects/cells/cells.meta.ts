@@ -35,7 +35,7 @@ export const cellsMeta = defineEffectMeta({
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  category: "Science",
+  categories: ["Science"],
   tags: ["biology", "microscope", "mitosis", "petri dish", "lab", "organic", "voronoi"],
   cost: "medium",
   context: "webgl2",

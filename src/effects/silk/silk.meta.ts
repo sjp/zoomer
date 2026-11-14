@@ -46,7 +46,7 @@ export const silkMeta = defineEffectMeta({
       default: 120,
     },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["fabric", "cloth", "luxury", "curtain"],
   cost: "low",
   context: "webgl2",

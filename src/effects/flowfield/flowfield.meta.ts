@@ -45,7 +45,7 @@ export const flowfieldMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#05060f" },
     seed: { kind: "number", label: "Field seed", min: 1, max: 9999, step: 1, default: 1 },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["generative", "wind", "perlin"],
   cost: "medium",
   context: "webgl2",

@@ -38,7 +38,7 @@ export const catMeta = defineEffectMeta({
     size: { kind: "number", label: "Cat size", min: 0.25, max: 0.55, step: 0.01, default: 0.4 },
     cushion: { kind: "color", label: "Cushion colour", default: "#7f9da6" },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["kitten", "pet", "nap", "sunbeam", "calm", "home", "purr"],
   cost: "very low",
   context: "webgl2",

@@ -47,7 +47,7 @@ export const newsdeskMeta = defineEffectMeta({
     live: { kind: "boolean", label: "LIVE tag and clock", default: true },
     skyline: { kind: "select", label: "Skyline", options: SKYLINE_OPTIONS, default: "cycle" },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["tv", "broadcast", "anchor", "studio", "lower third", "presenter", "newsroom"],
   cost: "low",
   context: "webgl2",

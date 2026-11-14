@@ -4,11 +4,14 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
 import { EffectList, type EffectListProps } from "./EffectList";
 
-const effect = (id: string, category: ListableEffect["category"] = "Abstract"): ListableEffect => ({
+const effect = (
+  id: string,
+  categories: ListableEffect["categories"] = ["Abstract"],
+): ListableEffect => ({
   id,
   name: id.toUpperCase(),
   description: `The ${id} effect`,
-  category,
+  categories,
   tags: [],
   cost: "low",
 });

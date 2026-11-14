@@ -42,7 +42,7 @@ export const kaleidoMeta = defineEffectMeta({
     contrast: { kind: "number", label: "Contrast", min: 0, max: 1, step: 0.05, default: 0.8 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["mandala", "mirror", "symmetry", "stained glass", "psychedelic", "toy", "pattern"],
   cost: "very low",
   context: "webgl2",

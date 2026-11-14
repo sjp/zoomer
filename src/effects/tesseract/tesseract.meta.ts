@@ -34,7 +34,7 @@ export const tesseractMeta = defineEffectMeta({
     colour: { kind: "select", label: "Colour", options: COLOUR_OPTIONS, default: "cyan" },
     position: { kind: "select", label: "Position", options: POSITION_OPTIONS, default: "right" },
   },
-  category: "Science",
+  categories: ["Science"],
   tags: ["4d", "hypercube", "polytope", "geometry", "wireframe", "maths", "sci-fi"],
   cost: "very low",
   context: "webgl2",

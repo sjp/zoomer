@@ -16,7 +16,9 @@ const files = Object.entries(
   import.meta.glob<string>("./*/*.ts", { query: "?raw", import: "default", eager: true }),
 ).map(([path, text]) => [path.replace(/^\.\//, ""), text] as const);
 
-const sceneFolders = new Set(effects.filter((e) => e.category === "Scenes").map((e) => e.id));
+const sceneFolders = new Set(
+  effects.filter((e) => e.categories.includes("Scenes")).map((e) => e.id),
+);
 
 /** Folders a file imports from with `../<folder>/...`, type-only imports included. */
 function foldersImported(source: string): string[] {

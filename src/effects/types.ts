@@ -124,7 +124,11 @@ export interface EffectMeta<S extends ParamSchema = ParamSchema> {
   id: string;
   name: string;
   description: string;
-  category: EffectCategory;
+  /**
+   * One to three of {@link EFFECT_CATEGORIES}, without repeats. The first is the
+   * primary category, which the "By category" sort groups by.
+   */
+  categories: readonly [EffectCategory, ...EffectCategory[]];
   /**
    * A few lowercase search words that aren't already in the name or description,
    * such as "stars" and "sci-fi" for Warp Speed.

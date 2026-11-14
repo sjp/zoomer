@@ -26,7 +26,7 @@ export const mystifyMeta = defineEffectMeta({
   name: "Mystify",
   description:
     "The classic Windows screensaver: polygons whose corners bounce around a black screen, each trailing a fan of echo outlines as its colour drifts through the spectrum.",
-  category: "Retro",
+  categories: ["Retro"],
   tags: ["lines", "90s", "nostalgia", "geometric", "vector", "rainbow"],
   cost: "very low",
   context: "webgl2",

@@ -58,7 +58,7 @@ export const phyllotaxisMeta = defineEffectMeta({
       default: "bottomRight",
     },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: [
     "phyllotaxis",
     "fibonacci",

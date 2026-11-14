@@ -26,7 +26,7 @@ export const lanternsMeta = defineEffectMeta({
     stars: { kind: "boolean", label: "Stars", default: true },
     lake: { kind: "boolean", label: "Lake", default: false },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["festival", "night", "lights", "celebration"],
   cost: "very low",
   context: "webgl2",

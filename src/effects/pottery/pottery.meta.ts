@@ -34,7 +34,7 @@ export const potteryMeta = defineEffectMeta({
     spin: { kind: "number", label: "Wheel speed", min: 0, max: 2, step: 0.05, default: 0.6 },
     corner: { kind: "select", label: "Corner", options: CORNER_OPTIONS, default: "right" },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["ceramics", "clay", "potter", "studio", "craft", "handmade", "throwing", "calm"],
   cost: "very low",
   context: "webgl2",

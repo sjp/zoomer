@@ -53,7 +53,7 @@ export const daymapMeta = defineEffectMeta({
     },
     demo: { kind: "boolean", label: "Demo (one day a minute)", default: false },
   },
-  category: "Science",
+  categories: ["Science"],
   tags: ["earth", "geography", "time zones", "globe", "sun"],
   cost: "very low",
   context: "webgl2",

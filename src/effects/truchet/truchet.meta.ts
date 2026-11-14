@@ -54,7 +54,7 @@ export const truchetMeta = defineEffectMeta({
     calmCentre: { kind: "boolean", label: "Calm centre", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["tiles", "pattern", "geometric", "maze", "professional", "minimal"],
   cost: "very low",
   context: "webgl2",

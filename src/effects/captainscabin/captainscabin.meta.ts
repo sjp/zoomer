@@ -19,7 +19,7 @@ export const captainscabinMeta = defineEffectMeta({
     lantern: { kind: "boolean", label: "Lantern lit", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["pirate", "sailing", "tall ship", "ocean", "nautical", "voyage", "galleon", "sea"],
   cost: "low",
   context: "webgl2",

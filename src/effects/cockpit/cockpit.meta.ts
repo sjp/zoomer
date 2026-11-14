@@ -31,7 +31,7 @@ export const cockpitMeta = defineEffectMeta({
     lights: { kind: "number", label: "Console activity", min: 0, max: 1, step: 0.05, default: 0.5 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["sci-fi", "spaceship", "hyperspace", "pilot", "lightspeed", "starship", "space travel"],
   cost: "low",
   context: "webgl2",

@@ -22,12 +22,12 @@ export function isEffectSort(value: unknown): value is EffectSort {
 /** What the list needs to know about an effect. */
 export type ListableEffect = Pick<
   EffectMeta,
-  "id" | "name" | "description" | "category" | "tags" | "cost"
+  "id" | "name" | "description" | "categories" | "tags" | "cost"
 >;
 
 export interface ListOptions {
   sort: EffectSort;
-  /** Search text. Every word must match the name, description, tags or category. */
+  /** Search text. Every word must match the name, description, tags or a category. */
   query?: string | undefined;
   /**
    * Ids of starred effects. They come first, in their own group, in the
@@ -90,7 +90,7 @@ export function visibleEffects<T extends ListableEffect>(
     const name = normalizeText(effect.name);
     if (words.length > 0) {
       const text = normalizeText(
-        [effect.name, effect.description, effect.category, ...effect.tags].join(" "),
+        [effect.name, effect.description, ...effect.categories, ...effect.tags].join(" "),
       );
       if (!words.every((w) => text.includes(w))) {
         continue;
@@ -103,7 +103,7 @@ export function visibleEffects<T extends ListableEffect>(
       score: words.length > 0 ? nameScore(name, words) : 0,
     });
   }
-  const byCategory = (e: T) => categoryIndex.get(e.category) ?? EFFECT_CATEGORIES.length;
+  const byCategory = (e: T) => categoryIndex.get(e.categories[0]) ?? EFFECT_CATEGORIES.length;
   const byCost = (e: T) =>
     e.cost !== undefined ? (costIndex.get(e.cost) ?? 0) : EFFECT_COSTS.length;
   rows.sort(
@@ -120,13 +120,13 @@ export function visibleEffects<T extends ListableEffect>(
 
 /**
  * The heading an effect is listed under, if the list is grouped: "Favourites" for a
- * starred effect, else its category when sorting by category.
+ * starred effect, else its primary category when sorting by category.
  */
 export function effectGroup(effect: ListableEffect, options: ListOptions): string | undefined {
   if (options.favourites?.has(effect.id) === true) {
     return FAVOURITES_GROUP;
   }
-  return options.sort === "category" ? effect.category : undefined;
+  return options.sort === "category" ? effect.categories[0] : undefined;
 }
 
 /**

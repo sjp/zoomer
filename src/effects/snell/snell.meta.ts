@@ -30,7 +30,7 @@ export const snellMeta = defineEffectMeta({
     leaf: { kind: "boolean", label: "Floating leaves", default: true },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  category: "Water",
+  categories: ["Water"],
   tags: ["underwater", "swimming", "pool", "diving", "refraction", "optics", "physics"],
   cost: "low",
   context: "webgl2",

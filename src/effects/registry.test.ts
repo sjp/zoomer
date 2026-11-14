@@ -22,8 +22,13 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
     expect(state.values).toEqual(values);
   });
 
-  it("has a category, a cost and lowercase search tags", () => {
-    expect(EFFECT_CATEGORIES).toContain(entry.category);
+  it("has one to three categories, a cost and lowercase search tags", () => {
+    expect(entry.categories.length).toBeGreaterThanOrEqual(1);
+    expect(entry.categories.length).toBeLessThanOrEqual(3);
+    expect(new Set(entry.categories).size).toBe(entry.categories.length);
+    for (const category of entry.categories) {
+      expect(EFFECT_CATEGORIES).toContain(category);
+    }
     expect(EFFECT_COSTS).toContain(entry.cost);
     expect(entry.tags.length).toBeGreaterThan(0);
     for (const tag of entry.tags) {

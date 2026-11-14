@@ -35,7 +35,7 @@ export const leniaMeta = defineEffectMeta({
     trail: { kind: "number", label: "Trail", min: 0, max: 1, step: 0.05, default: 0.35 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  category: "Science",
+  categories: ["Science"],
   tags: ["artificial life", "cellular automaton", "simulation", "organic", "biology", "microbes"],
   cost: "medium",
   context: "webgl2",

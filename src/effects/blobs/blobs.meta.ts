@@ -29,7 +29,7 @@ export const blobsMeta = defineEffectMeta({
     grain: { kind: "number", label: "Grain", min: 0, max: 1, step: 0.01, default: 0.15 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "low" },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["colours", "minimal", "mesh", "mesh gradient"],
   cost: "very low",
   context: "webgl2",

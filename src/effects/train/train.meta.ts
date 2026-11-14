@@ -42,7 +42,7 @@ export const trainMeta = defineEffectMeta({
     sway: { kind: "number", label: "Carriage sway", min: 0, max: 1, step: 0.05, default: 0.25 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["railway", "journey", "travel", "commute", "countryside", "farm", "parallax", "landscape"],
   cost: "low",
   context: "webgl2",

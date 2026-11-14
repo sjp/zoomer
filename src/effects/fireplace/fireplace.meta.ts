@@ -36,7 +36,7 @@ export const fireplaceMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#0a0604" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["hearth", "winter", "log fire", "christmas"],
   cost: "medium",
   context: "webgl2",

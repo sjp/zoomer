@@ -34,7 +34,7 @@ export const aquariumMeta = defineEffectMeta({
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 86 },
   },
-  category: "Water",
+  categories: ["Water"],
   tags: ["fish tank", "tetra", "underwater", "freshwater", "aquascape", "calm", "pets"],
   cost: "low",
   context: "webgl2",

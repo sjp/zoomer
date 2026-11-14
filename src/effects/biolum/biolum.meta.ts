@@ -37,7 +37,7 @@ export const biolumMeta = defineEffectMeta({
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  category: "Water",
+  categories: ["Water"],
   tags: ["ocean", "sea", "surf", "coast", "dinoflagellates", "neon", "calm", "summer"],
   cost: "low",
   context: "webgl2",

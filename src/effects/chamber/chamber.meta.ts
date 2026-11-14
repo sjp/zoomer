@@ -38,7 +38,7 @@ export const chamberMeta = defineEffectMeta({
     mist: { kind: "number", label: "Mist", min: 0, max: 1, step: 0.05, default: 0.5 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  category: "Science",
+  categories: ["Science"],
   tags: ["physics", "subatomic", "radiation", "laboratory", "experiment", "cosmic rays", "wilson"],
   cost: "very low",
   context: "webgl2",

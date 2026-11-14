@@ -24,7 +24,7 @@ export const kelpMeta = defineEffectMeta({
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 11 },
   },
-  category: "Water",
+  categories: ["Water"],
   tags: ["ocean", "underwater", "seaweed", "sea", "diving", "calm"],
   cost: "low",
   context: "webgl2",

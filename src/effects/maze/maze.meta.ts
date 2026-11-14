@@ -64,7 +64,7 @@ export const mazeMeta = defineEffectMeta({
     hand: { kind: "select", label: "Follow wall", options: HAND_OPTIONS, default: "right" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  category: "Retro",
+  categories: ["Retro"],
   tags: ["screensaver", "windows", "labyrinth", "first person", "90s", "bricks", "nostalgia"],
   cost: "low",
   context: "webgl2",

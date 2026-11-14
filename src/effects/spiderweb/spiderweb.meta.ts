@@ -26,7 +26,7 @@ export const spiderwebMeta = defineEffectMeta({
     light: { kind: "select", label: "Light", options: LIGHT_OPTIONS, default: "dawn" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["cobweb", "orb web", "dew drops", "morning", "sunrise", "garden", "macro", "bokeh"],
   cost: "very low",
   context: "webgl2",

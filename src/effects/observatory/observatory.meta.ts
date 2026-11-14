@@ -36,7 +36,7 @@ export const observatoryMeta = defineEffectMeta({
     side: { kind: "select", label: "Telescope", options: SIDE_OPTIONS, default: "left" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["astronomy", "telescope", "night sky", "stars", "stargazing", "space", "science"],
   cost: "low",
   context: "webgl2",

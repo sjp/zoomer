@@ -27,7 +27,7 @@ export const beachdayMeta = defineEffectMeta({
     birds: { kind: "boolean", label: "Gulls", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["seaside", "ocean", "shore", "surf", "summer", "holiday", "vacation", "sunny", "coast"],
   cost: "low",
   context: "webgl2",

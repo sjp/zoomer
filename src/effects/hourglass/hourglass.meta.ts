@@ -45,7 +45,7 @@ export const hourglassMeta = defineEffectMeta({
       default: 1,
     },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["sand timer", "egg timer", "time", "countdown", "pomodoro", "desk", "antique", "focus"],
   cost: "very low",
   context: "webgl2",

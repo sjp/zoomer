@@ -52,7 +52,7 @@ export const bokehMeta = defineEffectMeta({
     backgroundTop: { kind: "color", label: "Background top colour", default: "#07050f" },
     backgroundBottom: { kind: "color", label: "Background bottom colour", default: "#2a0f22" },
   },
-  category: "Abstract",
+  categories: ["Abstract"],
   tags: ["blur", "circles", "christmas", "sparkle"],
   cost: "low",
   context: "webgl2",

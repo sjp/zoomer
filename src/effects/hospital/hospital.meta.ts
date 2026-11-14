@@ -43,7 +43,7 @@ export const hospitalMeta = defineEffectMeta({
     clock: { kind: "boolean", label: "Wall clock (local time)", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["medical", "ward", "patient", "ecg", "heart", "sick", "nurse", "doctor", "drip"],
   cost: "low",
   context: "webgl2",

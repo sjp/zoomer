@@ -102,7 +102,7 @@ function fakeEffect() {
     id: "fake",
     name: "Fake",
     description: "",
-    category: "Abstract",
+    categories: ["Abstract"],
     tags: [],
     context: "webgl2",
     params: {},

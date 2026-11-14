@@ -24,7 +24,7 @@ const effect = (id: string) =>
     id,
     name: id,
     description: "",
-    category: "Abstract",
+    categories: ["Abstract"],
     tags: [],
     context: "webgl2",
     params: {},

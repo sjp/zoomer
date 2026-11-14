@@ -47,7 +47,7 @@ export const blossomMeta = defineEffectMeta({
     background: { kind: "boolean", label: "Faint tree behind", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["sakura", "cherry", "spring", "hanami", "flowers", "japan", "calm"],
   cost: "very low",
   context: "webgl2",

@@ -38,7 +38,7 @@ export const toastersMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#000000" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  category: "Retro",
+  categories: ["Retro"],
   tags: ["screensaver", "after dark", "wings", "bread", "mac", "90s", "kitchen"],
   cost: "very low",
   context: "webgl2",

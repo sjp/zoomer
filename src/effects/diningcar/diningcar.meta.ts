@@ -20,7 +20,7 @@ export const diningcarMeta = defineEffectMeta({
     drink: { kind: "select", label: "Drink", options: DRINK_OPTIONS, default: "red" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["railway", "sleeper", "travel", "night", "cosy", "vintage", "restaurant", "countryside"],
   cost: "low",
   context: "webgl2",

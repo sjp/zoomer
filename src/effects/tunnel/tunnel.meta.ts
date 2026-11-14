@@ -45,7 +45,7 @@ export const tunnelMeta = defineEffectMeta({
     },
     brightness: { kind: "number", label: "Brightness", min: 0.2, max: 2, step: 0.05, default: 1 },
   },
-  category: "Space",
+  categories: ["Space"],
   tags: ["sci-fi", "vortex", "portal", "trippy"],
   cost: "low",
   context: "webgl2",

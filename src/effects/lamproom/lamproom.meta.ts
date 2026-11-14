@@ -36,7 +36,7 @@ export const lamproomMeta = defineEffectMeta({
     lens: { kind: "select", label: "Lens", options: LENS_OPTIONS, default: "left" },
     beam: { kind: "number", label: "Beam brightness", min: 0, max: 1, step: 0.05, default: 0.6 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["coast", "storm", "keeper", "maritime", "ocean", "beacon", "fresnel"],
   cost: "medium",
   context: "webgl2",

@@ -37,7 +37,7 @@ export const bedroom80sMeta = defineEffectMeta({
     bedside: { kind: "boolean", label: "Bedside lamp", default: false },
     side: { kind: "select", label: "Computer", options: SIDE_OPTIONS, default: "left" },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: ["retro", "nostalgia", "home computer", "demoscene", "crt", "80s", "teenager", "night"],
   cost: "low",
   context: "webgl2",

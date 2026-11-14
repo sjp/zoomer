@@ -39,7 +39,7 @@ export const greenhouseMeta = defineEffectMeta({
     drips: { kind: "boolean", label: "Drips from the bars", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: [
     "glasshouse",
     "conservatory",

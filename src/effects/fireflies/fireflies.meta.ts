@@ -44,7 +44,7 @@ export const firefliesMeta = defineEffectMeta({
       default: 24,
     },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["summer", "night", "light rays", "magic"],
   cost: "very low",
   context: "webgl2",

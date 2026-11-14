@@ -42,7 +42,7 @@ export const snowMeta = defineEffectMeta({
     backgroundBottom: { kind: "color", label: "Horizon colour", default: "#1a2b4d" },
     mist: { kind: "number", label: "Ground mist", min: 0, max: 1, step: 0.01, default: 0.25 },
   },
-  category: "Sky & weather",
+  categories: ["Sky & weather"],
   tags: ["winter", "christmas", "cold", "snowflakes"],
   cost: "very low",
   context: "webgl2",

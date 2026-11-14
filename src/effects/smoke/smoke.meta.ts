@@ -22,7 +22,7 @@ export const smokeMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#1a1311" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  category: "Cosy",
+  categories: ["Cosy"],
   tags: ["steam", "calm", "meditation", "zen"],
   cost: "medium",
   context: "webgl2",

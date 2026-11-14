@@ -114,7 +114,7 @@ export async function describeLifecycle(category: Category): Promise<void> {
   });
 
   const loaded = await Promise.all(
-    effects.filter((e) => e.category === category).map((e) => e.load()),
+    effects.filter((e) => e.categories[0] === category).map((e) => e.load()),
   );
   const cases = loaded.map((e) => [e.id, e] as const);
 

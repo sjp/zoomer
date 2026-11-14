@@ -28,7 +28,7 @@ export const chemlabMeta = defineEffectMeta({
     lighting: { kind: "select", label: "Lighting", options: LIGHTING_OPTIONS, default: "dim" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Scenes",
+  categories: ["Scenes"],
   tags: [
     "science",
     "laboratory",

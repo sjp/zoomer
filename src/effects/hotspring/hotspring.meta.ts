@@ -22,7 +22,7 @@ export const hotspringMeta = defineEffectMeta({
     time: { kind: "select", label: "Time of day", options: TIME_OPTIONS, default: "dusk" },
     lantern: { kind: "boolean", label: "Lantern", default: true },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["onsen", "japan", "winter", "bath", "relaxing", "pool", "mist", "cold", "warm"],
   cost: "low",
   context: "webgl2",

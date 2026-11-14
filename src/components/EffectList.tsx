@@ -13,6 +13,14 @@ import { StarButton } from "./StarButton";
 /** The heading for the effects below the favourites, in sorts without groups. */
 const OTHERS_GROUP = "More effects";
 
+/**
+ * The categories a row shows: all of them, or under "By category", whose headings
+ * already name the primary one, only the others.
+ */
+function categoryLabel(effect: ListableEffect, sort: EffectSort): string {
+  return (sort === "category" ? effect.categories.slice(1) : effect.categories).join(" · ");
+}
+
 const optionDomId = (uid: string, id: string) => `${uid}-option-${id}`;
 
 export interface EffectListProps {
@@ -173,7 +181,9 @@ export function EffectList(props: EffectListProps) {
           {isFavourite && <span className="sr-only">, starred</span>}
           {isCurrent && <span className="sr-only"> (current)</span>}
         </span>
-        {sort !== "category" && <span className="effect-option-category">{effect.category}</span>}
+        {categoryLabel(effect, sort) !== "" && (
+          <span className="effect-option-category">{categoryLabel(effect, sort)}</span>
+        )}
         {/* For the pointer only: see the component's doc comment. */}
         <StarButton
           className="effect-option-star"

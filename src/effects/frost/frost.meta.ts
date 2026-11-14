@@ -31,7 +31,7 @@ export const frostMeta = defineEffectMeta({
     tint: { kind: "color", label: "Ice tint", default: "#d6ebff" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  category: "Sky & weather",
+  categories: ["Sky & weather"],
   tags: ["winter", "ice", "frozen", "cold", "crystals", "snow", "christmas", "cosy", "dendrites"],
   cost: "low",
   context: "webgl2",

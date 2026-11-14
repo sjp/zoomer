@@ -38,7 +38,7 @@ export const windfarmMeta = defineEffectMeta({
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  category: "Nature",
+  categories: ["Nature"],
   tags: ["renewable", "energy", "countryside", "windmills", "green", "landscape", "breeze"],
   cost: "low",
   context: "webgl2",
