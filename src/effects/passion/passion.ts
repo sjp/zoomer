@@ -116,7 +116,8 @@ void main() {
 
 /** One texture fetch; premultiplied, with alpha zeroed for additive pieces. */
 const FRAGMENT = /* glsl */ `#version 300 es
-precision mediump float;
+// highp: the atlases run to 4096 px, past what mediump texture coordinates resolve.
+precision highp float;
 in vec2 vUv;
 flat in vec3 vLook;
 uniform sampler2D uTex;
