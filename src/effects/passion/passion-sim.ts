@@ -8,7 +8,8 @@
  * Units: reference px, where the frame is 1080 tall and `refWidth` wide, y down
  * from the top.
  */
-import { clamp, wrap } from "../math";
+import { driftPoint } from "../fade";
+import { clamp } from "../math";
 import { createRng, hash32 } from "../noise";
 import { CAPTION_LINES, CRITTER_OPTIONS } from "./passion.meta";
 
@@ -569,45 +570,51 @@ export const CLOUD_MARGIN = (CLOUD_WIDTH * CLOUD_SIZE_MAX) / 2 + 4;
 /** How many clouds a frame `refWidth` wide shows. */
 export const cloudCount = (refWidth: number) => clamp(Math.round(refWidth / 380), 2, MAX_CLOUDS);
 
-/** Every cloud slot's layout for one seed. */
+/** Every cloud slot's layout for one seed, and where each cloud has drifted to. */
 interface CloudLayout {
   seed: number;
-  /** Starting place across the wrap span, 0 to 1. */
-  readonly u: Float64Array;
+  /** Centre x, reference px, in `[-CLOUD_MARGIN, span - CLOUD_MARGIN)`. */
+  readonly x: Float32Array;
   readonly y: Float32Array;
   readonly size: Float32Array;
   readonly speed: Float32Array;
   readonly variant: Uint8Array;
   /** 1, or -1 for a mirrored cloud. */
   readonly flip: Float32Array;
+  /** The wrap span the positions are in: the frame width plus a margin each side. */
+  span: number;
 }
 
-export function createCloudLayout(seed: number): CloudLayout {
+const cloudSpan = (refWidth: number) => Math.max(1, refWidth) + 2 * CLOUD_MARGIN;
+
+export function createCloudLayout(seed: number, refWidth: number): CloudLayout {
   const c: CloudLayout = {
     seed: 0,
-    u: new Float64Array(MAX_CLOUDS),
+    x: new Float32Array(MAX_CLOUDS),
     y: new Float32Array(MAX_CLOUDS),
     size: new Float32Array(MAX_CLOUDS),
     speed: new Float32Array(MAX_CLOUDS),
     variant: new Uint8Array(MAX_CLOUDS),
     flip: new Float32Array(MAX_CLOUDS),
+    span: 1,
   };
-  fillCloudLayout(c, seed);
+  fillCloudLayout(c, seed, refWidth);
   return c;
 }
 
 /**
- * Fills every slot from `seed`, each from its own stream (so a count change
- * leaves the other clouds where they were), spread evenly across the span by
- * golden-ratio steps from a seeded origin.
+ * Fills every slot from `seed` for a frame `refWidth` wide, each from its own
+ * stream (so a count change leaves the other clouds where they were), spread
+ * evenly across the span by golden-ratio steps from a seeded origin.
  */
-export function fillCloudLayout(c: CloudLayout, seed: number): void {
+export function fillCloudLayout(c: CloudLayout, seed: number, refWidth: number): void {
   c.seed = seed;
+  c.span = cloudSpan(refWidth);
   const origin = createRng(hash32(Math.floor(seed) * 7 + 3))();
   for (let i = 0; i < MAX_CLOUDS; i++) {
     const rng = createRng(hash32(Math.floor(seed) * 977 + i * 7919 + 13));
     const u = origin + i * 0.618034 + (rng() - 0.5) * 0.1;
-    c.u[i] = u - Math.floor(u);
+    c.x[i] = -CLOUD_MARGIN + (u - Math.floor(u)) * c.span;
     c.y[i] = CLOUD_Y_MIN + (CLOUD_Y_MAX - CLOUD_Y_MIN) * rng();
     c.size[i] = CLOUD_SIZE_MIN + (CLOUD_SIZE_MAX - CLOUD_SIZE_MIN) * rng();
     c.speed[i] = CLOUD_SPEED_MIN + (CLOUD_SPEED_MAX - CLOUD_SPEED_MIN) * rng();
@@ -617,13 +624,25 @@ export function fillCloudLayout(c: CloudLayout, seed: number): void {
 }
 
 /**
- * Cloud `i`'s centre x, reference px, after the clouds have drifted `travel`
- * (seconds at motion 1): moving right and wrapping from `CLOUD_MARGIN` past the
- * right side to as far past the left.
+ * Drifts every cloud slot right by `dt` seconds at `motion` (0 to 1), wrapping
+ * from `CLOUD_MARGIN` past the right side to as far past the left. A new frame
+ * width stretches the positions to the new span first, so each cloud keeps its
+ * place across the frame. Hidden slots drift too, so they come back in place.
  */
-export function cloudX(c: CloudLayout, i: number, travel: number, refWidth: number): number {
-  const span = refWidth + 2 * CLOUD_MARGIN;
-  return wrap(-CLOUD_MARGIN + c.u[i] * span + travel * c.speed[i], -CLOUD_MARGIN, span);
+export function stepClouds(c: CloudLayout, dt: number, motion: number, refWidth: number): void {
+  const span = cloudSpan(refWidth);
+  if (span !== c.span) {
+    const k = span / c.span;
+    for (let i = 0; i < MAX_CLOUDS; i++) {
+      c.x[i] = -CLOUD_MARGIN + (c.x[i] + CLOUD_MARGIN) * k;
+    }
+    c.span = span;
+  }
+  const step = (Number.isFinite(dt) && dt > 0 ? dt : 0) * clamp(motion, 0, 1);
+  for (let i = 0; i < MAX_CLOUDS; i++) {
+    // y never moves, so only x wraps.
+    driftPoint(c.x, c.y, i, c.speed[i] * step, 0, -CLOUD_MARGIN, 0, span, REF_HEIGHT);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -664,8 +683,6 @@ export function sparkleAt(
 
 /** Everything `motion` drives, stepped together. */
 interface MotionClock {
-  /** Cloud drift so far, seconds at motion 1. */
-  travel: number;
   /** Bob and breath phases, cycles in [0, 1). */
   bob: number;
   breath: number;
@@ -677,7 +694,6 @@ interface MotionClock {
 }
 
 export const createMotionClock = (seed: number): MotionClock => ({
-  travel: 0,
   bob: 0,
   breath: 0,
   sparkle: 0,
@@ -686,8 +702,8 @@ export const createMotionClock = (seed: number): MotionClock => ({
 });
 
 /**
- * Advances the clocks by `dt` at `motion` (0 to 1). Drift scales with motion,
- * and the bob and breath amplitudes are scaled where they are drawn; at motion 0
+ * Advances the clocks by `dt` at `motion` (0 to 1). The bob and breath
+ * amplitudes are scaled where they are drawn (and cloud drift in `stepClouds`); at motion 0
  * every clock stands still and the critter keeps its eyes open, so the frame is
  * a still image.
  */
@@ -698,7 +714,6 @@ export function stepMotion(m: MotionClock, dt: number, motion: number): void {
     m.frame = FRAME_OPEN;
     return;
   }
-  m.travel += step * k;
   m.bob = (m.bob + step * BOB_HZ) % 1;
   m.breath = (m.breath + step * BREATH_HZ) % 1;
   m.sparkle += step;

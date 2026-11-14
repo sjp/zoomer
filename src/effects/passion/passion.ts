@@ -28,7 +28,6 @@ import {
   CLOUD_HEIGHT,
   CLOUD_WIDTH,
   cloudCount,
-  cloudX,
   createCloudLayout,
   createCritterState,
   createMotionClock,
@@ -45,6 +44,7 @@ import {
   REF_HEIGHT,
   type Sparkle,
   sparkleAt,
+  stepClouds,
   stepCritter,
   stepMotion,
   WORDART_SHADOW,
@@ -177,7 +177,7 @@ export const passion = defineEffect(passionMeta, {
       const measures = { meme: createMeasure("meme"), wordart: createMeasure("wordart") };
       const settledText = createSettledValue<string>(SETTLE);
       const settledSize = createSettledValue<number>(SETTLE);
-      const clouds = [createCloudLayout(0), createCloudLayout(0)];
+      const clouds = [createCloudLayout(0, 1920), createCloudLayout(0, 1920)];
       const cloudFade = createCountFade(MAX_CLOUDS);
       const critter = createCritterState();
       const box: CritterBox = { x: 0, y: 0, size: 0 };
@@ -348,7 +348,7 @@ export const passion = defineEffect(passionMeta, {
           if (!started) {
             started = true;
             clock = createMotionClock(p.seed);
-            fillCloudLayout(clouds[0], p.seed);
+            fillCloudLayout(clouds[0], p.seed, refWidth);
             cloudFade.snap(cloudCount(refWidth));
             extras = p.extras ? 1 : 0;
           }
@@ -400,7 +400,7 @@ export const passion = defineEffect(passionMeta, {
 
           // The clouds crossfade to a new variation's layout the same way.
           if (!cloudFading && clouds[cloudShown].seed !== p.seed) {
-            fillCloudLayout(clouds[1 - cloudShown], p.seed);
+            fillCloudLayout(clouds[1 - cloudShown], p.seed, refWidth);
             cloudFading = true;
             cloudMix = 0;
           }
@@ -413,6 +413,8 @@ export const passion = defineEffect(passionMeta, {
             }
           }
           cloudFade.step(cloudCount(refWidth), step, CLOUD_COUNT_FADE, CLOUD_COUNT_FADE);
+          stepClouds(clouds[0], step, motion, refWidth);
+          stepClouds(clouds[1], step, motion, refWidth);
 
           stepCritter(critter, step, critterIndex(p.critter), critterSide(p.side));
           stepMotion(clock, step, motion);
@@ -435,7 +437,7 @@ export const passion = defineEffect(passionMeta, {
               }
               putMisc(
                 CLOUD_CELLS[c.variant[i]],
-                cloudX(c, i, clock.travel, refWidth) * scale,
+                c.x[i] * scale,
                 c.y[i] * scale,
                 (CLOUD_WIDTH / 2) * c.size[i] * scale,
                 (CLOUD_HEIGHT / 2) * c.size[i] * scale,

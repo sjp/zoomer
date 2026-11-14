@@ -19,7 +19,6 @@ import {
   CLOUD_SPEED_MAX,
   CLOUD_WIDTH,
   cloudCount,
-  cloudX,
   createBlinkClock,
   createCloudLayout,
   createCritterState,
@@ -43,6 +42,7 @@ import {
   type Sparkle,
   sparkleAt,
   stepBlink,
+  stepClouds,
   stepCritter,
   stepMotion,
   WORD_COLORS,
@@ -316,11 +316,10 @@ describe("clouds", () => {
     expect(cloudCount(w)).toBe(n);
   });
 
-  it.each([0, 1, 2, 3])("are prefix-stable and seeded (seed %i)", (seed) => {
-    const a = createCloudLayout(seed);
-    const b = createCloudLayout(seed + 1);
-    expect(Array.from(a.u)).not.toEqual(Array.from(b.u));
-    expect(Array.from(createCloudLayout(seed).y)).toEqual(Array.from(a.y));
+  it.each([0, 1, 2, 3])("are seeded, the same for the same seed (seed %i)", (seed) => {
+    const a = createCloudLayout(seed, 1920);
+    expect(Array.from(a.x)).not.toEqual(Array.from(createCloudLayout(seed + 1, 1920).x));
+    expect(Array.from(createCloudLayout(seed, 1920).y)).toEqual(Array.from(a.y));
   });
 
   const wrapCases = [0, 1, 2].flatMap((seed) =>
@@ -328,31 +327,59 @@ describe("clouds", () => {
   );
 
   it.each(wrapCases)("wrap only while out of view (seed %i, %s)", (seed, _a, w) => {
-    const c = createCloudLayout(seed);
+    const c = createCloudLayout(seed, w);
     const problems: string[] = [];
-    for (let i = 0; i < MAX_CLOUDS; i++) {
-      const half = (CLOUD_WIDTH * c.size[i]) / 2;
-      let prev = cloudX(c, i, 0, w);
-      let wraps = 0;
-      // Long enough for the cloud to cross the whole span once.
-      const crossing = (w + 2 * CLOUD_MARGIN) / c.speed[i] + 1;
-      for (let t = DT; t < crossing; t += DT) {
-        const x = cloudX(c, i, t, w);
-        if (x < prev) {
-          wraps++;
-          if (prev - half < w || x + half > 0) {
-            problems.push(`cloud ${String(i)} wrapped from ${String(prev)} to ${String(x)}`);
+    const wraps = Array.from({ length: MAX_CLOUDS }, () => 0);
+    const prev = Float64Array.from(c.x);
+    // Long enough for the slowest cloud to cross the whole span once.
+    const crossing = (w + 2 * CLOUD_MARGIN) / Math.min(...c.speed) + 1;
+    for (let t = DT; t < crossing; t += DT) {
+      stepClouds(c, DT, 1, w);
+      for (let i = 0; i < MAX_CLOUDS; i++) {
+        const half = (CLOUD_WIDTH * c.size[i]) / 2;
+        if (c.x[i] < prev[i]) {
+          wraps[i]++;
+          if (prev[i] - half < w || c.x[i] + half > 0) {
+            problems.push(
+              `cloud ${String(i)} wrapped from ${String(prev[i])} to ${String(c.x[i])}`,
+            );
           }
         }
-        prev = x;
+        prev[i] = c.x[i];
       }
-      expect(wraps).toBeGreaterThan(0);
     }
+    expect(wraps.every((n) => n > 0)).toBe(true);
     expect(problems).toEqual([]);
   });
 
+  const resizeCases = [
+    ["a few px", 1920, 1910],
+    ["16:9 to 4:3", (REF_HEIGHT * 16) / 9, (REF_HEIGHT * 4) / 3],
+    ["16:9 to 21:9", (REF_HEIGHT * 16) / 9, (REF_HEIGHT * 21) / 9],
+  ] as const;
+
+  it.each(resizeCases)(
+    "keep their place across the frame after an hour, resized %s",
+    (_n, from, to) => {
+      const c = createCloudLayout(3, from);
+      for (let t = 0; t < 3600; t += 0.1) {
+        stepClouds(c, 0.1, 1, from);
+      }
+      const before = Array.from(c.x, (x) => (x + CLOUD_MARGIN) / (from + 2 * CLOUD_MARGIN));
+      stepClouds(c, 0, 1, to);
+      const after = Array.from(c.x, (x) => (x + CLOUD_MARGIN) / (to + 2 * CLOUD_MARGIN));
+      // The same fraction of the way across; in px, at most the change in width.
+      const moved = after.map((a, i) => Math.abs(a - before[i]) * (to + 2 * CLOUD_MARGIN));
+      expect(Math.max(...moved)).toBeLessThan(0.01);
+      const px = Array.from(c.x, (x, i) =>
+        Math.abs(x - (before[i] * (from + 2 * CLOUD_MARGIN) - CLOUD_MARGIN)),
+      );
+      expect(Math.max(...px)).toBeLessThanOrEqual(Math.abs(to - from) + 0.01);
+    },
+  );
+
   it("stay in the sky", () => {
-    const c = createCloudLayout(5);
+    const c = createCloudLayout(5, 1920);
     for (let i = 0; i < MAX_CLOUDS; i++) {
       expect(c.y[i] - (CLOUD_HEIGHT * c.size[i]) / 2).toBeGreaterThan(0);
       expect(c.y[i] + (CLOUD_HEIGHT * c.size[i]) / 2).toBeLessThan(groundEdge(0) - 50);
@@ -398,15 +425,18 @@ describe("motion limits", () => {
 
 describe("motion 0", () => {
   /** Everything the clocks move, sampled. */
-  function sample(seed: number, m: ReturnType<typeof createMotionClock>) {
-    const clouds = createCloudLayout(seed);
+  function sample(
+    seed: number,
+    m: ReturnType<typeof createMotionClock>,
+    clouds: ReturnType<typeof createCloudLayout>,
+  ) {
     const out: Sparkle = { x: 0, y: 0, alpha: 0 };
     const sparkles = Array.from({ length: MAX_SPARKLES }, (_, k) => {
       const s = sparkleAt(seed, k, m.sparkle, 1920, out);
       return [s.x, s.y, s.alpha];
     });
     return {
-      clouds: Array.from({ length: MAX_CLOUDS }, (_, i) => cloudX(clouds, i, m.travel, 1920)),
+      clouds: Array.from(clouds.x),
       bob: Array.from({ length: 5 }, (_, i) => bobOffset(i, m.bob, 1)),
       breath: m.breath,
       frame: m.frame,
@@ -416,16 +446,20 @@ describe("motion 0", () => {
 
   it.each([0, 1, 2, 42])("gives identical frames over time (seed %i)", (seed) => {
     const m = createMotionClock(seed);
+    const clouds = createCloudLayout(seed, 1920);
     // Some motion first, so the clocks aren't at their starting values.
     for (let i = 0; i < 100; i++) {
       stepMotion(m, DT, 1);
+      stepClouds(clouds, DT, 1, 1920);
     }
     stepMotion(m, DT, 0);
-    const first = sample(seed, m);
+    stepClouds(clouds, DT, 0, 1920);
+    const first = sample(seed, m, clouds);
     for (let i = 0; i < 600; i++) {
       stepMotion(m, DT, 0);
+      stepClouds(clouds, DT, 0, 1920);
     }
-    expect(sample(seed, m)).toEqual(first);
+    expect(sample(seed, m, clouds)).toEqual(first);
     expect(m.frame).not.toBe(FRAME_BLINK);
   });
 
