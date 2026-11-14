@@ -45,8 +45,6 @@ import {
   stepClouds,
   stepCritter,
   stepMotion,
-  WORD_COLORS,
-  wordColors,
 } from "./passion-sim";
 import { CAPTION_LENGTH, CRITTER_OPTIONS, passionMeta } from "./passion.meta";
 
@@ -97,27 +95,6 @@ function wordsOutsideBox(c: CaptionLayout): string[] {
   }
   return out;
 }
-
-describe("word colours", () => {
-  const cases = [0, 1, 7, 42, 500, 999].flatMap((seed) =>
-    [1, 2, 5, 28].map((count) => [seed, count] as const),
-  );
-
-  it.each(cases)("never repeat between neighbours (seed %i, %i words)", (seed, count) => {
-    const colors = wordColors(seed, count);
-    expect(colors).toHaveLength(count);
-    expect(colors.every((c) => c >= 0 && c < WORD_COLORS.length)).toBe(true);
-    expect(colors.filter((c, i) => i > 0 && c === colors[i - 1])).toEqual([]);
-  });
-
-  it.each([1, 42])("keep earlier words' colours when words are added (seed %i)", (seed) => {
-    expect(wordColors(seed, 28).slice(0, 5)).toEqual(wordColors(seed, 5));
-  });
-
-  it("change with the seed", () => {
-    expect(wordColors(1, 8)).not.toEqual(wordColors(2, 8));
-  });
-});
 
 describe("caption layout", () => {
   const cases = ASPECTS.flatMap(([aspect, w]) =>

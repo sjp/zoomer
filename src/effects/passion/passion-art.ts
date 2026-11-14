@@ -7,6 +7,15 @@
 import { paintCanvas } from "../canvas-texture";
 import { hexToRgb, mixRgb } from "../color";
 import {
+  CLASHING_COLORS,
+  createEmMeasure,
+  drawOutlinedText,
+  linearGradient as linear,
+  memeFont,
+  radialGradient as radial,
+  rainbowStops,
+} from "../meme-art";
+import {
   type CaptionLayout,
   type CaptionStyle,
   CLOUD_VARIANTS,
@@ -15,14 +24,11 @@ import {
   packShelves,
   REF_HEIGHT,
   WORD_BOX_HEIGHT,
-  WORD_COLORS,
   WORD_PAD,
 } from "./passion-sim";
 
 type Ctx = OffscreenCanvasRenderingContext2D;
 
-/** The cheesy font stack; whatever the browser falls back to looks the part. */
-const CAPTION_FONT_STACK = `Papyrus, "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive`;
 /** Font weight per style: WordArt's letters are bold. */
 const CAPTION_WEIGHT: Record<CaptionStyle, number> = { meme: 400, wordart: 700 };
 /** The baseline's depth in a word's box, ems from the top. */
@@ -30,59 +36,16 @@ const WORD_BASELINE = 1.08;
 /** Outline widths per style, ems: thin in Meme, thick in WordArt. */
 const OUTLINE_EM: Record<CaptionStyle, number> = { meme: 0.07, wordart: 0.13 };
 const OUTLINE_COLOR: Record<CaptionStyle, string> = { meme: "#1c1c1c", wordart: "#1b1464" };
-/** WordArt's rainbow, left to right across each line. */
-const RAINBOW = ["#ff2a2a", "#ff9a1f", "#ffe81f", "#3fdc3f", "#2a8cff", "#9a3dff"];
 
 /** Largest texture side any of the art is drawn at, px. */
 const MAX_TEXTURE = 4096;
 /** Transparent gap round each word in the caption atlas, px. */
 const GUTTER = 2;
 
-const font = (style: CaptionStyle, px: number) =>
-  `${String(CAPTION_WEIGHT[style])} ${String(px)}px ${CAPTION_FONT_STACK}`;
+const font = (style: CaptionStyle, px: number) => memeFont(CAPTION_WEIGHT[style], px);
 
 const rgb = (c: readonly number[]) =>
   `rgb(${String(Math.round(c[0]))}, ${String(Math.round(c[1]))}, ${String(Math.round(c[2]))})`;
-
-/**
- * A linear gradient through `stops` (offset, colour), or the first colour where
- * the canvas is a stand-in that makes no gradients (tests).
- */
-function linear(
-  ctx: Ctx,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  stops: readonly (readonly [number, string])[],
-): CanvasGradient | string {
-  const g = ctx.createLinearGradient(x0, y0, x1, y1) as CanvasGradient | undefined;
-  if (!g) {
-    return stops[0][1];
-  }
-  for (const [at, colour] of stops) {
-    g.addColorStop(at, colour);
-  }
-  return g;
-}
-
-/** Like `linear`, radial from (x, y) out to radius `r`. */
-function radial(
-  ctx: Ctx,
-  x: number,
-  y: number,
-  r: number,
-  stops: readonly (readonly [number, string])[],
-): CanvasGradient | string {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r) as CanvasGradient | undefined;
-  if (!g) {
-    return stops[0][1];
-  }
-  for (const [at, colour] of stops) {
-    g.addColorStop(at, colour);
-  }
-  return g;
-}
 
 // ---------------------------------------------------------------------------
 // Backdrop
@@ -311,20 +274,7 @@ export function paintMiscAtlas(cell: number): OffscreenCanvas | null {
  * where there is no canvas to measure with.
  */
 export function createMeasure(style: CaptionStyle): MeasureWord {
-  let ctx: Ctx | null | undefined;
-  return (word) => {
-    if (ctx === undefined) {
-      const canvas = paintCanvas(1, 1, () => undefined);
-      ctx = canvas ? canvas.getContext("2d") : null;
-    }
-    if (!ctx) {
-      return undefined;
-    }
-    ctx.font = font(style, 100);
-    // Undefined from the tests' stand-in context, whose methods return nothing.
-    const metrics = ctx.measureText(word) as TextMetrics | undefined;
-    return metrics === undefined ? undefined : metrics.width / 100;
-  };
+  return createEmMeasure(CAPTION_WEIGHT[style]);
 }
 
 interface CaptionArt {
@@ -377,33 +327,23 @@ export function paintCaption(
     ctx.font = font(style, px);
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = OUTLINE_EM[style] * px;
-    ctx.strokeStyle = OUTLINE_COLOR[style];
     words.forEach((word, i) => {
       const x = pack.x[i] + WORD_PAD * px;
       const y = pack.y[i] + WORD_BASELINE * px;
+      let fill: CanvasGradient | string;
       if (style === "wordart") {
         // The rainbow spans the whole line, of which this box is a slice.
         const line = (word.em * px) / Math.max(1e-6, word.span1 - word.span0);
         const start = pack.x[i] - word.span0 * line;
-        ctx.fillStyle = linear(
-          ctx,
-          start,
-          0,
-          start + line,
-          0,
-          RAINBOW.map((c, k) => [k / (RAINBOW.length - 1), c] as const),
-        );
+        fill = linear(ctx, start, 0, start + line, 0, rainbowStops());
       } else {
-        ctx.fillStyle = WORD_COLORS[word.color];
+        fill = CLASHING_COLORS[word.color];
       }
       ctx.save();
       ctx.beginPath();
       ctx.rect(pack.x[i], pack.y[i], boxW[i], boxH[i]);
       ctx.clip();
-      ctx.strokeText(word.text, x, y);
-      ctx.fillText(word.text, x, y);
+      drawOutlinedText(ctx, word.text, x, y, fill, OUTLINE_COLOR[style], OUTLINE_EM[style] * px);
       ctx.restore();
     });
   });

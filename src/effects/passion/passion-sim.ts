@@ -10,6 +10,7 @@
  */
 import { driftPoint } from "../fade";
 import { clamp } from "../math";
+import { clashingColors } from "../meme-art";
 import { createRng, hash32 } from "../noise";
 import { CAPTION_LINES, CRITTER_OPTIONS } from "./passion.meta";
 
@@ -70,33 +71,6 @@ export const WORDART_SHADOW = 0.08;
 /** Meme's thin drop shadow (with extras), reference px right and down. */
 export const MEME_SHADOW = 1;
 
-/** The clashing word colours: yellow, lime, magenta, orange, cyan. */
-export const WORD_COLORS = ["#ffe800", "#8dff1a", "#ff2bd6", "#ff8a00", "#14e4ff"] as const;
-
-/**
- * Word `index`'s colour (an index into `WORD_COLORS`) for `seed`, given the word
- * before it had `previous` (-1 for none): a hash of the seed and index, moved on
- * when it would match its neighbour. Depends only on the words before it, so
- * adding words leaves the earlier ones' colours alone.
- */
-function wordColor(seed: number, index: number, previous: number): number {
-  const n = WORD_COLORS.length;
-  const h = hash32(Math.floor(seed) * 977 + index * 7919 + 101);
-  const c = h % n;
-  return c === previous ? (c + 1 + (hash32(h) % (n - 1))) % n : c;
-}
-
-/** The colours of `count` words in reading order, for `seed`. */
-export function wordColors(seed: number, count: number): number[] {
-  const out: number[] = [];
-  let previous = -1;
-  for (let i = 0; i < count; i++) {
-    previous = wordColor(seed, i, previous);
-    out.push(previous);
-  }
-  return out;
-}
-
 /** The text's words, line by line: at most `CAPTION_LINES` non-empty lines. */
 export function captionLines(text: string): string[][] {
   return text
@@ -120,7 +94,7 @@ interface CaptionWord {
   em: number;
   /** Rotation, radians, clockwise on screen. */
   angle: number;
-  /** Index into `WORD_COLORS`. */
+  /** Index into `CLASHING_COLORS`. */
   color: number;
   /** The box's span across its line, 0 to 1: where it sits in WordArt's rainbow. */
   span0: number;
@@ -331,7 +305,7 @@ export function layoutCaption(
   const top = CAPTION_TOP + BOB_AMPLITUDE + spare * 0.3;
   const ax = left - a.minX * size;
   const ay = top - a.minY * size;
-  const colors = wordColors(seed, words.length);
+  const colors = clashingColors(seed, words.length);
   return {
     words: words.map((w, i) => ({
       text: w,
