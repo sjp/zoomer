@@ -140,6 +140,7 @@ import { windowRainMeta } from "./windowrain/windowrain.meta";
 import { zenMeta } from "./zen/zen.meta";
 import { createEffectLoader, type EffectEntry } from "./loader";
 import { standbyMeta } from "./standby/standby.meta";
+import { stonksMeta } from "./stonks/stonks.meta";
 import { suchwowMeta } from "./suchwow/suchwow.meta";
 
 /**
@@ -249,6 +250,7 @@ export const effects: readonly EffectEntry[] = [
   { ...geocitiesMeta, load: () => import("./geocities/geocities").then((m) => m.geocities) },
   { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
   { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
+  { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
