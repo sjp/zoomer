@@ -4,6 +4,7 @@ import {
   autoRange,
   CORNER_TOP_LEFT,
   CORNER_TOP_RIGHT,
+  coverTicks,
   createAxisRange,
   createChartRenderer,
   createStepSlide,
@@ -14,7 +15,6 @@ import {
   formatTickCompact,
   kickSlide,
   minTweenSeconds,
-  niceStep,
   niceTicks,
   pushArc,
   pushArea,
@@ -728,14 +728,14 @@ export const dashboard = defineEffect(dashboardMeta, {
         return sum;
       };
 
-      /** The bar axis's top for the current targets: a nice value above the tallest bar. */
+      /** The bar axis's top for the current targets: the last of the nice ticks covering the bars. */
       const barTop = () => {
         let max = 0;
         for (let i = 0; i < 2 * BAR_GROUPS; i++) {
           max = Math.max(max, barTarget[i]);
         }
-        const step = niceStep(max * 1.15, 4);
-        return Math.max(step, Math.ceil((max * 1.15) / step) * step);
+        coverTicks(0, max * 1.05, ticks);
+        return tickAt(ticks, ticks.count - 1);
       };
 
       /** Shows `d` as it is now, without easing. */
