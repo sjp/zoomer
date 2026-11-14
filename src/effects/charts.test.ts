@@ -392,7 +392,7 @@ describe("pushQuad", () => {
   it("skips invisible, non-finite and overflowing quads", () => {
     const m = createChartMesh(8);
     pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 0);
-    pushQuad(m, 0, 0, NaN, 0, 1, 1, 0, 1, c, 1);
+    pushQuad(m, 0, 0, Number.NaN, 0, 1, 1, 0, 1, c, 1);
     expect(m.count).toBe(0);
     pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 1);
     pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 1);
