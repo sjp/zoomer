@@ -274,9 +274,10 @@ export function createTextLayer(
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
         allocated = true;
       } else {
+        // WebGL2 reads a sub-rectangle of the canvas through the row length and skip settings.
+        gl.pixelStorei(gl.UNPACK_ROW_LENGTH, width);
         for (let i = 0; i < dirtyCount; i++) {
           const o = i * 4;
-          // WebGL2 reads a sub-rectangle of the canvas through the skip settings.
           gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, dirty[o]);
           gl.pixelStorei(gl.UNPACK_SKIP_ROWS, dirty[o + 1]);
           gl.texSubImage2D(
