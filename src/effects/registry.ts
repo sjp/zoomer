@@ -10,6 +10,7 @@ import { blindsMeta } from "./blinds/blinds.meta";
 import { blobsMeta } from "./blobs/blobs.meta";
 import { blossomMeta } from "./blossom/blossom.meta";
 import { bluescreenMeta } from "./bluescreen/bluescreen.meta";
+import { jazzMeta } from "./jazz/jazz.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bouncingLogoMeta } from "./bouncinglogo/bouncinglogo.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
@@ -265,6 +266,7 @@ export const effects: readonly EffectEntry[] = [
     ...bluescreenMeta,
     load: () => import("./bluescreen/bluescreen").then((m) => m.bluescreen),
   },
+  { ...jazzMeta, load: () => import("./jazz/jazz").then((m) => m.jazz) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
