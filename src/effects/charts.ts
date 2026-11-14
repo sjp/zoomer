@@ -129,6 +129,24 @@ export function formatCompact(v: number): string {
   return sign + n.toFixed(n < 9.995 ? 2 : n < 99.95 ? 1 : 0) + unit;
 }
 
+/**
+ * Axis tick `v` in a few characters, on a shared unit picked by `maxAbs` (the
+ * largest tick's size), with the decimal places a `step` apart needs: ticks
+ * 0..3000 every 500 read "0", "0.5K", "1.0K" ... "3.0K".
+ */
+export function formatTickCompact(v: number, step: number, maxAbs: number): string {
+  if (!Number.isFinite(v)) {
+    return "-";
+  }
+  if (Math.abs(v) < Math.abs(step) * 1e-6) {
+    return "0";
+  }
+  const a = Math.abs(maxAbs);
+  const [div, unit] =
+    a >= 1e9 ? [1e9, "B"] : a >= 1e6 ? [1e6, "M"] : a >= 1e3 ? [1e3, "K"] : [1, ""];
+  return formatFixed(v / div, stepDecimals(step / div)) + unit;
+}
+
 /** Decimal places for a price of about `price`: 2 normally, more for pennies. */
 export const priceDecimals = (price: number): number =>
   Math.abs(price) >= 1 || !(Math.abs(price) > 0) ? 2 : Math.abs(price) >= 0.1 ? 3 : 4;
@@ -453,6 +471,85 @@ export function pushRect(
   vertex(m, r, t, 0, SOLID, c, a);
   vertex(m, r, b, 0, SOLID, c, a);
   vertex(m, l, b, 0, SOLID, c, a);
+}
+
+/** Corner flags for `pushRoundRect`. */
+export const CORNER_TOP_LEFT = 1;
+export const CORNER_TOP_RIGHT = 2;
+/** The bottom corners are 4 (right) and 8 (left); all four is 15. */
+const ALL_CORNERS = 15;
+
+/** Most segments in a rounded corner. */
+const MAX_CORNER_SEGMENTS = 16;
+
+/**
+ * A solid rect from (`x0`, `y0`) to (`x1`, `y1`) with the `corners` (flags above)
+ * rounded to `radius` px and antialiased, its edges snapped to whole pixels like
+ * `pushRect`. The pieces never overlap, so a translucent card has no seams. The
+ * radius is cut to half the shorter side; under a pixel it is a plain rect.
+ */
+export function pushRoundRect(
+  m: ChartMesh,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  radius: number,
+  c: Rgb,
+  a: number,
+  corners: number = ALL_CORNERS,
+): void {
+  const l = Math.round(Math.min(x0, x1));
+  const r = Math.round(Math.max(x0, x1));
+  const t = Math.round(Math.min(y0, y1));
+  const b = Math.round(Math.max(y0, y1));
+  const rad = Math.floor(Math.min(radius, (r - l) / 2, (b - t) / 2));
+  if (!(rad >= 1) || (corners & ALL_CORNERS) === 0 || !Number.isFinite(l + r + t + b)) {
+    pushRect(m, l, t, r, b, c, a);
+    return;
+  }
+  if (!(a > 0)) {
+    return;
+  }
+  const segments = Math.min(
+    MAX_CORNER_SEGMENTS,
+    Math.max(2, Math.ceil(((Math.PI / 2) * rad) / ARC_SEGMENT_PX)),
+  );
+  // Bands: the middle, full width; then top and bottom between the corner squares.
+  pushRect(m, l, t + rad, r, b - rad, c, a);
+  pushRect(m, l + rad, t, r - rad, t + rad, c, a);
+  pushRect(m, l + rad, b - rad, r - rad, b, c, a);
+  // Each corner: a quarter fan whose edge distance runs from 0 at the centre to
+  // the radius plus one pixel of fringe at the rim, so it fades out at `rad`.
+  for (let k = 0; k < 4; k++) {
+    const flag = 1 << k;
+    const right = k === 1 || k === 2;
+    const bottom = k >= 2;
+    const cx = right ? r - rad : l + rad;
+    const cy = bottom ? b - rad : t + rad;
+    if ((corners & flag) === 0) {
+      pushRect(m, cx, cy, right ? r : l, bottom ? b : t, c, a);
+      continue;
+    }
+    if (!room(m, 3 * segments)) {
+      return;
+    }
+    // Clockwise from twelve o'clock: top-left spans 270..360, top-right 0..90 and so on.
+    const start = (k === 0 ? 3 : k - 1) * (Math.PI / 2);
+    const ext = rad + 1;
+    let px = cx + Math.sin(start) * ext;
+    let py = cy - Math.cos(start) * ext;
+    for (let i = 1; i <= segments; i++) {
+      const ang = start + ((Math.PI / 2) * i) / segments;
+      const qx = cx + Math.sin(ang) * ext;
+      const qy = cy - Math.cos(ang) * ext;
+      vertex(m, cx, cy, 0, rad, c, a);
+      vertex(m, px, py, ext, rad, c, a);
+      vertex(m, qx, qy, ext, rad, c, a);
+      px = qx;
+      py = qy;
+    }
+  }
 }
 
 /** Writes the quad (p0 ± e0) to (p1 ± e1) with the edge distance ±`ext` across it. */

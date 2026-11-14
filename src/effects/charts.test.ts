@@ -18,6 +18,7 @@ import {
   formatFixed,
   formatPercent,
   formatSigned,
+  formatTickCompact,
   kickSlide,
   minTweenSeconds,
   niceStep,
@@ -29,6 +30,9 @@ import {
   pushLine,
   pushPolyline,
   pushRect,
+  pushRoundRect,
+  CORNER_TOP_LEFT,
+  CORNER_TOP_RIGHT,
   rangeShiftPx,
   settleSlide,
   snapAxis,
@@ -126,6 +130,18 @@ describe("formatters", () => {
     expect(priceDecimals(123)).toBe(2);
     expect(priceDecimals(0.5)).toBe(3);
     expect(priceDecimals(0.05)).toBe(4);
+  });
+});
+
+describe("formatTickCompact", () => {
+  it("puts every tick on one unit with the step's decimals", () => {
+    expect(formatTickCompact(0, 500, 3000)).toBe("0");
+    expect(formatTickCompact(500, 500, 3000)).toBe("0.5K");
+    expect(formatTickCompact(3000, 500, 3000)).toBe("3.0K");
+    expect(formatTickCompact(2_500_000, 500_000, 3_000_000)).toBe("2.5M");
+    expect(formatTickCompact(40, 10, 60)).toBe("40");
+    expect(formatTickCompact(0.25, 0.05, 0.4)).toBe("0.25");
+    expect(formatTickCompact(-2000, 1000, 4000)).toBe("-2K");
   });
 });
 
@@ -296,6 +312,66 @@ describe("mesh", () => {
     const last = (m.count - 3) * CHART_STRIDE;
     expect(m.data[last]).toBeCloseTo(12, 9);
     expect(m.data[last + 1]).toBeCloseTo(0, 9);
+  });
+});
+
+describe("pushRoundRect", () => {
+  const c = [1, 1, 1];
+  /** Sum of the mesh's triangle areas. */
+  const area = (m: ChartMesh) => {
+    let sum = 0;
+    for (let i = 0; i < m.count; i += 3) {
+      const o = i * CHART_STRIDE;
+      const d = m.data;
+      const ax = d[o + CHART_STRIDE] - d[o];
+      const ay = d[o + CHART_STRIDE + 1] - d[o + 1];
+      const bx = d[o + 2 * CHART_STRIDE] - d[o];
+      const by = d[o + 2 * CHART_STRIDE + 1] - d[o + 1];
+      sum += Math.abs(ax * by - ay * bx) / 2;
+    }
+    return sum;
+  };
+
+  it("cuts the corners to quarter circles, with a pixel of fringe", () => {
+    const m = createChartMesh(1024);
+    pushRoundRect(m, 0, 0, 100, 60, 10, c, 1);
+    // The rect less four corner squares, plus four quarter discs of radius 10..11.
+    const a = area(m);
+    expect(a).toBeGreaterThan(6000 - 400 + Math.PI * 100 * 0.97);
+    expect(a).toBeLessThan(6000 - 400 + Math.PI * 121);
+    for (let i = 0; i < m.count; i++) {
+      const x = m.data[i * CHART_STRIDE];
+      const y = m.data[i * CHART_STRIDE + 1];
+      expect(x).toBeGreaterThanOrEqual(-1);
+      expect(x).toBeLessThanOrEqual(101);
+      expect(y).toBeGreaterThanOrEqual(-1);
+      expect(y).toBeLessThanOrEqual(61);
+    }
+  });
+
+  it("leaves unflagged corners square", () => {
+    const m = createChartMesh(1024);
+    pushRoundRect(m, 0, 0, 40, 40, 6, c, 1, CORNER_TOP_LEFT | CORNER_TOP_RIGHT);
+    const a = area(m);
+    expect(a).toBeGreaterThan(1600 - 72 + Math.PI * 36 * 0.5 * 0.97);
+    expect(a).toBeLessThan(1600 - 72 + Math.PI * 49 * 0.5);
+  });
+
+  it("draws a plain rect for a tiny radius, and caps the radius at half the side", () => {
+    const m = createChartMesh(1024);
+    pushRoundRect(m, 0, 0, 10, 10, 0.4, c, 1);
+    expect(m.count).toBe(6);
+    m.count = 0;
+    pushRoundRect(m, 0, 0, 10, 4, 50, c, 1);
+    for (let i = 0; i < m.count; i++) {
+      expect(m.data[i * CHART_STRIDE + 3]).toBeLessThanOrEqual(1e4);
+      expect(Number.isFinite(m.data[i * CHART_STRIDE])).toBe(true);
+    }
+    // Radius 2: four quarter discs of radius 3 in place of the 2 x 2 corner squares.
+    expect(area(m)).toBeLessThan(40 - 16 + Math.PI * 9);
+    m.count = 0;
+    pushRoundRect(m, 0, 0, 10, 10, 3, c, 0);
+    expect(m.count).toBe(0);
   });
 });
 
