@@ -142,6 +142,7 @@ import { createEffectLoader, type EffectEntry } from "./loader";
 import { standbyMeta } from "./standby/standby.meta";
 import { stonksMeta } from "./stonks/stonks.meta";
 import { suchwowMeta } from "./suchwow/suchwow.meta";
+import { vaporwaveMeta } from "./vaporwave/vaporwave.meta";
 
 /**
  * Add new effects here; the UI picks them up automatically. Only the metadata is
@@ -251,6 +252,7 @@ export const effects: readonly EffectEntry[] = [
   { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
   { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
   { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
+  { ...vaporwaveMeta, load: () => import("./vaporwave/vaporwave").then((m) => m.vaporwave) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
