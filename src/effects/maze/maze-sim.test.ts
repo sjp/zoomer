@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DIR_X, DIR_Y, EASE_PEAK, SEG_WALK, walkEase } from "../grid-walk";
 import { MAX_PATTERN_HZ } from "../motion-limits";
 import { MAX_SIZE, MAX_SPEED, MIN_SIZE, MIN_SPEED } from "./maze.meta";
 import {
@@ -11,10 +12,7 @@ import {
   createMaze,
   createRat,
   createWalker,
-  DIR_X,
-  DIR_Y,
   distanceField,
-  EASE_PEAK,
   exitX,
   exitY,
   FOCAL,
@@ -33,9 +31,7 @@ import {
   ROLL_REF_RADIUS,
   ROLL_SECONDS,
   SEG_DONE,
-  SEG_WALK,
   turnSeconds,
-  walkEase,
   walkSeconds,
   walkTarget,
 } from "./maze-sim";

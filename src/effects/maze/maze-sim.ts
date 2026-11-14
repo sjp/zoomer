@@ -8,13 +8,20 @@
  * All state lives in preallocated typed arrays sized for the largest maze, so a
  * new maze or a step of the walker allocates nothing.
  */
-import { MAX_PATTERN_HZ, capPatternSpeed } from "../motion-limits";
+import {
+  DIR_X,
+  DIR_Y,
+  EASE_PEAK,
+  easedMoveSeconds,
+  type GridPose,
+  SEG_HOLD,
+  SEG_TURN,
+  SEG_WALK,
+  updateGridPose,
+} from "../grid-walk";
+import { MAX_PATTERN_HZ } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
 import { MAX_SIZE, MIN_SIZE, MIN_SPEED, MAX_SPEED } from "./maze.meta";
-
-/** Headings: east, north, west, south. A left turn adds 1. */
-export const DIR_X: readonly number[] = [1, 0, -1, 0];
-export const DIR_Y: readonly number[] = [0, 1, 0, -1];
 
 export const OBJ_NONE = 0;
 const OBJ_ICOSA = 1;
@@ -252,8 +259,6 @@ export const COURSE_HEIGHT = 0.25;
 export const REF_DISTANCE = 1;
 /** Focal length in frame heights: the frame spans 0.5 cell either side at 1 cell. */
 export const FOCAL = 1;
-/** Peak over mean rate of a smoothstep ease (3x^2 - 2x^3 peaks at slope 1.5). */
-export const EASE_PEAK = 1.5;
 /** Seconds per cell and per quarter turn at a pace of 1, before the motion caps. */
 const WALK_SECONDS = 1.5;
 const TURN_SECONDS = 0.8;
@@ -277,8 +282,7 @@ const clampSpeed = (speed: number) =>
  * the distance).
  */
 export function walkSeconds(speed: number): number {
-  const peak = capPatternSpeed((EASE_PEAK * clampSpeed(speed)) / WALK_SECONDS, PATTERN_PERIOD);
-  return EASE_PEAK / peak;
+  return easedMoveSeconds(1, clampSpeed(speed) / WALK_SECONDS, PATTERN_PERIOD);
 }
 
 /**
@@ -289,11 +293,11 @@ export function walkSeconds(speed: number): number {
  */
 export function turnSeconds(speed: number): number {
   const quarter = Math.PI / 2;
-  const peak = capPatternSpeed(
-    (EASE_PEAK * quarter * clampSpeed(speed)) / TURN_SECONDS,
+  return easedMoveSeconds(
+    quarter,
+    (quarter * clampSpeed(speed)) / TURN_SECONDS,
     PATTERN_PERIOD / REF_DISTANCE,
   );
-  return (EASE_PEAK * quarter) / peak;
 }
 
 /**
@@ -309,34 +313,15 @@ export const ROLL_SECONDS = Math.max(
 
 // --- The walker ---
 
-const SEG_HOLD = 0;
-const SEG_TURN = 1;
-export const SEG_WALK = 2;
 /** Out through the doorway: the walk is over. */
 export const SEG_DONE = 3;
 
-interface Walker {
-  /** Current cell (the one a walk leaves from). */
-  cx: number;
-  cy: number;
-  /** Heading, 0..3; during a turn, the heading it turns to. */
-  dir: number;
-  kind: number;
-  /** 0..1 through the current segment. */
-  progress: number;
-  /** Quarter turns of the current turn (+ is left). */
-  turn: number;
+/** The wall follower: its path segment (`SEG_*`, or SEG_DONE) and camera pose. */
+interface Walker extends GridPose {
   /** Turn planned for the cell a walk arrives at, chosen as the walk starts. */
   nextTurn: number;
-  /** Whether the current walk speeds up from rest and slows to rest. */
-  easeIn: boolean;
-  easeOut: boolean;
   /** Walks started so far; the effect watches it to see a new step begin. */
   walks: number;
-  /** The camera pose: position in cells and heading in radians (unwrapped). */
-  x: number;
-  y: number;
-  angle: number;
 }
 
 export function createWalker(): Walker {
@@ -369,48 +354,7 @@ export function resetWalker(w: Walker): void {
   w.nextTurn = 0;
   w.easeIn = true;
   w.easeOut = true;
-  updatePose(w);
-}
-
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-/**
- * Fraction of a cell walked at `t`: smoothstep when starting and stopping, a
- * cubic that starts from rest and leaves at the cruising rate (and its mirror)
- * when only one end stops, and a straight line when cruising through.
- */
-export function walkEase(t: number, easeIn: boolean, easeOut: boolean): number {
-  if (easeIn && easeOut) {
-    return smooth(t);
-  }
-  if (easeIn) {
-    return t * t * (2 - t);
-  }
-  if (easeOut) {
-    const u = 1 - t;
-    return 1 - u * u * (2 - u);
-  }
-  return t;
-}
-
-function updatePose(w: Walker): void {
-  const q = Math.PI / 2;
-  const cx = w.cx + 0.5;
-  const cy = w.cy + 0.5;
-  if (w.kind === SEG_TURN) {
-    w.x = cx;
-    w.y = cy;
-    w.angle = (w.dir - w.turn + w.turn * smooth(w.progress)) * q;
-  } else if (w.kind === SEG_WALK) {
-    const s = walkEase(w.progress, w.easeIn, w.easeOut);
-    w.x = cx + DIR_X[w.dir] * s;
-    w.y = cy + DIR_Y[w.dir] * s;
-    w.angle = w.dir * q;
-  } else {
-    w.x = cx;
-    w.y = cy;
-    w.angle = w.dir * q;
-  }
+  updateGridPose(w);
 }
 
 /** Starts a walk from the current cell along the heading, planning the turn after it. */
@@ -484,7 +428,7 @@ export function advanceWalker(
     left -= remaining;
     nextSegment(w, maze, hand);
   }
-  updatePose(w);
+  updateGridPose(w);
 }
 
 /** The cell the walker is heading into during a walk (else its own cell), as an index or -1 outside. */

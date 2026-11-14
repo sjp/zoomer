@@ -10,6 +10,7 @@ import {
   updateDataTexture,
   withScope,
 } from "../gl";
+import { DIR_X, DIR_Y, GRID_DDA_GLSL, SEG_WALK } from "../grid-walk";
 import { createLowResTarget } from "../lowres";
 import { approach, smoothstep } from "../math";
 import { hash32, VALUE_NOISE_GLSL } from "../noise";
@@ -24,8 +25,6 @@ import {
   createMaze,
   createRat,
   createWalker,
-  DIR_X,
-  DIR_Y,
   distanceField,
   FOCAL,
   generateMaze,
@@ -37,7 +36,6 @@ import {
   resetWalker,
   ROLL_SECONDS,
   SEG_DONE,
-  SEG_WALK,
   turnSeconds,
   walkSeconds,
   walkTarget,
@@ -132,6 +130,7 @@ const vec3 KEY = vec3(-0.37, 0.48, 0.79);
 
 ${VALUE_NOISE_GLSL}
 ${DITHER_GLSL}
+${GRID_DDA_GLSL}
 
 ivec4 cellAt(ivec2 c) {
   return ivec4(texelFetch(uMaze, clamp(c, ivec2(0), ivec2(GRID)), 0) * 255.0 + 0.5);
@@ -327,63 +326,48 @@ void main() {
   int n = int(uSize + 0.5);
 
   // DDA through the cell grid; t is in units of rd.
-  ivec2 cell = ivec2(floor(uCam));
-  vec2 dd = vec2(abs(rd.x) < 1e-6 ? 1e-6 : rd.x, abs(rd.y) < 1e-6 ? 1e-6 : rd.y);
-  ivec2 stp = ivec2(dd.x > 0.0 ? 1 : -1, dd.y > 0.0 ? 1 : -1);
-  vec2 tDelta = abs(1.0 / dd);
-  vec2 tMax = (vec2(cell) + vec2(greaterThan(dd, vec2(0.0))) - uCam) / dd;
+  GridRay ray = gridRay(uCam, rd.xy);
   float tPlane = rd.z > 1e-6 ? 0.5 / rd.z : (rd.z < -1e-6 ? -0.5 / rd.z : 1e9);
   // Surfaces: 0 floor or ceiling, 1 wall across x, 2 wall across y, 3 object, 4 light outside.
   int surf = 4;
   int code = 0;
   float t = 0.0;
   vec3 objCol = vec3(0.0);
-  ivec4 cur = cellAt(cell);
+  ivec4 cur = cellAt(ray.cell);
   for (int i = 0; i < MAX_STEPS; i++) {
-    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, ivec2(n)))) {
+    if (any(lessThan(ray.cell, ivec2(0))) || any(greaterThanEqual(ray.cell, ivec2(n)))) {
       surf = 4;
       break;
     }
-    float tExit = min(min(tMax.x, tMax.y), tPlane);
+    float tExit = min(gridNext(ray), tPlane);
     if (cur.b > 0) {
-      float to = objectHit(cur.b, cell, ro, rd, t, tExit, objCol);
+      float to = objectHit(cur.b, ray.cell, ro, rd, t, tExit, objCol);
       if (to > 0.0) {
         surf = 3;
         t = to;
         break;
       }
     }
-    if (tPlane <= min(tMax.x, tMax.y)) {
+    if (tPlane <= gridNext(ray)) {
       surf = 0;
       t = tPlane;
       break;
     }
-    if (tMax.x < tMax.y) {
-      ivec2 nc = cell + ivec2(stp.x, 0);
-      ivec4 nxt = cellAt(nc);
-      t = tMax.x;
-      code = stp.x > 0 ? nxt.r : cur.r;
-      if (code > 0) {
-        surf = 1;
-        break;
-      }
-      cell = nc;
-      cur = nxt;
-      tMax.x += tDelta.x;
+    // Step into the next cell; a wall on the boundary crossed stops the ray.
+    int axis = gridStep(ray, t);
+    ivec4 nxt = cellAt(ray.cell);
+    if (axis == 0) {
+      code = ray.stp.x > 0 ? nxt.r : cur.r;
     } else {
-      ivec2 nc = cell + ivec2(0, stp.y);
-      ivec4 nxt = cellAt(nc);
-      t = tMax.y;
-      code = stp.y > 0 ? nxt.g : cur.g;
-      if (code > 0) {
-        surf = 2;
-        break;
-      }
-      cell = nc;
-      cur = nxt;
-      tMax.y += tDelta.y;
+      code = ray.stp.y > 0 ? nxt.g : cur.g;
     }
+    if (code > 0) {
+      surf = 1 + axis;
+      break;
+    }
+    cur = nxt;
   }
+  ivec2 cell = ray.cell;
 
   vec3 hit = ro + rd * t;
   // Surface coordinates in cells, set for every pixel so their derivatives are
