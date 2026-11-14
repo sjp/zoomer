@@ -10,6 +10,7 @@
  * option in the meta.
  */
 import { paintCanvas } from "../canvas-texture";
+import { blob, curve, eye, highlight, LINE, OUTLINE, PINK, shape, startClipArt } from "../clip-art";
 import { FRAME_BLINK, FRAME_IDLE } from "./passion-sim";
 import { CRITTER_OPTIONS, type CritterId } from "./passion.meta";
 
@@ -18,12 +19,6 @@ type Ctx = OffscreenCanvasRenderingContext2D;
 /** Poses per critter, the atlas's columns: eyes open, blinking, idle touch. */
 export const CRITTER_FRAMES = 3;
 
-const OUTLINE = "#1d1a1a";
-/** Outline width, in cell units. */
-const LINE = 0.022;
-const WHITE = "#ffffff";
-const PINK = "#ff9ab8";
-
 /** What a pose changes: closed eyes, or the critter's own idle touch. */
 interface Pose {
   blink: boolean;
@@ -31,82 +26,6 @@ interface Pose {
 }
 
 type DrawCritter = (ctx: Ctx, pose: Pose) => void;
-
-/** A filled, outlined ellipse. */
-function blob(
-  ctx: Ctx,
-  x: number,
-  y: number,
-  rx: number,
-  ry: number,
-  fill: string,
-  rotation = 0,
-): void {
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.stroke();
-}
-
-/** A filled, outlined polygon. */
-function shape(ctx: Ctx, points: readonly (readonly [number, number])[], fill: string): void {
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) {
-    ctx.lineTo(points[i][0], points[i][1]);
-  }
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.stroke();
-}
-
-/** A stroked quadratic curve from (x0, y0) through control (cx, cy) to (x1, y1). */
-function curve(
-  ctx: Ctx,
-  x0: number,
-  y0: number,
-  cx: number,
-  cy: number,
-  x1: number,
-  y1: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x0, y0);
-  ctx.quadraticCurveTo(cx, cy, x1, y1);
-  ctx.stroke();
-}
-
-/**
- * A big friendly eye of radius `r`: white, a pupil looking by (`lookX`, `lookY`)
- * radii and a glint; or, blinking, a closed lid's happy curve.
- */
-function eye(ctx: Ctx, x: number, y: number, r: number, blink: boolean, lookX = 0, lookY = 0.2) {
-  if (blink) {
-    curve(ctx, x - r * 0.9, y, x, y + r * 0.8, x + r * 0.9, y);
-    return;
-  }
-  blob(ctx, x, y, r, r * 1.08, WHITE);
-  const px = x + lookX * r * 0.4;
-  const py = y + lookY * r * 0.4;
-  ctx.beginPath();
-  ctx.ellipse(px, py, r * 0.52, r * 0.58, 0, 0, Math.PI * 2);
-  ctx.fillStyle = OUTLINE;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(px - r * 0.2, py - r * 0.24, r * 0.17, 0, Math.PI * 2);
-  ctx.fillStyle = WHITE;
-  ctx.fill();
-}
-
-/** The one lazy white highlight: a soft-edged streak with no outline. */
-function highlight(ctx: Ctx, x: number, y: number, rx: number, ry: number, rotation: number) {
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-  ctx.fill();
-}
 
 /** Lumpy green body, big white eyes on top, a wide smile and a pale belly. */
 const frog: DrawCritter = (ctx, pose) => {
@@ -381,10 +300,7 @@ export const CRITTERS: Record<CritterId, DrawCritter> = { frog, cat, dog, duck, 
 /** Draws one critter's pose `frame` (open, blinking or idle) in the unit square. */
 export function drawCritter(ctx: Ctx, critter: CritterId, frame: number): void {
   ctx.save();
-  ctx.lineWidth = LINE;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.strokeStyle = OUTLINE;
+  startClipArt(ctx);
   CRITTERS[critter](ctx, { blink: frame === FRAME_BLINK, idle: frame === FRAME_IDLE });
   ctx.restore();
 }
