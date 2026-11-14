@@ -180,6 +180,31 @@ body,
   max-width: 45%;
 }
 
+/* Wraps onto more rows rather than widening the panel. */
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.category-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+}
+
+.category-chip[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.category-chip[aria-pressed="true"]:hover {
+  background: var(--accent);
+}
+
 input[type="search"] {
   font: inherit;
   color: var(--text);

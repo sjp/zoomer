@@ -6,7 +6,7 @@ import { defaults, encodeHash, stateFromHash } from "./effects/params";
 import { adjacentEffects, stepEffect, visibleEffects, type EffectSort } from "./effects/list";
 import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
-import type { AnyParamValues, EffectDefinition, ParamValue } from "./effects/types";
+import type { AnyParamValues, EffectCategory, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
 import { copyText } from "./lib/clipboard";
 import { describeError } from "./lib/errors";
@@ -86,15 +86,20 @@ export function App() {
   // A page opened with the panel hidden (e.g. an OBS browser source) starts idle, so
   // neither the cursor nor the show-controls button appears until there's input.
   const idle = useIdle(3000, initial.panelHidden);
-  // The effect list: its sort and favourites are remembered, its search isn't. The
-  // search stays while the list is closed, because ← / → follow the filtered list.
+  // The effect list: its sort and favourites are remembered, its search and category
+  // filter aren't. Both stay while the list is closed, because ← / → follow the
+  // filtered list.
   const [listOpen, setListOpen] = useState(false);
   const [listFocus, setListFocus] = useState(0);
   const [sort, setSort] = useState<EffectSort>(loadSort);
   const [query, setQuery] = useState("");
+  const [categories, setCategories] = useState<ReadonlySet<EffectCategory>>(() => new Set());
   const [favouritesStore] = useState(() => createFavourites());
   const favourites = useSyncExternalStore(favouritesStore.subscribe, favouritesStore.get);
-  const listOptions = useMemo(() => ({ sort, query, favourites }), [sort, query, favourites]);
+  const listOptions = useMemo(
+    () => ({ sort, query, categories, favourites }),
+    [sort, query, categories, favourites],
+  );
   const visible = useMemo(() => visibleEffects(effects, listOptions), [listOptions]);
   const changeSort = useCallback((next: EffectSort) => {
     setSort(next);
@@ -425,6 +430,7 @@ export function App() {
               open: listOpen,
               onOpenChange: setListOpen,
               onQueryChange: setQuery,
+              onCategoriesChange: setCategories,
               onSortChange: changeSort,
               onPrefetch: prefetch,
               onToggleFavourite: favouritesStore.toggle,

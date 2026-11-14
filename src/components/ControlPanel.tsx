@@ -5,6 +5,7 @@ import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 import type { Store } from "../lib/store";
 import { EffectList, type EffectListProps } from "./EffectList";
+import { categoryFilterLabel } from "../effects/list";
 import { ParamControl } from "./ParamControl";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
@@ -54,8 +55,10 @@ export function ControlPanel(props: Props) {
   const [duration, setDuration] = useState(20);
   const pickerRef = useRef<HTMLButtonElement>(null);
   const listOpen = list.open && !recording;
-  // The search stays applied after the list closes, because ← / → follow it.
+  // The search and category filter stay applied after the list closes, because
+  // ← / → follow them.
   const filter = list.options.query.trim();
+  const categoryFilter = categoryFilterLabel(list.options.categories);
   const closeList = () => {
     list.onOpenChange(false);
     pickerRef.current?.focus();
@@ -104,15 +107,17 @@ export function ControlPanel(props: Props) {
           onClose={closeList}
         />
       )}
-      {!listOpen && filter !== "" && (
+      {!listOpen && (filter !== "" || categoryFilter !== "") && (
         <p className="hint filter-hint">
-          ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}{" "}
-          for “{filter}”{" "}
+          ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}
+          {filter !== "" && <> for “{filter}”</>}
+          {categoryFilter !== "" && <> in {categoryFilter}</>}{" "}
           <button
             type="button"
             className="link-button"
             onClick={() => {
               list.onQueryChange("");
+              list.onCategoriesChange(new Set());
             }}
           >
             Clear

@@ -2,12 +2,14 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import {
   EFFECT_SORTS,
   FAVOURITES_GROUP,
+  categoryFilterLabel,
   effectGroup,
   isEffectSort,
   type EffectSort,
   type ListableEffect,
   type ListOptions,
 } from "../effects/list";
+import { EFFECT_CATEGORIES, type EffectCategory } from "../effects/types";
 import { StarButton } from "./StarButton";
 
 /** The heading for the effects below the favourites, in sorts without groups. */
@@ -20,6 +22,8 @@ const OTHERS_GROUP = "More effects";
 function categoryLabel(effect: ListableEffect, sort: EffectSort): string {
   return (sort === "category" ? effect.categories.slice(1) : effect.categories).join(" · ");
 }
+
+const NO_CATEGORIES: ReadonlySet<EffectCategory> = new Set();
 
 const optionDomId = (uid: string, id: string) => `${uid}-option-${id}`;
 
@@ -34,6 +38,8 @@ export interface EffectListProps {
   /** Stars or unstars an effect. */
   onToggleFavourite: (id: string) => void;
   onQueryChange: (query: string) => void;
+  /** Sets the category filter; an empty set lists every category. */
+  onCategoriesChange: (categories: ReadonlySet<EffectCategory>) => void;
   onSortChange: (sort: EffectSort) => void;
   /** Starts loading an effect's code, when it's hovered or becomes active. */
   onPrefetch: (id: string) => void;
@@ -49,10 +55,15 @@ export interface EffectListProps {
  * the star is hidden from assistive technology and never takes focus; keyboard and
  * screen reader users star the active option with `*` in the search box (search ignores
  * punctuation, so the key isn't needed for typing), and the option says it's starred.
+ *
+ * Between the search box and the list, a group of category chips (toggle buttons,
+ * reached by Tab) narrows the list to effects in any of the pressed categories. Esc
+ * clears the search, then the chips, then closes the list.
  */
 export function EffectList(props: EffectListProps) {
   const { effects, options, currentId, onPrefetch } = props;
   const { query, sort, favourites } = options;
+  const categories = options.categories ?? NO_CATEGORIES;
   const uid = useId();
   const listboxId = `${uid}-listbox`;
   const optionId = (id: string) => optionDomId(uid, id);
@@ -122,11 +133,18 @@ export function EffectList(props: EffectListProps) {
     } else if (e.key === "Escape") {
       // A search input clears itself on Esc in some browsers; do it here instead.
       e.preventDefault();
-      if (query !== "") {
-        changeQuery("");
-      } else {
-        props.onClose();
-      }
+      escape();
+    }
+  };
+
+  /** Esc: clears the search, then the category filter, then closes the list. */
+  const escape = () => {
+    if (query !== "") {
+      changeQuery("");
+    } else if (categories.size > 0) {
+      changeCategories(new Set());
+    } else {
+      props.onClose();
     }
   };
 
@@ -135,6 +153,25 @@ export function EffectList(props: EffectListProps) {
     setAnnouncement(undefined);
     props.onQueryChange(next);
   };
+
+  const changeCategories = (next: ReadonlySet<EffectCategory>) => {
+    setActiveId(undefined);
+    setAnnouncement(undefined);
+    props.onCategoriesChange(next);
+  };
+
+  const toggleCategory = (category: EffectCategory) => {
+    const next = new Set(categories);
+    if (!next.delete(category)) {
+      next.add(category);
+    }
+    changeCategories(next);
+  };
+
+  const filterLabel = categoryFilterLabel(categories);
+  const countText = `${effects.length === 1 ? "1 effect" : `${String(effects.length)} effects`}${
+    filterLabel !== "" ? ` in ${filterLabel}` : ""
+  }`;
 
   // Consecutive effects with the same heading form a group. Below the favourites, the
   // rest get a heading too when the sort has no groups of its own.
@@ -237,15 +274,42 @@ export function EffectList(props: EffectListProps) {
           ))}
         </select>
       </div>
+      <div
+        role="group"
+        aria-label="Filter by category"
+        className="category-chips"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            escape();
+          }
+        }}
+      >
+        {EFFECT_CATEGORIES.map((category) => (
+          <button
+            key={category}
+            type="button"
+            className="category-chip"
+            aria-pressed={categories.has(category)}
+            onClick={() => {
+              toggleCategory(category);
+            }}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
       <p id={`${uid}-star-help`} className="sr-only">
         Press * to star or unstar the highlighted effect.
       </p>
       <p className="sr-only" role="status">
-        {announcement ?? (effects.length === 1 ? "1 effect" : `${String(effects.length)} effects`)}
+        {announcement ?? countText}
       </p>
-      {query.trim() === "" && !effects.some((e) => favourites?.has(e.id) === true) && (
-        <p className="hint effect-list-hint">Star effects to keep them at the top</p>
-      )}
+      {query.trim() === "" &&
+        categories.size === 0 &&
+        !effects.some((e) => favourites?.has(e.id) === true) && (
+          <p className="hint effect-list-hint">Star effects to keep them at the top</p>
+        )}
       <div id={listboxId} role="listbox" aria-label="Effects" className="effect-listbox">
         {groups.map((group, g) =>
           group.heading === undefined ? (
@@ -266,15 +330,20 @@ export function EffectList(props: EffectListProps) {
       </div>
       {effects.length === 0 && (
         <div className="effect-empty">
-          <p>No effects match “{query.trim()}”.</p>
+          <p>
+            No effects
+            {query.trim() !== "" && <> match “{query.trim()}”</>}
+            {filterLabel !== "" && <> in {filterLabel}</>}.
+          </p>
           <button
             type="button"
             onClick={() => {
               changeQuery("");
+              changeCategories(new Set());
               inputRef.current?.focus();
             }}
           >
-            Clear search
+            {filterLabel !== "" ? "Clear filters" : "Clear search"}
           </button>
         </div>
       )}

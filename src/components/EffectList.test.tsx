@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
+import { EFFECT_CATEGORIES } from "../effects/types";
 import { EffectList, type EffectListProps } from "./EffectList";
 
 const effect = (
@@ -35,6 +36,7 @@ function renderList(overrides: Partial<EffectListProps> = {}) {
     onSelect: vi.fn<(id: string) => void>(),
     onToggleFavourite: vi.fn<(id: string) => void>(),
     onQueryChange: vi.fn<(q: string) => void>(),
+    onCategoriesChange: vi.fn<EffectListProps["onCategoriesChange"]>(),
     onSortChange: vi.fn<EffectListProps["onSortChange"]>(),
     onPrefetch: vi.fn<(id: string) => void>(),
     onClose: vi.fn<() => void>(),
@@ -111,6 +113,59 @@ describe("EffectList", () => {
     expect(empty.props.onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("clears the search, then the category filter, with Esc, then closes", () => {
+    const categories = new Set(["Water"] as const);
+    const both = renderList({ options: { sort: "featured", query: "x", categories } });
+    both.key("Escape");
+    expect(both.props.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
+    expect(both.props.onCategoriesChange).not.toHaveBeenCalled();
+    cleanup();
+    const filtered = renderList({ options: { sort: "featured", query: "", categories } });
+    filtered.key("Escape");
+    expect(filtered.props.onCategoriesChange).toHaveBeenCalledExactlyOnceWith(new Set());
+    expect(filtered.props.onClose).not.toHaveBeenCalled();
+    // Esc on a chip does the same.
+    fireEvent.keyDown(screen.getByRole("button", { name: "Water" }), { key: "Escape" });
+    expect(filtered.props.onCategoriesChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers every category as a toggle chip in a labelled group", () => {
+    const { props } = renderList({
+      options: { sort: "featured", query: "", categories: new Set(["Water"]) },
+    });
+    const group = screen.getByRole("group", { name: "Filter by category" });
+    const chips = within(group).getAllByRole("button");
+    expect(chips.map((c) => c.textContent)).toEqual([...EFFECT_CATEGORIES]);
+    const pressed = (name: string) =>
+      within(group).getByRole("button", { name }).getAttribute("aria-pressed");
+    expect(pressed("Water")).toBe("true");
+    expect(pressed("Space")).toBe("false");
+    fireEvent.click(within(group).getByRole("button", { name: "Space" }));
+    expect(props.onCategoriesChange).toHaveBeenLastCalledWith(new Set(["Water", "Space"]));
+    fireEvent.click(within(group).getByRole("button", { name: "Water" }));
+    expect(props.onCategoriesChange).toHaveBeenLastCalledWith(new Set());
+  });
+
+  it("announces the count with the category filter", () => {
+    renderList({
+      effects: ALL.slice(0, 3),
+      options: { sort: "featured", query: "", categories: new Set(["Water", "Space"]) },
+    });
+    expect(screen.getByRole("status").textContent).toBe("3 effects in Space or Water");
+  });
+
+  it("shows every category on a row, and only the others when grouped by category", () => {
+    const multi = effect("m", ["Cosy", "Water"]);
+    renderList({ effects: [multi] });
+    expect(document.querySelector(".effect-option-category")?.textContent).toBe("Cosy · Water");
+    cleanup();
+    renderList({ effects: [multi], options: { sort: "category", query: "" } });
+    expect(document.querySelector(".effect-option-category")?.textContent).toBe("Water");
+    cleanup();
+    renderList({ effects: [effect("s")], options: { sort: "category", query: "" } });
+    expect(document.querySelector(".effect-option-category")).toBeNull();
+  });
+
   it("stars the active option with * and announces it", () => {
     const { key, props } = renderList();
     key("*");
@@ -152,6 +207,17 @@ describe("EffectList", () => {
     expect(screen.getByText("No effects match “zzz”.")).toBeTruthy();
     fireEvent.click(screen.getByText("Clear search"));
     expect(props.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
+  });
+
+  it("offers to clear both the search and the category filter with no matches", () => {
+    const { props } = renderList({
+      effects: [],
+      options: { sort: "featured", query: "zzz", categories: new Set(["Retro"]) },
+    });
+    expect(screen.getByText("No effects match “zzz” in Retro.")).toBeTruthy();
+    fireEvent.click(screen.getByText("Clear filters"));
+    expect(props.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
+    expect(props.onCategoriesChange).toHaveBeenCalledExactlyOnceWith(new Set());
   });
 
   it("selects an option on click", () => {

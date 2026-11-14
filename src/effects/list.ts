@@ -1,9 +1,9 @@
 /**
- * The effect list as the user sees it: sorted, filtered by the search box and, with
- * favourites, starred effects first. The picker and ← / → both go through
+ * The effect list as the user sees it: sorted, filtered by the search box and the
+ * category chips and, with favourites, starred effects first. The picker and ← / → both go through
  * {@link visibleEffects}, so they can't disagree about the order.
  */
-import { EFFECT_CATEGORIES, EFFECT_COSTS, type EffectMeta } from "./types";
+import { EFFECT_CATEGORIES, EFFECT_COSTS, type EffectCategory, type EffectMeta } from "./types";
 
 /** Sort orders, keyed by the value stored in preferences, with their labels. */
 export const EFFECT_SORTS = {
@@ -30,6 +30,11 @@ export interface ListOptions {
   /** Search text. Every word must match the name, description, tags or a category. */
   query?: string | undefined;
   /**
+   * Categories to show effects from: an effect is listed if any of its categories is
+   * in the set. Empty or missing lists every category.
+   */
+  categories?: ReadonlySet<EffectCategory> | undefined;
+  /**
    * Ids of starred effects. They come first, in their own group, in the
    * current sort; the rest follow. Ids of effects not in the list are ignored.
    */
@@ -47,6 +52,11 @@ export function normalizeText(text: string): string {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+}
+
+/** The selected categories in display order, as a phrase: "Space or Water". */
+export function categoryFilterLabel(categories: ReadonlySet<EffectCategory> | undefined): string {
+  return EFFECT_CATEGORIES.filter((c) => categories?.has(c) === true).join(" or ");
 }
 
 /** The words of a search query, normalised; empty when there's nothing to search for. */
@@ -83,10 +93,17 @@ export function visibleEffects<T extends ListableEffect>(
   effects: readonly T[],
   options: ListOptions,
 ): T[] {
-  const { sort, favourites } = options;
+  const { sort, favourites, categories } = options;
   const words = searchWords(options.query);
   const rows: { effect: T; index: number; favourite: number; score: number }[] = [];
   for (const [index, effect] of effects.entries()) {
+    if (
+      categories !== undefined &&
+      categories.size > 0 &&
+      !effect.categories.some((c) => categories.has(c))
+    ) {
+      continue;
+    }
     const name = normalizeText(effect.name);
     if (words.length > 0) {
       const text = normalizeText(
@@ -131,8 +148,8 @@ export function effectGroup(effect: ListableEffect, options: ListOptions): strin
 
 /**
  * The effect ← (`dir` -1) or → (`dir` 1) moves to from `currentId`, wrapping at either
- * end. If the search hides the current effect, it steps from where the current effect
- * would sort without the search. Undefined when nothing is listed.
+ * end. If the search or category filter hides the current effect, it steps from where
+ * the current effect would sort without them. Undefined when nothing is listed.
  */
 export function stepEffect<T extends ListableEffect>(
   effects: readonly T[],
@@ -150,7 +167,7 @@ export function stepEffect<T extends ListableEffect>(
     return visible[(i + dir + n) % n];
   }
 
-  const all = visibleEffects(effects, { ...options, query: undefined });
+  const all = visibleEffects(effects, { ...options, query: undefined, categories: undefined });
   const from = all.findIndex((e) => e.id === currentId);
   if (from < 0) {
     return dir > 0 ? visible[0] : visible[n - 1];

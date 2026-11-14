@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adjacentEffects,
+  categoryFilterLabel,
   effectGroup,
   isEffectSort,
   normalizeText,
@@ -11,6 +12,7 @@ import {
   type ListOptions,
 } from "./list";
 import { DEFAULT_EFFECT_ID, effects } from "./registry";
+import type { EffectCategory } from "./types";
 
 /** Listed in featured order. */
 const list: ListableEffect[] = [
@@ -42,7 +44,7 @@ const list: ListableEffect[] = [
     id: "koi",
     name: "Koi Pond",
     description: "Koi gliding beneath lily pads, with blue water.",
-    categories: ["Water"],
+    categories: ["Water", "Nature"],
     tags: ["fish", "japanese"],
     cost: "medium",
   },
@@ -58,7 +60,7 @@ const list: ListableEffect[] = [
     id: "cafe",
     name: "Café Étoile",
     description: "A sea of tables under the stars.",
-    categories: ["Cosy"],
+    categories: ["Cosy", "Space"],
     tags: ["coffee"],
   },
 ];
@@ -93,7 +95,7 @@ describe("visibleEffects", () => {
     expect(ids({ sort: "az" })).toEqual(["cafe", "sea", "blobs", "koi", "nebula", "warp"]);
   });
 
-  it("groups by category in display order, A–Z within each", () => {
+  it("groups by primary category in display order, A–Z within each", () => {
     expect(ids({ sort: "category" })).toEqual(["nebula", "warp", "sea", "koi", "cafe", "blobs"]);
     expect(list.map((e) => effectGroup(e, { sort: "category" }))).toEqual([
       "Space",
@@ -115,6 +117,8 @@ describe("visibleEffects", () => {
     expect(ids({ sort: "featured", query: "galaxy" })).toEqual(["nebula"]);
     expect(ids({ sort: "featured", query: "lily" })).toEqual(["koi"]);
     expect(ids({ sort: "featured", query: "abstract" })).toEqual(["blobs"]);
+    // Non-primary categories match too.
+    expect(ids({ sort: "featured", query: "nature" })).toEqual(["koi"]);
     expect(ids({ sort: "featured", query: "   " })).toHaveLength(list.length);
     expect(ids({ sort: "featured", query: "zzz" })).toEqual([]);
   });
@@ -217,6 +221,43 @@ describe("visibleEffects", () => {
     ]);
   });
 
+  it("filters by any of the selected categories, primary or not", () => {
+    const only = (...categories: EffectCategory[]) => new Set(categories);
+    expect(ids({ sort: "featured", categories: only("Water") })).toEqual(["sea", "koi"]);
+    expect(ids({ sort: "featured", categories: only("Nature") })).toEqual(["koi"]);
+    expect(ids({ sort: "featured", categories: only("Space") })).toEqual([
+      "warp",
+      "nebula",
+      "cafe",
+    ]);
+    expect(ids({ sort: "featured", categories: only("Water", "Abstract") })).toEqual([
+      "sea",
+      "blobs",
+      "koi",
+    ]);
+    expect(ids({ sort: "featured", categories: only("Retro") })).toEqual([]);
+    expect(ids({ sort: "featured", categories: only() })).toHaveLength(list.length);
+  });
+
+  it("combines the category filter with search, favourites and grouping", () => {
+    const space = new Set<EffectCategory>(["Space"]);
+    expect(ids({ sort: "featured", categories: space, query: "stars" })).toEqual(["warp", "cafe"]);
+    expect(ids({ sort: "featured", categories: space, query: "coffee" })).toEqual(["cafe"]);
+    expect(ids({ sort: "featured", categories: space, query: "fish" })).toEqual([]);
+    expect(ids({ sort: "featured", categories: space, favourites: new Set(["cafe"]) })).toEqual([
+      "cafe",
+      "warp",
+      "nebula",
+    ]);
+    // Café Étoile is listed once, under its primary category, though it's also Space.
+    const options: ListOptions = { sort: "category", categories: space };
+    expect(visibleEffects(list, options).map((e) => [e.id, effectGroup(e, options)])).toEqual([
+      ["nebula", "Space"],
+      ["warp", "Space"],
+      ["cafe", "Cosy"],
+    ]);
+  });
+
   it("returns the registry's effects with the default first when featured", () => {
     const out = visibleEffects(effects, { sort: "featured" });
     expect(out).toEqual(effects);
@@ -256,6 +297,21 @@ describe("stepEffect", () => {
     expect(step(water, "gone", -1)).toBe("koi");
   });
 
+  it("follows the category filter, from where a filtered-out effect would sort", () => {
+    const space: ListOptions = { sort: "featured", categories: new Set(["Space"]) };
+    expect(step(space, "warp", 1)).toBe("nebula");
+    expect(step(space, "nebula", 1)).toBe("cafe");
+    expect(step(space, "cafe", 1)).toBe("warp");
+    expect(step(space, "warp", -1)).toBe("cafe");
+    // Featured: warp, sea, blobs, koi, nebula, cafe. Koi sits between warp and nebula.
+    expect(step(space, "koi", 1)).toBe("nebula");
+    expect(step(space, "koi", -1)).toBe("warp");
+    // With a search as well: only warp and cafe mention stars.
+    const stars: ListOptions = { ...space, query: "stars" };
+    expect(step(stars, "nebula", 1)).toBe("cafe");
+    expect(step(stars, "nebula", -1)).toBe("warp");
+  });
+
   it("returns nothing when nothing matches", () => {
     expect(step({ sort: "featured", query: "zzz" }, "warp", 1)).toBeUndefined();
   });
@@ -275,5 +331,17 @@ describe("adjacentEffects", () => {
     expect(adjacentIds({ sort: "featured", query: "water" }, "sea")).toEqual(["koi"]);
     expect(adjacentIds({ sort: "featured", query: "pond" }, "koi")).toEqual([]);
     expect(adjacentIds({ sort: "featured", query: "pond" }, "warp")).toEqual(["koi"]);
+    expect(adjacentIds({ sort: "featured", categories: new Set(["Water"]) }, "warp")).toEqual([
+      "sea",
+      "koi",
+    ]);
+  });
+});
+
+describe("categoryFilterLabel", () => {
+  it("names the selected categories in display order", () => {
+    expect(categoryFilterLabel(new Set(["Water", "Space"]))).toBe("Space or Water");
+    expect(categoryFilterLabel(new Set())).toBe("");
+    expect(categoryFilterLabel(undefined)).toBe("");
   });
 });

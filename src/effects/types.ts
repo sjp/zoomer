@@ -106,7 +106,7 @@ export const EFFECT_CATEGORIES = [
   "Retro",
   "Scenes",
 ] as const;
-type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
+export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 
 /**
  * Rough GPU cost at 4K with default params, lightest first, for the "Lightest first"

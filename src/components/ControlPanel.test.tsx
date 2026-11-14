@@ -92,6 +92,26 @@ describe("ControlPanel", () => {
     expect(screen.getByText(/step through 1 match for “sea”/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(list.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
+    expect(list.onCategoriesChange).toHaveBeenCalledExactlyOnceWith(new Set());
+  });
+
+  it("includes a closed list's category filter in the hint", () => {
+    const list = {
+      ...renderPanelList(),
+      options: {
+        sort: "featured" as const,
+        query: "",
+        categories: new Set(["Water", "Space"] as const),
+      },
+    };
+    renderPanel({ list });
+    expect(screen.getByText(/step through 1 match in Space or Water/)).toBeTruthy();
+    cleanup();
+    renderPanel({ list: { ...list, options: { ...list.options, query: "sea" } } });
+    expect(screen.getByText(/step through 1 match for “sea” in Space or Water/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(list.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
+    expect(list.onCategoriesChange).toHaveBeenCalledExactlyOnceWith(new Set());
   });
 
   it("shows an error, with a reload button when one is offered", () => {
@@ -133,6 +153,7 @@ function renderPanelList() {
     open: false,
     onOpenChange: vi.fn<(open: boolean) => void>(),
     onQueryChange: vi.fn<(q: string) => void>(),
+    onCategoriesChange: vi.fn<Props["list"]["onCategoriesChange"]>(),
     onSortChange: vi.fn<Props["list"]["onSortChange"]>(),
     onPrefetch: vi.fn<(id: string) => void>(),
     onToggleFavourite: vi.fn<(id: string) => void>(),
