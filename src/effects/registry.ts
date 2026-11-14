@@ -11,6 +11,7 @@ import { blossomMeta } from "./blossom/blossom.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bouncingLogoMeta } from "./bouncinglogo/bouncinglogo.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
+import { geocitiesMeta } from "./geocities/geocities.meta";
 import { retrobridgeMeta } from "./retrobridge/retrobridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
@@ -243,6 +244,7 @@ export const effects: readonly EffectEntry[] = [
   { ...beziersMeta, load: () => import("./beziers/beziers").then((m) => m.beziers) },
   { ...passionMeta, load: () => import("./passion/passion").then((m) => m.passion) },
   { ...standbyMeta, load: () => import("./standby/standby").then((m) => m.standby) },
+  { ...geocitiesMeta, load: () => import("./geocities/geocities").then((m) => m.geocities) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
