@@ -21,6 +21,7 @@ import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
 import { tradingMeta } from "./trading/trading.meta";
 import { dashboardMeta } from "./dashboard/dashboard.meta";
 import { spreadsheetMeta } from "./spreadsheet/spreadsheet.meta";
+import { documentMeta } from "./document/document.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { stationopsMeta } from "./stationops/stationops.meta";
 import { hospitalMeta } from "./hospital/hospital.meta";
@@ -177,6 +178,7 @@ export const effects: readonly EffectEntry[] = [
     ...spreadsheetMeta,
     load: () => import("./spreadsheet/spreadsheet").then((m) => m.spreadsheet),
   },
+  { ...documentMeta, load: () => import("./document/document").then((m) => m.documentPage) },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   {
     ...stationopsMeta,
