@@ -18,10 +18,14 @@ export const REF_HEIGHT = 1080;
 // Caption
 
 export type CaptionStyle = "meme" | "wordart";
+export const captionStyle = (v: string): CaptionStyle => (v === "wordart" ? "wordart" : "meme");
 
-/** A word's sprite box, in ems of the caption font: padding round the measured advance (room for the outline), and the box height. */
-const WORD_PAD = 0.15;
-const WORD_BOX_HEIGHT = 1.5;
+/**
+ * A word's sprite box, in ems of the caption font: padding round the measured
+ * advance (room for the outline), and the box height.
+ */
+export const WORD_PAD = 0.15;
+export const WORD_BOX_HEIGHT = 1.5;
 /** Gap between neighbouring word boxes, ems; with the pads it reads as a space. */
 const WORD_GAP = 0.02;
 /** Distance between the two lines' centres, ems. */
@@ -54,9 +58,9 @@ const OFFSET_MAX = 0.05;
 const ARCH = 0.07;
 
 /** WordArt's deep drop shadow, ems right and down. */
-const WORDART_SHADOW = 0.08;
+export const WORDART_SHADOW = 0.08;
 /** Meme's thin drop shadow (with extras), reference px right and down. */
-const MEME_SHADOW = 1;
+export const MEME_SHADOW = 1;
 
 /** The clashing word colours: yellow, lime, magenta, orange, cyan. */
 export const WORD_COLORS = ["#ffe800", "#8dff1a", "#ff2bd6", "#ff8a00", "#14e4ff"] as const;
@@ -127,7 +131,7 @@ export interface CaptionLayout {
 }
 
 /** Measures `word`'s advance in ems of the caption font, or undefined where it can't. */
-type MeasureWord = (word: string) => number | undefined;
+export type MeasureWord = (word: string) => number | undefined;
 
 /** A word box's width in ems: its measured advance plus the pads. */
 function wordEm(word: string, measure: MeasureWord): number {
@@ -544,7 +548,7 @@ export const BREATH_HZ = 0.3;
 
 export const MAX_CLOUDS = 7;
 /** Cloud shapes in the atlas. */
-const CLOUD_VARIANTS = 3;
+export const CLOUD_VARIANTS = 3;
 /** A cloud's sprite at size 1, reference px; sizes run from 0.7 to 1.2. */
 export const CLOUD_WIDTH = 300;
 export const CLOUD_HEIGHT = 150;
@@ -597,7 +601,7 @@ export function createCloudLayout(seed: number): CloudLayout {
  * leaves the other clouds where they were), spread evenly across the span by
  * golden-ratio steps from a seeded origin.
  */
-function fillCloudLayout(c: CloudLayout, seed: number): void {
+export function fillCloudLayout(c: CloudLayout, seed: number): void {
   c.seed = seed;
   const origin = createRng(hash32(Math.floor(seed) * 7 + 3))();
   for (let i = 0; i < MAX_CLOUDS; i++) {

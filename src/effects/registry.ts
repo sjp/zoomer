@@ -94,6 +94,7 @@ import { pipesMeta } from "./pipes/pipes.meta";
 import { mazeMeta } from "./maze/maze.meta";
 import { orbitsMeta } from "./orbits/orbits.meta";
 import { papercutMeta } from "./papercut/papercut.meta";
+import { passionMeta } from "./passion/passion.meta";
 import { pendulumMeta } from "./pendulum/pendulum.meta";
 import { leniaMeta } from "./lenia/lenia.meta";
 import { physarumMeta } from "./physarum/physarum.meta";
@@ -226,6 +227,7 @@ export const effects: readonly EffectEntry[] = [
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
   { ...beziersMeta, load: () => import("./beziers/beziers").then((m) => m.beziers) },
+  { ...passionMeta, load: () => import("./passion/passion").then((m) => m.passion) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
