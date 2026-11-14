@@ -12,7 +12,7 @@ type Ctx = OffscreenCanvasRenderingContext2D;
 export const OUTLINE = "#1d1a1a";
 /** Outline width, in unit-square units. */
 export const LINE = 0.022;
-const WHITE = "#ffffff";
+export const WHITE = "#ffffff";
 export const PINK = "#ff9ab8";
 
 /** Sets the outline pen: `LINE` wide, round joins and caps, `OUTLINE` coloured. */
@@ -78,7 +78,7 @@ export function curve(
  * radii: a dark disc with a glint. It stays inside the eye's white for looks
  * up to 1.
  */
-function pupil(ctx: Ctx, x: number, y: number, r: number, lookX = 0, lookY = 0.2): void {
+export function pupil(ctx: Ctx, x: number, y: number, r: number, lookX = 0, lookY = 0.2): void {
   const px = x + lookX * r * 0.4;
   const py = y + lookY * r * 0.4;
   ctx.beginPath();

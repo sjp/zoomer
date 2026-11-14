@@ -139,6 +139,7 @@ import { windowRainMeta } from "./windowrain/windowrain.meta";
 import { zenMeta } from "./zen/zen.meta";
 import { createEffectLoader, type EffectEntry } from "./loader";
 import { standbyMeta } from "./standby/standby.meta";
+import { suchwowMeta } from "./suchwow/suchwow.meta";
 
 /**
  * Add new effects here; the UI picks them up automatically. Only the metadata is
@@ -245,6 +246,7 @@ export const effects: readonly EffectEntry[] = [
   { ...passionMeta, load: () => import("./passion/passion").then((m) => m.passion) },
   { ...standbyMeta, load: () => import("./standby/standby").then((m) => m.standby) },
   { ...geocitiesMeta, load: () => import("./geocities/geocities").then((m) => m.geocities) },
+  { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
