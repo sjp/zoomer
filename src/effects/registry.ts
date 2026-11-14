@@ -18,6 +18,7 @@ import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
+import { tradingMeta } from "./trading/trading.meta";
 import { ringMeta } from "./ring/ring.meta";
 import { stationopsMeta } from "./stationops/stationops.meta";
 import { hospitalMeta } from "./hospital/hospital.meta";
@@ -168,6 +169,7 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./radiostudio/radiostudio").then((m) => m.radiostudio),
   },
   { ...newsdeskMeta, load: () => import("./newsdesk/newsdesk").then((m) => m.newsdesk) },
+  { ...tradingMeta, load: () => import("./trading/trading").then((m) => m.trading) },
   { ...ringMeta, load: () => import("./ring/ring").then((m) => m.ring) },
   {
     ...stationopsMeta,

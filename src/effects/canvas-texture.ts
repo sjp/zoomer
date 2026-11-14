@@ -8,6 +8,9 @@ import { resetUnpackState, type Scope } from "./gl";
 /** A clean system sans-serif stack; no font is bundled. */
 export const SANS_FONT_STACK = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
 
+/** A system monospaced stack, for figures that should line up in columns. */
+export const MONO_FONT_STACK = `ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace`;
+
 interface CanvasTextureOptions {
   /** Min and mag filter. Defaults to `gl.LINEAR`. */
   filter?: GLenum;
