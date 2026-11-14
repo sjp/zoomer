@@ -4,8 +4,6 @@ import {
   blendPose,
   FOOT,
   FOREARM,
-  HAND_R,
-  HEAD_R,
   J_BACK_ANKLE,
   J_BACK_ELBOW,
   J_BACK_HAND,
@@ -23,8 +21,6 @@ import {
   J_NECK,
   J_SHOULDER,
   JOINT_COUNT,
-  LAPTOP_HALF_W,
-  LEG_R,
   NECK_TO_HEAD,
   POSE_COUNT,
   POSE_HIGH_FIVE,
@@ -32,15 +28,12 @@ import {
   POSE_SIZE,
   POSES,
   poseWeight,
-  REACH,
   SHIN,
-  SOLO_POSES,
   solveRig,
   STRETCH_FORE,
   STRETCH_UPPER,
   THIGH,
   TORSO,
-  UP_REACH,
   UPPER_ARM,
 } from "./memphis-figures";
 
@@ -101,23 +94,6 @@ describe("corporate memphis poses", () => {
     expect(Array.from(pose.subarray(0, POSE_SIZE))).toEqual(POSES[to]);
     expect(pose[STRETCH_UPPER]).toBe(to === POSE_HIGH_FIVE ? upper : 1);
   });
-
-  it.each(pairs.filter(([a, b]) => a < SOLO_POSES && b < SOLO_POSES))(
-    "keeps a tween from pose %i to %i within the figure's reach",
-    (from, to) => {
-      for (const t of steps) {
-        solveRig(blendPose(from, to, t, 1, 1, pose), joints);
-        for (let j = 0; j < JOINT_COUNT; j++) {
-          const r = j === J_HEAD ? HEAD_R : Math.max(HAND_R, LEG_R[0]);
-          expect(Math.abs(joints[2 * j]) + r).toBeLessThan(REACH);
-          expect(joints[2 * j + 1] + r).toBeLessThan(UP_REACH);
-        }
-        const laptop = poseWeight(POSE_LAPTOP, from, to, t) > 0;
-        const edge = laptop ? joints[2 * J_FRONT_HAND] - 0.02 + LAPTOP_HALF_W : 0;
-        expect(edge).toBeLessThan(REACH);
-      }
-    },
-  );
 
   it("raises the high-five arm before stretching it, and shrinks it before lowering", () => {
     const from = 0;

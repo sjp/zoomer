@@ -19,22 +19,14 @@ export const TORSO = 0.27;
 /** How far the shoulders sit below the neck, along the torso. */
 export const SHOULDER_DROP = 0.025;
 /** Neck to the head's centre. */
-export const NECK_TO_HEAD = 0.075;
+export const NECK_TO_HEAD = 0.085;
 export const UPPER_ARM = 0.2;
 export const FOREARM = 0.19;
 /** The hand's centre sits this far past the wrist, along the forearm. */
 export const HAND_OFFSET = 0.025;
 
-/** Shape radii: tiny head, big hands and feet, arms and legs tapering. */
-export const HEAD_R = 0.05;
+/** About how far a hand reaches round its centre, for where high-fiving hands meet. */
 export const HAND_R = 0.042;
-export const FOOT_R = 0.028;
-export const ARM_R = [0.026, 0.021, 0.017] as const;
-export const LEG_R = [0.054, 0.04, 0.028] as const;
-/** The torso as a soft trapezoid: half widths at the hip and at the shoulders. */
-export const TORSO_HIP_R = 0.062;
-export const TORSO_SHOULDER_R = 0.08;
-export const TORSO_CORNER = 0.03;
 
 /** Hip height when standing. */
 const STAND_HIP = 0.51;
@@ -44,11 +36,6 @@ export const COIN_X = 0.03;
 export const COIN_R = 0.26;
 export const COIN_TOP = 0.13;
 export const COIN_DEPTH = 0.06;
-
-/** The laptop a figure holds up: its centre above the front hand, and half sizes. */
-export const LAPTOP_RISE = 0.085;
-export const LAPTOP_HALF_W = 0.11;
-export const LAPTOP_HALF_H = 0.075;
 
 /**
  * Bounds on everything a figure draws, in figure units from its root (props it
@@ -93,6 +80,8 @@ export const BLEND_SIZE = 16;
 /** Poses by index: 0 stand, 1 wave, 2 laptop, 3 point, 4 cheer, 5 sit, 6 high five. */
 export const POSE_WAVE = 1;
 export const POSE_LAPTOP = 2;
+export const POSE_POINT = 3;
+export const POSE_CHEER = 4;
 export const POSE_SIT = 5;
 /** Arm up and stretched across the top of the frame to meet a partner's hand. */
 export const POSE_HIGH_FIVE = 6;
@@ -108,14 +97,16 @@ export const POSES: readonly (readonly number[])[] = [
   [0, STAND_HIP, 0, 0, -0.22, 0.18, 0.18, 0.22, -0.13, 0.04, 0.13, -0.03, HALF_PI, HALF_PI],
   // Wave: front forearm up beside the head (the wave swings the elbow).
   [0, STAND_HIP, -0.03, -0.06, -0.18, 0.15, 2.45, 0.6, -0.12, 0.03, 0.14, -0.02, HALF_PI, HALF_PI],
-  // Holding a laptop up at chest height, looking down at it.
-  [0, STAND_HIP, 0.02, 0.1, 0.75, 1.25, 0.95, 1.05, -0.1, 0.03, 0.12, -0.02, HALF_PI, HALF_PI],
+  // An open laptop on the front forearm at waist height, the back hand on its
+  // keyboard, looking down at it.
+  [0, STAND_HIP, 0.02, 0.12, 0.13, 1.62, 0.33, 1.22, -0.1, 0.03, 0.12, -0.02, HALF_PI, HALF_PI],
   // Pointing up at something floating overhead.
   [0, STAND_HIP, -0.04, -0.14, -0.25, 0.25, 2.7, 0.08, -0.13, 0.04, 0.13, -0.03, HALF_PI, HALF_PI],
   // Cheering: both arms up in a V.
   [0, STAND_HIP, 0, -0.1, -2.55, -0.25, 2.55, 0.25, -0.14, 0.04, 0.14, -0.03, HALF_PI, HALF_PI],
-  // Sitting cross-legged on the coin, hands on the knees.
-  [0, COIN_TOP + 0.045, 0.03, 0.06, 0.35, 0.7, 0.55, 0.55, 1.2, -2.5, 1.4, -2.75, 2.6, 2.75],
+  // Sitting cross-legged on the coin, knees up and shins folded back so the
+  // feet rest on it, hands on the knees.
+  [0, COIN_TOP + 0.045, 0.03, 0.06, 0.4, 0.6, 0.62, 0.5, 1.55, -2.8, 1.75, -2.75, 2.85, 2.75],
   // High five: front upper arm straight up, forearm straight forward.
   [
     0,

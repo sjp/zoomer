@@ -43,11 +43,13 @@ describe("corporate memphis", () => {
     for (let i = 0; i < 120; i++) {
       instance.frame(1 / 2, params);
     }
-    expect(uploads.length).toBe(120);
+    // Each frame uploads the shapes, then the people's vertices.
+    expect(uploads.length).toBe(240);
     expect(uploads[0].length).toBeGreaterThan(0);
-    for (const u of uploads) {
-      expect(u).toEqual(uploads[0]);
-    }
+    expect(uploads[1].length).toBeGreaterThan(0);
+    uploads.forEach((u, i) => {
+      expect(u).toEqual(uploads[i % 2]);
+    });
     instance.dispose?.();
     expect(fake.errors).toEqual([]);
     expect(fake.live()).toEqual([]);
@@ -60,7 +62,8 @@ describe("corporate memphis", () => {
     instance.resize({ width: 640, height: 360, scale: 1 / 3 });
     instance.frame(1 / 30, defaults(effect.params));
     instance.frame(1 / 30, defaults(effect.params));
-    expect(uploads[1]).not.toEqual(uploads[0]);
+    // The second frame's people (upload 3) moved from the first's (upload 1).
+    expect(uploads[3]).not.toEqual(uploads[1]);
     instance.dispose?.();
     expect(fake.live()).toEqual([]);
   });
@@ -91,7 +94,8 @@ describe("corporate memphis", () => {
     const instance = effect.create(gl);
     instance.resize({ width: 360, height: 640, scale: 640 / 1080 });
     instance.frame(1 / 30, { ...defaults(effect.params), people: 0, props: false });
-    // Blobs, two plants and a mug.
+    // Blobs, two plants and a mug, and no people.
+    expect(uploads).toHaveLength(1);
     expect(uploads[0].length / 12).toBeLessThan(30);
     instance.dispose?.();
     expect(fake.live()).toEqual([]);

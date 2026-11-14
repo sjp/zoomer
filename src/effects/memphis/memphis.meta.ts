@@ -13,7 +13,7 @@ export const memphisMeta = defineEffectMeta({
   id: "memphis",
   name: "Corporate Memphis",
   description:
-    "The flat tech landing-page illustration style: lanky purple and blue people with tiny heads wave, hold up laptops, sit on giant coins and stretch impossibly long arms into a high five, among oversized plants and floating charts, ticks and speech bubbles.",
+    "The flat tech landing-page illustration style: mix-and-match people with natural skin tones, blank faces and their own hair, clothes and shoes wave, type on laptops, sit cross-legged on giant coins and stretch impossibly long arms into a high five, among oversized plants and floating charts, ticks and speech bubbles.",
   params: {
     people: {
       kind: "number",
@@ -33,7 +33,7 @@ export const memphisMeta = defineEffectMeta({
     "meme",
     "corporate",
     "flat illustration",
-    "alegria",
+    "people",
     "tech",
     "office",
     "ironic",

@@ -2,6 +2,7 @@ import { createColorEase, hexToUnitRgb } from "../color";
 import { beginFrame, createUniforms, scopedProgram, TO_CLIP_GLSL, withScope } from "../gl";
 import { QUAD, createSpriteBatch } from "../sprites";
 import { defineEffect } from "../types";
+import { createMesh, MAX_INDICES, MAX_VERTICES, VERTEX_FLOATS } from "./memphis-mesh";
 import { createShapeList, emitScene, MAX_SHAPES, STRIDE } from "./memphis-shapes";
 import {
   C_BG,
@@ -153,11 +154,35 @@ void main() {
 }
 `;
 
+/** The people: filled outlines, straight colour per vertex (the fringe fades to 0). */
+const MESH_VERTEX = /* glsl */ `#version 300 es
+layout(location = 0) in vec2 aPosition;
+layout(location = 1) in vec4 aColor;
+uniform vec2 uResolution;
+uniform float uScale;
+out vec4 vColor;
+${TO_CLIP_GLSL}
+void main() {
+  vColor = aColor;
+  gl_Position = pxToClip(aPosition * uScale, uResolution);
+}
+`;
+
+const MESH_FRAGMENT = /* glsl */ `#version 300 es
+precision mediump float;
+in vec4 vColor;
+out vec4 outColor;
+void main() {
+  outColor = vec4(vColor.rgb * vColor.a, vColor.a);
+}
+`;
+
 /**
- * Corporate Memphis: lanky flat people with tiny heads at the sides of the
- * frame, among oversized plants, floating props and soft blobs, swaying,
- * waving and now and then changing pose. Every shape is a signed-distance
- * sprite in one instanced draw over a cleared background.
+ * Corporate Memphis: flat people in the mix-and-match illustration-kit style
+ * at the sides of the frame, among oversized plants, floating props and soft
+ * blobs, swaying, waving and now and then changing pose. The background and
+ * props are signed-distance sprites in one instanced batch; the people are a
+ * mesh of antialiased outlines drawn between its back and front shapes.
  */
 export const memphis = defineEffect(memphisMeta, {
   create(gl) {
@@ -166,6 +191,29 @@ export const memphis = defineEffect(memphisMeta, {
       const u = createUniforms(gl, program, ["uResolution", "uScale"]);
       const batch = scope.own(createSpriteBatch(gl, MAX_SHAPES, [4, 4, 4], [QUAD]));
       const list = createShapeList(batch.data);
+      const meshProgram = scopedProgram(gl, scope, MESH_VERTEX, MESH_FRAGMENT);
+      const mu = createUniforms(gl, meshProgram, ["uResolution", "uScale"]);
+      const mesh = createMesh();
+      const meshVao = scope.add(gl.createVertexArray(), (v) => {
+        gl.deleteVertexArray(v);
+      });
+      const meshVertices = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      const meshIndices = scope.add(gl.createBuffer(), (b) => {
+        gl.deleteBuffer(b);
+      });
+      gl.bindVertexArray(meshVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, meshVertices);
+      gl.bufferData(gl.ARRAY_BUFFER, MAX_VERTICES * VERTEX_FLOATS * 4, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, VERTEX_FLOATS * 4, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, VERTEX_FLOATS * 4, 8);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshIndices);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, MAX_INDICES * 2, gl.DYNAMIC_DRAW);
+      gl.bindVertexArray(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
       if (batch.stride !== STRIDE) {
         throw new Error("Corporate Memphis: shape stride mismatch");
       }
@@ -201,17 +249,39 @@ export const memphis = defineEffect(memphisMeta, {
           gl.clearColor(palette[3 * C_BG], palette[3 * C_BG + 1], palette[3 * C_BG + 2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
 
-          const count = emitScene(list, scene, layout, palette);
+          const count = emitScene(list, mesh, scene, layout, palette, 1 / scale);
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           if (count > 0) {
             batch.upload(count);
             gl.useProgram(program);
             u.f2("uResolution", width, height);
             u.f1("uScale", scale);
-            gl.enable(gl.BLEND);
-            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-            batch.draw(0, count);
-            gl.disable(gl.BLEND);
+            batch.draw(0, list.split);
           }
+          if (mesh.indexCount > 0) {
+            gl.bindVertexArray(meshVao);
+            gl.bindBuffer(gl.ARRAY_BUFFER, meshVertices);
+            gl.bufferSubData(
+              gl.ARRAY_BUFFER,
+              0,
+              mesh.vertices,
+              0,
+              mesh.vertexCount * VERTEX_FLOATS,
+            );
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, mesh.indices, 0, mesh.indexCount);
+            gl.useProgram(meshProgram);
+            mu.f2("uResolution", width, height);
+            mu.f1("uScale", scale);
+            gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
+            gl.bindVertexArray(null);
+          }
+          if (count > list.split) {
+            gl.useProgram(program);
+            batch.draw(list.split, count - list.split);
+          }
+          gl.disable(gl.BLEND);
         },
         dispose: () => {
           scope.dispose();

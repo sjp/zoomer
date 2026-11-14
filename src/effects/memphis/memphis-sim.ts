@@ -87,29 +87,29 @@ const PROP_KINDS = 4;
 export const C_BG = 0;
 export const C_BLOB = 1;
 const BLOB_COLORS = 3;
-export const C_SKIN = 4;
-export const SKINS = 4;
-export const C_TOP = 8;
+export const C_TOP = 4;
 export const TOPS = 4;
-export const C_BOTTOM = 12;
-export const BOTTOMS = 2;
-export const C_SHOE = 14;
-export const C_HAIR = 16;
-export const C_LEAF = 17;
-export const C_POT = 19;
-export const C_CARD = 20;
-export const C_ACCENT = 21;
-export const C_HEART = 22;
-export const C_COIN = 23;
-export const C_COIN_EDGE = 24;
-export const C_LAPTOP = 25;
-export const C_MUG = 26;
-export const ROLE_COUNT = 27;
+export const C_BOTTOM = 8;
+export const BOTTOMS = 3;
+export const C_SHOE = 11;
+const SHOES = 2;
+/** Near-black: coffee, belts, soles, glasses. */
+export const C_INK = 13;
+export const C_LEAF = 14;
+export const C_POT = 16;
+export const C_CARD = 17;
+export const C_ACCENT = 18;
+export const C_HEART = 19;
+export const C_COIN = 20;
+export const C_COIN_EDGE = 21;
+export const C_LAPTOP = 22;
+export const C_MUG = 23;
+export const ROLE_COUNT = 24;
 
 /**
- * Flat colours by role, per palette: coral, mustard, teal and lavender with
- * unreal skins. Order: background, 3 blobs, 4 skins, 4 tops, 2 trousers,
- * 2 shoes, hair, 2 leaves, pot, card, accent, heart, coin, coin edge, laptop, mug.
+ * Flat colours by role, per palette: coral, mustard, teal and lavender
+ * clothes and props. Order: background, 3 blobs, 4 tops, 3 trousers, 2 shoes,
+ * ink, 2 leaves, pot, card, accent, heart, coin, coin edge, laptop, mug.
  */
 export const PALETTES: Record<string, readonly string[]> = {
   startup: [
@@ -117,18 +117,15 @@ export const PALETTES: Record<string, readonly string[]> = {
     "#f2d9c6",
     "#ddd5f3",
     "#cde9de",
-    "#7b5cd6",
-    "#3d6fd9",
-    "#b39cf2",
     "#f2894a",
     "#ffc93c",
-    "#ff6f61",
     "#1fa89a",
-    "#ff9ec4",
+    "#7b5cd6",
     "#2b2d6e",
-    "#5a46b8",
+    "#3f68c9",
+    "#e0b48a",
     "#1b1b2f",
-    "#8a3f2e",
+    "#ff6f61",
     "#2a2140",
     "#2f9e6e",
     "#5cc48f",
@@ -146,18 +143,15 @@ export const PALETTES: Record<string, readonly string[]> = {
     "#d6ddf8",
     "#d2eee8",
     "#f9e5c8",
-    "#5b4bdb",
     "#2f80ed",
-    "#a78bfa",
-    "#ff9255",
     "#f6c343",
     "#18b49a",
     "#ff7a6b",
-    "#8fd3ff",
     "#1d2b5c",
-    "#3b3f8c",
+    "#5b4bdb",
+    "#8fa3c7",
     "#101828",
-    "#6b4f3a",
+    "#ff9255",
     "#2b2236",
     "#1e8c74",
     "#4fc3a1",
@@ -175,18 +169,15 @@ export const PALETTES: Record<string, readonly string[]> = {
     "#cfe9da",
     "#f6ded2",
     "#e2dbf3",
-    "#8c6ad8",
-    "#4f86c6",
-    "#c3a6ee",
     "#f39a6b",
     "#f4c95d",
-    "#f28482",
     "#3bb0a0",
-    "#f7a8c4",
+    "#8c6ad8",
     "#2d4a53",
-    "#5a4e8c",
+    "#4f86c6",
+    "#d9c2a5",
     "#1f2d2e",
-    "#7a5a44",
+    "#c3a6ee",
     "#3a2e39",
     "#3f9b6f",
     "#7cc69b",
@@ -200,6 +191,65 @@ export const PALETTES: Record<string, readonly string[]> = {
     "#f08e6b",
   ],
 };
+
+/** Natural skin tones, lightest to deepest, the same in every palette. */
+export const SKIN_TONES: readonly string[] = [
+  "#f7d7c1",
+  "#eab894",
+  "#d39a6a",
+  "#b07446",
+  "#8a5232",
+  "#5e3621",
+];
+
+/** Natural hair colours: black, dark brown, auburn, blonde, grey. */
+export const HAIR_COLORS: readonly string[] = [
+  "#1f1a1c",
+  "#4a2f23",
+  "#9a4426",
+  "#dcae5c",
+  "#bdb8b2",
+];
+const HAIR_GREY = 4;
+
+// ---------------------------------------------------------------------------
+// The wardrobe
+
+/** Hairstyles; 0 is a short crop. */
+export const HAIR_AFRO = 1;
+export const HAIR_LONG = 2;
+export const HAIR_PONYTAIL = 3;
+export const HAIR_BUN = 4;
+export const HAIR_BOB = 5;
+export const HAIR_BUZZ = 6;
+export const HAIR_RECEDING = 7;
+export const HAIR_STYLES = 8;
+
+/** Tops; 0 is a t-shirt. */
+export const TOP_SHIRT = 1;
+export const TOP_JUMPER = 2;
+export const TOP_JACKET = 3;
+/** A dress replaces the top and the bottoms. */
+export const TOP_DRESS = 4;
+export const TOP_KINDS = 5;
+
+/** Bottoms; 0 is slim trousers. */
+export const BOTTOM_WIDE = 1;
+export const BOTTOM_JEANS = 2;
+export const BOTTOM_SKIRT = 3;
+export const BOTTOM_KINDS = 4;
+
+/** Shoes; 0 is trainers. */
+export const SHOE_BOOTS = 1;
+export const SHOE_FLATS = 2;
+export const SHOE_KINDS = 3;
+
+const ACC_NONE = 0;
+export const ACC_GLASSES = 1;
+export const ACC_BEANIE = 2;
+export const ACC_HEADPHONES = 3;
+/** Chance a person wears an accessory. */
+const ACCESSORY_CHANCE = 0.45;
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -448,7 +498,7 @@ export function tweenSeconds(
 // ---------------------------------------------------------------------------
 // The scene
 
-interface Figure {
+export interface Figure {
   from: number;
   to: number;
   /** Tween progress, 0..1 (1 when settled). */
@@ -456,11 +506,22 @@ interface Figure {
   duration: number;
   /** Presence, 0..1: fades in and out with the People slider. */
   alpha: number;
+  /** Skin tone and hair colour (indices into `SKIN_TONES` and `HAIR_COLORS`). */
   skin: number;
+  hairColor: number;
+  /** Wardrobe kinds (`HAIR_*`, `TOP_*`, `BOTTOM_*`, `SHOE_*`, `ACC_*`) and colour roles. */
+  hair: number;
   top: number;
+  topColor: number;
   bottom: number;
+  bottomColor: number;
   shoe: number;
-  bun: boolean;
+  shoeColor: number;
+  accessory: number;
+  /** The beanie's colour, a top role other than the person's own. */
+  accessoryColor: number;
+  /** Width factor for the torso, about 1. */
+  build: number;
   /** Idle phases: sway, nod, arms, wave. */
   phases: Float64Array;
 }
@@ -533,30 +594,110 @@ function createFigure(): Figure {
     duration: MIN_TWEEN,
     alpha: 0,
     skin: 0,
+    hairColor: 0,
+    hair: 0,
     top: 0,
+    topColor: 0,
     bottom: 0,
+    bottomColor: 0,
     shoe: 0,
-    bun: false,
+    shoeColor: 0,
+    accessory: ACC_NONE,
+    accessoryColor: 0,
+    build: 1,
     phases: new Float64Array(4),
   };
+}
+
+/** `0..n-1` shuffled by `seed` and `salt`, into `out`. */
+function shuffle(out: number[], n: number, seed: number, salt: number): number[] {
+  out.length = n;
+  for (let k = 0; k < n; k++) {
+    out[k] = k;
+  }
+  for (let k = n - 1; k > 0; k--) {
+    const j = Math.floor(hash01(seed, salt, k) * (k + 1));
+    const tmp = out[k];
+    out[k] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+}
+
+/** People who stand together: each side's pair, and the pair nearest the middle. */
+const NEIGHBOURS = [
+  [0, 2],
+  [1, 3],
+  [0, 1],
+] as const;
+
+/**
+ * Dresses everyone so they look clearly different: no two share a hairstyle,
+ * a top or a top colour; neighbours' skin tones are at least two shades
+ * apart; and neighbours differ in hair colour, trousers and shoes.
+ */
+function dressFigures(figures: Figure[], seed: number): void {
+  const n = figures.length;
+  const hairs = shuffle([], HAIR_STYLES, seed, 1);
+  const tops = shuffle([], TOP_KINDS, seed, 2);
+  const topColors = shuffle([], TOPS, seed, 3);
+  const bottoms = shuffle([], BOTTOM_KINDS, seed, 4);
+  const hairColors = shuffle([], HAIR_COLORS.length, seed, 5);
+  // Skin: the first shuffle that keeps neighbours two or more shades apart.
+  const skins: number[] = [];
+  for (let attempt = 0; attempt < 64; attempt++) {
+    shuffle(skins, SKIN_TONES.length, seed, 100 + attempt);
+    if (NEIGHBOURS.every(([a, b]) => Math.abs(skins[a] - skins[b]) >= 2)) {
+      break;
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    const f = figures[i];
+    f.hair = hairs[i % HAIR_STYLES];
+    f.top = tops[i % TOP_KINDS];
+    f.topColor = topColors[i % TOPS];
+    f.bottom = bottoms[i % BOTTOM_KINDS];
+    f.skin = skins[i % SKIN_TONES.length];
+    f.hairColor = hairColors[i % HAIR_COLORS.length];
+  }
+  // Receding hair goes grey: swap colours with whoever had grey.
+  const bald = figures.find((f) => f.hair === HAIR_RECEDING);
+  const grey = figures.find((f) => f.hairColor === HAIR_GREY);
+  if (bald && bald.hairColor !== HAIR_GREY) {
+    if (grey) {
+      grey.hairColor = bald.hairColor;
+    }
+    bald.hairColor = HAIR_GREY;
+  }
+  const bottomBase = Math.floor(hash01(seed, 6) * BOTTOMS);
+  const shoeBase = Math.floor(hash01(seed, 7) * SHOE_KINDS);
+  const shoeColorBase = Math.floor(hash01(seed, 8) * SHOES);
+  for (let i = 0; i < n; i++) {
+    const f = figures[i];
+    // Neighbours differ: 0 and 2, 1 and 3, 0 and 1.
+    f.bottomColor = (bottomBase + (i % BOTTOMS)) % BOTTOMS;
+    f.shoe = (shoeBase + (i >> 1) + 2 * (i & 1)) % SHOE_KINDS;
+    f.shoeColor = (shoeColorBase + (i >> 1)) % SHOES;
+    f.build = 0.92 + 0.18 * hash01(seed, 9, i);
+    // Beanies only sit over short or flat hair.
+    const hat = hash01(seed, 10, i);
+    if (hat < ACCESSORY_CHANCE) {
+      const kind = 1 + Math.floor((hat / ACCESSORY_CHANCE) * 3);
+      const bulky = f.hair === HAIR_AFRO || f.hair === HAIR_BUN || f.hair === HAIR_PONYTAIL;
+      f.accessory = kind === ACC_BEANIE && bulky ? ACC_GLASSES : kind;
+    } else {
+      f.accessory = ACC_NONE;
+    }
+    f.accessoryColor = (f.topColor + 1 + (i & 1)) % TOPS;
+  }
 }
 
 /** Looks, starting poses and props for `seed`; each item from its own hash, so items are independent. */
 function applySeed(scene: Scene, seed: number): void {
   scene.seed = seed;
   scene.targetSeed = seed;
-  const skinBase = Math.floor(hash01(seed, 1) * SKINS);
-  const topBase = Math.floor(hash01(seed, 2) * TOPS);
-  const bottomBase = Math.floor(hash01(seed, 3) * BOTTOMS);
-  const shoeBase = Math.floor(hash01(seed, 4) * 2);
+  dressFigures(scene.figures, seed);
   scene.figures.forEach((f, i) => {
-    // Rotating through the roles gives every person a different skin and top;
-    // the two at each side differ in trousers and shoes too.
-    f.skin = (skinBase + i) % SKINS;
-    f.top = (topBase + i) % TOPS;
-    f.bottom = (bottomBase + (i >> 1)) % BOTTOMS;
-    f.shoe = (shoeBase + (i >> 1)) % 2;
-    f.bun = hash01(seed, 10, i) < 0.4;
     const pose = Math.floor(hash01(seed, 11, i) * SOLO_POSES);
     f.from = pose;
     f.to = pose;

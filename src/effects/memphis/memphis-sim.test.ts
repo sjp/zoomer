@@ -7,19 +7,21 @@ import {
   POSE_COUNT,
   POSE_HIGH_FIVE,
   POSE_WAVE,
+  REACH,
   SOLO_POSES,
   solveRig,
   TIP_JOINTS,
+  UP_REACH,
 } from "./memphis-figures";
+import { createMesh, MAX_INDICES, MAX_VERTICES, type Mesh, VERTEX_FLOATS } from "./memphis-mesh";
+import { TAG_HIGH_FIVE } from "./memphis-people";
+import { createShapeList, emitScene, shapeBounds, TAG_BACKGROUND } from "./memphis-shapes";
 import {
-  createShapeList,
-  emitScene,
-  shapeBounds,
-  TAG_BACKGROUND,
-  TAG_HIGH_FIVE,
-} from "./memphis-shapes";
-import {
+  BOTTOM_KINDS,
   BOTTOMS,
+  HAIR_COLORS,
+  HAIR_RECEDING,
+  HAIR_STYLES,
   changePoseNow,
   createLayout,
   createScene,
@@ -30,9 +32,11 @@ import {
   REF_HEIGHT,
   ROLE_COUNT,
   type Scene,
-  SKINS,
+  SHOE_KINDS,
+  SKIN_TONES,
   stepScene,
   TOP_BAND,
+  TOP_KINDS,
   TOPS,
   tweenSeconds,
   updateLayout,
@@ -72,25 +76,42 @@ describe("corporate memphis palettes", () => {
     expect(new Set(colors).size).toBe(ROLE_COUNT);
   });
 
-  it.each([0, 1, 2, 7, 99, 500])("dresses neighbours differently for seed %i", (seed) => {
+  it.each([0, 1, 2, 7, 99, 500, 731])("makes everyone look different for seed %i", (seed) => {
     const scene = createScene(seed);
     const f = scene.figures;
-    expect(new Set(f.map((x) => x.skin)).size).toBe(MAX_PEOPLE);
-    expect(new Set(f.map((x) => x.top)).size).toBe(MAX_PEOPLE);
+    const distinct = (pick: (x: (typeof f)[number]) => number) =>
+      new Set(f.map((x) => pick(x))).size;
+    // No two share a hairstyle, a kind of top, a top colour or a skin tone.
+    expect(distinct((x) => x.hair)).toBe(MAX_PEOPLE);
+    expect(distinct((x) => x.top)).toBe(MAX_PEOPLE);
+    expect(distinct((x) => x.topColor)).toBe(MAX_PEOPLE);
+    expect(distinct((x) => x.skin)).toBe(MAX_PEOPLE);
+    expect(distinct((x) => x.hairColor)).toBe(MAX_PEOPLE);
     for (const x of f) {
-      expect(x.skin).toBeLessThan(SKINS);
-      expect(x.top).toBeLessThan(TOPS);
-      expect(x.bottom).toBeLessThan(BOTTOMS);
+      expect(x.hair).toBeLessThan(HAIR_STYLES);
+      expect(x.top).toBeLessThan(TOP_KINDS);
+      expect(x.topColor).toBeLessThan(TOPS);
+      expect(x.bottom).toBeLessThan(BOTTOM_KINDS);
+      expect(x.bottomColor).toBeLessThan(BOTTOMS);
+      expect(x.shoe).toBeLessThan(SHOE_KINDS);
+      expect(x.skin).toBeLessThan(SKIN_TONES.length);
+      expect(x.hairColor).toBeLessThan(HAIR_COLORS.length);
+      expect(x.accessoryColor).not.toBe(x.topColor);
     }
-    // The two at each side stand overlapping: trousers and shoes differ too.
+    // Receding hair is always grey.
+    const bald = f.filter((x) => x.hair === HAIR_RECEDING);
+    expect(bald.every((x) => HAIR_COLORS[x.hairColor] === "#bdb8b2")).toBe(true);
+    // People who stand together: skin two shades apart, trousers and shoes differ.
     for (const [a, b] of [
       [0, 2],
       [1, 3],
+      [0, 1],
     ]) {
-      expect(f[a].bottom).not.toBe(f[b].bottom);
+      expect(Math.abs(f[a].skin - f[b].skin)).toBeGreaterThanOrEqual(2);
+      expect(f[a].bottomColor).not.toBe(f[b].bottomColor);
       expect(f[a].shoe).not.toBe(f[b].shoe);
     }
-    // Neighbouring blobs and leaves.
+    // Neighbouring blobs.
     expect(scene.blobColors[0]).not.toBe(scene.blobColors[1]);
     expect(scene.blobColors[2]).not.toBe(scene.blobColors[3]);
   });
@@ -99,24 +120,36 @@ describe("corporate memphis palettes", () => {
 const palette = new Float32Array(ROLE_COUNT * 3).fill(0.5);
 const bounds = new Float64Array(4);
 
+/** Every shape's and person part's bounds and tag, after drawing a frame. */
+function* everything(scene: Scene, layout: Layout): Generator<[number, Float64Array]> {
+  const list = createShapeList();
+  const mesh: Mesh = createMesh();
+  emitScene(list, mesh, scene, layout, palette);
+  for (let i = 0; i < list.count; i++) {
+    yield [list.tags[i], shapeBounds(list, i, bounds)];
+  }
+  for (let i = 0; i < mesh.partCount; i++) {
+    bounds.set(mesh.bounds.subarray(4 * i, 4 * i + 4));
+    yield [mesh.tags[i], bounds];
+  }
+}
+
 /** Shapes that break the speaker's area, as messages. */
 function intrusions(scene: Scene, layout: Layout): string[] {
-  const list = createShapeList();
-  emitScene(list, scene, layout, palette);
   const c = layout.clear;
   const out: string[] = [];
-  for (let i = 0; i < list.count; i++) {
-    const tag = list.tags[i];
+  let i = 0;
+  for (const [tag, b] of everything(scene, layout)) {
+    i++;
     if (tag === TAG_BACKGROUND) {
       continue;
     }
-    shapeBounds(list, i, bounds);
-    const [x0, y0, x1, y1] = bounds;
+    const [x0, y0, x1, y1] = b;
     // People and props keep out of the middle columns at any height (in
     // portrait, out of the clear box); the high five's arms keep to the top band.
     const top = tag === TAG_HIGH_FIVE || layout.portrait ? c.y0 : 0;
     if (x1 > c.x0 && x0 < c.x1 && y1 > top && y0 < c.y1) {
-      out.push(`shape ${String(i)} (tag ${String(tag)}) at ${bounds.join(", ")}`);
+      out.push(`shape ${String(i)} (tag ${String(tag)}) at ${b.join(", ")}`);
     }
   }
   return out;
@@ -146,16 +179,23 @@ describe("corporate memphis layout", () => {
 
   it.each(ASPECTS)("keeps everything on screen vertically at %s", (_, w, h) => {
     const layout = layoutFor(w, h);
-    const scene = sceneFor(layout);
-    const list = createShapeList();
-    emitScene(list, scene, layout, palette);
     let top = Infinity;
     let bottom = -Infinity;
-    for (let i = 0; i < list.count; i++) {
-      shapeBounds(list, i, bounds);
-      if (list.tags[i] !== TAG_BACKGROUND) {
-        top = Math.min(top, bounds[1]);
-        bottom = Math.max(bottom, bounds[3]);
+    for (const seed of [0, 1, 2, 3, 4, 5]) {
+      const scene = sceneFor(layout, seed);
+      for (let pose = 0; pose < POSE_COUNT; pose++) {
+        scene.figures.forEach((f, i) => {
+          const p = pose === POSE_HIGH_FIVE && !(layout.highFive && i < 2) ? 0 : pose;
+          f.from = p;
+          f.to = p;
+          f.t = 1;
+        });
+        for (const [tag, b] of everything(scene, layout)) {
+          if (tag !== TAG_BACKGROUND) {
+            top = Math.min(top, b[1]);
+            bottom = Math.max(bottom, b[3]);
+          }
+        }
       }
     }
     expect(top).toBeGreaterThan(0);
@@ -187,6 +227,67 @@ describe("corporate memphis layout", () => {
     const s = layout.figures[0].size;
     expect(hands[1] - hands[0]).toBeLessThan(2 * 0.042 * s);
     expect(highFiveStretch(layout, 0, new Float64Array(2))[1]).toBeGreaterThan(3);
+  });
+});
+
+describe("corporate memphis people", () => {
+  const pairs: [number, number][] = [];
+  for (let a = 0; a < SOLO_POSES; a++) {
+    for (let b = 0; b < SOLO_POSES; b++) {
+      pairs.push([a, b]);
+    }
+  }
+
+  it.each(pairs)("keeps everyone within reach tweening pose %i to %i", (from, to) => {
+    // One person a unit tall at the origin: ref px are figure units, y down.
+    const layout = layoutFor(1920, 1080);
+    const s = layout.figures[0];
+    for (const seed of [0, 1, 2, 3, 4, 5, 6, 7]) {
+      const scene = sceneFor(layout, seed, 1);
+      s.x = 0;
+      s.ground = 0;
+      s.size = 1;
+      s.facing = 1;
+      const f = scene.figures[0];
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        f.from = from;
+        f.to = to;
+        f.t = t;
+        const mesh = createMesh();
+        emitScene(createShapeList(), mesh, scene, layout, palette, 0.001);
+        expect(mesh.partCount).toBeGreaterThan(20);
+        for (let i = 0; i < mesh.partCount; i++) {
+          const [x0, y0, x1] = mesh.bounds.subarray(4 * i, 4 * i + 4);
+          expect(Math.max(-x0, x1)).toBeLessThan(REACH);
+          expect(-y0).toBeLessThan(UP_REACH);
+        }
+      }
+    }
+  });
+
+  it("draws every wardrobe item without overflowing the mesh", () => {
+    const layout = layoutFor(1920, 1080);
+    const scene = sceneFor(layout, 1);
+    const mesh = createMesh();
+    for (let k = 0; k < 24; k++) {
+      scene.figures.forEach((f, i) => {
+        f.hair = (k + i) % HAIR_STYLES;
+        f.top = (k + 2 * i) % TOP_KINDS;
+        f.bottom = (k + i) % BOTTOM_KINDS;
+        f.shoe = (k + i) % SHOE_KINDS;
+        f.accessory = (k + i) % 4;
+        f.from = (k + i) % SOLO_POSES;
+        f.to = f.from;
+      });
+      emitScene(createShapeList(), mesh, scene, layout, palette);
+      expect(mesh.partCount).toBeGreaterThan(4 * 20);
+      // Room to spare for the busiest outfits.
+      expect(mesh.vertexCount).toBeLessThan(0.75 * MAX_VERTICES);
+      expect(mesh.indexCount).toBeLessThan(0.75 * MAX_INDICES);
+      for (let i = 0; i < mesh.vertexCount * VERTEX_FLOATS; i++) {
+        expect(Number.isFinite(mesh.vertices[i])).toBe(true);
+      }
+    }
   });
 });
 
