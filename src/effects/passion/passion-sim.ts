@@ -50,6 +50,13 @@ export const BOB_HZ = 0.25;
 /** Phase lag from one word to the next, radians: a slow wave along the caption. */
 const BOB_LAG = 0.8;
 
+/**
+ * How much bigger splitting a one-line caption in two must make it: to split
+ * it, and to keep it split.
+ */
+const SPLIT_GAIN = 1.15;
+const SPLIT_KEEP = 1.05;
+
 /** The hand-dragged tilt of the whole caption, radians either way. */
 const TILT_MIN = 0.025;
 const TILT_MAX = 0.06;
@@ -122,6 +129,8 @@ interface CaptionWord {
 
 export interface CaptionLayout {
   words: CaptionWord[];
+  /** Whether a one-line text was split onto two lines. */
+  split: boolean;
   /** Font size, reference px. */
   fontSize: number;
   /** Box round every word and its drop shadow, reference px, bob excluded. */
@@ -248,6 +257,10 @@ const captionRoom = (refWidth: number, style: CaptionStyle) => {
  * lines (the text's own lines, or one line split in two where that lets it be
  * bigger), shrunk to fit the room, tilted by a seeded angle (and arched in
  * WordArt), and placed a little off-centre in the upper third.
+ *
+ * `split` is whether the same caption was last shown split, if it was shown:
+ * a split that is kept needs less of a gain than a new one (hysteresis), so a
+ * width near the threshold doesn't flip the caption between one and two lines.
  */
 export function layoutCaption(
   text: string,
@@ -255,6 +268,7 @@ export function layoutCaption(
   seed: number,
   refWidth: number,
   measure: MeasureWord,
+  split = false,
 ): CaptionLayout {
   const lines = captionLines(text);
   const words = lines.flat();
@@ -266,6 +280,7 @@ export function layoutCaption(
     const y = (CAPTION_TOP + CAPTION_BOTTOM) / 2;
     return {
       words: [],
+      split: false,
       fontSize: BASE_FONT,
       left: refWidth / 2,
       top: y,
@@ -293,7 +308,7 @@ export function layoutCaption(
     const r = arrange(candidates[c], ems, style, tilt);
     const s = fit(r);
     // A split must buy a clearly bigger caption to be worth the second line.
-    if (s > size * 1.15) {
+    if (s > size * (split ? SPLIT_KEEP : SPLIT_GAIN)) {
       pick = c;
       a = r;
       size = s;
@@ -331,6 +346,7 @@ export function layoutCaption(
       span0: a.span0[i],
       span1: a.span1[i],
     })),
+    split: pick > 0,
     fontSize: size,
     left,
     top,

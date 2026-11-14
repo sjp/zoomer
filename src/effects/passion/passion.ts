@@ -165,7 +165,7 @@ export const passion = defineEffect(passionMeta, {
         text: "",
         style: "meme",
         seed: 0,
-        layout: { words: [], fontSize: 1, left: 0, top: 0, right: 0, bottom: 0 },
+        layout: { words: [], split: false, fontSize: 1, left: 0, top: 0, right: 0, bottom: 0 },
         uv: new Float32Array(0),
         refWidth: 0,
         builtPx: -1,
@@ -265,13 +265,14 @@ export const passion = defineEffect(passionMeta, {
       };
 
       /** Lays a slot's caption out for the current frame width. */
-      const relayout = (slot: CaptionSlot) => {
+      const relayout = (slot: CaptionSlot, split: boolean) => {
         slot.layout = layoutCaption(
           slot.text,
           slot.style,
           slot.seed,
           refWidth,
           measures[slot.style],
+          split,
         );
         slot.refWidth = refWidth;
       };
@@ -287,7 +288,7 @@ export const passion = defineEffect(passionMeta, {
         slot.text = text;
         slot.style = style;
         slot.seed = seed;
-        relayout(slot);
+        relayout(slot, false);
         repaint(slot);
       };
 
@@ -300,14 +301,17 @@ export const passion = defineEffect(passionMeta, {
         const wordart = slot.style === "wordart";
         const shadowAlpha = wordart ? WORDART_SHADOW_ALPHA : MEME_SHADOW_ALPHA * extras;
         const shadow = (wordart ? WORDART_SHADOW * slot.layout.fontSize : MEME_SHADOW) * scale;
+        // Device px per reference px across: the layout is for the width it was
+        // made at, stretched to the canvas until the size settles and it is redone.
+        const sx = width / slot.refWidth;
         for (let pass = shadowAlpha > 0 ? 0 : 1; pass < 2; pass++) {
           const off = pass === 0 ? shadow : 0;
           for (let i = 0; i < words.length && 4 * i + 3 < slot.uv.length; i++) {
             const w = words[i];
             put(
-              w.x * scale + off,
+              w.x * sx + off,
               (w.y + bobOffset(i, clock.bob, motion)) * scale + off,
-              (w.width / 2) * scale,
+              (w.width / 2) * sx,
               (w.height / 2) * scale,
               slot.uv[4 * i],
               slot.uv[4 * i + 1],
@@ -353,13 +357,9 @@ export const passion = defineEffect(passionMeta, {
             extras = p.extras ? 1 : 0;
           }
 
-          // Size-dependent art, redrawn once the canvas size settles; the
-          // layouts follow the frame width at once.
-          for (const slot of slots) {
-            if (slot.builtPx > 0 && slot.refWidth !== refWidth) {
-              relayout(slot);
-            }
-          }
+          // Size-dependent art and the caption layouts, redone once the canvas
+          // size settles (stretched until then), so a drag doesn't reflow the
+          // caption on every frame.
           const size = settledSize.update(width * 65536 + height, step);
           if (size !== paintedSize) {
             paintedSize = size;
@@ -372,6 +372,7 @@ export const passion = defineEffect(passionMeta, {
             );
             for (const slot of slots) {
               if (slot.builtPx > 0) {
+                relayout(slot, slot.layout.split);
                 repaint(slot);
               }
             }

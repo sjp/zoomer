@@ -152,6 +152,27 @@ describe("caption layout", () => {
     expect(new Set(c.words.map((word) => word.line)).size).toBe(lines);
   });
 
+  it("keeps a split caption split over a band of widths, so a drag doesn't flip it", () => {
+    // Widening from portrait: the split is kept a little past where a fresh
+    // layout would put the caption back on one line.
+    const fresh = (w: number) => layoutCaption(DEFAULT_TEXT, "meme", 1, w, measure).split;
+    const kept = (w: number) => layoutCaption(DEFAULT_TEXT, "meme", 1, w, measure, true).split;
+    const band: number[] = [];
+    const unsplit: number[] = [];
+    for (let w = 600; w <= 1920; w += 10) {
+      if (kept(w) && !fresh(w)) {
+        band.push(w);
+      }
+      if (fresh(w) && !kept(w)) {
+        unsplit.push(w);
+      }
+    }
+    expect(band.length).toBeGreaterThan(0);
+    expect(unsplit).toEqual([]);
+    expect(fresh(600)).toBe(true);
+    expect(kept(4000)).toBe(false);
+  });
+
   it("keeps the text's own line break", () => {
     const c = layoutCaption("graphic design\nis my passion", "meme", 1, 1920, measure);
     expect(c.words.map((w) => w.line)).toEqual([0, 0, 1, 1, 1]);
