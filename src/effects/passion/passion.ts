@@ -459,11 +459,16 @@ export const passion = defineEffect(passionMeta, {
             const rows = CRITTER_OPTIONS.length;
             const u0 = clock.frame / CRITTER_FRAMES;
             const u1 = (clock.frame + 1) / CRITTER_FRAMES;
+            // A swap draws the new critter over the old: the new one fades in over
+            // the first half while the old stays solid, and the old fades out over
+            // the second half under the now solid new one, so the body never
+            // turns see-through and no part pops off at the end.
             const both = critter.next >= 0;
             const kinds = both ? 2 : 1;
             for (let k = 0; k < kinds; k++) {
               const row = k === 0 ? critter.shown : critter.next;
-              const a = critter.presence * (both ? (k === 0 ? 1 - critter.mix : critter.mix) : 1);
+              const fade = k === 0 ? 2 * (1 - critter.mix) : 2 * critter.mix;
+              const a = critter.presence * (both ? Math.min(1, fade) : 1);
               put(
                 box.x * scale,
                 cy,
