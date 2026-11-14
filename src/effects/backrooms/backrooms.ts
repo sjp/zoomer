@@ -31,10 +31,9 @@ import {
   PILLAR,
   reseedWorld,
   resetWalker,
-  turnSeconds,
   VIEW_REACH,
   WALL,
-  walkSeconds,
+  walkRate,
   WINDOW,
   windowOrigin,
 } from "./backrooms-sim";
@@ -414,8 +413,8 @@ function canvas2d(w: number, h: number): OffscreenCanvasRenderingContext2D | nul
 }
 
 /**
- * The Backrooms: a slow first-person wander through endless empty yellow office
- * rooms. A fragment shader casts one ray per pixel through a window of cells
+ * The Backrooms: a slow first-person walk through endless empty yellow office
+ * rooms, on a long straight route that bends only now and then. A fragment shader casts one ray per pixel through a window of cells
  * round the camera (the shared grid DDA over a small data texture), shades
  * wallpapered walls and pillars, damp carpet and a drop ceiling of tiles and
  * light panels, lights them from the nearest panels, and fades the distance
@@ -582,7 +581,7 @@ export const backrooms = defineEffect(backroomsMeta, {
           }
           haze = approach(haze, hazeParam(p.haze), step / HAZE_EASE);
 
-          advanceWalker(walker, world, step, walkSeconds(p.speed), turnSeconds(p.speed));
+          advanceWalker(walker, world, step, walkRate(p.speed));
           advanceFlicker(flicker, world, step, p.flicker, walker.x, walker.y);
           pulse = (pulse + step / REC_PULSE) % 1;
 

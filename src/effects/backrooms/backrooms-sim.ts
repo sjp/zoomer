@@ -14,19 +14,17 @@
  * so both chunks beside an edge agree on them without generating each other.
  * Inside, a seeded jumble of partitions, wall blocks and pillars is carved so
  * that every doorway's cell is open, they all connect, and no open cell is a
- * dead end: every open cell has at least two open neighbours, so a walker that
- * never turns back always has somewhere to go.
+ * dead end: every open cell has at least two open neighbours.
+ *
+ * Through it all runs the route the walker follows: long straight legs of six
+ * to eleven chunks down the middle row or column of each chunk, joined by wide
+ * curves, turning left and right by turns so it never doubles back. The cells
+ * it passes are always open: lined-up doorways through the rooms, a corridor
+ * now and then, an open pillared hall now and then, and a hall at every bend.
  */
-import {
-  DIR_X,
-  DIR_Y,
-  easedMoveSeconds,
-  type GridPose,
-  SEG_TURN,
-  SEG_WALK,
-  updateGridPose,
-} from "../grid-walk";
-import { clamp } from "../math";
+import { DIR_X, DIR_Y, EASE_PEAK } from "../grid-walk";
+import { approach, clamp, smoothstep } from "../math";
+import { capPatternSpeed, MAX_PATTERN_HZ } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
 import { MAX_SPEED, MIN_SPEED } from "./backrooms.meta";
 
@@ -47,12 +45,13 @@ function mix(seed: number, a: number, b: number, salt: number): number {
 }
 
 /**
- * The doorways in a chunk edge, as bits 1..7 (position along the edge; 0 is the
- * corner, always wall): `axis` 0 is the west edge of chunk (cx, cy), 1 its south
- * edge. Never empty. Some edges are all doorway (rooms merge into halls), some
- * all but one stub of wall, the rest one or two doorways one to three cells wide.
+ * The seeded doorways in a chunk edge, as bits 1..7 (position along the edge; 0
+ * is the corner, always wall): `axis` 0 is the west edge of chunk (cx, cy), 1
+ * its south edge. Never empty. Some edges are all doorway (rooms merge into
+ * halls), some all but one stub of wall, the rest one or two doorways one to
+ * three cells wide.
  */
-export function edgeDoors(seed: number, cx: number, cy: number, axis: number): number {
+function seededDoors(seed: number, cx: number, cy: number, axis: number): number {
   let h = mix(seed, cx, cy, axis === 0 ? 0x27d4eb2f : 0x165667b1);
   const kind = h & 7;
   h = hash32(h);
@@ -76,9 +75,173 @@ export function edgeDoors(seed: number, cx: number, cy: number, axis: number): n
   return mask;
 }
 
+// --- The route ---
+
+/** The route's row or column within a chunk. */
+const LANE = CHUNK / 2;
+/** Leg lengths, in chunks: a minute or two of walking at the default pace. */
+const LEG_MIN = 6;
+const LEG_MAX = 11;
+
+/** What a chunk is along the route (`LaneInfo.style`). */
+export const STYLE_NONE = 0;
+/** The route passes through rooms, by doorways lined up along it. */
+export const STYLE_ROOMS = 1;
+/** A corridor walled along both sides, with the odd opening. */
+export const STYLE_CORRIDOR = 2;
+/** An open hall with a few pillars; every bend is one. */
+export const STYLE_HALL = 3;
+
+/** A chunk's place on the route, in world headings. */
+interface LaneInfo {
+  style: number;
+  /** Whether the route bends here, from heading `dirIn` to `dirOut`. */
+  corner: boolean;
+  dirIn: number;
+  dirOut: number;
+  /** Headings by which the route leaves the chunk, as bits 1 << heading. */
+  exits: number;
+}
+
+const NO_LANE: LaneInfo = { style: STYLE_NONE, corner: false, dirIn: 0, dirOut: 0, exits: 0 };
+
+/**
+ * The route is laid out in a canonical frame, heading east first then turning
+ * north, east, north and so on, and turned into the world by one of the eight
+ * orientations of the square (`World.orient`: quarter turns in bits 0-1, a
+ * mirror in y in bit 2), about the start chunk (0, 0).
+ */
+function orientDir(orient: number, d: number): number {
+  return (((orient & 4) !== 0 ? 4 - d : d) + orient) & 3;
+}
+
+/** Turns a vector by `q` quarter turns anticlockwise. */
+function turnVec(x: number, y: number, q: number): [number, number] {
+  switch (q & 3) {
+    case 1:
+      return [-y, x];
+    case 2:
+      return [-x, -y];
+    case 3:
+      return [y, -x];
+    default:
+      return [x, y];
+  }
+}
+
+/** A canonical vector into the world. */
+function toWorld(orient: number, x: number, y: number): [number, number] {
+  return turnVec(x, (orient & 4) !== 0 ? -y : y, orient);
+}
+
+/** A world vector into the canonical frame. */
+function toCanonical(orient: number, x: number, y: number): [number, number] {
+  const [u, v] = turnVec(x, y, -orient);
+  return [u, (orient & 4) !== 0 ? -v : v];
+}
+
+/** Canonical heading of leg k: east for even legs, north for odd. */
+const legDir = (k: number) => ((k & 1) === 0 ? 0 : 1);
+
+/** Makes sure the route's corners up to index `k` are laid out. */
+function extendRoute(world: World, k: number): void {
+  const { routeU, routeV } = world;
+  while (routeU.length <= k) {
+    const leg = routeU.length - 1;
+    const len = LEG_MIN + (mix(world.seed, leg, 0, 0x5be0cd19) % (LEG_MAX - LEG_MIN + 1));
+    const east = legDir(leg) === 0;
+    routeU.push(routeU[leg] + (east ? len : 0));
+    routeV.push(routeV[leg] + (east ? 0 : len));
+  }
+}
+
+/** The style of a straight stretch of the route through chunk (u, v), canonical. */
+function straightStyle(seed: number, u: number, v: number): number {
+  const h = mix(seed, u, v, 0x1f83d9ab) & 7;
+  return h < 4 ? STYLE_ROOMS : h < 6 ? STYLE_CORRIDOR : STYLE_HALL;
+}
+
+/** The lane in chunk (u, v): a straight stretch heading canonical `d`, or a bend from `d` to `e`. */
+function lane(world: World, u: number, v: number, d: number, e: number): LaneInfo {
+  const o = world.orient;
+  const dirIn = orientDir(o, d);
+  const dirOut = orientDir(o, e);
+  const corner = d !== e;
+  return {
+    style: corner ? STYLE_HALL : straightStyle(world.seed, u, v),
+    corner,
+    dirIn,
+    dirOut,
+    exits: (1 << ((dirIn + 2) & 3)) | (1 << dirOut),
+  };
+}
+
+/**
+ * The route's place in world chunk (cx, cy). Behind the start the route runs
+ * on straight forever; ahead, the corners rise in both u and v, so the search
+ * stops at the first corner past the chunk.
+ */
+export function laneAt(world: World, cx: number, cy: number): LaneInfo {
+  const [u, v] = toCanonical(world.orient, cx, cy);
+  if (v === 0 && u <= 0) {
+    return lane(world, u, v, 0, 0);
+  }
+  if (u < 0 || v < 0) {
+    return NO_LANE;
+  }
+  const { routeU, routeV } = world;
+  for (let k = 0; ; k++) {
+    extendRoute(world, k + 2);
+    const au = routeU[k];
+    const av = routeV[k];
+    if (au > u || av > v) {
+      return NO_LANE;
+    }
+    const bu = routeU[k + 1];
+    const bv = routeV[k + 1];
+    const on = legDir(k) === 0 ? v === av && u <= bu : u === au && v <= bv;
+    if (on) {
+      const d = legDir(k);
+      return u === bu && v === bv ? lane(world, u, v, d, legDir(k + 1)) : lane(world, u, v, d, d);
+    }
+  }
+}
+
+/** The route's doorway in an edge, as an `edgeDoors` bit. */
+const LANE_DOOR = 1 << LANE;
+
+/**
+ * The doorways in a chunk edge, as bits 1..7 (position along the edge; 0 is the
+ * corner, always wall): `axis` 0 is the west edge of chunk (cx, cy), 1 its south
+ * edge. Never empty. The seeded doorways, and where the route crosses, its
+ * doorway too: the edge opens right up beside a hall, and between two stretches
+ * of corridor it is only the corridor's width.
+ */
+export function edgeDoors(world: World, cx: number, cy: number, axis: number): number {
+  const seeded = seededDoors(world.seed, cx, cy, axis);
+  const here = laneAt(world, cx, cy);
+  // Crossing west (heading 2) or south (heading 3).
+  if ((here.exits & (1 << (axis === 0 ? 2 : 3))) === 0) {
+    return seeded;
+  }
+  const there = axis === 0 ? laneAt(world, cx - 1, cy) : laneAt(world, cx, cy - 1);
+  if (here.style === STYLE_HALL || there.style === STYLE_HALL) {
+    return 0xfe;
+  }
+  if (here.style === STYLE_CORRIDOR && there.style === STYLE_CORRIDOR) {
+    return LANE_DOOR;
+  }
+  return seeded | LANE_DOOR;
+}
+
 export interface World {
   /** The 32-bit seed every hash derives from. */
   seed: number;
+  /** The route's orientation in the world, 0..7 (see `orientDir`). */
+  orient: number;
+  /** The route's corners in canonical chunks, from the start chunk (0, 0); laid out as needed. */
+  readonly routeU: number[];
+  readonly routeV: number[];
   /** Chunk coordinates held by each cache slot, and whether the slot is filled. */
   readonly keyX: Int32Array;
   readonly keyY: Int32Array;
@@ -94,9 +257,15 @@ export interface World {
 const worldSeed = (seed: number) =>
   hash32(Math.floor(Number.isFinite(seed) ? seed : 0) ^ 0x6a09e667);
 
+const worldOrient = (seed: number) => hash32(seed ^ 0x3f84d5b5) & 7;
+
 export function createWorld(seed: number): World {
+  const s = worldSeed(seed);
   return {
-    seed: worldSeed(seed),
+    seed: s,
+    orient: worldOrient(s),
+    routeU: [0],
+    routeV: [0],
     keyX: new Int32Array(CACHE_SLOTS),
     keyY: new Int32Array(CACHE_SLOTS),
     filled: new Uint8Array(CACHE_SLOTS),
@@ -110,6 +279,9 @@ export function createWorld(seed: number): World {
 /** Switches the world to another variation, forgetting every generated chunk. */
 export function reseedWorld(world: World, seed: number): void {
   world.seed = worldSeed(seed);
+  world.orient = worldOrient(world.seed);
+  world.routeU.length = 1;
+  world.routeV.length = 1;
   world.filled.fill(0);
 }
 
@@ -179,12 +351,13 @@ function wallLine(
 
 /** Generates chunk (cx, cy) into cache slot `slot`. */
 function generateChunk(world: World, slot: number, cx: number, cy: number): void {
-  const { cells, required, reached, seed } = world;
+  const { cells, required, seed } = world;
   const base = slot * CELLS;
-  const west = edgeDoors(seed, cx, cy, 0);
-  const south = edgeDoors(seed, cx, cy, 1);
-  const east = edgeDoors(seed, cx + 1, cy, 0);
-  const north = edgeDoors(seed, cx, cy + 1, 1);
+  const west = edgeDoors(world, cx, cy, 0);
+  const south = edgeDoors(world, cx, cy, 1);
+  const east = edgeDoors(world, cx + 1, cy, 0);
+  const north = edgeDoors(world, cx, cy + 1, 1);
+  const route = laneAt(world, cx, cy);
   const rng = createRng(mix(seed, cx, cy, 0x3c6ef372));
   const pick = (lo: number, hi: number) => lo + Math.floor(rng() * (hi - lo + 1));
 
@@ -193,6 +366,55 @@ function generateChunk(world: World, slot: number, cx: number, cy: number): void
     cells[base + local(0, p)] = ((west >> p) & 1) !== 0 ? OPEN : WALL;
     cells[base + local(p, 0)] = ((south >> p) & 1) !== 0 ? OPEN : WALL;
   }
+  if (route.style === STYLE_HALL) {
+    hallPillars(cells, base, route, rng);
+  } else {
+    furnish(cells, base, rng, pick);
+  }
+  if (route.style === STYLE_CORRIDOR) {
+    corridorWalls(cells, base, route, pick);
+  }
+
+  // The cells inside each doorway must be open floor.
+  required.fill(0);
+  let firstX = -1;
+  let firstY = -1;
+  for (let side = 0; side < 4; side++) {
+    const mask = side === 0 ? west : side === 1 ? south : side === 2 ? east : north;
+    for (let p = 1; p < CHUNK; p++) {
+      if (((mask >> p) & 1) === 0) {
+        continue;
+      }
+      const x = side === 0 ? 1 : side === 2 ? CHUNK - 1 : p;
+      const y = side === 1 ? 1 : side === 3 ? CHUNK - 1 : p;
+      required[local(x, y)] = 1;
+      cells[base + local(x, y)] = OPEN;
+      if (firstX < 0) {
+        firstX = x;
+        firstY = y;
+      }
+    }
+  }
+  // So must the route's cells: its row or column, or both halves at a bend.
+  if (route.style !== STYLE_NONE) {
+    for (let k = 1; k < CHUNK; k++) {
+      const d = k < LANE ? (route.dirIn + 2) & 3 : route.dirOut;
+      const r = Math.abs(k - LANE);
+      const c = local(LANE + DIR_X[d] * r, LANE + DIR_Y[d] * r);
+      required[c] = 1;
+      cells[base + c] = OPEN;
+    }
+  }
+  connect(world, base, east, north, firstX, firstY);
+}
+
+/** Partitions, odd blocks of wall and pillars: the jumble of rooms. */
+function furnish(
+  cells: Uint8Array,
+  base: number,
+  rng: () => number,
+  pick: (lo: number, hi: number) => number,
+): void {
   // Partitions: whole or part lines of wall across the chunk, with a doorway in the long ones.
   const partitions = pick(1, 3);
   for (let i = 0; i < partitions; i++) {
@@ -232,27 +454,71 @@ function generateChunk(world: World, slot: number, cx: number, cy: number): void
       cells[base + local(x, y)] = PILLAR;
     }
   }
+}
 
-  // The cells inside each doorway must be open floor.
-  required.fill(0);
-  let firstX = -1;
-  let firstY = -1;
-  for (let side = 0; side < 4; side++) {
-    const mask = side === 0 ? west : side === 1 ? south : side === 2 ? east : north;
-    for (let p = 1; p < CHUNK; p++) {
-      if (((mask >> p) & 1) === 0) {
-        continue;
-      }
-      const x = side === 0 ? 1 : side === 2 ? CHUNK - 1 : p;
-      const y = side === 1 ? 1 : side === 3 ? CHUNK - 1 : p;
-      required[local(x, y)] = 1;
-      cells[base + local(x, y)] = OPEN;
-      if (firstX < 0) {
-        firstX = x;
-        firstY = y;
+/**
+ * Pillars in a hall, two cells off the route: at a bend, in the three quarters
+ * the curve doesn't cut through; on a straight, a seeded few in two rows either
+ * side.
+ */
+function hallPillars(cells: Uint8Array, base: number, route: LaneInfo, rng: () => number): void {
+  const ax = DIR_X[route.dirIn];
+  const ay = DIR_Y[route.dirIn];
+  if (route.corner) {
+    const bx = DIR_X[route.dirOut];
+    const by = DIR_Y[route.dirOut];
+    for (const [s, t] of [
+      [1, -1],
+      [1, 1],
+      [-1, -1],
+    ]) {
+      cells[base + local(LANE + 2 * (s * ax + t * bx), LANE + 2 * (s * ay + t * by))] = PILLAR;
+    }
+    return;
+  }
+  for (const along of [-2, 0, 2]) {
+    for (const side of [-2, 2]) {
+      if (rng() < 0.6) {
+        cells[base + local(LANE + along * ax - side * ay, LANE + along * ay + side * ax)] = PILLAR;
       }
     }
   }
+}
+
+/** Walls along both sides of the route, with up to two openings into the rooms beside it. */
+function corridorWalls(
+  cells: Uint8Array,
+  base: number,
+  route: LaneInfo,
+  pick: (lo: number, hi: number) => number,
+): void {
+  const alongX = DIR_X[route.dirIn] !== 0;
+  const at = (k: number, side: number) =>
+    base + (alongX ? local(k, LANE + side) : local(LANE + side, k));
+  for (let k = 1; k < CHUNK; k++) {
+    cells[at(k, -1)] = WALL;
+    cells[at(k, 1)] = WALL;
+  }
+  const openings = pick(0, 2);
+  for (let i = 0; i < openings; i++) {
+    cells[at(pick(2, CHUNK - 2), pick(0, 1) === 0 ? -1 : 1)] = OPEN;
+  }
+}
+
+/**
+ * Joins up the chunk round its required cells: every one is connected to the
+ * first doorway (an L-shaped path carved to any cut off), pockets left cut off
+ * become wall, and dead ends are filled until none are left.
+ */
+function connect(
+  world: World,
+  base: number,
+  east: number,
+  north: number,
+  firstX: number,
+  firstY: number,
+): void {
+  const { cells, required, reached } = world;
   // Connect every doorway to the first: carve an L-shaped path to any cut off.
   flood(world, base, firstX, firstY);
   for (let c = 0; c < CELLS; c++) {
@@ -374,175 +640,195 @@ export function fillWindow(world: World, ox: number, oy: number, out: Uint8Array
 export const PATTERN_PERIOD = 0.5;
 /**
  * The distance, in cells, the turn limit is measured at: about the nearest wall
- * swept past in a turn. Nearer patterns appear larger and cross a point less
+ * swept past on a bend. Nearer patterns appear larger and cross a point less
  * often; further ones are filtered out as they shrink and fade into the haze.
  */
 export const REF_DISTANCE = 1;
-/** Seconds per cell and per quarter turn at a pace of 1, before the motion caps. */
+/** Seconds per cell at a pace of 1, before the motion caps. */
 const WALK_SECONDS = 0.8;
-const TURN_SECONDS = 1.6;
 
 const clampSpeed = (speed: number) =>
   clamp(Number.isFinite(speed) ? speed : 1, MIN_SPEED, MAX_SPEED);
 
+// --- The bends ---
+
+/** How far before and after the corner cell's centre a bend starts and ends, in cells. */
+const CURVE_CUT = 3;
+/** Steps of the bend's table. */
+const CURVE_STEPS = 64;
 /**
- * Seconds to walk a cell at `speed`, eased in and out: the peak pace keeps the
- * tiles and wallpaper passing a point at most MAX_PATTERN_HZ times a second.
+ * A bend turns the heading a quarter turn with a smoothstep along its length,
+ * so the turn rate rises from nothing and falls back to it. The table holds the
+ * distance covered along the heading in and along the heading out, per cell of
+ * bend, at CURVE_STEPS + 1 even steps through it (pairs, from the start).
  */
-export const walkSeconds = (speed: number) =>
-  easedMoveSeconds(1, clampSpeed(speed) / WALK_SECONDS, PATTERN_PERIOD);
+const CURVE_TABLE = (() => {
+  const table = new Float64Array(2 * (CURVE_STEPS + 1));
+  const sub = 32;
+  const du = 1 / (CURVE_STEPS * sub);
+  let a = 0;
+  let b = 0;
+  for (let i = 0; i < CURVE_STEPS; i++) {
+    for (let j = 0; j < sub; j++) {
+      const turn = (Math.PI / 2) * smoothstep(0, 1, (i * sub + j + 0.5) * du);
+      a += Math.cos(turn) * du;
+      b += Math.sin(turn) * du;
+    }
+    table[2 * i + 2] = a;
+    table[2 * i + 3] = b;
+  }
+  return table;
+})();
+/** The bend's length, in cells: it covers CURVE_CUT along the heading in. */
+export const CURVE_LENGTH = CURVE_CUT / CURVE_TABLE[2 * CURVE_STEPS];
+/** How far past the corner along the heading out the bend ends: CURVE_CUT, give or take rounding. */
+const CURVE_OUT = CURVE_LENGTH * CURVE_TABLE[2 * CURVE_STEPS + 1];
 
 /**
- * Seconds per quarter turn at `speed`: the peak turn rate sweeps the wallpaper
- * at REF_DISTANCE past a point at most MAX_PATTERN_HZ times a second.
+ * Walking rate in cells a second at `speed`: the tiles and wallpaper pass a
+ * point at most MAX_PATTERN_HZ times a second, and so does the wallpaper at
+ * REF_DISTANCE swept past at a bend's peak turn rate.
  */
-export function turnSeconds(speed: number): number {
-  const quarter = Math.PI / 2;
-  return easedMoveSeconds(
-    quarter,
-    (quarter * clampSpeed(speed)) / TURN_SECONDS,
-    PATTERN_PERIOD / REF_DISTANCE,
-  );
+export function walkRate(speed: number): number {
+  const turnPerCell = (EASE_PEAK * Math.PI) / 2 / CURVE_LENGTH;
+  const turnCap = (MAX_PATTERN_HZ * PATTERN_PERIOD) / REF_DISTANCE / turnPerCell;
+  return Math.min(capPatternSpeed(clampSpeed(speed) / WALK_SECONDS, PATTERN_PERIOD), turnCap);
 }
 
 // --- The walker ---
 
-/** Odds of each choice at a cell where it is open: straight on, and each side. */
-const STRAIGHT_WEIGHT = 5;
-const SIDE_WEIGHT = 1;
+/** Cells a second the walking rate changes by each second: from rest, and on a pace change. */
+const ACCEL = 0.4;
+/** Drift sideways within the route's row of cells: amplitude in cells, and its two wavelengths. */
+const DRIFT = 0.18;
+const DRIFT_WAVE_A = 23;
+const DRIFT_WAVE_B = 9.7;
+/** The start: the centre of the route's cell in chunk (0, 0), on both axes. */
+const START = LANE + 0.5;
 
-interface Walker extends GridPose {
-  /** Turn planned for the cell a walk arrives at, chosen as the walk starts. */
-  nextTurn: number;
-  /** Walks started so far. */
-  walks: number;
-  /** Total distance walked, in cells (for the head bob). */
+interface Walker {
+  /** The route leg it is on: leg k runs from corner k to corner k + 1. */
+  leg: number;
+  /** Whether it is on the bend at the leg's end, rather than its straight. */
+  bending: boolean;
+  /** Cells into the straight or the bend. */
+  along: number;
+  /** Walking rate, cells a second. */
+  rate: number;
+  /** Total distance walked, in cells (for the head bob and the drift). */
   walked: number;
-  rng: () => number;
+  /** Phases of the sideways drift. */
+  phaseA: number;
+  phaseB: number;
+  /** The camera pose: position in cells and heading in radians. */
+  x: number;
+  y: number;
+  angle: number;
 }
 
 export function createWalker(): Walker {
   return {
-    cx: 0,
-    cy: 0,
-    dir: 0,
-    kind: SEG_WALK,
-    progress: 0,
-    turn: 0,
-    nextTurn: 0,
-    easeIn: true,
-    easeOut: false,
-    walks: 0,
+    leg: 0,
+    bending: false,
+    along: 0,
+    rate: 0,
     walked: 0,
-    x: 0.5,
-    y: 0.5,
+    phaseA: 0,
+    phaseB: 0,
+    x: START,
+    y: START,
     angle: 0,
-    rng: createRng(0),
   };
 }
 
-/**
- * The wanderer's choice at cell (x, y) heading `dir`, in quarter turns (+ is
- * left): straight on or to either side into open floor, mostly straight on.
- * Never back the way it came, unless there is no other way (the world has no
- * dead ends, so only in a world built otherwise).
- */
-function chooseTurn(w: Walker, world: World, x: number, y: number, dir: number): number {
-  const ahead = isOpen(world, x + DIR_X[dir], y + DIR_Y[dir]) ? STRAIGHT_WEIGHT : 0;
-  const left = (dir + 1) & 3;
-  const right = (dir + 3) & 3;
-  const l = isOpen(world, x + DIR_X[left], y + DIR_Y[left]) ? SIDE_WEIGHT : 0;
-  const r = isOpen(world, x + DIR_X[right], y + DIR_Y[right]) ? SIDE_WEIGHT : 0;
-  const total = ahead + l + r;
-  if (total === 0) {
-    return 2;
+/** Length of leg k's straight, in cells: corner to corner, less the bends at either end. */
+function straightLength(world: World, k: number): number {
+  extendRoute(world, k + 1);
+  const chunks = world.routeU[k + 1] - world.routeU[k] + (world.routeV[k + 1] - world.routeV[k]);
+  return CHUNK * chunks - CURVE_CUT - (k > 0 ? CURVE_OUT : 0);
+}
+
+/** Sets the camera pose from the walker's place on the route. */
+function updatePose(w: Walker, world: World): void {
+  const k = w.leg;
+  extendRoute(world, k + 1);
+  const east = legDir(k) === 0;
+  const dx = east ? 1 : 0;
+  const dy = east ? 0 : 1;
+  // The corner ahead, in canonical cells.
+  const nx = CHUNK * world.routeU[k + 1] + START;
+  const ny = CHUNK * world.routeV[k + 1] + START;
+  let px: number;
+  let py: number;
+  let th = east ? 0 : Math.PI / 2;
+  if (!w.bending) {
+    const back = CURVE_CUT + straightLength(world, k) - w.along;
+    px = nx - dx * back;
+    py = ny - dy * back;
+  } else {
+    const u = clamp(w.along / CURVE_LENGTH, 0, 1);
+    const f = u * CURVE_STEPS;
+    const i = Math.min(Math.floor(f), CURVE_STEPS - 1);
+    const t = f - i;
+    const a = CURVE_TABLE[2 * i] + (CURVE_TABLE[2 * i + 2] - CURVE_TABLE[2 * i]) * t;
+    const b = CURVE_TABLE[2 * i + 1] + (CURVE_TABLE[2 * i + 3] - CURVE_TABLE[2 * i + 1]) * t;
+    // The heading out is the other axis: east turns left to north, north right to east.
+    px = nx - dx * CURVE_CUT + CURVE_LENGTH * (a * dx + b * dy);
+    py = ny - dy * CURVE_CUT + CURVE_LENGTH * (a * dy + b * dx);
+    th += (east ? 1 : -1) * (Math.PI / 2) * smoothstep(0, 1, u);
   }
-  const u = w.rng() * total;
-  return u < ahead ? 0 : u < ahead + l ? 1 : -1;
+  const s = w.walked * 2 * Math.PI;
+  const drift =
+    DRIFT *
+    (0.6 * Math.sin(s / DRIFT_WAVE_A + w.phaseA) + 0.4 * Math.sin(s / DRIFT_WAVE_B + w.phaseB));
+  px -= Math.sin(th) * drift;
+  py += Math.cos(th) * drift;
+  const o = world.orient;
+  const [wx, wy] = toWorld(o, px - START, py - START);
+  w.x = wx + START;
+  w.y = wy + START;
+  w.angle = ((o & 4) !== 0 ? -th : th) + (o & 3) * (Math.PI / 2);
 }
 
-/** Starts a walk from the current cell along the heading, planning the turn after it. */
-function startWalk(w: Walker, world: World, easeIn: boolean): void {
-  w.nextTurn = chooseTurn(w, world, w.cx + DIR_X[w.dir], w.cy + DIR_Y[w.dir], w.dir);
-  w.kind = SEG_WALK;
-  w.progress = 0;
-  w.easeIn = easeIn;
-  w.easeOut = w.nextTurn !== 0;
-  w.walks++;
-}
-
-/** Headings tried for the first walk, in order: on through the doorway first. */
-const START_HEADINGS = [0, 1, 3, 2] as const;
-
-/**
- * Puts the walker in the world's first doorway cell (always open), facing open
- * floor, and sets off from rest with its own seeded choices.
- */
+/** Puts the walker at rest at the start of the route, with its own seeded drift. */
 export function resetWalker(w: Walker, world: World): void {
-  const doors = edgeDoors(world.seed, 0, 0, 0);
-  // The lowest doorway in the west edge of chunk (0, 0).
-  const p = 31 - Math.clz32(doors & -doors);
-  w.cx = 1;
-  w.cy = p;
-  w.rng = createRng(hash32(world.seed ^ 0x1f83d9ab));
-  w.dir = 0;
-  for (const d of START_HEADINGS) {
-    if (isOpen(world, w.cx + DIR_X[d], w.cy + DIR_Y[d])) {
-      w.dir = d;
-      break;
-    }
-  }
-  w.turn = 0;
-  w.walks = 0;
-  startWalk(w, world, true);
-  updateGridPose(w);
-}
-
-/** Ends the current segment and starts the next. */
-function nextSegment(w: Walker, world: World): void {
-  if (w.kind === SEG_TURN) {
-    startWalk(w, world, true);
-    return;
-  }
-  w.cx += DIR_X[w.dir];
-  w.cy += DIR_Y[w.dir];
-  if (w.nextTurn === 0) {
-    startWalk(w, world, false);
-    return;
-  }
-  w.kind = SEG_TURN;
-  w.progress = 0;
-  w.turn = w.nextTurn;
-  w.dir = (w.dir + w.nextTurn + 4) & 3;
+  const rng = createRng(hash32(world.seed ^ 0x1f83d9ab));
+  w.leg = 0;
+  w.bending = false;
+  w.along = 0;
+  w.rate = 0;
+  w.walked = 0;
+  w.phaseA = rng() * Math.PI * 2;
+  w.phaseB = rng() * Math.PI * 2;
+  updatePose(w, world);
 }
 
 /**
- * Advances the walker by `dt` seconds with the given segment times, carrying
- * leftover time into the following segments, and updates its pose.
+ * Advances the walker by `dt` seconds along the route, its walking rate easing
+ * towards `rate` cells a second, and updates its pose.
  */
-export function advanceWalker(
-  w: Walker,
-  world: World,
-  dt: number,
-  walkTime: number,
-  turnTime: number,
-): void {
-  let left = Math.max(0, dt);
-  const x0 = w.x;
-  const y0 = w.y;
-  // A handful of segments per frame at most; the cap only guards odd inputs.
+export function advanceWalker(w: Walker, world: World, dt: number, rate: number): void {
+  const step = Math.max(0, dt);
+  const r0 = w.rate;
+  w.rate = approach(w.rate, Math.max(0, Number.isFinite(rate) ? rate : 0), step * ACCEL);
+  const ds = 0.5 * (r0 + w.rate) * step;
+  w.walked += ds;
+  w.along += ds;
+  // A leg is many cells long; the cap only guards odd inputs.
   for (let i = 0; i < 16; i++) {
-    const dur = w.kind === SEG_TURN ? turnTime * Math.abs(w.turn) : walkTime;
-    const remaining = (1 - w.progress) * dur;
-    if (left < remaining) {
-      w.progress += left / dur;
+    const len = w.bending ? CURVE_LENGTH : straightLength(world, w.leg);
+    if (w.along < len) {
       break;
     }
-    left -= remaining;
-    nextSegment(w, world);
+    w.along -= len;
+    if (w.bending) {
+      w.bending = false;
+      w.leg++;
+    } else {
+      w.bending = true;
+    }
   }
-  updateGridPose(w);
-  w.walked += Math.hypot(w.x - x0, w.y - y0);
+  updatePose(w, world);
 }
 
 // --- Flickering panels ---

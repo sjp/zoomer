@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DIR_X, DIR_Y, EASE_PEAK, SEG_TURN, SEG_WALK } from "../grid-walk";
+import { DIR_X, DIR_Y, EASE_PEAK } from "../grid-walk";
 import { MAX_PATTERN_HZ } from "../motion-limits";
-import { MAX_SPEED, MIN_SPEED } from "./backrooms.meta";
+import { backroomsMeta, MAX_SPEED, MIN_SPEED } from "./backrooms.meta";
 import {
   advanceFlicker,
   advanceWalker,
@@ -10,10 +10,12 @@ import {
   createFlicker,
   createWalker,
   createWorld,
+  CURVE_LENGTH,
   edgeDoors,
   fillWindow,
   flickerLevel,
   isOpen,
+  laneAt,
   MAX_FLICKERS,
   OPEN,
   PANEL_DEAD,
@@ -25,15 +27,19 @@ import {
   REF_DISTANCE,
   reseedWorld,
   resetWalker,
-  turnSeconds,
+  STYLE_CORRIDOR,
+  STYLE_HALL,
+  STYLE_NONE,
+  STYLE_ROOMS,
   VIEW_REACH,
   WALL,
-  walkSeconds,
+  walkRate,
   WINDOW,
   windowOrigin,
   type World,
 } from "./backrooms-sim";
 
+const DEFAULT_SPEED = backroomsMeta.params.speed.default;
 const SEEDS = [0, 1, 2, 3, 7, 42, 123, 500, 999];
 /** Chunks -R..R on each axis. */
 const R = 3;
@@ -75,7 +81,7 @@ describe("world", () => {
     const queue: number[] = [];
     const walker = createWalker();
     resetWalker(walker, world);
-    const start = (walker.cy - LO) * side + (walker.cx - LO);
+    const start = (Math.floor(walker.y) - LO) * side + (Math.floor(walker.x) - LO);
     seen[start] = 1;
     queue.push(start);
     while (queue.length > 0) {
@@ -110,7 +116,7 @@ describe("world", () => {
       for (let cy = -R; cy <= R; cy++) {
         for (let cx = -R; cx <= R; cx++) {
           for (const axis of [0, 1]) {
-            const mask = edgeDoors(world.seed, cx, cy, axis);
+            const mask = edgeDoors(world, cx, cy, axis);
             expect(mask & 0xfe).toBeGreaterThan(0);
             expect(mask & ~0xfe).toBe(0);
             for (let p = 1; p < CHUNK; p++) {
@@ -224,46 +230,177 @@ describe("window", () => {
   });
 });
 
-describe("walker", () => {
-  it.each(SEEDS)("wanders on forever without turning back (seed %d)", (seed) => {
+describe("route", () => {
+  it.each(SEEDS)("keeps the route's cells open in rooms, corridors and halls (seed %d)", (seed) => {
     const world = createWorld(seed);
+    const styles = new Set<number>();
+    let lanes = 0;
+    let corners = 0;
+    for (let cy = -6; cy <= 6; cy++) {
+      for (let cx = -6; cx <= 6; cx++) {
+        const lane = laneAt(world, cx, cy);
+        if (lane.style === STYLE_NONE) {
+          continue;
+        }
+        lanes++;
+        corners += lane.corner ? 1 : 0;
+        styles.add(lane.style);
+        // The middle cell, and every exit's row or column out to the chunk's edge and beyond.
+        expect(cellKind(world, cx * CHUNK + 4, cy * CHUNK + 4)).toBe(OPEN);
+        for (let d = 0; d < 4; d++) {
+          if ((lane.exits & (1 << d)) === 0) {
+            continue;
+          }
+          for (let r = 1; r <= CHUNK / 2; r++) {
+            const x = cx * CHUNK + 4 + DIR_X[d] * r;
+            const y = cy * CHUNK + 4 + DIR_Y[d] * r;
+            expect(cellKind(world, x, y)).toBe(OPEN);
+          }
+          // The neighbour carries the route on.
+          const n = laneAt(world, cx + DIR_X[d], cy + DIR_Y[d]);
+          expect(n.exits & (1 << ((d + 2) & 3))).not.toBe(0);
+        }
+      }
+    }
+    expect(lanes).toBeGreaterThan(12);
+    expect(styles.has(STYLE_NONE)).toBe(false);
+    expect(corners).toBeLessThanOrEqual(2);
+  });
+
+  it("has every kind of stretch across the variations", () => {
+    const styles = new Set<number>();
+    let corners = 0;
+    for (const seed of SEEDS) {
+      const world = createWorld(seed);
+      for (let k = -20; k <= 20; k++) {
+        for (let j = -20; j <= 20; j++) {
+          const lane = laneAt(world, k, j);
+          styles.add(lane.style);
+          corners += lane.corner ? 1 : 0;
+        }
+      }
+    }
+    expect([...styles].toSorted((a, b) => a - b)).toEqual([
+      STYLE_NONE,
+      STYLE_ROOMS,
+      STYLE_CORRIDOR,
+      STYLE_HALL,
+    ]);
+    expect(corners).toBeGreaterThan(SEEDS.length);
+  });
+});
+
+describe("walker", () => {
+  /** Whether the camera at (x, y) keeps `clear` cells from every wall and pillar. */
+  const clearAt = (world: World, x: number, y: number, clear: number) => {
+    for (let j = Math.floor(y - 1); j <= Math.floor(y + 1); j++) {
+      for (let i = Math.floor(x - 1); i <= Math.floor(x + 1); i++) {
+        const kind = cellKind(world, i, j);
+        const half = kind === WALL ? 0.5 : kind === PILLAR ? 0.22 : -1;
+        if (half < 0) {
+          continue;
+        }
+        const dx = Math.max(Math.abs(x - i - 0.5) - half, 0);
+        const dy = Math.max(Math.abs(y - j - 0.5) - half, 0);
+        if (Math.hypot(dx, dy) < clear) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  it.each(SEEDS)(
+    "walks on and on along open floor, bending only now and then (seed %d)",
+    (seed) => {
+      const world = createWorld(seed);
+      const w = createWalker();
+      resetWalker(w, world);
+      const dt = 1 / 30;
+      const rate = walkRate(DEFAULT_SPEED);
+      let px = w.x;
+      let py = w.y;
+      let pa = w.angle;
+      let step = 0;
+      let rot = 0;
+      let blocked = 0;
+      const bends: number[] = [];
+      let bending = false;
+      // Twenty minutes.
+      for (let i = 0; i < 30 * 1200; i++) {
+        advanceWalker(w, world, dt, rate);
+        blocked += clearAt(world, w.x, w.y, 0.25) ? 0 : 1;
+        step = Math.max(step, Math.hypot(w.x - px, w.y - py));
+        const da = Math.atan2(Math.sin(w.angle - pa), Math.cos(w.angle - pa));
+        rot = Math.max(rot, Math.abs(da));
+        const turning = Math.abs(da) > 1e-9;
+        if (turning && !bending) {
+          bends.push(i * dt);
+        }
+        bending = turning;
+        px = w.x;
+        py = w.y;
+        pa = w.angle;
+      }
+      expect(blocked).toBe(0);
+      // Its own pace, and the drift a little on top.
+      expect(step).toBeLessThanOrEqual(rate * dt * 1.1);
+      // A bend's peak turn rate sweeps the wallpaper REF_DISTANCE away within MAX_PATTERN_HZ.
+      expect(rot / dt).toBeLessThanOrEqual((MAX_PATTERN_HZ * PATTERN_PERIOD) / REF_DISTANCE);
+      // A bend every minute or two.
+      expect(bends.length).toBeGreaterThanOrEqual(8);
+      const gaps = bends.slice(1).map((t, k) => t - bends[k]);
+      expect(Math.min(...gaps)).toBeGreaterThan(55);
+      expect(Math.max(...gaps)).toBeLessThan(130);
+      expect(bends[0]).toBeGreaterThan(55);
+    },
+  );
+
+  it("holds its heading on the straights, sweeping only at the bends", () => {
+    const world = createWorld(3);
     const w = createWalker();
     resetWalker(w, world);
-    const dt = 1 / 30;
-    const walk = walkSeconds(MAX_SPEED);
-    const turn = turnSeconds(MAX_SPEED);
-    const maxStep = (EASE_PEAK / walk) * dt * 1.0001;
-    const maxTurn = ((EASE_PEAK * Math.PI) / 2 / turn) * dt * 1.0001;
-    let px = w.x;
-    let py = w.y;
-    let pa = w.angle;
-    let step = 0;
-    let rot = 0;
-    let reversals = 0;
-    let blocked = 0;
-    let far = 0;
-    const sx = w.x;
-    const sy = w.y;
-    for (let i = 0; i < 20_000; i++) {
-      advanceWalker(w, world, dt, walk, turn);
-      reversals += w.kind === SEG_TURN && Math.abs(w.turn) > 1 ? 1 : 0;
-      blocked += isOpen(world, w.cx, w.cy) ? 0 : 1;
-      if (w.kind === SEG_WALK) {
-        blocked += isOpen(world, w.cx + DIR_X[w.dir], w.cy + DIR_Y[w.dir]) ? 0 : 1;
-      }
-      step = Math.max(step, Math.hypot(w.x - px, w.y - py));
-      rot = Math.max(rot, Math.abs(Math.atan2(Math.sin(w.angle - pa), Math.cos(w.angle - pa))));
-      far = Math.max(far, Math.hypot(w.x - sx, w.y - sy));
-      px = w.x;
-      py = w.y;
-      pa = w.angle;
+    const start = w.angle;
+    for (let i = 0; i < 30 * 40; i++) {
+      advanceWalker(w, world, 1 / 30, walkRate(DEFAULT_SPEED));
+      expect(w.angle).toBe(start);
     }
-    expect([reversals, blocked]).toEqual([0, 0]);
-    expect(step).toBeLessThanOrEqual(maxStep);
-    expect(rot).toBeLessThanOrEqual(maxTurn);
-    expect(w.walks).toBeGreaterThan(500);
-    // It roams across chunks rather than circling one room.
-    expect(far).toBeGreaterThan(2 * CHUNK);
+  });
+
+  it("bends round a quarter turn and alternates left and right", () => {
+    const world = createWorld(8);
+    const w = createWalker();
+    resetWalker(w, world);
+    const headings = [w.angle];
+    let leg = 0;
+    for (let i = 0; i < 30 * 600; i++) {
+      advanceWalker(w, world, 1 / 30, walkRate(MAX_SPEED));
+      if (w.leg !== leg) {
+        leg = w.leg;
+        headings.push(w.angle);
+      }
+    }
+    expect(headings.length).toBeGreaterThan(4);
+    const turns = headings.slice(1).map((a, k) => {
+      const d = a - headings[k];
+      return Math.round((Math.atan2(Math.sin(d), Math.cos(d)) / (Math.PI / 2)) * 1e6) / 1e6;
+    });
+    expect(turns.map((t) => Math.abs(t))).toEqual(turns.map(() => 1));
+    expect(turns.slice(1)).toEqual(turns.slice(0, -1).map((t) => -t));
+  });
+
+  it("starts from rest and eases up to pace", () => {
+    const world = createWorld(1);
+    const w = createWalker();
+    resetWalker(w, world);
+    const x0 = w.x;
+    const y0 = w.y;
+    advanceWalker(w, world, 1 / 30, walkRate(1));
+    expect(Math.hypot(w.x - x0, w.y - y0)).toBeLessThan(0.01);
+    for (let i = 0; i < 30 * 10; i++) {
+      advanceWalker(w, world, 1 / 30, walkRate(1));
+    }
+    expect(w.rate).toBe(walkRate(1));
   });
 
   it("walks the same path for the same variation", () => {
@@ -271,8 +408,8 @@ describe("walker", () => {
       const world = createWorld(seed);
       const w = createWalker();
       resetWalker(w, world);
-      for (let i = 0; i < 2000; i++) {
-        advanceWalker(w, world, 1 / 30, walkSeconds(1), turnSeconds(1));
+      for (let i = 0; i < 30 * 200; i++) {
+        advanceWalker(w, world, 1 / 30, walkRate(1));
       }
       return [w.x, w.y, w.angle];
     };
@@ -280,12 +417,25 @@ describe("walker", () => {
     expect(run(5)).not.toEqual(run(6));
   });
 
+  it("heads off in different directions for different variations", () => {
+    const headings = new Set<number>();
+    for (const seed of SEEDS) {
+      const world = createWorld(seed);
+      const w = createWalker();
+      resetWalker(w, world);
+      headings.add(Math.round(Math.atan2(Math.sin(w.angle), Math.cos(w.angle)) * 100));
+    }
+    expect(headings.size).toBeGreaterThan(2);
+  });
+
   it("counts the distance walked", () => {
     const world = createWorld(2);
     const w = createWalker();
     resetWalker(w, world);
-    advanceWalker(w, world, walkSeconds(1) * 10, walkSeconds(1), turnSeconds(1));
-    expect(w.walked).toBeGreaterThan(0);
+    for (let i = 0; i < 30 * 10; i++) {
+      advanceWalker(w, world, 1 / 30, walkRate(1));
+    }
+    expect(w.walked).toBeGreaterThan(5);
   });
 });
 
@@ -293,21 +443,19 @@ describe("motion limits", () => {
   const speeds = [MIN_SPEED, 1, MAX_SPEED, 1e9, Number.NaN, -1];
 
   it.each(speeds)("walks tiles and wallpaper past a point within MAX_PATTERN_HZ at %d", (s) => {
-    const peak = EASE_PEAK / walkSeconds(s);
-    expect(peak / PATTERN_PERIOD).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
-    expect(Number.isFinite(walkSeconds(s))).toBe(true);
+    expect(walkRate(s) / PATTERN_PERIOD).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
+    expect(walkRate(s)).toBeGreaterThan(0);
   });
 
-  it.each(speeds)("turns within MAX_PATTERN_HZ of swept wallpaper at %d", (s) => {
-    const omega = (EASE_PEAK * Math.PI) / 2 / turnSeconds(s);
+  it.each(speeds)("bends within MAX_PATTERN_HZ of swept wallpaper at %d", (s) => {
+    const omega = (walkRate(s) * EASE_PEAK * Math.PI) / 2 / CURVE_LENGTH;
     expect(omega / (PATTERN_PERIOD / REF_DISTANCE)).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
-    expect(Number.isFinite(turnSeconds(s))).toBe(true);
   });
 
-  it("walks about a room every three to four seconds at the default pace", () => {
+  it("walks about a room every six to seven and a half seconds at the default pace", () => {
     // A room is about five cells across.
-    expect(5 * walkSeconds(1)).toBeGreaterThan(3);
-    expect(5 * walkSeconds(1)).toBeLessThan(4.5);
+    expect(5 / walkRate(DEFAULT_SPEED)).toBeGreaterThan(6);
+    expect(5 / walkRate(DEFAULT_SPEED)).toBeLessThan(7.5);
   });
 });
 
