@@ -26,6 +26,7 @@ import {
   priceDecimals,
   pushArc,
   pushArea,
+  pushQuad,
   pushCandle,
   pushLine,
   pushPolyline,
@@ -363,6 +364,39 @@ describe("mesh", () => {
     const last = (m.count - 3) * CHART_STRIDE;
     expect(m.data[last]).toBeCloseTo(12, 9);
     expect(m.data[last + 1]).toBeCloseTo(0, 9);
+  });
+});
+
+describe("pushQuad", () => {
+  const c = [1, 0, 0];
+
+  it("writes two solid triangles through the four corners in order", () => {
+    const m = createChartMesh(16);
+    pushQuad(m, 0, 10, 10, 0, 20, 0, 10, 10, c, 0.5);
+    expect(m.count).toBe(6);
+    const corners = Array.from({ length: 6 }, (_, i) => [
+      m.data[i * CHART_STRIDE],
+      m.data[i * CHART_STRIDE + 1],
+    ]);
+    expect(corners).toEqual([
+      [0, 10],
+      [10, 0],
+      [20, 0],
+      [0, 10],
+      [20, 0],
+      [10, 10],
+    ]);
+    expect(m.data[7]).toBe(0.5);
+  });
+
+  it("skips invisible, non-finite and overflowing quads", () => {
+    const m = createChartMesh(8);
+    pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 0);
+    pushQuad(m, 0, 0, NaN, 0, 1, 1, 0, 1, c, 1);
+    expect(m.count).toBe(0);
+    pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 1);
+    pushQuad(m, 0, 0, 1, 0, 1, 1, 0, 1, c, 1);
+    expect(m.count).toBe(6);
   });
 });
 

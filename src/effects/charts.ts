@@ -525,6 +525,35 @@ export function pushRect(
   vertex(m, l, b, 0, SOLID, c, a);
 }
 
+/**
+ * A solid quad through (`x0`, `y0`), (`x1`, `y1`), (`x2`, `y2`), (`x3`, `y3`) in
+ * order round its edge, not snapped: for slanted faces, such as the top and side
+ * of a bar drawn in 3D. Its edges aren't antialiased.
+ */
+export function pushQuad(
+  m: ChartMesh,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  c: Rgb,
+  a: number,
+): void {
+  if (!(a > 0) || !room(m, 6) || !Number.isFinite(x0 + y0 + x1 + y1 + x2 + y2 + x3 + y3)) {
+    return;
+  }
+  vertex(m, x0, y0, 0, SOLID, c, a);
+  vertex(m, x1, y1, 0, SOLID, c, a);
+  vertex(m, x2, y2, 0, SOLID, c, a);
+  vertex(m, x0, y0, 0, SOLID, c, a);
+  vertex(m, x2, y2, 0, SOLID, c, a);
+  vertex(m, x3, y3, 0, SOLID, c, a);
+}
+
 /** Corner flags for `pushRoundRect`. */
 export const CORNER_TOP_LEFT = 1;
 export const CORNER_TOP_RIGHT = 2;
