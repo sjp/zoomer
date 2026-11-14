@@ -1,5 +1,6 @@
 import { aquariumMeta } from "./aquarium/aquarium.meta";
 import { auroraMeta } from "./aurora/aurora.meta";
+import { backroomsMeta } from "./backrooms/backrooms.meta";
 import { balloonsMeta } from "./balloons/balloons.meta";
 import { bambooMeta } from "./bamboo/bamboo.meta";
 import { beachMeta } from "./beach/beach.meta";
@@ -247,6 +248,7 @@ export const effects: readonly EffectEntry[] = [
   { ...standbyMeta, load: () => import("./standby/standby").then((m) => m.standby) },
   { ...geocitiesMeta, load: () => import("./geocities/geocities").then((m) => m.geocities) },
   { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
+  { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
