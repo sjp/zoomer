@@ -26,7 +26,9 @@ npm test         # vitest
 The control panel sits in the corner and fades out, with the cursor, after a few seconds
 without input. It has:
 
-- the effect picker and a short description of the effect;
+- the effect picker, whose list you can search, sort, narrow by category (Space, Calm,
+  Retro, Work and more; an effect can be in several) and star favourites in, and a short
+  description of the effect;
 - the effect's own parameters (sliders, colours, toggles and lists), and **Reset** to restore
   their defaults;
 - **Resolution**: fit the window (capped at 1080p), or a fixed 720p, 1080p or 4K canvas;
