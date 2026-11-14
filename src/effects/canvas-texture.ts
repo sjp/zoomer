@@ -106,7 +106,7 @@ const MAX_DIRTY = 48;
  * cleared with `clear`, then `flush` uploads just those areas (premultiplied).
  * Text layers and card atlases draw labels and sprites on one and sample it.
  */
-interface CanvasAtlas {
+export interface CanvasAtlas {
   /** Linear-filtered, clamped, premultiplied; one transparent texel until the first flush. */
   readonly texture: WebGLTexture;
   /**
