@@ -87,6 +87,58 @@ export function niceTicks(lo: number, hi: number, target: number, out: Ticks): T
   return out;
 }
 
+/** Fewest and most ticks `coverTicks` gives, and the count it prefers. */
+export const COVER_MIN_TICKS = 4;
+export const COVER_MAX_TICKS = 7;
+const COVER_PREFERRED = 5.5;
+
+/**
+ * Fills `out` with nice ticks that cover [`lo`, `hi`]: the first at or below
+ * `lo`, the last at or above `hi`, 4 to 7 in all, as tight around the range as
+ * those allow. For an axis that should end on a labelled value, such as a bar
+ * chart's. An empty range is widened by a tenth of its size (or by one at zero).
+ */
+export function coverTicks(lo: number, hi: number, out: Ticks): Ticks {
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+    out.first = 0;
+    out.step = 1;
+    out.count = 0;
+    out.decimals = 0;
+    return out;
+  }
+  let a = Math.min(lo, hi);
+  let b = Math.max(lo, hi);
+  if (!(b - a > Math.max(Math.abs(a), Math.abs(b)) * 1e-9)) {
+    const pad = Math.abs(a) > 0 ? Math.abs(a) * 0.1 : 1;
+    a -= pad;
+    b += pad;
+  }
+  const span = b - a;
+  const mag = 10 ** Math.floor(Math.log10(span / COVER_PREFERRED));
+  let bestScore = Infinity;
+  for (let e = -1; e <= 1; e++) {
+    for (const m of NICE_MANTISSAS) {
+      const step = m * mag * 10 ** e;
+      const i0 = Math.floor(a / step + 1e-9);
+      const i1 = Math.ceil(b / step - 1e-9);
+      const count = i1 - i0 + 1;
+      if (count < COVER_MIN_TICKS || count > COVER_MAX_TICKS) {
+        continue;
+      }
+      // Tightest cover first; between equals, nearest the preferred count.
+      const score = ((i1 - i0) * step) / span + 0.01 * Math.abs(count - COVER_PREFERRED);
+      if (score < bestScore) {
+        bestScore = score;
+        out.first = i0 * step + 0;
+        out.step = step;
+        out.count = count;
+      }
+    }
+  }
+  out.decimals = stepDecimals(out.step);
+  return out;
+}
+
 /** Tick `i` of `t`. */
 export const tickAt = (t: Ticks, i: number): number => t.first + i * t.step;
 

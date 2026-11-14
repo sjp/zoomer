@@ -33,6 +33,9 @@ import {
   pushRoundRect,
   CORNER_TOP_LEFT,
   CORNER_TOP_RIGHT,
+  COVER_MAX_TICKS,
+  COVER_MIN_TICKS,
+  coverTicks,
   rangeShiftPx,
   settleSlide,
   snapAxis,
@@ -130,6 +133,54 @@ describe("formatters", () => {
     expect(priceDecimals(123)).toBe(2);
     expect(priceDecimals(0.5)).toBe(3);
     expect(priceDecimals(0.05)).toBe(4);
+  });
+});
+
+describe("coverTicks", () => {
+  /** A deterministic spread of ranges: every size from tiny to huge, either side of zero. */
+  const ranges: [number, number][] = [];
+  for (let e = -7; e <= 9; e++) {
+    for (const f of [1, 1.3, 2.7, 4.9, 7.7]) {
+      const span = f * 10 ** e;
+      for (const centre of [0, span * 0.3, -span * 2.2, span * 17, -span * 400]) {
+        ranges.push([centre - span / 2, centre + span / 2]);
+      }
+    }
+  }
+
+  it("covers every range with 4 to 7 ticks", () => {
+    const t = createTicks();
+    for (const [lo, hi] of ranges) {
+      coverTicks(lo, hi, t);
+      const last = tickAt(t, t.count - 1);
+      const span = hi - lo;
+      expect(t.count).toBeGreaterThanOrEqual(COVER_MIN_TICKS);
+      expect(t.count).toBeLessThanOrEqual(COVER_MAX_TICKS);
+      expect(t.first).toBeLessThanOrEqual(lo + span * 1e-6);
+      expect(last).toBeGreaterThanOrEqual(hi - span * 1e-6);
+      // Not wastefully loose: the ticks span at most a few times the range.
+      expect(last - t.first).toBeLessThanOrEqual(span * 3);
+      // Every step is 1, 2, 2.5 or 5 times a power of ten.
+      const m = t.step / 10 ** Math.floor(Math.log10(t.step) + 1e-9);
+      expect([1, 2, 2.5, 5].some((n) => Math.abs(m - n) < 1e-6)).toBe(true);
+    }
+  });
+
+  it("ends a zero-based range on a nice value", () => {
+    const t = coverTicks(0, 87, createTicks());
+    expect(t.first).toBe(0);
+    expect(tickAt(t, t.count - 1)).toBe(100);
+    const n = coverTicks(-0.0042, 0.0013, createTicks());
+    expect(n.first).toBeCloseTo(-0.005, 12);
+    expect(n.decimals).toBeGreaterThanOrEqual(3);
+  });
+
+  it("widens an empty range, and gives nothing for an invalid one", () => {
+    const t = coverTicks(5, 5, createTicks());
+    expect(t.first).toBeLessThan(5);
+    expect(tickAt(t, t.count - 1)).toBeGreaterThan(5);
+    expect(coverTicks(0, 0, createTicks()).count).toBeGreaterThanOrEqual(COVER_MIN_TICKS);
+    expect(coverTicks(Number.NaN, 1, createTicks()).count).toBe(0);
   });
 });
 
