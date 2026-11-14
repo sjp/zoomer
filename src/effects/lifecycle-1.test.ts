@@ -1,3 +1,3 @@
 import { describeLifecycle } from "../test/lifecycle";
 
-await describeLifecycle("Cosy");
+await describeLifecycle(1);

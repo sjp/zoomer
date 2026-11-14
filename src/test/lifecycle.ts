@@ -5,22 +5,18 @@
  * every object deleted on dispose, the default framebuffer and FUNC_ADD left at
  * the end of each frame, and nothing leaked when `create` throws part-way.
  *
- * The effects are split by category across test files
- * (`src/effects/lifecycle-<category>.test.ts`), each calling `describeLifecycle`,
- * so Vitest runs them on separate workers instead of one file running every
- * effect in turn. `registry.test.ts` checks every category has its file.
+ * The effects are split across {@link LIFECYCLE_SHARDS} test files
+ * (`src/effects/lifecycle-<n>.test.ts`), each calling `describeLifecycle(n)`, so
+ * Vitest runs them on separate workers instead of one file running every effect in
+ * turn. An effect's shard is a hash of its id, so adding an effect never moves
+ * another. `registry.test.ts` checks every shard has its file.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createFakeGl, type FakeGl, type FakeGlOptions } from "./fake-gl";
 import { FakeOffscreenCanvas } from "./offscreen-canvas";
 import { paramSets } from "./param-sets";
 import { effects } from "../effects/registry";
-import type {
-  AnyParamValues,
-  EFFECT_CATEGORIES,
-  EffectDefinition,
-  Viewport,
-} from "../effects/types";
+import type { AnyParamValues, EffectDefinition, Viewport } from "../effects/types";
 
 const viewport = (width: number, height: number): Viewport => ({
   width,
@@ -91,21 +87,33 @@ function run(effect: EffectDefinition, options: FakeGlOptions = {}) {
  */
 const EFFECT_TIMEOUT = 60_000;
 
-type Category = (typeof EFFECT_CATEGORIES)[number];
+/** How many lifecycle test files the effects are spread over. */
+export const LIFECYCLE_SHARDS = 8;
 
-/** The file-name form of a category: "Sky & weather" runs in `lifecycle-sky-weather.test.ts`. */
-export function categorySlug(category: string): string {
-  return category
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+/**
+ * Effects pinned to a shard, by id, to even out a shard the hash left much slower
+ * than the rest. Empty while the hash balances well enough.
+ */
+const SHARD_OVERRIDES: ReadonlyMap<string, number> = new Map();
+
+/** The lifecycle shard an effect runs in: FNV-1a of its id, mod {@link LIFECYCLE_SHARDS}. */
+export function lifecycleShard(id: string): number {
+  const pinned = SHARD_OVERRIDES.get(id);
+  if (pinned !== undefined) {
+    return pinned;
+  }
+  let h = 0x811c9dc5;
+  for (const char of id) {
+    h = Math.imul(h ^ (char.codePointAt(0) ?? 0), 0x01000193);
+  }
+  return (h >>> 0) % LIFECYCLE_SHARDS;
 }
 
 /**
- * Registers the lifecycle tests for the effects in `category`, loading only those.
- * Each category has its own test file, so Vitest runs them on separate workers.
+ * Registers the lifecycle tests for the effects in `shard`, loading only those.
+ * Each shard has its own test file, so Vitest runs them on separate workers.
  */
-export async function describeLifecycle(category: Category): Promise<void> {
+export async function describeLifecycle(shard: number): Promise<void> {
   beforeAll(() => {
     vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
   });
@@ -114,7 +122,7 @@ export async function describeLifecycle(category: Category): Promise<void> {
   });
 
   const loaded = await Promise.all(
-    effects.filter((e) => e.categories[0] === category).map((e) => e.load()),
+    effects.filter((e) => lifecycleShard(e.id) === shard).map((e) => e.load()),
   );
   const cases = loaded.map((e) => [e.id, e] as const);
 

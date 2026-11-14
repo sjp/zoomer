@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaults, encodeHash, stateFromHash } from "./params";
-import { categorySlug } from "../test/lifecycle";
+import { LIFECYCLE_SHARDS, lifecycleShard } from "../test/lifecycle";
 import { defaultEffect, effects } from "./registry";
 import { EFFECT_CATEGORIES, EFFECT_COSTS } from "./types";
 
@@ -38,10 +38,34 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
 });
 
 describe("lifecycle tests", () => {
-  it("have a file for every category, so no effect goes unchecked", () => {
+  it("have a file for every shard, so no effect goes unchecked", () => {
     const files = Object.keys(import.meta.glob("./lifecycle-*.test.ts")).toSorted();
     expect(files).toEqual(
-      EFFECT_CATEGORIES.map((c) => `./lifecycle-${categorySlug(c)}.test.ts`).toSorted(),
+      Array.from(
+        { length: LIFECYCLE_SHARDS },
+        (_, n) => `./lifecycle-${String(n)}.test.ts`,
+      ).toSorted(),
     );
+  });
+
+  it("put every effect in exactly one shard", () => {
+    for (const entry of effects) {
+      const shard = lifecycleShard(entry.id);
+      expect(Number.isInteger(shard)).toBe(true);
+      expect(shard).toBeGreaterThanOrEqual(0);
+      expect(shard).toBeLessThan(LIFECYCLE_SHARDS);
+    }
+  });
+
+  it("spread the effects roughly evenly over the shards", () => {
+    const counts = Array.from({ length: LIFECYCLE_SHARDS }, () => 0);
+    for (const entry of effects) {
+      counts[lifecycleShard(entry.id)]++;
+    }
+    const mean = effects.length / LIFECYCLE_SHARDS;
+    for (const count of counts) {
+      expect(count).toBeGreaterThan(mean / 2);
+      expect(count).toBeLessThan(mean * 2);
+    }
   });
 });
