@@ -91,20 +91,33 @@ export interface EffectInstance<V> {
 }
 
 /**
- * The categories the effect list groups by, in display order. Add one only when
- * several effects need it. "Scenes" is for recreations of well-known kinds of set
- * or place, such as a starship bridge.
+ * The categories effects belong to, in display order, with related ones together.
+ * Each effect has one to three; the first is its primary category, which the
+ * "By category" sort groups by, and the picker's chips filter by any of them. Add a
+ * category only when at least four effects fit it. "Scenes" is for recreations of
+ * well-known kinds of set or place, such as a starship bridge; "Objects" for a single
+ * thing on show, such as an hourglass; "Work" for offices, studios and backdrops that
+ * suit a work call.
  */
 export const EFFECT_CATEGORIES = [
   "Space",
+  "Sci-fi",
+  "Night",
   "Sky & weather",
+  "Seasonal",
   "Water",
   "Nature",
+  "Calm",
   "Cosy",
+  "Objects",
+  "Scenes",
+  "Work",
   "Abstract",
+  "Geometric",
   "Science",
   "Retro",
-  "Scenes",
+  "Screensavers",
+  "Fun",
 ] as const;
 export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 

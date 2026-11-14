@@ -6,8 +6,8 @@ export const warpMeta = defineEffectMeta({
   id: "warp",
   name: "Warp Speed",
   description: "A starfield where stars stretch into streaks at faster-than-light speed.",
-  categories: ["Space"],
-  tags: ["sci-fi", "space travel", "spaceship", "lightspeed"],
+  categories: ["Space", "Sci-fi"],
+  tags: ["space travel", "spaceship", "lightspeed"],
   cost: "very low",
   context: "webgl2",
   params: {

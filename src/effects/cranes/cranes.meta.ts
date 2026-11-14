@@ -38,8 +38,8 @@ export const cranesMeta = defineEffectMeta({
     speed: { kind: "number", label: "Speed", min: 0, max: 2, step: 0.05, default: 1 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Cosy"],
-  tags: ["origami", "paper", "birds", "papercraft", "senbazuru", "japanese", "calm"],
+  categories: ["Cosy", "Calm"],
+  tags: ["origami", "paper", "birds", "papercraft", "senbazuru", "japanese"],
   cost: "very low",
   context: "webgl2",
 });

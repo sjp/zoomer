@@ -33,8 +33,8 @@ export const desertcampMeta = defineEffectMeta({
     sparks: { kind: "boolean", label: "Sparks", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  categories: ["Nature"],
-  tags: ["camping", "sahara", "wilderness", "galaxy", "bonfire", "stars", "night sky", "calm"],
+  categories: ["Nature", "Night", "Calm"],
+  tags: ["camping", "sahara", "wilderness", "galaxy", "bonfire", "stars", "night sky"],
   cost: "low",
   context: "webgl2",
 });

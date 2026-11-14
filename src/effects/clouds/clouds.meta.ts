@@ -20,7 +20,7 @@ export const cloudsMeta = defineEffectMeta({
     layers: { kind: "number", label: "Layers", min: 1, max: 2, step: 1, default: 2 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Sky & weather"],
+  categories: ["Sky & weather", "Calm"],
   tags: ["timelapse", "sunset", "weather", "cloudscape"],
   cost: "medium",
   context: "webgl2",

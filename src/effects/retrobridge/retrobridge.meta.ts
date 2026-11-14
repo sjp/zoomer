@@ -32,8 +32,8 @@ export const retrobridgeMeta = defineEffectMeta({
     door: { kind: "select", label: "Lift door", options: DOOR_OPTIONS, default: "right" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Scenes"],
-  tags: ["retro", "sci-fi", "starship", "1960s", "space", "captain", "spaceship", "command"],
+  categories: ["Scenes", "Sci-fi", "Retro"],
+  tags: ["starship", "1960s", "space", "captain", "spaceship", "command"],
   cost: "low",
   context: "webgl2",
 });

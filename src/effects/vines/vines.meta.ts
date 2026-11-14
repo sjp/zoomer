@@ -49,7 +49,7 @@ export const vinesMeta = defineEffectMeta({
     },
     background: { kind: "color", label: "Wall colour", default: "#d8cdb9" },
   },
-  categories: ["Nature"],
+  categories: ["Nature", "Calm"],
   tags: ["plants", "ivy", "flowers", "garden", "growth"],
   cost: "low",
   context: "webgl2",

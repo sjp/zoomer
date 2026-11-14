@@ -47,8 +47,8 @@ export const moireMeta = defineEffectMeta({
     palette: { kind: "select", label: "Palette", options: PALETTE_OPTIONS, default: "paper" },
     contrast: { kind: "number", label: "Contrast", min: 0, max: 1, step: 0.01, default: 0.35 },
   },
-  categories: ["Abstract"],
-  tags: ["op art", "interference", "optical illusion", "geometric", "pattern", "minimal"],
+  categories: ["Abstract", "Geometric"],
+  tags: ["op art", "interference", "optical illusion", "pattern", "minimal"],
   cost: "very low",
   context: "webgl2",
 });

@@ -23,8 +23,8 @@ export const candlelightMeta = defineEffectMeta({
     glow: { kind: "number", label: "Glow", min: 0, max: 1, step: 0.01, default: 0.6 },
     reflection: { kind: "boolean", label: "Reflections", default: true },
   },
-  categories: ["Cosy"],
-  tags: ["romantic", "candlelit", "cosy"],
+  categories: ["Cosy", "Night"],
+  tags: ["romantic", "candlelit"],
   cost: "very low",
   context: "webgl2",
 });

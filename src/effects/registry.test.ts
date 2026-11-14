@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaults, encodeHash, stateFromHash } from "./params";
+import { normalizeText } from "./list";
 import { LIFECYCLE_SHARDS, lifecycleShard } from "../test/lifecycle";
 import { defaultEffect, effects } from "./registry";
 import { EFFECT_CATEGORIES, EFFECT_COSTS } from "./types";
@@ -23,6 +24,7 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
   });
 
   it("has one to three categories, a cost and lowercase search tags", () => {
+    const categoryWords = entry.categories.map(normalizeText);
     expect(entry.categories.length).toBeGreaterThanOrEqual(1);
     expect(entry.categories.length).toBeLessThanOrEqual(3);
     expect(new Set(entry.categories).size).toBe(entry.categories.length);
@@ -33,7 +35,16 @@ describe.each(effects.map((e) => [e.id, e] as const))("%s", (_, entry) => {
     expect(entry.tags.length).toBeGreaterThan(0);
     for (const tag of entry.tags) {
       expect(tag).toMatch(/^[a-z0-9][a-z0-9 '-]*$/);
+      // A category already matches in search, so repeating it as a tag adds nothing.
+      expect(categoryWords).not.toContain(normalizeText(tag));
     }
+  });
+});
+
+describe("categories", () => {
+  it.each(EFFECT_CATEGORIES.map((c) => [c]))("%s has at least four effects", (category) => {
+    const count = effects.filter((e) => e.categories.includes(category)).length;
+    expect(count).toBeGreaterThanOrEqual(4);
   });
 });
 

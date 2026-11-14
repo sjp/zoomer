@@ -43,7 +43,7 @@ export const gearsMeta = defineEffectMeta({
     },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 12 },
   },
-  categories: ["Retro"],
+  categories: ["Retro", "Objects"],
   tags: ["clock", "cogs", "mechanism", "steampunk", "watch", "machinery", "copper", "workshop"],
   cost: "very low",
   context: "webgl2",

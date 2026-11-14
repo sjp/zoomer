@@ -22,8 +22,8 @@ export const smokeMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#1a1311" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Cosy"],
-  tags: ["steam", "calm", "meditation", "zen"],
+  categories: ["Cosy", "Calm"],
+  tags: ["steam", "meditation", "zen"],
   cost: "medium",
   context: "webgl2",
 });

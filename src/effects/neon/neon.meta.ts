@@ -45,7 +45,7 @@ export const neonMeta = defineEffectMeta({
     },
     shimmer: { kind: "number", label: "Shimmer", min: 0, max: 1, step: 0.05, default: 0.5 },
   },
-  categories: ["Retro"],
+  categories: ["Retro", "Night"],
   tags: ["lettering", "name", "message", "custom text", "on air", "bar", "pub", "studio"],
   cost: "very low",
   context: "webgl2",

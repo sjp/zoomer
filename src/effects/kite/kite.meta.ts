@@ -31,7 +31,7 @@ export const kiteMeta = defineEffectMeta({
     corner: { kind: "select", label: "Corner", options: CORNER_OPTIONS, default: "right" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Sky & weather"],
+  categories: ["Sky & weather", "Fun"],
   tags: ["kite flying", "summer", "windy", "cheerful", "outdoors", "park"],
   cost: "very low",
   context: "webgl2",

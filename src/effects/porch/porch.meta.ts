@@ -21,8 +21,8 @@ export const porchMeta = defineEffectMeta({
     splashes: { kind: "boolean", label: "Splashes", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  categories: ["Cosy"],
-  tags: ["night", "storm", "shower", "lantern", "veranda", "garden", "moody", "calm", "rainy"],
+  categories: ["Cosy", "Night", "Sky & weather"],
+  tags: ["storm", "shower", "lantern", "veranda", "garden", "moody", "calm", "rainy"],
   cost: "very low",
   context: "webgl2",
 });

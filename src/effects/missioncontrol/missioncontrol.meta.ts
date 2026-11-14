@@ -43,8 +43,8 @@ export const missioncontrolMeta = defineEffectMeta({
     clock: { kind: "select", label: "Big clock", options: CLOCK_OPTIONS, default: "mission" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Scenes"],
-  tags: ["space race", "nasa-era", "launch", "control room", "retro", "rocket", "orbit", "1960s"],
+  categories: ["Scenes", "Space", "Retro"],
+  tags: ["space race", "nasa-era", "launch", "control room", "rocket", "orbit", "1960s"],
   cost: "low",
   context: "webgl2",
 });

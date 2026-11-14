@@ -47,8 +47,8 @@ export const plasmaMeta = defineEffectMeta({
     },
     corner: { kind: "select", label: "Corner", options: CORNER_OPTIONS, default: "right" },
   },
-  categories: ["Science"],
-  tags: ["electricity", "lightning", "tesla", "novelty", "lamp", "neon", "glow", "retro"],
+  categories: ["Science", "Objects", "Retro"],
+  tags: ["electricity", "lightning", "tesla", "novelty", "lamp", "neon", "glow"],
   cost: "very low",
   context: "webgl2",
 });

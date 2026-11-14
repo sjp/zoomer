@@ -39,8 +39,8 @@ export const meteorsMeta = defineEffectMeta({
     ground: { kind: "select", label: "Ground", options: GROUND_OPTIONS, default: "trees" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  categories: ["Space"],
-  tags: ["perseids", "shooting stars", "night sky", "stars", "astronomy", "camping", "calm"],
+  categories: ["Space", "Night", "Calm"],
+  tags: ["perseids", "shooting stars", "night sky", "stars", "astronomy", "camping"],
   cost: "very low",
   context: "webgl2",
 });

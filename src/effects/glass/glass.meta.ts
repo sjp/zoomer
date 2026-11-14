@@ -40,7 +40,7 @@ export const glassMeta = defineEffectMeta({
     light: { kind: "number", label: "Sunlight", min: 0, max: 1, step: 0.01, default: 0.6 },
     texture: { kind: "number", label: "Glass texture", min: 0, max: 1, step: 0.01, default: 0.5 },
   },
-  categories: ["Abstract"],
+  categories: ["Abstract", "Geometric"],
   tags: ["church", "mosaic", "colourful", "cathedral"],
   cost: "low",
   context: "webgl2",

@@ -40,8 +40,8 @@ export const coralMeta = defineEffectMeta({
     caustics: { kind: "boolean", label: "Caustic light", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  categories: ["Water"],
-  tags: ["ocean", "underwater", "reef", "sea", "tropical", "diving", "calm", "nature"],
+  categories: ["Water", "Nature"],
+  tags: ["ocean", "underwater", "reef", "sea", "tropical", "diving", "calm"],
   cost: "low",
   context: "webgl2",
 });

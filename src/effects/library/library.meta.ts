@@ -33,7 +33,7 @@ export const libraryMeta = defineEffectMeta({
     blur: { kind: "number", label: "Blur", min: 0, max: 1, step: 0.01, default: 0.6 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Calm"],
   tags: ["books", "bookcase", "study", "reading", "sunlight", "bokeh", "academia"],
   cost: "very low",
   context: "webgl2",

@@ -36,7 +36,7 @@ export const blindsMeta = defineEffectMeta({
     plaster: { kind: "number", label: "Plaster texture", min: 0, max: 1, step: 0.01, default: 0.3 },
     sunDrift: { kind: "boolean", label: "Sun drift", default: true },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Calm", "Work"],
   tags: ["sunlight", "shadows", "window", "office"],
   cost: "very low",
   context: "webgl2",

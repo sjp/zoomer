@@ -29,7 +29,7 @@ export const globeMeta = defineEffectMeta({
     flakes: { kind: "number", label: "Flakes", min: 50, max: MAX_FLAKES, step: 10, default: 300 },
     size: { kind: "number", label: "Size", min: 0.7, max: 1.2, step: 0.05, default: 1 },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Objects", "Seasonal"],
   tags: ["winter", "christmas", "holiday", "ornament", "village", "cabin", "lighthouse", "festive"],
   cost: "very low",
   context: "webgl2",

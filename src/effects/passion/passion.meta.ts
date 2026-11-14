@@ -47,7 +47,7 @@ export const passionMeta = defineEffectMeta({
     motion: { kind: "number", label: "Motion", min: 0, max: 1, step: 0.05, default: 1 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Retro"],
+  categories: ["Fun", "Retro"],
   tags: [
     "meme",
     "clip art",

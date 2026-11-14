@@ -21,8 +21,8 @@ export const noirMeta = defineEffectMeta({
     search: { kind: "boolean", label: "Searchlight", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Scenes"],
-  tags: ["cyberpunk", "rain", "neon", "city", "night", "sci-fi", "film noir", "skyscrapers"],
+  categories: ["Scenes", "Night", "Sci-fi"],
+  tags: ["cyberpunk", "rain", "neon", "city", "film noir", "skyscrapers"],
   cost: "medium",
   context: "webgl2",
 });

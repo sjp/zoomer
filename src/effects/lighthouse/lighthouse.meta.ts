@@ -41,8 +41,8 @@ export const lighthouseMeta = defineEffectMeta({
     stars: { kind: "boolean", label: "Stars", default: true },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Water"],
-  tags: ["coast", "beacon", "mist", "maritime", "harbour", "calm"],
+  categories: ["Water", "Night", "Calm"],
+  tags: ["coast", "beacon", "mist", "maritime", "harbour"],
   cost: "low",
   context: "webgl2",
 });

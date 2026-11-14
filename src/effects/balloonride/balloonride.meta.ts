@@ -45,7 +45,7 @@ export const balloonrideMeta = defineEffectMeta({
     },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Scenes"],
+  categories: ["Scenes", "Sky & weather"],
   tags: [
     "flight",
     "countryside",

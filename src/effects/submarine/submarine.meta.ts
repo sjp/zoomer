@@ -30,7 +30,7 @@ export const submarineMeta = defineEffectMeta({
     side: { kind: "select", label: "Gauges", options: SIDE_OPTIONS, default: "left" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 5 },
   },
-  categories: ["Scenes"],
+  categories: ["Scenes", "Water"],
   tags: ["steampunk", "deep sea", "ocean", "nautical", "brass", "underwater", "victorian"],
   cost: "low",
   context: "webgl2",

@@ -36,7 +36,7 @@ export const cloudseaMeta = defineEffectMeta({
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 3 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Sky & weather"],
+  categories: ["Sky & weather", "Calm"],
   tags: ["alpine", "sunrise", "summit", "inversion", "peaceful", "morning"],
   cost: "medium",
   context: "webgl2",

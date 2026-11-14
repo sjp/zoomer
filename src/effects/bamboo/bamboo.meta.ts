@@ -24,8 +24,8 @@ export const bambooMeta = defineEffectMeta({
     opening: { kind: "select", label: "Opening", options: OPENING_OPTIONS, default: "centre" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 9 },
   },
-  categories: ["Nature"],
-  tags: ["forest", "japan", "zen", "trees", "green", "calm", "arashiyama"],
+  categories: ["Nature", "Calm"],
+  tags: ["forest", "japan", "zen", "trees", "green", "arashiyama"],
   cost: "low",
   context: "webgl2",
 });

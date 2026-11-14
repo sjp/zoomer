@@ -34,7 +34,7 @@ export const splitflapMeta = defineEffectMeta({
     style: { kind: "select", label: "Style", options: SPLITFLAP_STYLE_OPTIONS, default: "station" },
     rows: { kind: "number", label: "Rows", min: 2, max: MAX_ROWS, step: 1, default: 4 },
   },
-  categories: ["Retro"],
+  categories: ["Retro", "Work"],
   tags: ["solari", "departures", "station", "airport", "railway", "sign", "message", "status"],
   cost: "very low",
   context: "webgl2",

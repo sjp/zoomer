@@ -6,7 +6,7 @@ export const seaMeta = defineEffectMeta({
   name: "Calm Sea at Dusk",
   description:
     "A gentle swell rolling in under a dusk sky, with a soft glitter path beneath a low sun or the moon.",
-  categories: ["Water"],
+  categories: ["Water", "Calm"],
   tags: ["ocean", "waves", "sunset"],
   cost: "medium",
   context: "webgl2",

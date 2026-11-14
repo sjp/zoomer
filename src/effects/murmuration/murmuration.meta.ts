@@ -36,7 +36,7 @@ export const murmurationMeta = defineEffectMeta({
     horizon: { kind: "select", label: "Horizon", options: HORIZON_OPTIONS, default: "reeds" },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "high" },
   },
-  categories: ["Nature"],
+  categories: ["Nature", "Sky & weather"],
   tags: ["birds", "flock", "boids", "swarm", "sunset", "evening", "wildlife", "emergent"],
   cost: "low",
   context: "webgl2",

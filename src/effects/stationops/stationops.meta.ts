@@ -34,8 +34,8 @@ export const stationopsMeta = defineEffectMeta({
     lighting: { kind: "select", label: "Lighting", options: LIGHTING_OPTIONS, default: "normal" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 9 },
   },
-  categories: ["Scenes"],
-  tags: ["space station", "sci-fi", "operations", "starbase", "wormhole", "docking", "command"],
+  categories: ["Scenes", "Sci-fi", "Space"],
+  tags: ["space station", "operations", "starbase", "wormhole", "docking", "command"],
   cost: "low",
   context: "webgl2",
 });

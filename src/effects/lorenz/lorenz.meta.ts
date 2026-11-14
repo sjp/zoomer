@@ -27,7 +27,7 @@ export const lorenzMeta = defineEffectMeta({
   name: "Lorenz Attractor",
   description:
     "Tens of thousands of glowing particles stream around the butterfly wings of a chaotic attractor as the camera slowly circles it.",
-  categories: ["Science"],
+  categories: ["Science", "Abstract"],
   tags: ["chaos", "butterfly effect", "strange attractor", "maths", "aizawa", "thomas"],
   cost: "low",
   context: "webgl2",

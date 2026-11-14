@@ -35,7 +35,7 @@ export const radiostudioMeta = defineEffectMeta({
     mic: { kind: "select", label: "Microphone", options: MIC_OPTIONS, default: "left" },
     clock: { kind: "boolean", label: "Studio clock (local time)", default: true },
   },
-  categories: ["Scenes"],
+  categories: ["Scenes", "Work", "Cosy"],
   tags: ["podcast", "broadcast", "dj", "streaming", "music", "presenter", "vinyl", "recording"],
   cost: "very low",
   context: "webgl2",

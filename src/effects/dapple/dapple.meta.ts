@@ -39,7 +39,7 @@ export const dappleMeta = defineEffectMeta({
     windowFrame: { kind: "boolean", label: "Window frame", default: false },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Nature"],
+  categories: ["Nature", "Calm"],
   tags: ["trees", "shadows", "komorebi"],
   cost: "very low",
   context: "webgl2",

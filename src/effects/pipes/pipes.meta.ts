@@ -47,8 +47,8 @@ export const pipesMeta = defineEffectMeta({
     orbit: { kind: "boolean", label: "Slow camera orbit", default: false },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Retro"],
-  tags: ["screensaver", "windows", "plumbing", "maze", "90s", "opengl", "tubes", "nostalgia"],
+  categories: ["Screensavers", "Retro", "Geometric"],
+  tags: ["windows", "plumbing", "maze", "90s", "opengl", "tubes", "nostalgia"],
   cost: "low",
   context: "webgl2",
 });

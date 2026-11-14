@@ -16,7 +16,7 @@ export const beziersMeta = defineEffectMeta({
   name: "Béziers",
   description:
     "The classic Windows screensaver: closed loops of smooth curves whose control points bounce around a black screen, each trailing a ribbon of echoes as its colour drifts through the spectrum.",
-  categories: ["Retro"],
+  categories: ["Screensavers", "Retro", "Geometric"],
   tags: ["lines", "90s", "nostalgia", "vector", "rainbow", "bezier", "splines"],
   cost: "very low",
   context: "webgl2",

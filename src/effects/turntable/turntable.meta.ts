@@ -39,8 +39,8 @@ export const turntableMeta = defineEffectMeta({
     plinth: { kind: "select", label: "Plinth", options: PLINTH_OPTIONS, default: "walnut" },
     room: { kind: "select", label: "Room", options: ROOM_OPTIONS, default: "lamp" },
   },
-  categories: ["Cosy"],
-  tags: ["vinyl", "turntable", "music", "lp", "hi-fi", "retro", "living room", "jazz"],
+  categories: ["Cosy", "Objects", "Retro"],
+  tags: ["vinyl", "turntable", "music", "lp", "hi-fi", "living room", "jazz"],
   cost: "very low",
   context: "webgl2",
 });

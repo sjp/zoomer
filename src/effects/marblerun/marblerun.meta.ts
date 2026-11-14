@@ -29,7 +29,7 @@ export const marblerunMeta = defineEffectMeta({
     side: { kind: "select", label: "Side", options: SIDE_OPTIONS, default: "right" },
     glass: { kind: "select", label: "Glass", options: GLASS_OPTIONS, default: "mixed" },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Objects", "Fun"],
   tags: ["toy", "playroom", "kinetic", "rollercoaster", "mechanical", "satisfying", "beech"],
   cost: "very low",
   context: "webgl2",

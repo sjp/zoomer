@@ -24,7 +24,7 @@ export const lavaMeta = defineEffectMeta({
     sky: { kind: "select", label: "Sky", options: SKY_OPTIONS, default: "night" },
     camera: { kind: "select", label: "Camera", options: CAMERA_OPTIONS, default: "low" },
   },
-  categories: ["Nature"],
+  categories: ["Nature", "Night"],
   tags: ["volcano", "magma", "volcanic", "embers", "glow", "iceland", "hawaii", "warm"],
   cost: "low",
   context: "webgl2",

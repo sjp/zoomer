@@ -63,7 +63,7 @@ export const cradleMeta = defineEffectMeta({
       default: 1,
     },
   },
-  categories: ["Science"],
+  categories: ["Science", "Objects"],
   tags: [
     "physics",
     "momentum",

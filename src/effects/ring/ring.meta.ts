@@ -36,8 +36,8 @@ export const ringMeta = defineEffectMeta({
     accent: { kind: "color", label: "Seat colour", default: "#c8102e" },
     windows: { kind: "select", label: "Windows", options: WINDOW_OPTIONS, default: "right" },
   },
-  categories: ["Scenes"],
-  tags: ["space station", "orbit", "retro-futurist", "corridor", "1960s", "sci-fi", "earth"],
+  categories: ["Scenes", "Sci-fi", "Space"],
+  tags: ["space station", "orbit", "retro-futurist", "corridor", "1960s", "earth"],
   cost: "low",
   context: "webgl2",
 });

@@ -5,8 +5,8 @@ export const ripplesMeta = defineEffectMeta({
   id: "ripples",
   name: "Pond Ripples",
   description: "Rain drops on dark, still water, sending soft rings through the reflected sky.",
-  categories: ["Water"],
-  tags: ["lake", "calm", "raindrops", "puddle"],
+  categories: ["Water", "Calm"],
+  tags: ["lake", "raindrops", "puddle"],
   cost: "medium",
   context: "webgl2",
   params: {

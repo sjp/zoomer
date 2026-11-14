@@ -53,7 +53,7 @@ export const papercutMeta = defineEffectMeta({
     motion: { kind: "number", label: "Motion", min: 0, max: 1, step: 0.01, default: 0.5 },
     texture: { kind: "number", label: "Paper texture", min: 0, max: 1, step: 0.01, default: 0.5 },
   },
-  categories: ["Nature"],
+  categories: ["Nature", "Calm"],
   tags: ["papercraft", "diorama", "craft"],
   cost: "low",
   context: "webgl2",

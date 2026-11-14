@@ -34,7 +34,7 @@ export const mugMeta = defineEffectMeta({
     draft: { kind: "number", label: "Draft", min: 0, max: 1, step: 0.05, default: 0.35 },
     room: { kind: "select", label: "Room", options: ROOM_OPTIONS, default: "wall" },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Objects"],
   tags: ["tea", "coffee", "cup", "hot drink", "cafe", "kitchen", "morning"],
   cost: "low",
   context: "webgl2",

@@ -7,7 +7,7 @@ export const causticsMeta = defineEffectMeta({
   name: "Underwater Caustics",
   description:
     "Rippling networks of light on a pool floor, or deep water with god rays and rising bubbles.",
-  categories: ["Water"],
+  categories: ["Water", "Calm"],
   tags: ["swimming", "sea", "ocean", "reflections"],
   cost: "low",
   context: "webgl2",

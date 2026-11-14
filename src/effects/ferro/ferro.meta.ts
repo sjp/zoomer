@@ -52,7 +52,7 @@ export const ferroMeta = defineEffectMeta({
       default: "high",
     },
   },
-  categories: ["Science"],
+  categories: ["Science", "Objects"],
   tags: ["magnet", "rosensweig", "physics", "liquid metal", "hypnotic", "studio"],
   cost: "medium",
   context: "webgl2",

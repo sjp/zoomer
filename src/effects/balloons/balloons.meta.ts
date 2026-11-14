@@ -38,7 +38,7 @@ export const balloonsMeta = defineEffectMeta({
     light: { kind: "select", label: "Light", options: LIGHT_OPTIONS, default: "morning" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Sky & weather"],
+  categories: ["Sky & weather", "Fun"],
   tags: ["ballooning", "countryside", "cheerful", "flight", "festival", "landscape"],
   cost: "very low",
   context: "webgl2",

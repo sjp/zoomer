@@ -41,7 +41,7 @@ export const orbitsMeta = defineEffectMeta({
     centre: { kind: "select", label: "Centre", options: CENTRE_OPTIONS, default: "right" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 4 },
   },
-  categories: ["Space"],
+  categories: ["Space", "Science"],
   tags: ["orrery", "solar system", "astronomy", "kepler", "moons", "binary star"],
   cost: "very low",
   context: "webgl2",

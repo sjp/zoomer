@@ -48,8 +48,8 @@ export const quasiMeta = defineEffectMeta({
     contrast: { kind: "number", label: "Contrast", min: 0, max: 1, step: 0.01, default: 0.45 },
     centre: { kind: "select", label: "Centre", options: CENTRE_OPTIONS, default: "offcentre" },
   },
-  categories: ["Abstract"],
-  tags: ["penrose", "interference", "symmetry", "mandala", "geometric", "pattern", "math"],
+  categories: ["Abstract", "Geometric"],
+  tags: ["penrose", "interference", "symmetry", "mandala", "pattern", "math"],
   cost: "very low",
   context: "webgl2",
 });

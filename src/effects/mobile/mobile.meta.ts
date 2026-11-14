@@ -37,7 +37,7 @@ export const mobileMeta = defineEffectMeta({
     side: { kind: "select", label: "Hanging", options: SIDE_OPTIONS, default: "right" },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 7 },
   },
-  categories: ["Abstract"],
+  categories: ["Abstract", "Objects"],
   tags: ["calder", "kinetic", "sculpture", "mid-century", "modern art", "balance", "minimal"],
   cost: "very low",
   context: "webgl2",

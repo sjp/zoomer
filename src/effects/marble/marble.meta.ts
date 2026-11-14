@@ -34,7 +34,7 @@ export const marbleMeta = defineEffectMeta({
     scale: { kind: "number", label: "Pattern scale", min: 0.5, max: 2, step: 0.05, default: 1 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 11 },
   },
-  categories: ["Abstract"],
+  categories: ["Abstract", "Calm"],
   tags: ["marbling", "ebru", "paper", "paint", "swirl", "art", "craft", "suminagashi"],
   cost: "low",
   context: "webgl2",

@@ -63,8 +63,8 @@ export const bouncingLogoMeta = defineEffectMeta({
     background: { kind: "color", label: "Background", default: "#000000" },
     seed: { kind: "number", label: "Variation", min: 0, max: 99, step: 1, default: 0 },
   },
-  categories: ["Retro"],
-  tags: ["dvd", "screensaver", "corner", "idle", "nostalgia", "bounce", "tv", "video"],
+  categories: ["Screensavers", "Retro", "Fun"],
+  tags: ["dvd", "corner", "idle", "nostalgia", "bounce", "tv", "video"],
   cost: "very low",
   context: "webgl2",
 });

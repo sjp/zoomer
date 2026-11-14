@@ -44,7 +44,7 @@ export const snowWindowMeta = defineEffectMeta({
     warmth: { kind: "number", label: "Room light", min: 0, max: 1, step: 0.01, default: 0.6 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 4 },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Seasonal", "Sky & weather"],
   tags: ["winter", "christmas", "evening", "cabin", "pines", "hygge", "cold", "condensation"],
   cost: "low",
   context: "webgl2",

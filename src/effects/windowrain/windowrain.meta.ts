@@ -25,7 +25,7 @@ export const windowRainMeta = defineEffectMeta({
     fog: { kind: "boolean", label: "Fogged glass", default: false },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Sky & weather"],
+  categories: ["Sky & weather", "Night", "Cosy"],
   tags: ["rainy day", "glass", "storm", "bokeh"],
   cost: "medium",
   context: "webgl2",

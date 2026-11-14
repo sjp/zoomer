@@ -19,8 +19,8 @@ export const lunarlanderMeta = defineEffectMeta({
     ascent: { kind: "boolean", label: "Lift off every half hour", default: false },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 11 },
   },
-  categories: ["Scenes"],
-  tags: ["moon", "apollo-era", "space race", "astronaut", "retro", "1960s", "lunar surface"],
+  categories: ["Scenes", "Space", "Retro"],
+  tags: ["moon", "apollo-era", "space race", "astronaut", "1960s", "lunar surface"],
   cost: "very low",
   context: "webgl2",
 });

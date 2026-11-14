@@ -52,7 +52,7 @@ export const pendulumMeta = defineEffectMeta({
     finish: { kind: "select", label: "Finish", options: FINISH_OPTIONS, default: "chrome" },
     placement: { kind: "select", label: "Placement", options: PLACEMENT_OPTIONS, default: "top" },
   },
-  categories: ["Science"],
+  categories: ["Science", "Objects"],
   tags: ["physics", "harmonic", "oscillation", "demonstration", "kinetic", "desk toy", "snake"],
   cost: "very low",
   context: "webgl2",

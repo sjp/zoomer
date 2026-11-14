@@ -27,7 +27,7 @@ export const physarumMeta = defineEffectMeta({
     food: { kind: "boolean", label: "Drifting food sources", default: true },
     calmCentre: { kind: "boolean", label: "Calm centre", default: true },
   },
-  categories: ["Science"],
+  categories: ["Science", "Abstract"],
   tags: ["biology", "simulation", "organic", "veins", "mycelium", "fungus"],
   cost: "medium",
   context: "webgl2",

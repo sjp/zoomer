@@ -43,7 +43,7 @@ export const jellyfishMeta = defineEffectMeta({
     },
     water: { kind: "color", label: "Water colour", default: "#0a2c52" },
   },
-  categories: ["Water"],
+  categories: ["Water", "Nature", "Calm"],
   tags: ["ocean", "sea", "deep sea", "aquarium", "creatures"],
   cost: "low",
   context: "webgl2",

@@ -37,7 +37,7 @@ export const fairylightsMeta = defineEffectMeta({
     focus: { kind: "number", label: "Background blur", min: 0, max: 1, step: 0.01, default: 0.7 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 12 },
   },
-  categories: ["Cosy"],
+  categories: ["Cosy", "Seasonal", "Night"],
   tags: ["christmas", "festive", "string lights", "garland", "party", "bokeh", "holiday"],
   cost: "very low",
   context: "webgl2",

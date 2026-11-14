@@ -62,7 +62,7 @@ export const mandelMeta = defineEffectMeta({
     dim: { kind: "number", label: "Centre dimming", min: 0, max: 1, step: 0.05, default: 0.35 },
     quality: { kind: "select", label: "Quality", options: QUALITY_OPTIONS, default: "balanced" },
   },
-  categories: ["Abstract"],
+  categories: ["Abstract", "Geometric"],
   tags: ["fractal", "mandelbrot", "infinite", "math", "seahorse", "spiral", "psychedelic"],
   cost: "medium",
   context: "webgl2",
