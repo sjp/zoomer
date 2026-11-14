@@ -137,6 +137,7 @@ import { windfarmMeta } from "./windfarm/windfarm.meta";
 import { windowRainMeta } from "./windowrain/windowrain.meta";
 import { zenMeta } from "./zen/zen.meta";
 import { createEffectLoader, type EffectEntry } from "./loader";
+import { standbyMeta } from "./standby/standby.meta";
 
 /**
  * Add new effects here; the UI picks them up automatically. Only the metadata is
@@ -241,6 +242,7 @@ export const effects: readonly EffectEntry[] = [
   { ...mystifyMeta, load: () => import("./mystify/mystify").then((m) => m.mystify) },
   { ...beziersMeta, load: () => import("./beziers/beziers").then((m) => m.beziers) },
   { ...passionMeta, load: () => import("./passion/passion").then((m) => m.passion) },
+  { ...standbyMeta, load: () => import("./standby/standby").then((m) => m.standby) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
