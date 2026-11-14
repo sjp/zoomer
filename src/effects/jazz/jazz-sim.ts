@@ -85,14 +85,27 @@ const GONE = 3;
 
 /** Paint-schedule timings at rate 1, seconds. */
 const PAINT_IN = 1.6;
-const FADE_OUT = 1.0;
+const UNPAINT = 1.2;
 const POP_IN = 0.45;
 const SHRINK = 0.4;
 /** Between one element leaving and its replacement starting. */
 const SPAWN_DELAY = 0.6;
-/** The gap between changes, at rate 1. */
-const EVENT_MIN = 4;
-const EVENT_MAX = 6;
+/**
+ * The pause after one change finishes before the next starts, at rate 1. With
+ * the change itself (a few seconds for a stroke) one element swaps every 4-7 s,
+ * and something is painting most of the time.
+ */
+const EVENT_MIN = 1.5;
+/** The first change comes sooner, so the painting shows straight away. */
+const FIRST_EVENT_MIN = 1.2;
+const FIRST_EVENT_MAX = 2.2;
+/**
+ * How likely each group is to be the next to change (swash, squiggle, shape,
+ * splatter, confetti). Strokes painting on and off are the show; confetti is
+ * most of the elements, so an even pick would mostly swap a tiny bit.
+ */
+const GROUP_PICK = [0.45, 0.33, 0.1, 0.04, 0.08];
+const EVENT_MAX = 3;
 /** Param changes crossfade over this long, seconds. */
 const CROSSFADE = 1;
 /** Toggled groups fade over this long, seconds. */
@@ -215,6 +228,11 @@ export interface Pose {
   y: number;
   angle: number;
   pop: number;
+  /**
+   * How much of a stroke shows: below 1, painted from the start up to that share
+   * of its length; 1, all of it; above 1, un-painted from the start up to
+   * `reveal - 1` of its length.
+   */
   reveal: number;
   alpha: number;
 }
@@ -656,7 +674,7 @@ function buildScene(jazz: Jazz, seed: number, k: number, uniform: boolean): Scen
       }
     }
   }
-  scene.nextEvent = range(scene.rng, EVENT_MIN, EVENT_MAX);
+  scene.nextEvent = range(scene.rng, FIRST_EVENT_MIN, FIRST_EVENT_MAX);
   return scene;
 }
 
@@ -707,19 +725,16 @@ const seedOf = (p: JazzParams) => (Number.isFinite(p.seed) ? Math.round(p.seed) 
 
 /** The extent a transition moves an element's edge or tip over, ref px per unit progress. */
 function travel(el: Element): number {
-  if (el.half > 0 && el.state === ENTERING) {
-    return 2 * el.half * SMOOTH_SLOPE;
-  }
   if (el.half > 0) {
-    // Strokes leave by fading: nothing moves.
-    return 0;
+    // The paint-on or un-paint cut-off runs the stroke's length.
+    return 2 * el.half * SMOOTH_SLOPE;
   }
   return el.radius * (el.state === ENTERING ? POP_SLOPE : SMOOTH_SLOPE);
 }
 
 function duration(el: Element): number {
   if (el.half > 0) {
-    return el.state === ENTERING ? PAINT_IN : FADE_OUT;
+    return el.state === ENTERING ? PAINT_IN : UNPAINT;
   }
   return el.state === ENTERING ? POP_IN : SHRINK;
 }
@@ -777,8 +792,12 @@ function stepScene(
   if (p.animation !== "paint" || rate <= 0) {
     return;
   }
+  // The pause only counts once nothing is changing.
+  if (moving > 0) {
+    return;
+  }
   scene.clock += dTau;
-  if (scene.clock < scene.nextEvent || moving > 0) {
+  if (scene.clock < scene.nextEvent) {
     return;
   }
   scene.nextEvent = scene.clock + range(scene.rng, EVENT_MIN, EVENT_MAX);
@@ -786,7 +805,7 @@ function stepScene(
   if (candidates.length === 0) {
     return;
   }
-  const el = candidates[Math.floor(scene.rng() * candidates.length)];
+  const el = pickWeighted(candidates, scene.rng);
   // Find the replacement's spot first, so the pattern never thins out.
   const next = place({ scene, clear: jazz.clear }, el.group, scene.rng, el);
   if (!next) {
@@ -796,6 +815,31 @@ function stepScene(
   el.t = 0;
   scene.pending = next;
   scene.pendingDelay = SPAWN_DELAY;
+}
+
+/** One of `candidates`, by `GROUP_PICK` across the groups present, then evenly within the group. */
+function pickWeighted(candidates: readonly Element[], rng: () => number): Element {
+  let total = 0;
+  const present = [0, 0, 0, 0, 0];
+  for (const e of candidates) {
+    present[e.group]++;
+  }
+  for (let g = 0; g < GROUP_COUNT; g++) {
+    total += present[g] > 0 ? GROUP_PICK[g] : 0;
+  }
+  let r = rng() * total;
+  let group = candidates[0].group;
+  for (let g = 0; g < GROUP_COUNT; g++) {
+    if (present[g] > 0) {
+      group = g;
+      r -= GROUP_PICK[g];
+      if (r < 0) {
+        break;
+      }
+    }
+  }
+  const pool = candidates.filter((e) => e.group === group);
+  return pool[Math.floor(rng() * pool.length)];
 }
 
 /** Advances the pattern by `dt` seconds. */
@@ -859,7 +903,8 @@ function poseOf(jazz: Jazz, scene: Scene, el: Element, sceneAlpha: number, pose:
     }
   } else if (el.state === LEAVING) {
     if (el.half > 0) {
-      alpha *= 1 - el.t;
+      // Un-paints from the start, so the tail goes last, as it came.
+      reveal = 1 + smoothstep(0, 1, el.t);
     } else {
       pop = 1 - smoothstep(0, 1, el.t);
     }
@@ -896,7 +941,7 @@ function poseOf(jazz: Jazz, scene: Scene, el: Element, sceneAlpha: number, pose:
   pose.pop = pop;
   pose.reveal = reveal;
   pose.alpha = alpha;
-  return alpha > 0.002 && pop > 0.002 && reveal > 0;
+  return alpha > 0.002 && pop > 0.002 && reveal > 0 && reveal < 2;
 }
 
 /** Calls `visit` with each visible element and its pose, back to front. */

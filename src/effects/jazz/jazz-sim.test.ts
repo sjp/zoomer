@@ -192,6 +192,32 @@ describe("90s jazz motion", () => {
     expect(fresh).toBeGreaterThan(10);
   });
 
+  it("mostly paints strokes on and off, starting within a couple of seconds", () => {
+    const { jazz, params } = make(16 / 9);
+    const pose = createPose();
+    let firstChange = Infinity;
+    const painted = new Set<Element>();
+    const unpainted = new Set<Element>();
+    for (let f = 0; f < 30 * 60; f++) {
+      stepJazz(jazz, 1 / 30, params);
+      forEachVisible(jazz, pose, (el, p) => {
+        if (el.half > 0 && p.reveal < 1) {
+          painted.add(el);
+        }
+        if (el.half > 0 && p.reveal > 1) {
+          unpainted.add(el);
+        }
+      });
+      if (firstChange === Infinity && liveElements(jazz).some((e) => isChanging(e))) {
+        firstChange = f / 30;
+      }
+    }
+    expect(firstChange).toBeLessThan(2.5);
+    // About one change every 4-6 s, most of them strokes.
+    expect(painted.size).toBeGreaterThanOrEqual(4);
+    expect(unpainted.size).toBeGreaterThanOrEqual(4);
+  });
+
   it("drifts no faster than the pattern limit for the finest feature", () => {
     for (const scale of [MIN_SCALE, 0.7, 1]) {
       const v = driftSpeed(1, scale);

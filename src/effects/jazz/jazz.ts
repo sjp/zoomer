@@ -48,7 +48,7 @@ const SHAPE_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 aCorner;
 /** Centre (ref px, y down), angle, pop scale. */
 layout(location = 1) in vec4 aPlace;
-/** Quad half extents (ref px), kind, paint-on reveal (0..1 along a stroke). */
+/** Quad half extents (ref px), kind, stroke reveal (below 1 painting on, above 1 un-painting). */
 layout(location = 2) in vec4 aSize;
 layout(location = 3) in vec4 aParam;
 /** Straight RGB and opacity. */
@@ -99,10 +99,17 @@ float cover(float d) {
   return clamp(0.5 - d / vPx, 0.0, 1.0);
 }
 
-/** How much of the stroke up to local x the paint-on has reached. */
+/**
+ * Whether the stroke shows at local x: below 1, painted on from the start up to
+ * that share of its length; 1, all of it; above 1, un-painted from the start.
+ */
 float revealed(float x, float halfL) {
   float reveal = vSize.w;
-  return reveal >= 1.0 ? 1.0 : cover(x + halfL - reveal * 2.0 * halfL);
+  float along = x + halfL;
+  if (reveal < 1.0) {
+    return cover(along - reveal * 2.0 * halfL);
+  }
+  return reveal > 1.0 ? cover((reveal - 1.0) * 2.0 * halfL - along) : 1.0;
 }
 
 /** A dry-brush swash: coverage, and a per-bristle tone in .y. */
