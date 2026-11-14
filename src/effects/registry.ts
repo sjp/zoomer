@@ -13,6 +13,7 @@ import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bouncingLogoMeta } from "./bouncinglogo/bouncinglogo.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { geocitiesMeta } from "./geocities/geocities.meta";
+import { memphisMeta } from "./memphis/memphis.meta";
 import { retrobridgeMeta } from "./retrobridge/retrobridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
@@ -258,6 +259,7 @@ export const effects: readonly EffectEntry[] = [
     ...thisisfineMeta,
     load: () => import("./thisisfine/thisisfine").then((m) => m.thisisfine),
   },
+  { ...memphisMeta, load: () => import("./memphis/memphis").then((m) => m.memphis) },
   { ...greenhouseMeta, load: () => import("./greenhouse/greenhouse").then((m) => m.greenhouse) },
   { ...porchMeta, load: () => import("./porch/porch").then((m) => m.porch) },
   { ...frostMeta, load: () => import("./frost/frost").then((m) => m.frost) },
