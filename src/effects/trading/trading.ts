@@ -858,17 +858,12 @@ export const trading = defineEffect(tradingMeta, {
         return m;
       };
 
-      /** Resets everything that follows the market or the focus stock, without easing. */
-      const adopt = (m: Market) => {
-        shownCandles = m.candles;
+      /** Resets everything that follows the focus stock, without easing: the Focus layout's chart, book and trades. */
+      const adoptFocus = (m: Market) => {
         shownTrades = m.stocks[focus].trades;
         settleSlide(mainSlide);
-        settleSlide(gridSlide);
         settleSlide(tradeSlide);
         mainRange.ready = false;
-        for (const r of tileRanges) {
-          r.ready = false;
-        }
         fillBook(m, focus, book);
         for (let l = 0; l < BOOK_LEVELS; l++) {
           bookShown[l] = book.askSize[l];
@@ -879,11 +874,21 @@ export const trading = defineEffect(tradingMeta, {
           bookMax = Math.max(bookMax, v);
         }
         volMax = 0;
+        focusPainted = false;
+      };
+
+      /** Resets everything that follows the market, without easing: both layouts. */
+      const adoptMarket = (m: Market) => {
+        shownCandles = m.candles;
+        adoptFocus(m);
+        settleSlide(gridSlide);
+        for (const r of tileRanges) {
+          r.ready = false;
+        }
         for (let k = 0; k < INDEX_COUNT; k++) {
           indexPrev[k] = m.indices[k].value;
         }
         paintedClock = clockText(m.time, true);
-        focusPainted = false;
         gridPainted = false;
       };
 
@@ -1500,7 +1505,7 @@ export const trading = defineEffect(tradingMeta, {
             dimLevel = clamp(p.dim, 0, 0.6);
             highlight[focus] = 1;
             retile(count, false);
-            adopt(market);
+            adoptMarket(market);
             ease.snap();
           }
 
@@ -1516,7 +1521,7 @@ export const trading = defineEffect(tradingMeta, {
               market = startMarket(p.seed);
               focus = Math.min(focus, count - 1);
               focusPhase = 0;
-              adopt(market);
+              adoptMarket(market);
               swapPhase = 2;
               swapT = 0;
             }
@@ -1554,7 +1559,7 @@ export const trading = defineEffect(tradingMeta, {
             focusT = Math.min(1, focusT + step / SWAP_HALF);
             if (focusT >= 1) {
               focus = nextFocus;
-              adopt(m);
+              adoptFocus(m);
               focusPhase = 2;
               focusT = 0;
             }
