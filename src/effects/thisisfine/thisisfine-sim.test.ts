@@ -123,11 +123,14 @@ describe("flame anchors", () => {
     const dt = 1 / 60;
     const before = new Float64Array(fire.size);
     let eased = [0, 0];
+    // The most any anchor's size step goes over its limit (one expect, not thousands).
+    let over = -Infinity;
     for (let f = 1; f <= 600; f++) {
       stepFire(fire, dt, 1, 1);
       for (let s = 0; s < before.length; s++) {
-        expect(Math.abs(fire.size[s] - before[s])).toBeLessThanOrEqual(
-          SIZE_RATE * fire.limit[s] * dt + 1e-9,
+        over = Math.max(
+          over,
+          Math.abs(fire.size[s] - before[s]) - (SIZE_RATE * fire.limit[s] * dt + 1e-9),
         );
       }
       before.set(fire.size);
@@ -135,6 +138,7 @@ describe("flame anchors", () => {
         eased = [fire.intensity, fire.smoke];
       }
     }
+    expect(over).toBeLessThanOrEqual(0);
     expect(eased[0]).toBeCloseTo(PARAM_RATE, 6);
     expect(eased[1]).toBeCloseTo(PARAM_RATE, 6);
     expect(fire.intensity).toBe(1);
