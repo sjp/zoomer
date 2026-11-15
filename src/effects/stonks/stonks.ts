@@ -401,6 +401,374 @@ export const stonks = defineEffect(stonksMeta, {
         data[o + 4] = alpha;
       };
 
+      /** The background gradient, with a glow in the line colour on the terminal. */
+      const drawBackground = (clip: number, line: ArrayLike<number>) => {
+        gl.useProgram(background);
+        ub.f3(
+          "uTop",
+          lerp(TERM_TOP[0], CLIP_TOP[0], clip),
+          lerp(TERM_TOP[1], CLIP_TOP[1], clip),
+          lerp(TERM_TOP[2], CLIP_TOP[2], clip),
+        );
+        ub.f3(
+          "uBottom",
+          lerp(TERM_BOTTOM[0], CLIP_BOTTOM[0], clip),
+          lerp(TERM_BOTTOM[1], CLIP_BOTTOM[1], clip),
+          lerp(TERM_BOTTOM[2], CLIP_BOTTOM[2], clip),
+        );
+        const glow = GLOW * (1 - clip);
+        ub.f3("uGlow", line[0] * glow, line[1] * glow, line[2] * glow);
+        ub.f1("uGlowRadius", 0.9 * height);
+        triangle.draw();
+      };
+
+      /** Starts the chart mesh with the plot: gridlines, then the line, candles or bars. Returns the plot's mesh count. */
+      const meshPlot = (
+        step: number,
+        clip: number,
+        candles: number,
+        line: ArrayLike<number>,
+        fade: number,
+      ): number => {
+        const mesh = chart.mesh;
+        mesh.count = 0;
+        const termA = (1 - clip) * fade;
+        const pointPx = ((plotR - plotL) / view.span) * scale;
+        const x0 = plotL * scale;
+        const yTop = plotT * scale;
+        const yBottom = plotB * scale;
+
+        // Time gridlines on the terminal.
+        const gridColor = scratch;
+        gridColor[0] = lerp(1, CLIP_GRID[0], clip);
+        gridColor[1] = lerp(1, CLIP_GRID[1], clip);
+        gridColor[2] = lerp(1, CLIP_GRID[2], clip);
+        if (termA > 0) {
+          const lineW = Math.max(1, Math.round(scale));
+          const firstK = Math.ceil(view.x.lo / GRID_X_POINTS);
+          for (let k = firstK; k * GRID_X_POINTS <= view.x.hi; k++) {
+            const gx = plotL + viewX(view, k * GRID_X_POINTS);
+            const a =
+              smoothstep(plotL, plotL + EDGE_FADE, gx) *
+              (1 - smoothstep(plotR - EDGE_FADE, plotR, gx));
+            pushRect(
+              mesh,
+              Math.round(gx * scale),
+              yTop,
+              Math.round(gx * scale) + lineW,
+              yBottom,
+              WHITE,
+              0.05 * a * termA,
+            );
+          }
+        }
+        // Price gridlines, crossfading when their spacing changes.
+        if (view.y.toLo !== gridLo || view.y.toHi !== gridHi) {
+          gridLo = view.y.toLo;
+          gridHi = view.y.toHi;
+          const next = niceStep(gridHi - gridLo, GRID_Y_LINES);
+          if (gridStep <= 0) {
+            gridStep = next;
+          } else if (Math.abs(next - gridStep) > 1e-12 * next) {
+            oldStep = gridStep;
+            gridStep = next;
+            gridFade = 0;
+          }
+        }
+        gridFade = Math.min(1, gridFade + step / GRID_SECONDS);
+        const gf = smoothstep(0, 1, gridFade);
+        priceGrid(oldStep, (1 - gf) * fade, clip, gridColor);
+        priceGrid(gridStep, gf * fade, clip, gridColor);
+
+        // The line's points: from just left of the view to the head.
+        const pos = market.pos;
+        const iHead = Math.floor(pos);
+        const i0 = Math.max(
+          Math.floor(view.x.lo) - 1,
+          market.count - MARKET_CAPACITY,
+          0,
+          iHead - MAX_POINTS + 2,
+        );
+        let n = 0;
+        for (let i = i0; i <= iHead; i++) {
+          xs[n] = (plotL + viewX(view, i)) * scale;
+          ys[n] = (plotT + viewY(view, pointValue(market, i))) * scale;
+          n++;
+        }
+        const head = headValue(market);
+        const hx = (plotL + viewX(view, pos)) * scale;
+        const hy = (plotT + viewY(view, head)) * scale;
+        xs[n] = hx;
+        ys[n] = hy;
+        n++;
+
+        const lineA = termA * (1 - candles);
+        if (lineA > 0) {
+          pushArea(mesh, xs, ys, 0, n, yBottom, line, 0.3 * lineA, 0);
+          pushPolyline(mesh, xs, ys, 0, n, 14 * scale, line, 0.12 * lineA);
+          pushPolyline(mesh, xs, ys, 0, n, 4 * scale, line, lineA);
+          pushArc(mesh, hx, hy, -1, 16 * scale, 0, 2 * Math.PI, line, 0.18 * lineA);
+          pushArc(mesh, hx, hy, -1, 6 * scale, 0, 2 * Math.PI, line, lineA);
+        }
+        const candleA = termA * candles;
+        if (candleA > 0) {
+          const body = Math.max(1, 0.6 * pointPx);
+          const wickW = Math.max(1, 2 * scale);
+          for (let k = 1; k < n; k++) {
+            const i = i0 + k;
+            const open = pointValue(market, i - 1);
+            const last = k === n - 1;
+            const close = last ? head : pointValue(market, i);
+            candleWicks(market, i, wick);
+            const grow = last ? pos - iHead : 1;
+            const hi = Math.max(open, close) + wick.up * grow;
+            const lo = Math.min(open, close) - wick.down * grow;
+            const cx = (plotL + viewX(view, i - 0.5)) * scale;
+            pushCandle(
+              mesh,
+              cx,
+              body,
+              wickW,
+              (plotT + viewY(view, open)) * scale,
+              (plotT + viewY(view, close)) * scale,
+              (plotT + viewY(view, hi)) * scale,
+              (plotT + viewY(view, lo)) * scale,
+              close >= open ? line : RED,
+              candleA,
+            );
+          }
+        }
+        const barA = clip * fade;
+        if (barA > 0) {
+          const bw = 0.62 * pointPx;
+          const depth = 0.18 * pointPx;
+          // The points' bars, then the next one growing with the head.
+          for (let k = 0; k < n; k++) {
+            const last = k === n - 1;
+            const i = last ? iHead + 1 : i0 + k;
+            const a = last ? barA * smoothstep(0, 0.3, pos - iHead) : barA;
+            const l = (plotL + viewX(view, i)) * scale - bw / 2;
+            const r = l + bw;
+            const top = Math.min(yBottom - 1, ys[k]);
+            pushQuad(
+              mesh,
+              l,
+              top,
+              l + depth,
+              top - depth,
+              r + depth,
+              top - depth,
+              r,
+              top,
+              BAR_TOP,
+              a,
+            );
+            pushQuad(
+              mesh,
+              r,
+              top,
+              r + depth,
+              top - depth,
+              r + depth,
+              yBottom - depth,
+              r,
+              yBottom,
+              BAR_SIDE,
+              a,
+            );
+            pushRect(mesh, l, top, r, yBottom, BAR_FRONT, a);
+            pushRect(mesh, l, top, l + bw * 0.2, yBottom, BAR_LIGHT, 0.55 * a);
+          }
+          pushRect(
+            mesh,
+            x0,
+            yBottom,
+            plotR * scale,
+            yBottom + Math.max(2, 2 * scale),
+            CLIP_AXIS,
+            barA,
+          );
+        }
+        return mesh.count;
+      };
+
+      /** Adds the ticker band and tape to the chart mesh, repainting any item whose price changed. */
+      const meshTicker = (clip: number, line: ArrayLike<number>, fade: number) => {
+        const mesh = chart.mesh;
+        // The band, and a soft tint behind each price that just ticked up.
+        const bandA = tickerA;
+        const bandTop = (REF_HEIGHT - TICKER_H) * scale;
+        if (bandA > 0) {
+          scratch[0] = lerp(TERM_BAND[0], CLIP_BAND[0], clip);
+          scratch[1] = lerp(TERM_BAND[1], CLIP_BAND[1], clip);
+          scratch[2] = lerp(TERM_BAND[2], CLIP_BAND[2], clip);
+          pushRect(mesh, 0, bandTop, width, height, scratch, 0.92 * bandA);
+          pushRect(
+            mesh,
+            0,
+            bandTop,
+            width,
+            bandTop + Math.max(1, 2 * scale),
+            line,
+            lerp(0.5, 0, clip) * bandA,
+          );
+        }
+
+        // Ticker items: repaint the ones whose price changed, then lay the tape out.
+        const ctx = text.ctx;
+        for (let i = 0; i < TICKER_ITEMS; i++) {
+          const it = ticker.items[i];
+          if (it.changed && ctx) {
+            it.changed = false;
+            text.clear(0, i * rowH, slotW, rowH);
+            // Allocates the item's label, only when its price changes.
+            drawTickerItem(ctx, it, tickerPx * TICKER_INDENT_EM, i * rowH + rowH / 2, tickerPx);
+          }
+        }
+        const itemA = bandA * fade;
+        if (itemA > 0) {
+          const k = scale / artScale;
+          const slotRef = slotW / artScale;
+          const period = slotRef * TICKER_ITEMS;
+          const offset = ticker.scroll % period;
+          let slot = Math.floor(offset / slotRef);
+          let sx = -(offset - slot * slotRef);
+          const cy = REF_HEIGHT - TICKER_H / 2;
+          for (let guard = 0; sx < refWidth && guard < 64; guard++) {
+            const item = ticker.items[slot % TICKER_ITEMS];
+            if (item.tint > 0) {
+              pushRect(
+                mesh,
+                sx * scale,
+                bandTop + 3 * scale,
+                (sx + slotRef - (TICKER_PX * 1.6) / 2) * scale,
+                height,
+                line,
+                0.16 * item.tint * itemA,
+              );
+            }
+            text.quad(
+              0,
+              (slot % TICKER_ITEMS) * rowH,
+              slotW,
+              rowH,
+              sx * scale,
+              cy * scale - (rowH * k) / 2,
+              slotW * k,
+              rowH * k,
+              itemA,
+            );
+            sx += slotRef;
+            slot++;
+          }
+        }
+      };
+
+      /** Draws the chart mesh: the plot clipped to it, then the ticker band. */
+      const drawMesh = (plotCount: number) => {
+        const mesh = chart.mesh;
+        const pointPx = ((plotR - plotL) / view.span) * scale;
+        const x0 = plotL * scale;
+        const yBottom = plotB * scale;
+        chart.upload();
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.SCISSOR_TEST);
+        const sx0 = Math.floor(x0);
+        const sy0 = Math.floor(height - yBottom - Math.max(2, 2 * scale));
+        gl.scissor(
+          sx0,
+          sy0,
+          Math.max(0, Math.ceil(plotR * scale) - sx0 + Math.ceil(pointPx)),
+          Math.max(0, height - sy0),
+        );
+        chart.draw(width, height, 0, plotCount);
+        gl.disable(gl.SCISSOR_TEST);
+        chart.draw(width, height, plotCount, mesh.count - plotCount);
+      };
+
+      /** Draws the labels and ticker text, coloured by role. */
+      const drawText = (clip: number, line: ArrayLike<number>) => {
+        for (let r = 0; r < TEXT_PALETTE_FLOATS; r++) {
+          palette[r] = lerp(termRoles[r], clipRoles[r], clip);
+        }
+        for (let c = 0; c < 3; c++) {
+          palette[6 + c] = lerp(line[c], clipRoles[6 + c], clip);
+        }
+        text.flush();
+        text.draw(width, height, palette);
+      };
+
+      /** Crossfades the caption slots, painting the back one on a new text, style or art scale. */
+      const stepCaptions = (caption: string, style: StyleId, step: number) => {
+        if (caption !== shownCaption || style !== shownStyle || artScale !== shownScale) {
+          // Allocates the new caption's art, once per settled change.
+          shownCaption = caption;
+          shownStyle = style;
+          shownScale = artScale;
+          front = 1 - front;
+          const c = captions[front];
+          const maxW = Math.min(refWidth * 0.5, 980) * artScale;
+          const art = paintCaption(
+            caption,
+            style,
+            Math.round(CAPTION_PX * artScale),
+            maxW,
+            measure,
+          );
+          c.texture.upload(art);
+          c.width = art ? art.width : 1;
+          c.height = art ? art.height : 1;
+        }
+        for (let i = 0; i < 2; i++) {
+          const c = captions[i];
+          c.alpha = approach(c.alpha, i === front ? 1 : 0, step / CAPTION_SECONDS);
+        }
+      };
+
+      /** Draws the sprites: the arrows (one per style), then the captions. */
+      const drawSprites = (clip: number, line: ArrayLike<number>) => {
+        spriteCount = 0;
+        const arrowRef = Math.min(ARROW_SIZE, refWidth * 0.28);
+        const ax = plotR - arrowRef * 0.55;
+        const ay = plotB - arrowRef * 0.6 - arrowBob(time) * BOB_HEIGHT;
+        const ah = (arrowRef / 2) * scale;
+        put(ax * scale, ay * scale, ah, ah, 1 - clip);
+        put(ax * scale, ay * scale, ah, ah, clip);
+        const k = scale / artScale;
+        for (let i = 0; i < 2; i++) {
+          const c = captions[i];
+          put(
+            CAPTION_X * scale + (c.width * k) / 2,
+            CAPTION_Y * scale + (c.height * k) / 2,
+            (c.width * k) / 2,
+            (c.height * k) / 2,
+            c.alpha,
+          );
+        }
+        batch.upload(spriteCount);
+        gl.useProgram(spriteProgram);
+        us.f2("uResolution", width, height);
+        gl.activeTexture(gl.TEXTURE0);
+        for (let i = 0; i < 2; i++) {
+          const a = i === 0 ? 1 - clip : clip;
+          if (a > 0) {
+            us.f3("uTint", i === 0 ? line[0] : 1, i === 0 ? line[1] : 1, i === 0 ? line[2] : 1);
+            gl.bindTexture(gl.TEXTURE_2D, arrows[i].texture);
+            batch.draw(i, 1);
+          }
+        }
+        us.f3("uTint", 1, 1, 1);
+        for (let i = 0; i < 2; i++) {
+          if (captions[i].alpha > 0) {
+            gl.bindTexture(gl.TEXTURE_2D, captions[i].texture.texture);
+            batch.draw(2 + i, 1);
+          }
+        }
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.disable(gl.BLEND);
+      };
+
       return {
         resize(v) {
           width = Math.max(1, Math.round(v.width));
@@ -473,347 +841,13 @@ export const stonks = defineEffect(stonksMeta, {
             arrows[1].upload(paintArrow("clipart", arrowPx));
           }
 
-          // Background.
-          gl.useProgram(background);
-          ub.f3(
-            "uTop",
-            lerp(TERM_TOP[0], CLIP_TOP[0], clip),
-            lerp(TERM_TOP[1], CLIP_TOP[1], clip),
-            lerp(TERM_TOP[2], CLIP_TOP[2], clip),
-          );
-          ub.f3(
-            "uBottom",
-            lerp(TERM_BOTTOM[0], CLIP_BOTTOM[0], clip),
-            lerp(TERM_BOTTOM[1], CLIP_BOTTOM[1], clip),
-            lerp(TERM_BOTTOM[2], CLIP_BOTTOM[2], clip),
-          );
-          const glow = GLOW * (1 - clip);
-          ub.f3("uGlow", line[0] * glow, line[1] * glow, line[2] * glow);
-          ub.f1("uGlowRadius", 0.9 * height);
-          triangle.draw();
-
-          // The chart mesh: the plot (clipped to it), then the ticker band.
-          const mesh = chart.mesh;
-          mesh.count = 0;
-          const fade = swapA;
-          const termA = (1 - clip) * fade;
-          const pointPx = ((plotR - plotL) / view.span) * scale;
-          const x0 = plotL * scale;
-          const yTop = plotT * scale;
-          const yBottom = plotB * scale;
-
-          // Time gridlines on the terminal.
-          const gridColor = scratch;
-          gridColor[0] = lerp(1, CLIP_GRID[0], clip);
-          gridColor[1] = lerp(1, CLIP_GRID[1], clip);
-          gridColor[2] = lerp(1, CLIP_GRID[2], clip);
-          if (termA > 0) {
-            const lineW = Math.max(1, Math.round(scale));
-            const firstK = Math.ceil(view.x.lo / GRID_X_POINTS);
-            for (let k = firstK; k * GRID_X_POINTS <= view.x.hi; k++) {
-              const gx = plotL + viewX(view, k * GRID_X_POINTS);
-              const a =
-                smoothstep(plotL, plotL + EDGE_FADE, gx) *
-                (1 - smoothstep(plotR - EDGE_FADE, plotR, gx));
-              pushRect(
-                mesh,
-                Math.round(gx * scale),
-                yTop,
-                Math.round(gx * scale) + lineW,
-                yBottom,
-                WHITE,
-                0.05 * a * termA,
-              );
-            }
-          }
-          // Price gridlines, crossfading when their spacing changes.
-          if (view.y.toLo !== gridLo || view.y.toHi !== gridHi) {
-            gridLo = view.y.toLo;
-            gridHi = view.y.toHi;
-            const next = niceStep(gridHi - gridLo, GRID_Y_LINES);
-            if (gridStep <= 0) {
-              gridStep = next;
-            } else if (Math.abs(next - gridStep) > 1e-12 * next) {
-              oldStep = gridStep;
-              gridStep = next;
-              gridFade = 0;
-            }
-          }
-          gridFade = Math.min(1, gridFade + step / GRID_SECONDS);
-          const gf = smoothstep(0, 1, gridFade);
-          priceGrid(oldStep, (1 - gf) * fade, clip, gridColor);
-          priceGrid(gridStep, gf * fade, clip, gridColor);
-
-          // The line's points: from just left of the view to the head.
-          const pos = market.pos;
-          const iHead = Math.floor(pos);
-          const i0 = Math.max(
-            Math.floor(view.x.lo) - 1,
-            market.count - MARKET_CAPACITY,
-            0,
-            iHead - MAX_POINTS + 2,
-          );
-          let n = 0;
-          for (let i = i0; i <= iHead; i++) {
-            xs[n] = (plotL + viewX(view, i)) * scale;
-            ys[n] = (plotT + viewY(view, pointValue(market, i))) * scale;
-            n++;
-          }
-          const head = headValue(market);
-          const hx = (plotL + viewX(view, pos)) * scale;
-          const hy = (plotT + viewY(view, head)) * scale;
-          xs[n] = hx;
-          ys[n] = hy;
-          n++;
-
-          const lineA = termA * (1 - candles);
-          if (lineA > 0) {
-            pushArea(mesh, xs, ys, 0, n, yBottom, line, 0.3 * lineA, 0);
-            pushPolyline(mesh, xs, ys, 0, n, 14 * scale, line, 0.12 * lineA);
-            pushPolyline(mesh, xs, ys, 0, n, 4 * scale, line, lineA);
-            pushArc(mesh, hx, hy, -1, 16 * scale, 0, 2 * Math.PI, line, 0.18 * lineA);
-            pushArc(mesh, hx, hy, -1, 6 * scale, 0, 2 * Math.PI, line, lineA);
-          }
-          const candleA = termA * candles;
-          if (candleA > 0) {
-            const body = Math.max(1, 0.6 * pointPx);
-            const wickW = Math.max(1, 2 * scale);
-            for (let k = 1; k < n; k++) {
-              const i = i0 + k;
-              const open = pointValue(market, i - 1);
-              const last = k === n - 1;
-              const close = last ? head : pointValue(market, i);
-              candleWicks(market, i, wick);
-              const grow = last ? pos - iHead : 1;
-              const hi = Math.max(open, close) + wick.up * grow;
-              const lo = Math.min(open, close) - wick.down * grow;
-              const cx = (plotL + viewX(view, i - 0.5)) * scale;
-              pushCandle(
-                mesh,
-                cx,
-                body,
-                wickW,
-                (plotT + viewY(view, open)) * scale,
-                (plotT + viewY(view, close)) * scale,
-                (plotT + viewY(view, hi)) * scale,
-                (plotT + viewY(view, lo)) * scale,
-                close >= open ? line : RED,
-                candleA,
-              );
-            }
-          }
-          const barA = clip * fade;
-          if (barA > 0) {
-            const bw = 0.62 * pointPx;
-            const depth = 0.18 * pointPx;
-            // The points' bars, then the next one growing with the head.
-            for (let k = 0; k < n; k++) {
-              const last = k === n - 1;
-              const i = last ? iHead + 1 : i0 + k;
-              const a = last ? barA * smoothstep(0, 0.3, pos - iHead) : barA;
-              const l = (plotL + viewX(view, i)) * scale - bw / 2;
-              const r = l + bw;
-              const top = Math.min(yBottom - 1, ys[k]);
-              pushQuad(
-                mesh,
-                l,
-                top,
-                l + depth,
-                top - depth,
-                r + depth,
-                top - depth,
-                r,
-                top,
-                BAR_TOP,
-                a,
-              );
-              pushQuad(
-                mesh,
-                r,
-                top,
-                r + depth,
-                top - depth,
-                r + depth,
-                yBottom - depth,
-                r,
-                yBottom,
-                BAR_SIDE,
-                a,
-              );
-              pushRect(mesh, l, top, r, yBottom, BAR_FRONT, a);
-              pushRect(mesh, l, top, l + bw * 0.2, yBottom, BAR_LIGHT, 0.55 * a);
-            }
-            pushRect(
-              mesh,
-              x0,
-              yBottom,
-              plotR * scale,
-              yBottom + Math.max(2, 2 * scale),
-              CLIP_AXIS,
-              barA,
-            );
-          }
-          const plotCount = mesh.count;
-
-          // The ticker band, and a soft tint behind each price that just ticked up.
-          const bandA = tickerA;
-          const bandTop = (REF_HEIGHT - TICKER_H) * scale;
-          if (bandA > 0) {
-            scratch[0] = lerp(TERM_BAND[0], CLIP_BAND[0], clip);
-            scratch[1] = lerp(TERM_BAND[1], CLIP_BAND[1], clip);
-            scratch[2] = lerp(TERM_BAND[2], CLIP_BAND[2], clip);
-            pushRect(mesh, 0, bandTop, width, height, scratch, 0.92 * bandA);
-            pushRect(
-              mesh,
-              0,
-              bandTop,
-              width,
-              bandTop + Math.max(1, 2 * scale),
-              line,
-              lerp(0.5, 0, clip) * bandA,
-            );
-          }
-
-          // Ticker items: repaint the ones whose price changed, then lay the tape out.
-          const ctx = text.ctx;
-          for (let i = 0; i < TICKER_ITEMS; i++) {
-            const it = ticker.items[i];
-            if (it.changed && ctx) {
-              it.changed = false;
-              text.clear(0, i * rowH, slotW, rowH);
-              // Allocates the item's label, only when its price changes.
-              drawTickerItem(ctx, it, tickerPx * TICKER_INDENT_EM, i * rowH + rowH / 2, tickerPx);
-            }
-          }
-          const itemA = bandA * fade;
-          if (itemA > 0) {
-            const k = scale / artScale;
-            const slotRef = slotW / artScale;
-            const period = slotRef * TICKER_ITEMS;
-            const offset = ticker.scroll % period;
-            let slot = Math.floor(offset / slotRef);
-            let sx = -(offset - slot * slotRef);
-            const cy = REF_HEIGHT - TICKER_H / 2;
-            for (let guard = 0; sx < refWidth && guard < 64; guard++) {
-              const item = ticker.items[slot % TICKER_ITEMS];
-              if (item.tint > 0) {
-                pushRect(
-                  mesh,
-                  sx * scale,
-                  bandTop + 3 * scale,
-                  (sx + slotRef - (TICKER_PX * 1.6) / 2) * scale,
-                  height,
-                  line,
-                  0.16 * item.tint * itemA,
-                );
-              }
-              text.quad(
-                0,
-                (slot % TICKER_ITEMS) * rowH,
-                slotW,
-                rowH,
-                sx * scale,
-                cy * scale - (rowH * k) / 2,
-                slotW * k,
-                rowH * k,
-                itemA,
-              );
-              sx += slotRef;
-              slot++;
-            }
-          }
-
-          chart.upload();
-          gl.enable(gl.BLEND);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          gl.enable(gl.SCISSOR_TEST);
-          const sx0 = Math.floor(x0);
-          const sy0 = Math.floor(height - yBottom - Math.max(2, 2 * scale));
-          gl.scissor(
-            sx0,
-            sy0,
-            Math.max(0, Math.ceil(plotR * scale) - sx0 + Math.ceil(pointPx)),
-            Math.max(0, height - sy0),
-          );
-          chart.draw(width, height, 0, plotCount);
-          gl.disable(gl.SCISSOR_TEST);
-          chart.draw(width, height, plotCount, mesh.count - plotCount);
-
-          // Labels and ticker text, coloured by role.
-          for (let r = 0; r < TEXT_PALETTE_FLOATS; r++) {
-            palette[r] = lerp(termRoles[r], clipRoles[r], clip);
-          }
-          for (let c = 0; c < 3; c++) {
-            palette[6 + c] = lerp(line[c], clipRoles[6 + c], clip);
-          }
-          text.flush();
-          text.draw(width, height, palette);
-
-          // Caption: a new text, style or art scale paints the back slot and crossfades to it.
-          if (caption !== shownCaption || style !== shownStyle || artScale !== shownScale) {
-            // Allocates the new caption's art, once per settled change.
-            shownCaption = caption;
-            shownStyle = style;
-            shownScale = artScale;
-            front = 1 - front;
-            const c = captions[front];
-            const maxW = Math.min(refWidth * 0.5, 980) * artScale;
-            const art = paintCaption(
-              caption,
-              style,
-              Math.round(CAPTION_PX * artScale),
-              maxW,
-              measure,
-            );
-            c.texture.upload(art);
-            c.width = art ? art.width : 1;
-            c.height = art ? art.height : 1;
-          }
-          for (let i = 0; i < 2; i++) {
-            const c = captions[i];
-            c.alpha = approach(c.alpha, i === front ? 1 : 0, step / CAPTION_SECONDS);
-          }
-
-          // Sprites: the arrows (one per style), then the captions.
-          spriteCount = 0;
-          const arrowRef = Math.min(ARROW_SIZE, refWidth * 0.28);
-          const ax = plotR - arrowRef * 0.55;
-          const ay = plotB - arrowRef * 0.6 - arrowBob(time) * BOB_HEIGHT;
-          const ah = (arrowRef / 2) * scale;
-          put(ax * scale, ay * scale, ah, ah, 1 - clip);
-          put(ax * scale, ay * scale, ah, ah, clip);
-          const k = scale / artScale;
-          for (let i = 0; i < 2; i++) {
-            const c = captions[i];
-            put(
-              CAPTION_X * scale + (c.width * k) / 2,
-              CAPTION_Y * scale + (c.height * k) / 2,
-              (c.width * k) / 2,
-              (c.height * k) / 2,
-              c.alpha,
-            );
-          }
-          batch.upload(spriteCount);
-          gl.useProgram(spriteProgram);
-          us.f2("uResolution", width, height);
-          gl.activeTexture(gl.TEXTURE0);
-          for (let i = 0; i < 2; i++) {
-            const a = i === 0 ? 1 - clip : clip;
-            if (a > 0) {
-              us.f3("uTint", i === 0 ? line[0] : 1, i === 0 ? line[1] : 1, i === 0 ? line[2] : 1);
-              gl.bindTexture(gl.TEXTURE_2D, arrows[i].texture);
-              batch.draw(i, 1);
-            }
-          }
-          us.f3("uTint", 1, 1, 1);
-          for (let i = 0; i < 2; i++) {
-            if (captions[i].alpha > 0) {
-              gl.bindTexture(gl.TEXTURE_2D, captions[i].texture.texture);
-              batch.draw(2 + i, 1);
-            }
-          }
-          gl.bindTexture(gl.TEXTURE_2D, null);
-          gl.disable(gl.BLEND);
+          drawBackground(clip, line);
+          const plotCount = meshPlot(step, clip, candles, line, swapA);
+          meshTicker(clip, line, swapA);
+          drawMesh(plotCount);
+          drawText(clip, line);
+          stepCaptions(caption, style, step);
+          drawSprites(clip, line);
         },
         dispose: () => {
           scope.dispose();
