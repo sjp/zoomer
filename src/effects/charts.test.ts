@@ -290,6 +290,21 @@ describe("axis range", () => {
     );
   });
 
+  it("keeps a span for flat data with no minimum span", () => {
+    const r = createAxisRange();
+    const flat = { ...opts, minSpan: 0 };
+    autoRange(r, 0, 0, 500, 1, flat);
+    expect(r.hi).toBeGreaterThan(r.lo);
+    expect(Number.isFinite(valueY(0, r, 100, 300))).toBe(true);
+    expect(autoRange(r, 0, 0, 500, 1, flat)).toBe(false);
+    autoRange(r, 5e6, 5e6, 500, 1, flat);
+    expect(r.toHi).toBeGreaterThan(r.toLo);
+    expect(autoRange(r, 5e6, 5e6, 500, 1, flat)).toBe(false);
+    // An empty range puts every value mid-plot rather than dividing by zero.
+    snapAxis(r, 3, 3);
+    expect(valueY(3, r, 100, 300)).toBe(200);
+  });
+
   it("maps values to device y", () => {
     const r = createAxisRange();
     snapAxis(r, 0, 10);

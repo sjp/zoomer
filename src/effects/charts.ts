@@ -366,6 +366,9 @@ export function rangeShiftPx(
   return Math.max(Math.abs(at(lo)), Math.abs(at(hi)));
 }
 
+/** The smallest half span `autoRange` shows, relative to the data's size (at least 1). */
+const MIN_HALF_SPAN = 1e-6;
+
 /** How `autoRange` fits an axis to its data. */
 export interface AutoRangeOptions {
   /** Room left above and below the data, as a share of its span. */
@@ -399,18 +402,20 @@ export function autoRange(
   if (!Number.isFinite(dataLo) || !Number.isFinite(dataHi) || dataHi < dataLo) {
     return false;
   }
+  const mid = (dataLo + dataHi) / 2;
+  // A tiny floor keeps flat data with no `minSpan` from collapsing the span to 0.
+  const minHalf = Math.max(o.minSpan / 2, Math.max(1, Math.abs(mid)) * MIN_HALF_SPAN);
   const span = r.toHi - r.toLo;
   const fits =
     r.ready &&
     span > 0 &&
     dataLo >= r.toLo + o.edge * span &&
     dataHi <= r.toHi - o.edge * span &&
-    (dataHi - dataLo >= o.minFill * span || span <= o.minSpan * (1 + 1e-9));
+    (dataHi - dataLo >= o.minFill * span || span <= 2 * minHalf * (1 + 1e-9));
   if (fits) {
     return false;
   }
-  const mid = (dataLo + dataHi) / 2;
-  const half = Math.max((dataHi - dataLo) * (0.5 + o.pad), o.minSpan / 2);
+  const half = Math.max((dataHi - dataLo) * (0.5 + o.pad), minHalf);
   const lo = mid - half;
   const hi = mid + half;
   if (!r.ready) {
@@ -423,9 +428,12 @@ export function autoRange(
   return true;
 }
 
-/** Device y of value `v` on a plot from `top` to `bottom` showing `r`. */
+/**
+ * Device y of value `v` on a plot from `top` to `bottom` showing `r`; the middle
+ * of the plot for an empty range.
+ */
 export const valueY = (v: number, r: AxisRange, top: number, bottom: number): number =>
-  bottom - ((v - r.lo) / (r.hi - r.lo)) * (bottom - top);
+  r.hi > r.lo ? bottom - ((v - r.lo) / (r.hi - r.lo)) * (bottom - top) : (top + bottom) / 2;
 
 // ---------------------------------------------------------------------------
 // Mesh
