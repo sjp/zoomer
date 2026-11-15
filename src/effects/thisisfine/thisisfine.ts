@@ -373,8 +373,9 @@ export const thisisfine = defineEffect(thisisfineMeta, {
       let paintedSeed = Number.NaN;
       let paintedSize = -1;
 
-      /** What the bubble texture shows, and its eased opacity. */
-      let bubbleKey = "";
+      /** The text and size the bubble texture was painted for (none yet: null), and its eased opacity. */
+      let bubbleText: string | null = null;
+      let bubbleSize = -1;
       let bubbleAlpha = 0;
       let bubbleX = 0;
       let bubbleY = 0;
@@ -451,17 +452,18 @@ export const thisisfine = defineEffect(thisisfineMeta, {
 
           // The speech bubble fades out before showing a new text or size.
           const text = settledText.update(p.text, step);
-          const key = `${text}\n${String(paintedSize)}`;
-          if (key !== bubbleKey && bubbleAlpha <= 0) {
+          const current = text === bubbleText && paintedSize === bubbleSize;
+          if (!current && bubbleAlpha <= 0) {
             const art = paintBubble(text, layout, scale);
             bubbleTex.upload(art.canvas);
-            bubbleKey = key;
+            bubbleText = text;
+            bubbleSize = paintedSize;
             bubbleX = art.x;
             bubbleY = art.y;
             bubbleW = art.width;
             bubbleH = art.height;
           }
-          const showBubble = p.caption && key === bubbleKey;
+          const showBubble = p.caption && text === bubbleText && paintedSize === bubbleSize;
           bubbleAlpha = approach(bubbleAlpha, showBubble ? 1 : 0, step / BUBBLE_FADE);
 
           // Noise offsets, wrapped to the texture's period.
