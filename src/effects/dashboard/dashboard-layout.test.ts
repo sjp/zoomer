@@ -18,6 +18,21 @@ const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 describe("dashboard layout", () => {
+  it.each(SIZES)(
+    "keeps the line plot's top and height through a density move at %s",
+    (_name, w, h) => {
+      // The value labels are painted once at the Full plot's height and placed on
+      // the moving plot, so both densities' plots must agree vertically.
+      const s = h / 1080;
+      const L = dashboardLayout(w, h, s, createLayout());
+      expect(L.lineSimple.y).toBe(L.lineFull.y);
+      expect(L.lineSimple.h).toBe(L.lineFull.h);
+      const simple = linePlot(L.lineSimple, s, rect());
+      const full = linePlot(L.lineFull, s, rect());
+      expect([simple.y, simple.h]).toEqual([full.y, full.h]);
+    },
+  );
+
   it.each(SIZES)("fits every Full card at %s without overlaps", (_name, w, h) => {
     const s = h / 1080;
     const L = dashboardLayout(w, h, s, createLayout());

@@ -255,6 +255,12 @@ export const dashboard = defineEffect(dashboardMeta, {
       const lineFrom = rect();
       const lineTo = rect();
       const plot = rect();
+      /**
+       * The value labels' plot: the Full card's, rounded as `placeLine` rounds
+       * the card. Simple and Full share a top and height, so this matches `plot`
+       * vertically at every point of a density move.
+       */
+      const fullCard = rect();
       const fullPlot = rect();
       const barPlot = rect();
       const lineRange = createAxisRange();
@@ -431,7 +437,10 @@ export const dashboard = defineEffect(dashboardMeta, {
         paintHeader(S(PAD), headerBandY, w - 2 * S(PAD), d.lineTitle, d.lineNames, lineLegendX);
       };
 
-      /** The line chart's value labels, in the column right of the frame, at the plot's height. */
+      /**
+       * The line chart's value labels, in the column right of the frame, at
+       * `fullPlot`'s height (the queued quad places them on the moving `plot`).
+       */
       const paintLineAxis = (d: Dashboard) => {
         const p = fullPlot;
         if (!lineRange.ready || p.h <= 0) {
@@ -1157,7 +1166,8 @@ export const dashboard = defineEffect(dashboardMeta, {
         if (p.w > 0 && p.h > 0 && lineRange.ready) {
           const colW = S(AXIS_W);
           const top = p.y - S(12);
-          text.quad(axisColX, top, colW, p.h + S(24), p.x - colW, top, colW, p.h + S(24), ca);
+          const h = p.h + S(24);
+          text.quad(axisColX, fullPlot.y - S(12), colW, h, p.x - colW, top, colW, h, ca);
           const sp = p.w / (LINE_POINTS - 1);
           const off = lineSlide.offset * sp;
           const newest = d.lineWalks[0].steps - 1;
@@ -1200,7 +1210,11 @@ export const dashboard = defineEffect(dashboardMeta, {
 
       const relayout = () => {
         dashboardLayout(width, height, scale, layout);
-        linePlot(layout.lineFull, scale, fullPlot);
+        fullCard.x = Math.round(layout.lineFull.x);
+        fullCard.y = Math.round(layout.lineFull.y);
+        fullCard.w = Math.round(layout.lineFull.w);
+        fullCard.h = Math.round(layout.lineFull.h);
+        linePlot(fullCard, scale, fullPlot);
         barPlotOf(layout.bars, barPlot);
         donutGeometry();
         tableGeometry();
