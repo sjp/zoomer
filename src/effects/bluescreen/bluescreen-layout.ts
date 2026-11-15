@@ -301,15 +301,15 @@ export function layoutClassic(message: string, code: string, refWidth: number): 
   let cols = 0;
   let lines: string[] = [];
   for (; ; dot -= DOT_STEP) {
+    const last = dot - DOT_STEP < MIN_DOT;
     cols = Math.min(CLASSIC_COLS, Math.floor(width / (CELL_W * dot)));
-    if (cols >= 8) {
+    // Too narrow for 8 columns even at the smallest dot: wrap to what fits.
+    if (cols >= 8 || last) {
+      cols = Math.max(1, cols);
       lines = ["", "", ...wrapClassic(paragraphs, cols)];
-      if (lines.length * CELL_H * dot <= height) {
+      if (last || lines.length * CELL_H * dot <= height) {
         break;
       }
-    }
-    if (dot - DOT_STEP < MIN_DOT) {
-      break;
     }
   }
   const row = lines.length - 1;
@@ -362,7 +362,7 @@ export function layoutKernel(code: string, refWidth: number, measure: Measure): 
   const size = Math.min(
     KERNEL_SIZE,
     (BAND * REF_HEIGHT - top) / (rows * LINE),
-    (refWidth - 2 * left) / widestEms,
+    Math.max(1, refWidth - 2 * left) / widestEms,
   );
   const lineHeight = size * LINE;
   const runs = header.map((text, i) => ({
