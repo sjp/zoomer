@@ -524,6 +524,11 @@ export interface Figure {
   build: number;
   /** Idle phases: sway, nod, arms, wave. */
   phases: Float64Array;
+  /**
+   * The high five's arm stretch last used ([upper arm, forearm]), kept so a
+   * high five ended by the frame turning portrait shrinks back smoothly.
+   */
+  stretch: Float64Array;
 }
 
 interface Leaf {
@@ -606,6 +611,7 @@ function createFigure(): Figure {
     accessoryColor: 0,
     build: 1,
     phases: new Float64Array(4),
+    stretch: new Float64Array([1, 1]),
   };
 }
 
@@ -767,21 +773,15 @@ export function createScene(seed: number): Scene {
   return scene;
 }
 
-const stretch = new Float64Array(2);
-
 /** Starts person `f` (slot `index`) changing to pose `to`. */
 function startTween(f: Figure, index: number, to: number, layout: Layout): void {
-  const hf = index < 2 && layout.highFive;
-  if (hf) {
-    highFiveStretch(layout, index, stretch);
-  } else {
-    stretch[0] = 1;
-    stretch[1] = 1;
+  if (index < 2 && layout.highFive) {
+    highFiveStretch(layout, index, f.stretch);
   }
   f.from = f.to;
   f.to = to;
   f.t = 0;
-  f.duration = tweenSeconds(f.from, to, stretch[0], stretch[1], layout.figures[index].size);
+  f.duration = tweenSeconds(f.from, to, f.stretch[0], f.stretch[1], layout.figures[index].size);
 }
 
 /** A solo pose for `f` other than the one it holds. */
@@ -948,13 +948,12 @@ export function figurePose(
   out: Float64Array,
 ): Float64Array {
   const f = scene.figures[index];
+  // The stretch follows the frame while a high five can show; one ended by a
+  // portrait frame keeps its last stretch as it shrinks back.
   if (index < 2 && layout.highFive) {
-    highFiveStretch(layout, index, stretch);
-  } else {
-    stretch[0] = 1;
-    stretch[1] = 1;
+    highFiveStretch(layout, index, f.stretch);
   }
-  blendPose(f.from, f.to, f.t, stretch[0], stretch[1], out);
+  blendPose(f.from, f.to, f.t, f.stretch[0], f.stretch[1], out);
   const m = scene.motion;
   if (m <= 0) {
     return out;

@@ -10,6 +10,7 @@ import {
   REACH,
   SOLO_POSES,
   solveRig,
+  STRETCH_UPPER,
   TIP_JOINTS,
   UP_REACH,
 } from "./memphis-figures";
@@ -412,18 +413,20 @@ describe("corporate memphis schedule", () => {
     const [a] = scene.figures;
     a.from = 0;
     a.to = POSE_HIGH_FIVE;
-    a.t = 0.4;
+    a.t = 0.8;
     scene.figures[1].from = 0;
     scene.figures[1].to = POSE_HIGH_FIVE;
-    scene.figures[1].t = 0.4;
+    scene.figures[1].t = 0.8;
     const pose = new Float64Array(BLEND_SIZE);
     const before = Array.from(figurePose(scene, layout, 0, pose));
-    // A portrait frame has no room for it.
+    expect(before[STRETCH_UPPER]).toBeGreaterThan(1);
+    // A portrait frame has no room for it; the arm keeps its stretch as it
+    // shrinks back.
     const tall = layoutFor(608, 1080);
     stepScene(scene, tall, 0, params({ seed: 3 }));
     expect(a.to).toBe(0);
     expect(a.from).toBe(POSE_HIGH_FIVE);
-    const after = Array.from(figurePose(scene, layout, 0, pose));
+    const after = Array.from(figurePose(scene, tall, 0, pose));
     after.forEach((v, i) => {
       expect(v).toBeCloseTo(before[i], 9);
     });
