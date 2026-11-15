@@ -6,10 +6,12 @@ import { getEffect } from "../effects/registry";
 import { defaults } from "../effects/params";
 import { createStore } from "../lib/store";
 import type { FrameStats } from "../lib/renderLoop";
+import { mockMedia } from "../test/media";
 import { ControlPanel } from "./ControlPanel";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 const warp = (() => {
@@ -112,6 +114,21 @@ describe("ControlPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(list.onQueryChange).toHaveBeenCalledExactlyOnceWith("");
     expect(list.onCategoriesChange).toHaveBeenCalledExactlyOnceWith(new Set());
+  });
+
+  it("shows keyboard shortcuts where the pointer can hover, and not on touch screens", () => {
+    renderPanel();
+    expect(screen.getByText(/S star · H hide/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Hide" }).title).toBe("Hide controls (H)");
+    expect(screen.getByRole("button", { name: /^Add Warp/ }).title).toMatch(/\(S\)$/);
+    cleanup();
+    mockMedia(["(hover: none)"]);
+    renderPanel();
+    expect(screen.queryByText(/S star · H hide/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Hide" }).title).toBe("Hide controls");
+    expect(screen.getByRole("button", { name: "Fullscreen" }).title).toBe("Fullscreen");
+    expect(screen.getByRole("button", { name: /^Effect: / }).title).toBe("Choose an effect");
+    expect(screen.getByRole("button", { name: /^Add Warp/ }).title).not.toMatch(/\(S\)$/);
   });
 
   it("shows an error, with a reload button when one is offered", () => {

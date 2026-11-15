@@ -8,6 +8,7 @@ import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectCategory, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
+import { useCanHover } from "./hooks/useMediaQuery";
 import { useTouchInput } from "./hooks/useTouchInput";
 import { copyText } from "./lib/clipboard";
 import { describeError } from "./lib/errors";
@@ -91,6 +92,7 @@ export function App() {
   // A touch "leaves" the panel when the finger lifts, so hover can't keep it up; on
   // touch screens it stays until hidden instead of fading out mid-use.
   const touchInput = useTouchInput();
+  const canHover = useCanHover();
   // The effect list: its sort and favourites are remembered, its search and category
   // filter aren't. Both stay while the list is closed, because ← / → follow the
   // filtered list.
@@ -482,7 +484,7 @@ export function App() {
         className="show-panel"
         data-visible={panelHidden && !idle}
         aria-label="Show controls"
-        title="Show controls (H)"
+        title={canHover ? "Show controls (H)" : "Show controls"}
         onClick={openPanel}
       >
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

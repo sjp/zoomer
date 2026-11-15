@@ -9,6 +9,7 @@ import { categoryFilterLabel } from "../effects/list";
 import { ParamControl } from "./ParamControl";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
+import { useCanHover } from "../hooks/useMediaQuery";
 
 const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
 const isFrameRate = (v: string): v is FrameRate => has(FRAME_RATES, v);
@@ -54,6 +55,9 @@ export function ControlPanel(props: Props) {
   const recording = recordingLeft !== undefined;
   const [duration, setDuration] = useState(20);
   const pickerRef = useRef<HTMLButtonElement>(null);
+  // Keyboard shortcuts in tooltips and the hint line, left out on touch screens.
+  const canHover = useCanHover();
+  const shortcut = (k: string) => (canHover ? ` (${k})` : "");
   const listOpen = list.open && !recording;
   // The search and category filter stay applied after the list closes, because
   // ← / → follow them.
@@ -73,7 +77,7 @@ export function ControlPanel(props: Props) {
           className="effect-picker"
           aria-expanded={listOpen}
           disabled={recording}
-          title={recording ? "Locked while recording" : "Choose an effect (/)"}
+          title={recording ? "Locked while recording" : `Choose an effect${shortcut("/")}`}
           onClick={() => {
             list.onOpenChange(!list.open);
           }}
@@ -87,12 +91,12 @@ export function ControlPanel(props: Props) {
         <StarButton
           starred={list.options.favourites?.has(effect.id) ?? false}
           name={effect.name}
-          titleSuffix=" (S)"
+          titleSuffix={shortcut("S")}
           onToggle={() => {
             list.onToggleFavourite(effect.id);
           }}
         />
-        <button type="button" onClick={props.onHide} title="Hide controls (H)">
+        <button type="button" onClick={props.onHide} title={`Hide controls${shortcut("H")}`}>
           Hide
         </button>
       </header>
@@ -235,7 +239,7 @@ export function ControlPanel(props: Props) {
         <button type="button" onClick={props.onReset}>
           Reset
         </button>
-        <button type="button" onClick={props.onFullscreen} title="Fullscreen (F)">
+        <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
           Fullscreen
         </button>
         <button
@@ -246,7 +250,9 @@ export function ControlPanel(props: Props) {
           Copy link
         </button>
       </footer>
-      <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
+      {canHover && (
+        <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
+      )}
     </aside>
   );
 }
