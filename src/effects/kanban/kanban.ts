@@ -1142,7 +1142,8 @@ export const kanban = defineEffect(kanbanMeta, {
               // Back to the look still fading out: turn the fade around.
               cur = 1 - cur;
               mixT = 1 - mixT;
-            } else {
+            } else if (mixT >= 1) {
+              // A third look waits for the running fade to finish rather than cutting it short.
               cur = 1 - cur;
               mixT = 0;
               sizeAtlas(cur);

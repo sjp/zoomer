@@ -70,6 +70,34 @@ describe("kanban board", () => {
     expect(fake.errors).toEqual([]);
   });
 
+  it("lets a look's crossfade finish before fading to a third look", () => {
+    const fake = createFakeGl({ record: true });
+    const effect = kanban.create(fake.gl);
+    effect.resize({ width: 1920, height: 1080, scale: 1 });
+    const mixes = () =>
+      fake.calls
+        .filter((c) => c.name === "uniform1f" && (c.args[0] as { name: string }).name === "uMix")
+        .map((c) => c.args[1] as number);
+    for (let i = 0; i < 10; i++) {
+      effect.frame(1 / 30, DEFAULTS);
+    }
+    // Dark, then sticky notes a moment into that fade.
+    for (let i = 0; i < 9; i++) {
+      effect.frame(1 / 30, { ...DEFAULTS, theme: "dark" });
+    }
+    for (let i = 0; i < 120; i++) {
+      effect.frame(1 / 30, { ...DEFAULTS, theme: "dark", style: "sticky" });
+    }
+    const m = mixes();
+    // The mix only falls back once a fade has reached 1: once for dark, once for sticky.
+    const restarts = m.filter((x, i) => i > 0 && x < m[i - 1]);
+    expect(m.some((x, i) => i > 0 && x < m[i - 1] && m[i - 1] < 1)).toBe(false);
+    expect(restarts.length).toBe(2);
+    expect(m[m.length - 1]).toBe(1);
+    effect.dispose?.();
+    expect(fake.errors).toEqual([]);
+  });
+
   it.each([
     [{ theme: "dark" }],
     [{ style: "sticky" }],
