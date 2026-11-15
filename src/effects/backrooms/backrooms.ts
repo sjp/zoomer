@@ -50,6 +50,13 @@ const FOOTAGE_LINES = 480;
 /** Found footage head bob: height in cells, and bobs per cell walked. */
 const BOB = 0.012;
 const BOBS_PER_CELL = 1;
+/**
+ * The world-space patterns (wallpaper, carpet noise, ceiling tiles) repeat
+ * every this many cells, so `uOrigin` can wrap into +-half of it and the
+ * shader's float coordinates stay small however far the walk has gone. A
+ * multiple of 20 so every noise frequency below tiles; far too long to notice.
+ */
+const PATTERN_WRAP = 2000;
 /** Seconds to fade to black on a variation change, and back. */
 const RESET_FADE = 1.2;
 /** Seconds of the dip to black and back that switches between the styles. */
@@ -92,7 +99,10 @@ uniform vec2 uPixOffset;
 uniform vec3 uCam;
 /** Heading (x, y). */
 uniform vec2 uView;
-/** The window's south-west cell in the world, so patterns stay put when the window moves. */
+/**
+ * The window's south-west cell in the world, so patterns stay put when the
+ * window moves; wrapped by PATTERN_WRAP, which the patterns repeat over.
+ */
 uniform vec2 uOrigin;
 /** Horizontal distance at which the haze is complete, cells. */
 uniform float uFar;
@@ -108,6 +118,7 @@ const int FLICKERS = ${String(MAX_FLICKERS)};
 const int WALL = ${String(WALL)};
 const int PILLAR = ${String(PILLAR)};
 const int PANEL_LIT = ${String(PANEL_LIT)};
+const int WRAP = ${String(PATTERN_WRAP)};
 const float FOCAL = ${glslFloat(FOCAL)};
 const float CEIL = ${glslFloat(CEIL)};
 const float PILLAR_HALF = 0.22;
@@ -131,6 +142,25 @@ const float DIRECT = 0.75;
 ${VALUE_NOISE_GLSL}
 ${DITHER_GLSL}
 ${GRID_DDA_GLSL}
+
+/** Lattice point k wrapped into [-n/2, n/2): unchanged near the world's middle, period n beyond. */
+ivec2 wrapLattice(ivec2 k, ivec2 n) {
+  ivec2 h = n / 2;
+  ivec2 r = k - n * ivec2(floor(vec2(k + h) / vec2(n)));
+  // Exact whatever the division rounded to.
+  return r + n * (ivec2(lessThan(r, -h)) - ivec2(greaterThanEqual(r, h)));
+}
+
+/** vnoise with its lattice repeating every n points (WRAP cells times the frequency). */
+float vnoiseWrap(vec2 p, float s, ivec2 n) {
+  vec2 f = floor(p);
+  ivec2 i = wrapLattice(ivec2(f), n);
+  ivec2 j = wrapLattice(i + 1, n);
+  vec2 t = p - f;
+  t = t * t * (3.0 - 2.0 * t);
+  return mix(mix(hash2(vec2(i), s), hash2(vec2(j.x, i.y), s), t.x),
+             mix(hash2(vec2(i.x, j.y), s), hash2(vec2(j), s), t.x), t.y);
+}
 
 /** Kind and panel of window cell c; outside the window, wall. */
 ivec2 cellAt(ivec2 c) {
@@ -229,7 +259,8 @@ vec3 wallpaperColour(vec2 g, float fw) {
   vec3 c = mix(WALLPAPER, WALL_INK, (0.5 * chevron + 0.6 * pin) * 0.5 * k);
   // Damp creeping up from the floor, and the odd water stain.
   c *= mix(0.8, 1.0, smoothstep(0.0, 0.9, g.y));
-  float stain = smoothstep(0.58, 0.8, vnoise(vec2(g.x * 0.9, g.y * 1.4), 3.0));
+  float stainNoise = vnoiseWrap(vec2(g.x * 0.9, g.y * 1.4), 3.0, ivec2(WRAP * 9 / 10, 1 << 20));
+  float stain = smoothstep(0.58, 0.8, stainNoise);
   c = mix(c, STAIN, 0.45 * stain * (1.0 - smoothstep(0.4, 1.6, g.y)));
   // A plain skirting board.
   return mix(c, BASEBOARD, 1.0 - smoothstep(0.075 - fw, 0.075 + fw, g.y));
@@ -242,13 +273,14 @@ vec3 carpetColour(vec2 g, float fw) {
   // The pile's noise is skipped where it has filtered out (mid-distance on).
   float pile = 0.0;
   if (k1 > 0.0) {
-    pile = (vnoise(g * 9.0, 5.0) - 0.5) * k1;
+    pile = (vnoiseWrap(g * 9.0, 5.0, ivec2(WRAP * 9)) - 0.5) * k1;
   }
   if (k2 > 0.0) {
-    pile += 0.6 * (vnoise(g * 23.0, 6.0) - 0.5) * k2;
+    pile += 0.6 * (vnoiseWrap(g * 23.0, 6.0, ivec2(WRAP * 23)) - 0.5) * k2;
   }
   vec3 c = CARPET * (1.0 + 0.16 * pile);
-  float damp = smoothstep(0.6, 0.78, 0.7 * vnoise(g * 0.45, 9.0) + 0.3 * vnoise(g * 1.3, 10.0));
+  float damp = smoothstep(0.6, 0.78,
+    0.7 * vnoiseWrap(g * 0.45, 9.0, ivec2(WRAP * 9 / 20)) + 0.3 * vnoiseWrap(g * 1.3, 10.0, ivec2(WRAP * 13 / 10)));
   return mix(c, DAMP, 0.65 * damp);
 }
 
@@ -258,7 +290,7 @@ vec3 ceilingColour(vec2 q, vec2 g, float fw) {
   vec2 f = abs(fract(vec2(q.x + 0.25, q.y) * 2.0) - 0.5);
   float d = (0.5 - max(f.x, f.y)) * 0.5;
   float grout = 1.0 - smoothstep(0.006, 0.01 + 1.5 * fw, d);
-  float v = hash2(floor(vec2(g.x + 0.25, g.y) * 2.0), 21.0);
+  float v = hash2(vec2(wrapLattice(ivec2(floor(vec2(g.x + 0.25, g.y) * 2.0)), ivec2(2 * WRAP))), 21.0);
   vec3 c = mix(TILE * (0.97 + 0.05 * v), GROUT, grout * (1.0 - smoothstep(0.02, 0.06, fw)));
   float glow = panelGlow(q);
   c *= 0.62 + 0.4 * glow;
@@ -379,6 +411,9 @@ void main() {
   outColor = texture(uTex, vec2(vUv.x, 1.0 - vUv.y)) * uAlpha;
 }
 `;
+
+/** A window origin wrapped into +-PATTERN_WRAP / 2 (unchanged nearer the start). */
+const wrapOrigin = (o: number) => o - PATTERN_WRAP * Math.round(o / PATTERN_WRAP);
 
 const hazeParam = (v: number) => clamp(Number.isFinite(v) ? v : 0.5, 0, 1);
 
@@ -648,7 +683,7 @@ export const backrooms = defineEffect(backroomsMeta, {
           const bob = footage ? BOB * Math.sin(walker.walked * BOBS_PER_CELL * Math.PI * 2) : 0;
           u.f3("uCam", walker.x - ox, walker.y - oy, EYE + bob);
           u.f2("uView", Math.cos(walker.angle), Math.sin(walker.angle));
-          u.f2("uOrigin", ox, oy);
+          u.f2("uOrigin", wrapOrigin(ox), wrapOrigin(oy));
           u.f1("uFar", VIEW_REACH + (NEAR_HAZE - VIEW_REACH) * smoothstep(0, 1, haze));
           for (let k = 0; k < MAX_FLICKERS; k++) {
             const s = flicker.slots[k];
