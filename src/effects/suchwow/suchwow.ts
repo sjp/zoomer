@@ -51,6 +51,11 @@ const BACKGROUND_EASE = 1.2;
 /** Seconds the typed phrases, and the canvas size and variation, must hold before they are used. */
 const SETTLE_TEXT = 1;
 const SETTLE_SIZE = 0.3;
+/**
+ * Phrases repainted per frame for a settled resize; the rest are drawn
+ * stretched until their turn, so a resize doesn't repaint every slot at once.
+ */
+const RESCALES_PER_FRAME = 2;
 /** Bounds on the shiba atlas's cell, px. */
 const MIN_CELL = 16;
 const MAX_CELL = 1024;
@@ -268,13 +273,16 @@ export const suchwow = defineEffect(suchwowMeta, {
           // Sprites: phrases (one slot each), then the shiba.
           const sx = width / f.refWidth;
           count = 0;
+          let rescales = 0;
           for (let i = 0; i < CAPACITY; i++) {
             const ph = f.phrases[i];
             const slot = slots[i];
             if (!ph.live || ph.alpha <= 0) {
               continue;
             }
-            if (slot.serial !== ph.serial || slot.scale !== artScale) {
+            // A new phrase is painted at once; one only resized waits its turn.
+            const fresh = slot.serial !== ph.serial;
+            if (fresh || (slot.scale !== artScale && rescales++ < RESCALES_PER_FRAME)) {
               slot.texture.upload(
                 paintPhrase(
                   ph.text,
