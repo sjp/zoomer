@@ -512,10 +512,12 @@ export function stepScene(
   const fade = (step * Math.max(m, MIN_FADE_RATE)) / FADE_SECONDS;
   scene.clock += step * m;
 
-  // The bust turns at full rate while spinning; stopped, it eases back to rest.
+  // The bust turns at full rate while spinning; stopped, it eases back to rest,
+  // never faster than it spins, so its veins stay within the codec budget.
   scene.spin = approach(scene.spin, spinOn ? 1 : 0, fade);
   const back = wrap(REST_ANGLE - scene.angle, -Math.PI, 2 * Math.PI);
-  scene.angle += step * m * (SPIN_RATE * scene.spin + (1 - scene.spin) * 0.8 * back);
+  const ret = clamp(0.8 * back, -SPIN_RATE, SPIN_RATE);
+  scene.angle += step * m * (SPIN_RATE * scene.spin + (1 - scene.spin) * ret);
   scene.angle = wrap(scene.angle, -Math.PI, 2 * Math.PI);
 
   scene.drift = approach(scene.drift, driftOn ? 1 : 0, fade);

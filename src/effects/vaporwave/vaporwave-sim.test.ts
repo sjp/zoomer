@@ -25,6 +25,9 @@ import {
   windowOffset,
 } from "./vaporwave-sim";
 
+/** An angle difference brought into [-π, π], across the wrap. */
+const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
 const ASPECTS = [0.5, 9 / 16, 0.75, 1, 4 / 3, 16 / 9, 21 / 9, 3];
 const SEEDS = [0, 1, 2, 42, 999];
 const CASES = ASPECTS.flatMap((a) => SEEDS.map((s) => [a, s] as const));
@@ -208,13 +211,17 @@ describe("motion", () => {
     expect(Math.abs(Math.abs(scene.angle - REST_ANGLE) - Math.PI)).toBeLessThan(0.01);
     let last = scene.angle;
     let biggest = 0;
-    for (let f = 0; f < 30 * 60; f++) {
+    for (let f = 0; f < 60 * 60; f++) {
       stepScene(scene, 1 / 60, 1, false, false, true);
-      biggest = Math.max(biggest, Math.abs(scene.angle - last));
+      const turn = Math.abs(wrapAngle(scene.angle - last));
+      biggest = Math.max(biggest, turn);
       last = scene.angle;
     }
     expect(Math.abs(scene.angle - REST_ANGLE)).toBeLessThan(0.01);
-    expect(biggest).toBeLessThan(0.05);
+    // The way back turns the veins no faster than the spin does.
+    const l = computeLayout((REF_HEIGHT * 16) / 9, 1);
+    const surface = (biggest * 60 * BUST_RADIUS * l.bustUnit) / REF_HEIGHT;
+    expect(pxPerReferenceFrame(surface)).toBeLessThanOrEqual(1);
   });
 
   it("keeps the floor's drift within the codec limits at full motion", () => {
