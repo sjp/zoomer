@@ -21,6 +21,7 @@ import {
   isChanging,
   type Jazz,
   type JazzParams,
+  type Pose,
   liveElements,
   PALETTES,
   REF_HEIGHT,
@@ -105,6 +106,10 @@ describe("90s jazz layout", () => {
   it.each(ASPECTS.map((a) => [a]))(
     "keeps swashes, shapes and splatter out of the centre at aspect %f",
     (aspect) => {
+      // How far body samples keep from the clear centre beyond their radius: the
+      // least of it, 0 at most, as a sample surely clear by its radius skips the
+      // edge scan and counts as exactly its radius away (one expect, not thousands).
+      let margin = Infinity;
       for (const seed of [0, 1, 7, 42, 333]) {
         for (const scale of [MIN_SCALE, 1]) {
           const { jazz } = make(aspect, { seed, scale });
@@ -113,11 +118,12 @@ describe("90s jazz layout", () => {
           expect(els.filter((e) => e.group === G_SWASH).length).toBeGreaterThan(0);
           for (const el of els.filter((e) => isBig(e))) {
             for (const [x, y, r] of body(el, el.x, el.y, el.angle)) {
-              expect(distanceTo(jazz.clear, ring, x, y)).toBeGreaterThanOrEqual(r);
+              margin = Math.min(margin, distanceTo(jazz.clear, ring, x, y, r) - r);
             }
           }
         }
       }
+      expect(margin).toBeGreaterThanOrEqual(0);
     },
   );
 
@@ -287,29 +293,36 @@ describe("90s jazz motion", () => {
       for (const scale of [MIN_SCALE, 1]) {
         const { jazz, params } = make(16 / 9, { animation, speed: 1, scale });
         const pose = createPose();
-        const last = new Map<Element, [number, number, number, number, number, number]>();
+        // Each element's last x, y, angle, pop, reveal and frame, updated in place.
+        const last = new Map<Element, Float64Array>();
         let worst = 0;
-        const seen: [Element, number, number, number, number, number][] = [];
-        for (let f = 0; f < 30 * 120; f++) {
-          stepJazz(jazz, 1 / 30, params);
-          seen.length = 0;
-          forEachVisible(jazz, pose, (el, p) => {
-            seen.push([el, p.x, p.y, p.angle, p.pop, p.reveal]);
-          });
-          for (const [el, x, y, angle, pop, reveal] of seen) {
-            const reach = el.half > 0 ? el.half : el.radius;
-            const prev = last.get(el);
-            // Only frame to frame; a drift wrap jumps off screen, not on it.
-            if (prev?.[5] === f - 1 && Math.hypot(x - prev[0], y - prev[1]) < 100) {
-              const move =
-                Math.hypot(x - prev[0], y - prev[1]) +
-                reach * Math.abs(angle - prev[2]) * Math.max(pop, prev[3]) +
-                reach * Math.abs(pop - prev[3]) +
-                2 * el.half * Math.abs(reveal - prev[4]);
-              worst = Math.max(worst, move);
-            }
-            last.set(el, [x, y, angle, pop, reveal, f]);
+        let f = 0;
+        const visit = (el: Element, { x, y, angle, pop, reveal }: Pose) => {
+          const reach = el.half > 0 ? el.half : el.radius;
+          let prev = last.get(el);
+          // Only frame to frame; a drift wrap jumps off screen, not on it.
+          if (prev?.[5] === f - 1 && Math.hypot(x - prev[0], y - prev[1]) < 100) {
+            const move =
+              Math.hypot(x - prev[0], y - prev[1]) +
+              reach * Math.abs(angle - prev[2]) * Math.max(pop, prev[3]) +
+              reach * Math.abs(pop - prev[3]) +
+              2 * el.half * Math.abs(reveal - prev[4]);
+            worst = Math.max(worst, move);
           }
+          if (!prev) {
+            prev = new Float64Array(6);
+            last.set(el, prev);
+          }
+          prev[0] = x;
+          prev[1] = y;
+          prev[2] = angle;
+          prev[3] = pop;
+          prev[4] = reveal;
+          prev[5] = f;
+        };
+        for (; f < 30 * 120; f++) {
+          stepJazz(jazz, 1 / 30, params);
+          forEachVisible(jazz, pose, visit);
         }
         expect(worst).toBeGreaterThan(0);
         expect(worst).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
