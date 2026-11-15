@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeGl } from "../test/fake-gl";
-import { FakeOffscreenCanvas } from "../test/offscreen-canvas";
+import { FakeOffscreenCanvas, MeasuringCanvas } from "../test/offscreen-canvas";
 import { hexToUnitRgb } from "./color";
 import { createScope } from "./gl";
 import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES, type TextLayer } from "./text-layer";
@@ -94,5 +94,23 @@ describe("createTextLayer", () => {
     scope.dispose();
     expect(fake.errors).toEqual([]);
     expect(fake.live()).toEqual([]);
+  });
+
+  it("fills role text centred on whole pixels, skipping empty text and no width", () => {
+    vi.stubGlobal("OffscreenCanvas", MeasuringCanvas);
+    MeasuringCanvas.reset();
+    const { scope, layer } = build();
+    layer.fill("A", 10, 10, TEXT_ROLES.up, "12px x", 50);
+    expect(layer.resize(100, 50)).toBe(true);
+    layer.fill("", 10, 10, TEXT_ROLES.up, "12px x", 50);
+    layer.fill("B", 10, 10, TEXT_ROLES.up, "12px x", 0);
+    layer.fill("C", 10.4, 20.6, TEXT_ROLES.up, "12px x", 50, "right");
+    const fills = MeasuringCanvas.calls.filter((c) => c.method === "fillText");
+    expect(fills).toEqual([
+      { method: "fillText", args: ["C", 10, 21, 50], font: "12px x", fillStyle: TEXT_ROLES.up },
+    ]);
+    expect(layer.ctx?.textAlign).toBe("right");
+    expect(layer.ctx?.textBaseline).toBe("middle");
+    scope.dispose();
   });
 });

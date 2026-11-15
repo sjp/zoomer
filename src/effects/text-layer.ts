@@ -99,6 +99,20 @@ export interface TextLayer {
   /** Uploads the rects cleared (and drawn on) since the last flush. */
   flush: () => void;
   /**
+   * Draws `text` in `role` (a `TEXT_ROLES` colour) and `font`, vertically
+   * centred on `y` and aligned at `x` (both rounded to whole pixels), squeezed
+   * into `maxWidth`. Draws nothing without a canvas, for empty text or for no width.
+   */
+  fill: (
+    text: string,
+    x: number,
+    y: number,
+    role: string,
+    font: string,
+    maxWidth: number,
+    align?: CanvasTextAlign,
+  ) => void;
+  /**
    * Queues the canvas rect (`sx`, `sy`, `sw`, `sh`) to be drawn to the screen
    * rect (`dx`, `dy`, `dw`, `dh`) at opacity `alpha`.
    */
@@ -180,6 +194,17 @@ export function createTextLayer(
     release: atlas.release,
     clear: atlas.clear,
     flush: atlas.flush,
+    fill(text, x, y, role, font, maxWidth, align = "left") {
+      const ctx = atlas.ctx;
+      if (!ctx || !(maxWidth > 0) || text.length === 0) {
+        return;
+      }
+      ctx.font = font;
+      ctx.fillStyle = role;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, Math.round(x), Math.round(y), maxWidth);
+    },
     quad(sx, sy, sw, sh, dx, dy, dw, dh, alpha) {
       if (!(alpha > 0) || !(sw > 0) || !(sh > 0) || !(dw > 0) || !(dh > 0) || quads >= maxQuads) {
         return;

@@ -297,24 +297,6 @@ export const documentPage = defineEffect(documentMeta, {
         return w;
       };
 
-      const fill = (
-        t: string,
-        x: number,
-        y: number,
-        role: string,
-        font: string,
-        maxWidth: number,
-      ) => {
-        const ctx = text.ctx;
-        if (!ctx || !(maxWidth > 0) || t.length === 0) {
-          return;
-        }
-        ctx.font = font;
-        ctx.fillStyle = role;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(t, Math.round(x), Math.round(y), maxWidth);
-      };
       const R = (n: number) => Math.round(n * scale);
 
       /**
@@ -368,7 +350,7 @@ export const documentPage = defineEffect(documentMeta, {
         }
         const style = Ld.lineStyle[i];
         const kind = d.blocks[d.segments[s].block].kind;
-        fill(
+        text.fill(
           d.segments[s].text.slice(Ld.lineStart[i], end),
           Ld.lineX[i] - pageLeft,
           Ld.lineY[i] + shift + Ld.lineH[i] / 2,
@@ -385,7 +367,7 @@ export const documentPage = defineEffect(documentMeta, {
         const tx = pageCols + g.commentBar + g.commentPad;
         const tw = g.commentW - g.commentBar - 2 * g.commentPad;
         let ty = c.y + shift + g.commentPad;
-        fill(
+        text.fill(
           AUTHOR_NAMES[c.author],
           tx,
           ty + g.lineH[STYLE_AUTHOR] / 2,
@@ -395,7 +377,7 @@ export const documentPage = defineEffect(documentMeta, {
         );
         ty += g.lineH[STYLE_AUTHOR];
         for (let i = 0; i < c.starts.length; i++) {
-          fill(
+          text.fill(
             c.text.slice(c.starts[i], c.ends[i]),
             tx,
             ty + g.lineH[STYLE_COMMENT] / 2,
@@ -471,7 +453,7 @@ export const documentPage = defineEffect(documentMeta, {
       const paintStyle = (kind: number) => {
         pStyle = kind;
         text.clear(0, bandY, R(STYLE_W), S.toolbarH);
-        fill(
+        text.fill(
           STYLE_NAMES[kind] ?? STYLE_NAMES[2],
           R(10),
           bandY + S.toolbarH / 2,
@@ -498,7 +480,7 @@ export const documentPage = defineEffect(documentMeta, {
           " words";
         const y = bandY + S.toolbarH;
         text.clear(0, y, R(STATUS_W), S.statusH);
-        fill(s, R(14), y + S.statusH / 2, TEXT_ROLES.muted, chromeFonts[1], R(STATUS_W - 20));
+        text.fill(s, R(14), y + S.statusH / 2, TEXT_ROLES.muted, chromeFonts[1], R(STATUS_W - 20));
       };
 
       const paintRuler = () => {
@@ -509,7 +491,7 @@ export const documentPage = defineEffect(documentMeta, {
         for (let i = 1; i <= n; i++) {
           const x = g.margin + i * g.inch;
           if (x < g.pageW - g.margin - 2) {
-            fill(
+            text.fill(
               String(i),
               x - R(3) - pageLeft,
               y + S.rulerH / 2,

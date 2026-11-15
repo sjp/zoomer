@@ -234,25 +234,6 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
 
       // ---- Text painters (they run on an edit or a change, never every frame).
 
-      const fill = (
-        t: string,
-        x: number,
-        y: number,
-        role: string,
-        align: CanvasTextAlign,
-        font: string,
-        maxWidth: number,
-      ) => {
-        const ctx = text.ctx;
-        if (!ctx || !(maxWidth > 0)) {
-          return;
-        }
-        ctx.font = font;
-        ctx.fillStyle = role;
-        ctx.textAlign = align;
-        ctx.textBaseline = "middle";
-        ctx.fillText(t, Math.round(x), Math.round(y), maxWidth);
-      };
       const S = (n: number) => Math.round(n * scale);
       /** Cell text padding. */
       const padX = () => Math.max(2, Math.round(6 * scale * zoom));
@@ -274,23 +255,22 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           e.ext > 0
             ? cellAddress(e.row, e.col) + ":" + cellAddress(e.row + e.ext, e.col)
             : cellAddress(e.row, e.col);
-        fill(
+        text.fill(
           address,
           a.x + a.w / 2,
           a.y + a.h / 2,
           TEXT_ROLES.primary,
-          "center",
           fonts.address,
           a.w - S(8),
+          "center",
         );
         const content =
           e.phase === PHASE_TYPE ? e.text.slice(0, e.chars) : formulaBarText(s, e.row, e.col);
-        fill(
+        text.fill(
           content,
           L.formulaTextX,
           f.y + f.h / 2,
           TEXT_ROLES.primary,
-          "left",
           fonts.formula,
           width - L.formulaTextX - S(14),
         );
@@ -303,17 +283,17 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
         for (let c = 0; c < L.colCount; c++) {
           const x0 = L.colX[c];
           const w = L.colX[c + 1] - x0;
-          fill(columnName(c), x0 + w / 2, y, TEXT_ROLES.muted, "center", fonts.head, w - 2);
+          text.fill(columnName(c), x0 + w / 2, y, TEXT_ROLES.muted, fonts.head, w - 2, "center");
         }
         for (let r = 0; r < L.rowCount; r++) {
-          fill(
+          text.fill(
             String(r + 1),
             L.gutterW / 2,
             L.cellsTop + (r + 0.5) * L.rowH,
             TEXT_ROLES.muted,
-            "center",
             fonts.head,
             L.gutterW - 2,
+            "center",
           );
         }
       };
@@ -333,33 +313,33 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           e.row === r + 1 &&
           e.col === t.col0 + 1 + c
         ) {
-          fill(
-            e.text.slice(0, e.chars),
-            cell.x + p,
-            y,
-            TEXT_ROLES.primary,
-            "left",
-            fonts.cell,
-            maxW,
-          );
+          text.fill(e.text.slice(0, e.chars), cell.x + p, y, TEXT_ROLES.primary, fonts.cell, maxW);
           return;
         }
         const bold = r < 0 || r === t.items;
         const font = bold ? fonts.cellBold : fonts.cell;
         if (c < 0) {
           const label = r < 0 ? t.title : r === t.items ? "Total" : t.labels[r];
-          fill(label, cell.x + p, y, TEXT_ROLES.primary, "left", font, maxW);
+          text.fill(label, cell.x + p, y, TEXT_ROLES.primary, font, maxW);
         } else if (r < 0) {
-          fill(t.specs[c].header, cell.x + cell.w - p, y, TEXT_ROLES.primary, "right", font, maxW);
+          text.fill(
+            t.specs[c].header,
+            cell.x + cell.w - p,
+            y,
+            TEXT_ROLES.primary,
+            font,
+            maxW,
+            "right",
+          );
         } else {
-          fill(
+          text.fill(
             cellText(t, r, c),
             cell.x + cell.w - p,
             y,
             cellNegative(t, r, c) ? TEXT_ROLES.down : TEXT_ROLES.primary,
-            "right",
             font,
             maxW,
+            "right",
           );
         }
       };
@@ -394,15 +374,15 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           tabRect(i, cell);
           const x = cell.x + cell.w / 2;
           const y = cell.y + cell.h / 2;
-          fill(TAB_NAMES[i], x, y, TEXT_ROLES.muted, "center", fonts.tab, cell.w - S(12));
-          fill(
+          text.fill(TAB_NAMES[i], x, y, TEXT_ROLES.muted, fonts.tab, cell.w - S(12), "center");
+          text.fill(
             TAB_NAMES[i],
             x,
             y - L.tabs.y + height,
             TEXT_ROLES.up,
-            "center",
             fonts.tab,
             cell.w - S(12),
+            "center",
           );
         }
       };
@@ -432,14 +412,14 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           const v = tickAt(ticks, i);
           const y = valueY(v, range, plot.y, plot.y + plot.h);
           if (y >= plot.y - 1 && y <= plot.y + plot.h + 1) {
-            fill(
+            text.fill(
               "$" + formatTickCompact(v, ticks.step, maxAbs),
               plot.x - S(8),
               y,
               TEXT_ROLES.muted,
-              "right",
               fonts.axis,
               plot.x - x - S(8),
+              "right",
             );
           }
         }
@@ -453,25 +433,24 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           return;
         }
         text.clear(c.x, c.y, c.w, c.h);
-        fill(
+        text.fill(
           t.specs[s.chartCol].header + " by region",
           c.x + S(CHART_PAD),
           c.y + S(22),
           TEXT_ROLES.primary,
-          "left",
           fonts.chartTitle,
           c.w - 2 * S(CHART_PAD),
         );
         const slot = plot.w / t.items;
         for (let i = 0; i < t.items; i++) {
-          fill(
+          text.fill(
             t.labels[i],
             plot.x + (i + 0.5) * slot,
             plot.y + plot.h + S(15),
             TEXT_ROLES.muted,
-            "center",
             fonts.axis,
             slot - S(4),
+            "center",
           );
         }
         paintChartAxis();

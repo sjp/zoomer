@@ -463,25 +463,6 @@ export const kanban = defineEffect(kanbanMeta, {
       const countTint = new Float64Array(MAX_COLUMNS);
 
       const R = (n: number) => Math.round(n * scale);
-      const fill = (
-        t: string,
-        x: number,
-        y: number,
-        role: string,
-        font: string,
-        maxWidth: number,
-        align: CanvasTextAlign = "left",
-      ) => {
-        const ctx = text.ctx;
-        if (!ctx || !(maxWidth > 0) || t.length === 0) {
-          return;
-        }
-        ctx.font = font;
-        ctx.fillStyle = role;
-        ctx.textAlign = align;
-        ctx.textBaseline = "middle";
-        ctx.fillText(t, Math.round(x), Math.round(y), maxWidth);
-      };
 
       const headerFonts = (sticky: boolean) => {
         const stack = sticky ? HAND_FONT_STACK : SANS_FONT_STACK;
@@ -512,10 +493,10 @@ export const kanban = defineEffect(kanbanMeta, {
         const f = headerFonts(sticky);
         const y = copy * rowH;
         text.clear(0, y, text.width, rowH);
-        fill(title, 0, y + L.titleH / 2, TEXT_ROLES.primary, f.title, titleW);
+        text.fill(title, 0, y + L.titleH / 2, TEXT_ROLES.primary, f.title, titleW);
         const first = names.length - L.columns;
         for (let c = 0; c < L.columns; c++) {
-          fill(
+          text.fill(
             names[first + c] ?? "",
             titleW + c * nameW + R(12),
             y + L.headerH / 2,
@@ -537,8 +518,16 @@ export const kanban = defineEffect(kanbanMeta, {
         const y = countBandY;
         text.clear(x, y, 2 * countW, L.headerH);
         const s = String(n);
-        fill(s, x + countW / 2, y + L.headerH / 2, TEXT_ROLES.muted, f.count, countW, "center");
-        fill(s, x + 1.5 * countW, y + L.headerH / 2, TEXT_ROLES.up, f.count, countW, "center");
+        text.fill(
+          s,
+          x + countW / 2,
+          y + L.headerH / 2,
+          TEXT_ROLES.muted,
+          f.count,
+          countW,
+          "center",
+        );
+        text.fill(s, x + 1.5 * countW, y + L.headerH / 2, TEXT_ROLES.up, f.count, countW, "center");
       };
 
       // ---- Card atlases: the current look and, while crossfading, the previous one.
