@@ -361,9 +361,9 @@ body,
 }
 
 /* For a mouse (see EffectList), arrows sit in their own slots either side of the chips,
-   never over them: the row runs into the panel's side padding, the arrows take its
-   ends and the chips scroll in the column between. An arrow's slot stays reserved
-   while it's hidden, so the chips don't shift as the arrows come and go. */
+   never over them: the row runs into the panel's side padding and an arrow takes its
+   end only while there are more chips that way. Without that arrow the chips use its
+   slot too, lined up with the rest of the panel. */
 .category-row[data-arrows="true"] {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) 24px;
@@ -373,18 +373,22 @@ body,
 }
 
 .category-row[data-arrows="true"] .category-chips {
-  grid-column: 2;
+  grid-column: 1 / 4;
   margin-inline: 0;
-  padding-inline: 0;
+  padding-inline: calc(var(--pad-left) - 6px) calc(var(--pad-right) - 6px);
   scroll-padding-inline: 16px;
 }
 
 .category-row[data-arrows="true"] .category-chips[data-more-start="true"] {
   --fade-start: 16px;
+  grid-column-start: 2;
+  padding-inline-start: 0;
 }
 
 .category-row[data-arrows="true"] .category-chips[data-more-end="true"] {
   --fade-end: 16px;
+  grid-column-end: 3;
+  padding-inline-end: 0;
 }
 
 .chips-arrow {
