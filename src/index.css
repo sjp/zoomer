@@ -10,6 +10,8 @@
   --muted: #9aa0ae;
   --accent: #5b8cff;
   --star: #f5c542;
+  /* Record's dot and tint; its light-pink text is well over 4.5:1 on the tint. */
+  --record: #ff5a5f;
   /* The notch, rounded corners and home indicator, with viewport-fit=cover. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
@@ -174,27 +176,37 @@ body,
   padding-bottom: var(--pad-bottom);
 }
 
-.panel-header-row,
-.row {
+.panel-header-row {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   align-items: center;
 }
 
-.row > * {
-  flex: 1;
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
+/* The effect's name as the header's title, a button that opens the list. */
 .effect-picker {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+  height: 34px;
+  margin-left: -8px;
+  padding: 0 8px;
+  border: none;
+  background: none;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 650;
   text-align: left;
+}
+
+.effect-picker:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.06);
 }
 
 .effect-picker-name {
@@ -210,6 +222,59 @@ body,
 
 .effect-picker[aria-expanded="true"] svg {
   transform: rotate(180deg);
+}
+
+.step-buttons {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+/* Star, Copy link, Fullscreen, the fps badge and Record. */
+.panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px;
+}
+
+.panel-toolbar .fps-meter {
+  margin-left: auto;
+}
+
+/* Tinted rather than filled, so it reads as the one red action without shouting. */
+.record-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border-color: rgb(255 90 95 / 0.45);
+  background: rgb(255 90 95 / 0.12);
+  color: #ffd6d7;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.record-button svg {
+  color: var(--record);
+}
+
+.record-button:hover:not(:disabled) {
+  background: rgb(255 90 95 / 0.22);
+}
+
+.panel-toolbar .record-button {
+  margin-left: 6px;
+}
+
+.panel-header-row .record-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
 }
 
 /* The list expands inside the panel, so the panel keeps its width. */
@@ -632,17 +697,19 @@ select:disabled {
   cursor: default;
 }
 
-/* A two-line badge in the header: fps over frame time. */
+/* A small badge: fps and frame time. */
 .fps-meter {
   flex: none;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 10px;
-  line-height: 1.2;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--muted);
+  background: rgb(255 255 255 / 0.06);
 }
 
 .fps-meter[data-level="warn"] {
@@ -682,11 +749,18 @@ select:disabled {
 }
 
 .icon-button {
+  flex: none;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
+  border-color: transparent;
+  background: none;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.08);
 }
 
 .link-button {
@@ -752,6 +826,17 @@ select:disabled {
 .app[data-layout="sheet"] .panel[data-sheet="dragging"] {
   overflow: hidden;
   transition: none;
+}
+
+.app[data-layout="sheet"] .panel-header {
+  gap: 0;
+}
+
+/* Under about 375 px the picker would be left too narrow beside them. */
+@media (max-width: 374px) {
+  .app[data-layout="sheet"] .step-buttons {
+    display: none;
+  }
 }
 
 .sheet-handle {
@@ -858,15 +943,6 @@ select:disabled {
 .app[data-layout="sheet"] .toast {
   top: calc(16px + var(--safe-top));
   bottom: auto;
-}
-
-/* The header's Record button, in the sheet's peek bar. */
-.record-button {
-  flex: none;
-}
-
-.panel-header-row .record-button {
-  min-width: 72px;
 }
 
 @media (prefers-reduced-motion: reduce) {

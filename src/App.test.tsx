@@ -291,6 +291,14 @@ describe("App", () => {
     expect(pickerName()).toContain(WARP.name);
   });
 
+  it("steps through the list with the previous and next buttons too", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Next effect" }));
+    expect(pickerName()).not.toContain(WARP.name);
+    fireEvent.click(screen.getByRole("button", { name: "Previous effect" }));
+    expect(pickerName()).toContain(WARP.name);
+  });
+
   it("ignores shortcuts typed into form fields and with modifiers", () => {
     render(<App />);
     const slider = screen.getByRole("slider", { name: /^Speed/ });

@@ -478,6 +478,7 @@ export function App() {
             onFullscreen={fullscreenEnabled ? toggleFullscreen : undefined}
             onCopyLink={copyLink}
             onHide={hidePanel}
+            onStep={step}
           />
         </PanelErrorBoundary>
       </div>

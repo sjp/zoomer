@@ -46,6 +46,7 @@ function renderPanel(overrides: Partial<Props> = {}) {
     onFullscreen: vi.fn<() => void>(),
     onCopyLink: vi.fn<() => void>(),
     onHide: vi.fn<() => void>(),
+    onStep: vi.fn<(dir: 1 | -1) => void>(),
     ...overrides,
   };
   render(<ControlPanel {...props} />);
@@ -93,16 +94,15 @@ describe("ControlPanel", () => {
     expect(screen.queryByLabelText("Search effects")).toBeNull();
   });
 
-  it("keeps output and recording in a section that starts closed and remembers its state", () => {
+  it("keeps output in a section that starts closed and remembers its state", () => {
     renderPanel();
     const section = () => defined(document.querySelector("details"), "the output section");
     expect(section().open).toBe(false);
-    expect(section().querySelector("summary")?.textContent).toBe("Output & recording");
+    expect(section().querySelector("summary")?.textContent).toBe("Output");
     for (const control of [
       screen.getByLabelText("Resolution"),
       screen.getByLabelText("Frame rate"),
       screen.getByLabelText("Clip length"),
-      screen.getByRole("button", { name: "Record clip" }),
     ]) {
       expect(section().contains(control)).toBe(true);
     }
@@ -131,6 +131,32 @@ describe("ControlPanel", () => {
     expect(meter.closest("header")).toBeTruthy();
     expect(meter.textContent).toBe("60 fps4.0 ms");
     expect(meter.getAttribute("title")).toMatch(/GPU time/);
+  });
+
+  it("puts Record in the header's toolbar beside the other actions", () => {
+    const props = renderPanel();
+    const record = screen.getByRole("button", { name: "Record clip" });
+    expect(record.textContent).toBe("Record");
+    const toolbar = defined(record.closest(".panel-toolbar"), "the toolbar");
+    expect(toolbar.closest("header")).toBeTruthy();
+    for (const name of [/^Add Warp/, "Copy link", "Fullscreen"]) {
+      expect(toolbar.contains(screen.getByRole("button", { name }))).toBe(true);
+    }
+    fireEvent.click(record);
+    expect(props.onRecord).toHaveBeenCalledExactlyOnceWith(20);
+  });
+
+  it("steps to the previous and next effect, except while recording", () => {
+    const onStep = vi.fn<(dir: 1 | -1) => void>();
+    renderPanel({ onStep });
+    fireEvent.click(screen.getByRole("button", { name: "Previous effect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next effect" }));
+    expect(onStep.mock.calls).toEqual([[-1], [1]]);
+    cleanup();
+    renderPanel({ onStep, recordingLeft: 5 });
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Next effect" }).disabled).toBe(
+      true,
+    );
   });
 
   it("can't record before the selected effect runs", () => {
@@ -172,13 +198,14 @@ describe("ControlPanel", () => {
   it("shows keyboard shortcuts where the pointer can hover, and not on touch screens", () => {
     renderPanel();
     expect(screen.getByText(/S star · H hide/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Hide" }).title).toBe("Hide controls (H)");
+    expect(screen.getByRole("button", { name: "Hide controls" }).title).toBe("Hide controls (H)");
+    expect(screen.getByRole("button", { name: "Next effect" }).title).toBe("Next effect (→)");
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).toMatch(/\(S\)$/);
     cleanup();
     mockMedia(["(hover: none)"]);
     renderPanel();
     expect(screen.queryByText(/S star · H hide/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Hide" }).title).toBe("Hide controls");
+    expect(screen.getByRole("button", { name: "Hide controls" }).title).toBe("Hide controls");
     expect(screen.getByRole("button", { name: "Fullscreen" }).title).toBe("Fullscreen");
     expect(screen.getByRole("button", { name: /^Effect: / }).title).toBe("Choose an effect");
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).not.toMatch(/\(S\)$/);
@@ -259,7 +286,10 @@ describe("ControlPanel as a bottom sheet", () => {
     expect(handle().getAttribute("aria-expanded")).toBe("false");
     const record = screen.getByRole("button", { name: "Record clip" });
     expect(record.closest("header")).toBeTruthy();
-    expect(record.textContent).toBe("Record");
+    // A dot alone, to leave the picker room.
+    expect(record.textContent).toBe("");
+    // Toolbar actions stay in the footer.
+    expect(screen.getByRole("button", { name: "Copy link" }).closest("footer")).toBeTruthy();
     fireEvent.click(record);
     expect(props.onRecord).toHaveBeenCalledExactlyOnceWith(20);
     fireEvent.click(handle(), { detail: 1 });
@@ -268,6 +298,16 @@ describe("ControlPanel as a bottom sheet", () => {
     expect(handle().getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(handle(), { detail: 0 });
     expect(sheetState()).toBe("collapsed");
+  });
+
+  it("offers previous and next only while expanded", () => {
+    renderPanel({ layout: "sheet", onStep: vi.fn<(dir: 1 | -1) => void>() });
+    expect(screen.queryByRole("button", { name: "Next effect" })).toBeNull();
+    fireEvent.click(handle(), { detail: 1 });
+    expect(screen.getByRole("button", { name: "Next effect" }).closest("header")).toBeTruthy();
+    cleanup();
+    renderPanel({ layout: "drawer", onStep: vi.fn<(dir: 1 | -1) => void>() });
+    expect(screen.queryByRole("button", { name: "Next effect" })).toBeNull();
   });
 
   it("follows a drag on the handle and snaps on release", () => {

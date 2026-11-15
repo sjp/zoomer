@@ -50,6 +50,8 @@ interface Props {
   /** Copies a link with every setting spelled out that opens with the panel hidden. */
   onCopyLink: () => void;
   onHide: () => void;
+  /** Steps to the previous (-1) or next (1) effect in the list, as ← / → do. */
+  onStep?: ((dir: 1 | -1) => void) | undefined;
   /** Shown with the error when the effect's code failed to load, e.g. after a redeploy. */
   onReload?: (() => void) | undefined;
 }
@@ -126,28 +128,122 @@ export function ControlPanel(props: Props) {
     }
   }
 
+  // On a phone the header is the sheet's peek bar (or the drawer's top), so it keeps
+  // to the picker, star, Record and Hide; a floating card has room for a toolbar.
+  const compact = layout !== "float";
+  const recordLabel = recording ? `Recording… ${String(recordingLeft)}s` : "Record clip";
   const recordButton = (
     <button
       type="button"
-      className="primary record-button"
+      className="record-button"
       disabled={recording || !props.canRecord}
       title="Keep this tab visible while recording"
-      aria-label={
-        sheet ? (recording ? `Recording… ${String(recordingLeft)}s` : "Record clip") : undefined
-      }
+      aria-label={compact || !recording ? recordLabel : undefined}
       onClick={() => {
         props.onRecord(duration);
       }}
     >
-      {sheet
-        ? recording
-          ? `${String(recordingLeft)}s`
-          : "Record"
+      {(!compact || !recording) && (
+        <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true">
+          <circle cx="5" cy="5" r="5" fill="currentColor" />
+        </svg>
+      )}
+      {compact
+        ? recording && `${String(recordingLeft)}s`
         : recording
           ? `Recording… ${String(recordingLeft)}s`
-          : "Record clip"}
+          : "Record"}
     </button>
   );
+  const star = (
+    <StarButton
+      className="icon-button"
+      starred={list.options.favourites?.has(effect.id) ?? false}
+      name={effect.name}
+      titleSuffix={shortcut("S")}
+      onToggle={() => {
+        list.onToggleFavourite(effect.id);
+      }}
+    />
+  );
+  const fps = <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />;
+  const fullscreenButton = props.onFullscreen && (
+    <button
+      type="button"
+      className="icon-button"
+      aria-label="Fullscreen"
+      title={`Fullscreen${shortcut("F")}`}
+      onClick={props.onFullscreen}
+    >
+      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+        <path
+          d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+  const copyLinkButton = (
+    <button
+      type="button"
+      className="icon-button"
+      aria-label="Copy link"
+      title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
+      onClick={props.onCopyLink}
+    >
+      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+        <path
+          d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+  // ← / → as buttons. A phone has no arrow keys, but its header has room for these
+  // only while the sheet is expanded (and not on the narrowest screens; see the CSS).
+  const onStep = props.onStep;
+  const stepButtons =
+    onStep && (!compact || (sheet && sheetOpen)) ? (
+      <div className="step-buttons">
+        {(
+          [
+            [-1, "Previous effect", "←", "M12.5 4.5L7 10l5.5 5.5"],
+            [1, "Next effect", "→", "M7.5 4.5L13 10l-5.5 5.5"],
+          ] as const
+        ).map(([dir, label, key, path]) => (
+          <button
+            key={dir}
+            type="button"
+            className="icon-button"
+            aria-label={label}
+            title={recording ? "Locked while recording" : `${label}${shortcut(key)}`}
+            disabled={recording}
+            onClick={() => {
+              onStep(dir);
+            }}
+          >
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path
+                d={path}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   return (
     <aside
@@ -189,24 +285,49 @@ export function ControlPanel(props: Props) {
           >
             <span className="sr-only">Effect: </span>
             <span className="effect-picker-name">{effect.name}</span>
-            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-              <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+              <path
+                d="M5 7.5l5 5 5-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
-          <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />
-          <StarButton
-            starred={list.options.favourites?.has(effect.id) ?? false}
-            name={effect.name}
-            titleSuffix={shortcut("S")}
-            onToggle={() => {
-              list.onToggleFavourite(effect.id);
-            }}
-          />
-          {sheet && recordButton}
-          <button type="button" onClick={props.onHide} title={`Hide controls${shortcut("H")}`}>
-            Hide
+          {stepButtons}
+          {compact && star}
+          {compact && recordButton}
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Hide controls"
+            title={`Hide controls${shortcut("H")}`}
+            onClick={props.onHide}
+          >
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path
+                d={sheet ? "M5 5l5 5 5-5M5 11l5 5 5-5" : "M5 5l5 5-5 5M11 5l5 5-5 5"}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
+        {!compact && <Description key={effect.id} text={effect.description} clamp={false} />}
+        {!compact && (
+          <div className="panel-toolbar">
+            {star}
+            {copyLinkButton}
+            {fullscreenButton}
+            {fps}
+            {recordButton}
+          </div>
+        )}
       </header>
       {listOpen && (
         <EffectList
@@ -239,7 +360,12 @@ export function ControlPanel(props: Props) {
               </button>
             </p>
           )}
-          <Description key={effect.id} text={effect.description} clamp={layout !== "float"} />
+          {compact && <Description key={effect.id} text={effect.description} clamp />}
+          {recording && (
+            <p className="hint" role="status">
+              Keep this tab visible until the recording finishes; hidden tabs make clips run long.
+            </p>
+          )}
           {props.loading && (
             <p className="loading" role="status">
               Loading…
@@ -282,7 +408,7 @@ export function ControlPanel(props: Props) {
               saveOutputOpen(open);
             }}
           >
-            <summary>Output &amp; recording</summary>
+            <summary>Output</summary>
             <div className="control control-inline">
               <label htmlFor="resolution">Resolution</label>
               <select
@@ -323,9 +449,10 @@ export function ControlPanel(props: Props) {
                 ))}
               </select>
             </div>
-            <div className="row">
+            <div className="control control-inline">
+              <label htmlFor="clip-length">Clip length</label>
               <select
-                aria-label="Clip length"
+                id="clip-length"
                 value={duration}
                 disabled={recording}
                 onChange={(e) => {
@@ -338,13 +465,7 @@ export function ControlPanel(props: Props) {
                   </option>
                 ))}
               </select>
-              {!sheet && recordButton}
             </div>
-            {recording && (
-              <p className="hint" role="status">
-                Keep this tab visible until the recording finishes; hidden tabs make clips run long.
-              </p>
-            )}
           </details>
 
           <footer className="panel-footer">
@@ -358,44 +479,9 @@ export function ControlPanel(props: Props) {
               >
                 Reset all
               </button>
-              {props.onFullscreen && (
-                <button
-                  type="button"
-                  className="icon-button"
-                  aria-label="Fullscreen"
-                  title={`Fullscreen${shortcut("F")}`}
-                  onClick={props.onFullscreen}
-                >
-                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-                    <path
-                      d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              )}
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Copy link"
-                title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
-                onClick={props.onCopyLink}
-              >
-                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-                  <path
-                    d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+              {compact && fps}
+              {compact && fullscreenButton}
+              {compact && copyLinkButton}
             </div>
             {canHover && (
               <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
