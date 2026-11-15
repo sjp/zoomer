@@ -199,6 +199,8 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
       const plot = rect();
       const range = createAxisRange();
       const ticks = createTicks();
+      // The chart's bar heights (region values) ease like colours do: a block of floats
+      // crossfading to a new target. Float32 is plenty for a bar a few hundred px tall.
       const valueEase = createColorEase(MAX_REGIONS);
       const valueTarget = new Float64Array(MAX_REGIONS);
       const tintAge = new Float32Array(2 * TINT_STRIDE).fill(99);
