@@ -167,7 +167,10 @@ interface Slot {
   sign: CanvasTexture;
   parts: CanvasTexture;
   layout: SignLayout | null;
+  /** Where the sign goes (its canvas dropped once uploaded). */
   art: SignArt | null;
+  /** Whether the sign texture holds a sign. */
+  signed: boolean;
   /** The canvas size key the textures were drawn for; -1 when empty. */
   painted: number;
 }
@@ -208,6 +211,7 @@ export const standby = defineEffect(standbyMeta, {
         parts: createCanvasTexture(gl, scope, { premultiply: true }),
         layout: null,
         art: null,
+        signed: false,
         painted: -1,
       }));
       gl.useProgram(program);
@@ -276,9 +280,13 @@ export const standby = defineEffect(standbyMeta, {
       /** Draws a slot's card, sign and parts for its params at the current size. */
       const paint = (slot: Slot) => {
         slot.layout = layoutSign(slot.text, slot.subtext, refWidth, measures[slot.style]);
-        slot.art = paintSign(slot.layout, slot.style, scale);
+        const art = paintSign(slot.layout, slot.style, scale);
         slot.card.upload(paintCard(slot.style, width, height));
-        slot.sign.upload(slot.art.canvas);
+        slot.sign.upload(art.canvas);
+        // Only the texture is drawn from: let the canvas go.
+        slot.signed = art.canvas !== null;
+        art.canvas = null;
+        slot.art = art;
         slot.parts.upload(
           paintParts(slot.style, clamp(Math.round(TV_SIZE * scale), MIN_CELL, MAX_CELL)),
         );
@@ -295,6 +303,9 @@ export const standby = defineEffect(standbyMeta, {
         slot.card.upload(null);
         slot.sign.upload(null);
         slot.parts.upload(null);
+        slot.layout = null;
+        slot.art = null;
+        slot.signed = false;
         slot.painted = -1;
       };
 
@@ -303,7 +314,7 @@ export const standby = defineEffect(standbyMeta, {
       /** Writes a slot's sign sprite at opacity `alpha`. */
       const putSign = (slot: Slot, alpha: number, pulse: number, swing: number) => {
         const art = slot.art;
-        if (!art?.canvas || alpha <= 0) {
+        if (!art || !slot.signed || alpha <= 0) {
           return;
         }
         // Device px per reference px across: stretched to the canvas until a new
