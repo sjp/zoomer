@@ -376,6 +376,33 @@ describe("walker", () => {
     },
   );
 
+  it("keeps walking on open floor for hundreds of legs at the fastest pace", () => {
+    const world = createWorld(11);
+    const w = createWalker();
+    resetWalker(w, world);
+    const dt = 0.25;
+    const rate = walkRate(MAX_SPEED);
+    let px = w.x;
+    let py = w.y;
+    let blocked = 0;
+    let step = 0;
+    let offRoute = 0;
+    // Hours of walking: hundreds of legs, over ten thousand cells out.
+    while (w.leg < 400) {
+      advanceWalker(w, world, dt, rate);
+      blocked += clearAt(world, w.x, w.y, 0.25) ? 0 : 1;
+      step = Math.max(step, Math.hypot(w.x - px, w.y - py));
+      const lane = laneAt(world, Math.floor(w.x / CHUNK), Math.floor(w.y / CHUNK));
+      offRoute += lane.style === STYLE_NONE ? 1 : 0;
+      px = w.x;
+      py = w.y;
+    }
+    expect(blocked).toBe(0);
+    expect(offRoute).toBe(0);
+    expect(step).toBeLessThanOrEqual(rate * dt * 1.1);
+    expect(Math.hypot(w.x, w.y)).toBeGreaterThan(15_000);
+  });
+
   it("holds its heading on the straights, sweeping only at the bends", () => {
     const world = createWorld(3);
     const w = createWalker();
