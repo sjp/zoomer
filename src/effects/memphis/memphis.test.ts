@@ -8,6 +8,7 @@ import { memphis } from "./memphis";
 function recording() {
   const fake = createFakeGl();
   const uploads: number[][] = [];
+  const indexUploads: number[] = [];
   const clears: number[][] = [];
   const gl = new Proxy(fake.gl, {
     get(target, key) {
@@ -22,6 +23,9 @@ function recording() {
           if (data && typeof count === "number") {
             uploads.push(Array.from(data.subarray(0, count)));
           }
+          if (args.some((a) => a instanceof Uint16Array)) {
+            indexUploads.push(uploads.length);
+          }
         }
         if (key === "clearColor") {
           clears.push(args as number[]);
@@ -30,7 +34,7 @@ function recording() {
       };
     },
   });
-  return { fake, gl, uploads, clears };
+  return { fake, gl, uploads, indexUploads, clears };
 }
 
 describe("corporate memphis", () => {
@@ -43,12 +47,13 @@ describe("corporate memphis", () => {
     for (let i = 0; i < 120; i++) {
       instance.frame(1 / 2, params);
     }
-    // Each frame uploads the shapes, then the people's vertices.
-    expect(uploads.length).toBe(240);
+    // The first frame uploads the shapes, then the people's vertices; later
+    // frames re-upload the same shapes and reuse the people's mesh.
+    expect(uploads.length).toBe(121);
     expect(uploads[0].length).toBeGreaterThan(0);
     expect(uploads[1].length).toBeGreaterThan(0);
     uploads.forEach((u, i) => {
-      expect(u).toEqual(uploads[i % 2]);
+      expect(u).toEqual(uploads[i === 1 ? 1 : 0]);
     });
     instance.dispose?.();
     expect(fake.errors).toEqual([]);
@@ -56,7 +61,7 @@ describe("corporate memphis", () => {
   });
 
   it("moves at Motion 1", () => {
-    const { fake, gl, uploads } = recording();
+    const { fake, gl, uploads, indexUploads } = recording();
     const effect: EffectDefinition = memphis;
     const instance = effect.create(gl);
     instance.resize({ width: 640, height: 360, scale: 1 / 3 });
@@ -64,6 +69,8 @@ describe("corporate memphis", () => {
     instance.frame(1 / 30, defaults(effect.params));
     // The second frame's people (upload 3) moved from the first's (upload 1).
     expect(uploads[3]).not.toEqual(uploads[1]);
+    // The same parts make the same triangles, so the indices went up once.
+    expect(indexUploads).toEqual([2]);
     instance.dispose?.();
     expect(fake.live()).toEqual([]);
   });

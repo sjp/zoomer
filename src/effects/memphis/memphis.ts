@@ -232,6 +232,52 @@ export const memphis = defineEffect(memphisMeta, {
       let width = 1;
       let height = 1;
       let scale = 1;
+      // What the people's mesh was last built from, and the indices last
+      // uploaded: a still frame (Motion 0, nothing fading) reuses both.
+      const keyHead = 6;
+      const builtKey = new Float64Array(keyHead + 4 * scene.figures.length + ROLE_COUNT * 3);
+      const key = new Float64Array(builtKey.length);
+      builtKey[0] = Number.NaN;
+      const uploadedIndices = new Uint16Array(MAX_INDICES);
+      let uploadedIndexCount = -1;
+      /** Fills `key` with everything the people's mesh depends on; true when it changed. */
+      const peopleChanged = (palette: Float32Array): boolean => {
+        key[0] = scene.seed;
+        key[1] = scene.swap;
+        key[2] = scene.motion;
+        key[3] = scene.motion > 0 ? scene.clock : 0;
+        key[4] = layout.width * 100003 + layout.height;
+        key[5] = scale;
+        let k = keyHead;
+        for (const f of scene.figures) {
+          key[k++] = f.from;
+          key[k++] = f.to;
+          key[k++] = f.t;
+          key[k++] = f.alpha;
+        }
+        for (let i = 0; i < ROLE_COUNT * 3; i++) {
+          key[k++] = palette[i];
+        }
+        for (let i = 0; i < key.length; i++) {
+          if (key[i] !== builtKey[i]) {
+            builtKey.set(key);
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const sameIndices = (): boolean => {
+        if (mesh.indexCount !== uploadedIndexCount) {
+          return false;
+        }
+        for (let i = 0; i < mesh.indexCount; i++) {
+          if (mesh.indices[i] !== uploadedIndices[i]) {
+            return false;
+          }
+        }
+        return true;
+      };
 
       return {
         resize(v) {
@@ -249,7 +295,8 @@ export const memphis = defineEffect(memphisMeta, {
           gl.clearColor(palette[3 * C_BG], palette[3 * C_BG + 1], palette[3 * C_BG + 2], 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
 
-          const count = emitScene(list, mesh, scene, layout, palette, 1 / scale);
+          const rebuild = peopleChanged(palette);
+          const count = emitScene(list, mesh, scene, layout, palette, 1 / scale, rebuild);
           gl.enable(gl.BLEND);
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           if (count > 0) {
@@ -261,16 +308,23 @@ export const memphis = defineEffect(memphisMeta, {
           }
           if (mesh.indexCount > 0) {
             gl.bindVertexArray(meshVao);
-            gl.bindBuffer(gl.ARRAY_BUFFER, meshVertices);
-            gl.bufferSubData(
-              gl.ARRAY_BUFFER,
-              0,
-              mesh.vertices,
-              0,
-              mesh.vertexCount * VERTEX_FLOATS,
-            );
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
-            gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, mesh.indices, 0, mesh.indexCount);
+            if (rebuild) {
+              gl.bindBuffer(gl.ARRAY_BUFFER, meshVertices);
+              gl.bufferSubData(
+                gl.ARRAY_BUFFER,
+                0,
+                mesh.vertices,
+                0,
+                mesh.vertexCount * VERTEX_FLOATS,
+              );
+              gl.bindBuffer(gl.ARRAY_BUFFER, null);
+              // The triangles only change when a part comes or goes.
+              if (!sameIndices()) {
+                gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, mesh.indices, 0, mesh.indexCount);
+                uploadedIndices.set(mesh.indices.subarray(0, mesh.indexCount));
+                uploadedIndexCount = mesh.indexCount;
+              }
+            }
             gl.useProgram(meshProgram);
             mu.f2("uResolution", width, height);
             mu.f1("uScale", scale);

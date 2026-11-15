@@ -315,8 +315,9 @@ const pen: Pen = {
 /**
  * Fills `list` with this frame's shapes and `mesh` with its people, back to
  * front, in `palette`'s colours (unit RGB per colour role). `feather` is one
- * device px in reference px, for the people's antialiased edges. Returns the
- * shape count.
+ * device px in reference px, for the people's antialiased edges. With
+ * `people` false the mesh is left as it is (the people haven't changed).
+ * Returns the shape count.
  */
 export function emitScene(
   list: ShapeList,
@@ -325,10 +326,13 @@ export function emitScene(
   layout: Layout,
   palette: Float32Array,
   feather = 1,
+  people = true,
 ): number {
   list.count = 0;
-  resetMesh(mesh, feather);
-  setPeoplePalette(palette);
+  if (people) {
+    resetMesh(mesh, feather);
+    setPeoplePalette(palette);
+  }
   pen.list = list;
   pen.palette = palette;
   const m = scene.motion;
@@ -371,7 +375,7 @@ export function emitScene(
   list.split = list.count;
   for (const i of FIGURE_ORDER) {
     const alpha = swap * scene.figures[i].alpha;
-    if (alpha > 0) {
+    if (people && alpha > 0) {
       emitPerson(mesh, scene, layout, i, alpha);
     }
   }
