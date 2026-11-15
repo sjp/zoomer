@@ -4,6 +4,7 @@ import type { FrameStats } from "./EffectCanvas";
 import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 import type { Store } from "../lib/store";
+import { Description } from "./Description";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { categoryFilterLabel } from "../effects/list";
 import { ParamControl } from "./ParamControl";
@@ -238,7 +239,7 @@ export function ControlPanel(props: Props) {
               </button>
             </p>
           )}
-          <p className="description">{effect.description}</p>
+          <Description key={effect.id} text={effect.description} clamp={layout !== "float"} />
           {props.loading && (
             <p className="loading" role="status">
               Loading…

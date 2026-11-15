@@ -402,6 +402,26 @@ input[type="search"]:focus-visible {
   white-space: nowrap;
 }
 
+.description-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* On phones: two lines at most, with a toggle for the rest. */
+.description[data-clamped="true"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.description-toggle {
+  font-size: 12px;
+}
+
 .description,
 .hint {
   margin: 0;
@@ -900,6 +920,11 @@ select:disabled {
   .output summary {
     min-height: 44px;
     padding-top: 0;
+  }
+
+  .description-toggle {
+    min-height: 32px;
+    padding-right: 12px;
   }
 
   /* The label fills the row, so tapping anywhere beside a checkbox or swatch hits it. */
