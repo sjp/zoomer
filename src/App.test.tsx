@@ -296,6 +296,8 @@ describe("App", () => {
     render(<App />);
     press("/");
     expect(document.activeElement).toBe(screen.getByLabelText("Search effects"));
+    // In the picker's place.
+    expect(screen.queryByRole("button", { name: /^Effect: / })).toBeNull();
   });
 
   it("← and → step through the list", () => {
@@ -335,8 +337,6 @@ describe("App", () => {
     press("ArrowRight", chip);
     press("h", chip);
     expect(panelVisible()).toBe(true);
-    expect(screen.getByRole("button", { expanded: true, name: /^Effect: / }).textContent).toContain(
-      WARP.name,
-    );
+    expect(screen.getByRole("option", { name: /\(current\)/ }).textContent).toContain(WARP.name);
   });
 });

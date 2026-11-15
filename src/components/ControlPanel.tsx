@@ -92,10 +92,20 @@ export function ControlPanel(props: Props) {
   // ← / → follow them.
   const filter = list.options.query.trim();
   const categoryFilter = categoryFilterLabel(list.options.categories);
+  // The open list's search takes the picker's place, so focus goes back to the picker
+  // once it's rendered again. Only when the list closes from inside (a pick, the close
+  // button or Esc), not when the sheet collapses or a recording starts.
+  const refocusPicker = useRef(false);
   const closeList = () => {
+    refocusPicker.current = true;
     list.onOpenChange(false);
-    pickerRef.current?.focus();
   };
+  useLayoutEffect(() => {
+    if (!listOpen && refocusPicker.current) {
+      refocusPicker.current = false;
+      pickerRef.current?.focus();
+    }
+  }, [listOpen]);
 
   const layout = props.layout ?? "float";
   const sheet = layout === "sheet";
@@ -108,15 +118,22 @@ export function ControlPanel(props: Props) {
   const panelRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   // The peek bar's height is the header's, which depends on the font and the effect's
-  // name; it's measured so the collapsed sheet can animate to it.
+  // name; it's measured so the collapsed sheet can animate to it. While the list is open
+  // the header holds it, so the last height before it opened stands.
   const [peek, setPeek] = useState<number>();
+  const listOpenRef = useRef(listOpen);
+  useLayoutEffect(() => {
+    listOpenRef.current = listOpen;
+  }, [listOpen]);
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (!sheet || !header) {
       return undefined;
     }
     const measure = () => {
-      setPeek(header.offsetHeight);
+      if (!listOpenRef.current) {
+        setPeek(header.offsetHeight);
+      }
     };
     measure();
     if (typeof ResizeObserver === "undefined") {
@@ -290,53 +307,86 @@ export function ControlPanel(props: Props) {
             sheetHeight={() => panelRef.current?.getBoundingClientRect().height ?? 0}
           />
         )}
-        <div className="panel-header-row">
-          <button
-            ref={pickerRef}
-            type="button"
-            className="effect-picker"
-            aria-expanded={listOpen}
-            disabled={recording}
-            title={recording ? "Locked while recording" : `Choose an effect${shortcut("/")}`}
-            onClick={() => {
-              list.onOpenChange(!list.open);
+        {/* While open, the list's search row takes the picker row's place. */}
+        {listOpen ? (
+          <EffectList
+            {...list}
+            currentId={effect.id}
+            onSelect={(id) => {
+              props.onEffectChange(id);
+              closeList();
             }}
-          >
-            <span className="sr-only">Effect: </span>
-            <span className="effect-picker-name">{effect.name}</span>
-            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-              <path
-                d="M5 7.5l5 5 5-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          {stepButtons}
-          {compact && star}
-          {compact && recordButton}
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Hide controls"
-            title={`Hide controls${shortcut("H")}`}
-            onClick={props.onHide}
-          >
-            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-              <path
-                d={sheet ? "M5 5l5 5 5-5M5 11l5 5 5-5" : "M5 5l5 5-5 5M11 5l5 5-5 5"}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
+            onClose={closeList}
+            sortBesideSearch={compact}
+            searchEnd={
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Close effect list"
+                title={`Close effect list${shortcut("Esc")}`}
+                onClick={closeList}
+              >
+                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                  <path
+                    d="M5.5 5.5l9 9M14.5 5.5l-9 9"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            }
+          />
+        ) : (
+          <div className="panel-header-row">
+            <button
+              ref={pickerRef}
+              type="button"
+              className="effect-picker"
+              aria-expanded={false}
+              disabled={recording}
+              title={recording ? "Locked while recording" : `Choose an effect${shortcut("/")}`}
+              onClick={() => {
+                list.onOpenChange(true);
+              }}
+            >
+              <span className="sr-only">Effect: </span>
+              <span className="effect-picker-name">{effect.name}</span>
+              <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+                <path
+                  d="M5 7.5l5 5 5-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            {stepButtons}
+            {compact && star}
+            {compact && recordButton}
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Hide controls"
+              title={`Hide controls${shortcut("H")}`}
+              onClick={props.onHide}
+            >
+              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <path
+                  d={sheet ? "M5 5l5 5 5-5M5 11l5 5 5-5" : "M5 5l5 5-5 5M11 5l5 5-5 5"}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
         {!compact && !listOpen && (
           <Description key={effect.id} text={effect.description} clamp={false} />
         )}
@@ -350,17 +400,6 @@ export function ControlPanel(props: Props) {
           </div>
         )}
       </header>
-      {listOpen && (
-        <EffectList
-          {...list}
-          currentId={effect.id}
-          onSelect={(id) => {
-            props.onEffectChange(id);
-            closeList();
-          }}
-          onClose={closeList}
-        />
-      )}
       {!listFills && (
         <>
           {(filter !== "" || categoryFilter !== "") && (

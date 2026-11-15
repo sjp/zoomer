@@ -290,4 +290,20 @@ describe("EffectList", () => {
     expect(scrolled.mock.contexts).toContain(chip);
     scrolled.mockRestore();
   });
+
+  it("puts the sort under the chips beside a count, or beside the search", () => {
+    renderList({ searchEnd: <button type="button">Close</button> });
+    const searchRow = () => screen.getByRole("combobox", { name: "Search effects" }).parentElement;
+    expect(screen.getByText("12 effects", { selector: "[aria-hidden]" })).toBeTruthy();
+    expect(searchRow()?.contains(screen.getByRole("combobox", { name: "Sort effects" }))).toBe(
+      false,
+    );
+    expect(searchRow()?.contains(screen.getByRole("button", { name: "Close" }))).toBe(true);
+    cleanup();
+    renderList({ sortBesideSearch: true });
+    expect(searchRow()?.contains(screen.getByRole("combobox", { name: "Sort effects" }))).toBe(
+      true,
+    );
+    expect(screen.queryByText("12 effects", { selector: "[aria-hidden]" })).toBeNull();
+  });
 });

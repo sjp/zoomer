@@ -470,6 +470,78 @@ describe("ControlPanel as a bottom sheet", () => {
   });
 });
 
+describe("ControlPanel effect list", () => {
+  /** The panel with the list's open state kept, as the app keeps it. */
+  function Harness(props: Props) {
+    const [open, setOpen] = useState(false);
+    return <ControlPanel {...props} list={{ ...props.list, open, onOpenChange: setOpen }} />;
+  }
+  const picker = () => screen.getByRole("button", { name: /^Effect: / });
+  const search = () => screen.queryByRole("combobox", { name: "Search effects" });
+
+  function openList() {
+    const props = panelProps();
+    render(<Harness {...props} />);
+    fireEvent.click(picker());
+    return props;
+  }
+
+  function expectPanelRestored() {
+    expect(search()).toBeNull();
+    expect(document.activeElement).toBe(picker());
+    expect(document.querySelector(".description")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
+    expect(screen.getAllByRole("slider").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Reset all" })).toBeTruthy();
+  }
+
+  it("swaps the picker for the focused search, in the same header row", () => {
+    openList();
+    const input = defined(search(), "the search box");
+    expect(document.activeElement).toBe(input);
+    expect(screen.queryByRole("button", { name: /^Effect: / })).toBeNull();
+    // First in the header, where the picker row was, with a close button beside it.
+    const header = defined(document.querySelector(".panel-header"), "the header");
+    expect(header.contains(input)).toBe(true);
+    expect(header.querySelector("input, button")).toBe(input);
+    expect(
+      input.parentElement?.contains(screen.getByRole("button", { name: "Close effect list" })),
+    ).toBe(true);
+    expect(screen.queryByRole("button", { name: "Hide controls" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next effect" })).toBeNull();
+  });
+
+  it("hides the header's other rows, the sections and the footer while open", () => {
+    openList();
+    expect(document.querySelector(".description")).toBeNull();
+    expect(document.querySelector(".panel-toolbar")).toBeNull();
+    expect(screen.queryByRole("slider")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Output" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reset all" })).toBeNull();
+  });
+
+  it("restores the panel on Esc, with focus back on the picker", () => {
+    openList();
+    fireEvent.keyDown(defined(search(), "the search box"), { key: "Escape" });
+    expect(document.activeElement).toBe(picker());
+    expectPanelRestored();
+  });
+
+  it("restores the panel when an effect is picked", () => {
+    const props = openList();
+    fireEvent.click(screen.getByRole("option", { name: /Warp/ }));
+    expect(props.onEffectChange).toHaveBeenCalledExactlyOnceWith("warp");
+    expectPanelRestored();
+  });
+
+  it("restores the panel from the close button", () => {
+    openList();
+    fireEvent.click(screen.getByRole("button", { name: "Close effect list" }));
+    expect(document.activeElement).toBe(picker());
+    expectPanelRestored();
+  });
+});
+
 function renderPanelList() {
   return {
     effects: [warp],

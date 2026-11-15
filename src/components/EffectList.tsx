@@ -52,6 +52,13 @@ export interface EffectListProps {
   /** Starts loading an effect's code, when it's hovered or becomes active. */
   onPrefetch: (id: string) => void;
   onClose: () => void;
+  /** Shown at the end of the search row, e.g. a button that closes the list. */
+  searchEnd?: ReactNode;
+  /**
+   * Puts the sort select beside the search instead of on a row of its own under the
+   * chips, with the count. For wider panels with little height to spare, as on phones.
+   */
+  sortBesideSearch?: boolean;
 }
 
 /**
@@ -274,6 +281,24 @@ export function EffectList(props: EffectListProps) {
     );
   };
 
+  const sortSelect = (
+    <select
+      aria-label="Sort effects"
+      value={sort}
+      onChange={(e) => {
+        if (isEffectSort(e.target.value)) {
+          props.onSortChange(e.target.value);
+        }
+      }}
+    >
+      {Object.entries(EFFECT_SORTS).map(([value, label]) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+
   return (
     <section className="effect-list" aria-label="Choose an effect">
       <div className="effect-list-controls">
@@ -296,21 +321,8 @@ export function EffectList(props: EffectListProps) {
           }}
           onKeyDown={onKeyDown}
         />
-        <select
-          aria-label="Sort effects"
-          value={sort}
-          onChange={(e) => {
-            if (isEffectSort(e.target.value)) {
-              props.onSortChange(e.target.value);
-            }
-          }}
-        >
-          {Object.entries(EFFECT_SORTS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        {props.sortBesideSearch === true && sortSelect}
+        {props.searchEnd}
       </div>
       <div
         role="group"
@@ -365,6 +377,15 @@ export function EffectList(props: EffectListProps) {
           </button>
         ))}
       </div>
+      {props.sortBesideSearch !== true && (
+        <div className="effect-list-sort">
+          {/* The status region below announces the count. */}
+          <span className="effect-list-count" aria-hidden="true">
+            {countText}
+          </span>
+          {sortSelect}
+        </div>
+      )}
       <p id={`${uid}-star-help`} className="sr-only">
         Press * to star or unstar the highlighted effect.
       </p>

@@ -215,11 +215,6 @@ body,
 
 .effect-picker svg {
   flex: none;
-  transition: transform 150ms ease;
-}
-
-.effect-picker[aria-expanded="true"] svg {
-  transform: rotate(180deg);
 }
 
 .step-buttons {
@@ -297,17 +292,47 @@ body,
 
 .effect-list-controls {
   display: flex;
-  gap: 8px;
+  gap: 2px;
+  align-items: center;
 }
 
+/* In the picker's place: as tall as the picker row, and starting where its name did. */
 .effect-list-controls input {
   flex: 1;
   min-width: 0;
+  height: 34px;
+  margin-right: 4px;
 }
 
 .effect-list-controls select {
   flex: none;
-  max-width: 45%;
+  max-width: 40%;
+  margin-right: 4px;
+}
+
+/* The count on the left, a compact sort select on the right. */
+.effect-list-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.effect-list-count {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.effect-list-sort select {
+  flex: none;
+  max-width: 60%;
+  padding: 3px 6px;
+  font-size: 12px;
 }
 
 /* One row of chips that scrolls sideways, leaving the height to the list. It runs to
@@ -1194,6 +1219,13 @@ kbd {
   height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
 }
 
+.panel[data-list-fills="true"] .panel-header {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
 .panel[data-list-fills="true"] .effect-list {
   flex: 1;
   min-height: 0;
@@ -1223,8 +1255,7 @@ kbd {
   .app .panel,
   .show-panel,
   .show-panel[data-visible="false"],
-  .section-chevron,
-  .effect-picker svg {
+  .section-chevron {
     transition: none;
   }
 }
