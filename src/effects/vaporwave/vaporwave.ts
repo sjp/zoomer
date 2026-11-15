@@ -3,12 +3,11 @@ import { createColorEase, hexToUnitRgb } from "../color";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createRenderTarget,
+  createDepthTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   scopedProgram,
   type Scope,
   TO_CLIP_GLSL,
@@ -307,65 +306,25 @@ interface BustLayer {
 }
 
 function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
-  let target: RenderTarget | null = null;
-  scope.defer(() => target?.dispose());
-  const ms = scope.add(gl.createFramebuffer(), (f) => {
-    gl.deleteFramebuffer(f);
-  });
-  const color = scope.add(gl.createRenderbuffer(), (r) => {
-    gl.deleteRenderbuffer(r);
-  });
-  const depth = scope.add(gl.createRenderbuffer(), (r) => {
-    gl.deleteRenderbuffer(r);
-  });
-  let msaa = false;
+  const depth = createDepthTarget(gl, scope, { msaa: true });
   let width = 0;
   let height = 0;
-  /** Empties a renderbuffer's storage (the object itself lives on). */
-  const zero = (r: WebGLRenderbuffer, format: number) => {
-    gl.bindRenderbuffer(gl.RENDERBUFFER, r);
-    gl.renderbufferStorage(gl.RENDERBUFFER, format, 0, 0);
-  };
   const layer: BustLayer = {
     drawn: Number.NaN,
     get texture() {
-      return target?.texture ?? null;
+      return depth.target?.texture ?? null;
     },
     ensure(w, h) {
       if (w === width && h === height) {
-        return target !== null;
+        return depth.target !== null;
       }
       width = w;
       height = h;
       layer.drawn = Number.NaN;
-      target?.dispose();
-      target = createRenderTarget(gl, w, h, gl.RGBA8);
-      if (!target) {
-        return false;
-      }
-      gl.bindRenderbuffer(gl.RENDERBUFFER, color);
-      gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGBA8, w, h);
-      gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-      gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH_COMPONENT24, w, h);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, ms);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-      msaa = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-      if (!msaa) {
-        // No multisampling here: draw straight into the texture, with a plain
-        // depth buffer, and drop the unused multisampled colour.
-        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
-        zero(color, gl.RGBA8);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-      }
-      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      return true;
+      return depth.resize(w, h) !== null;
     },
     begin() {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, msaa ? ms : (target?.framebuffer ?? null));
-      gl.viewport(0, 0, width, height);
+      depth.bind();
       gl.clearColor(0, 0, 0, 0);
       gl.depthMask(true);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -374,22 +333,7 @@ function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
     },
     end() {
       gl.disable(gl.DEPTH_TEST);
-      if (msaa && target) {
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, ms);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, target.framebuffer);
-        gl.blitFramebuffer(
-          0,
-          0,
-          width,
-          height,
-          0,
-          0,
-          width,
-          height,
-          gl.COLOR_BUFFER_BIT,
-          gl.NEAREST,
-        );
-      }
+      depth.resolve();
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     },
     release() {
@@ -399,11 +343,7 @@ function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
       width = 0;
       height = 0;
       layer.drawn = Number.NaN;
-      target?.dispose();
-      target = null;
-      zero(color, gl.RGBA8);
-      zero(depth, gl.DEPTH_COMPONENT24);
-      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+      depth.release();
     },
   };
   return layer;

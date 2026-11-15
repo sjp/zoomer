@@ -17,12 +17,11 @@ import { type PipesJoints, pipesMeta } from "./pipes.meta";
 import {
   beginFrame,
   createFullscreenTriangle,
-  createRenderTarget,
+  createDepthTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   type Scope,
   scopedProgram,
   type Uniforms,
@@ -415,19 +414,9 @@ export const pipes = defineEffect(pipesMeta, {
       const tubes = createPieceBatch(gl, scope, tubeMesh(1, SIDES), sim.capacity);
       const rounds = createPieceBatch(gl, scope, tubeMesh(ROUND_BANDS, SIDES), sim.capacity);
 
-      const cacheDepth = scope.add(gl.createRenderbuffer(), (r) => {
-        gl.deleteRenderbuffer(r);
-      });
-      const workDepth = scope.add(gl.createRenderbuffer(), (r) => {
-        gl.deleteRenderbuffer(r);
-      });
       /** Finished pieces, and the frame (cache plus growing ends): colour with depth. */
-      let cache: RenderTarget | null = null;
-      let work: RenderTarget | null = null;
-      scope.defer(() => {
-        cache?.dispose();
-        work?.dispose();
-      });
+      const cache = createDepthTarget(gl, scope, { filter: gl.NEAREST });
+      const work = createDepthTarget(gl, scope, { filter: gl.NEAREST });
       let cacheValid = false;
 
       let width = 1;
@@ -453,31 +442,13 @@ export const pipes = defineEffect(pipesMeta, {
       let written = 0;
       let frozenScan = 0;
 
-      const withDepth = (target: RenderTarget | null, depth: WebGLRenderbuffer) => {
-        if (!target) {
-          return;
-        }
-        gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, target.width, target.height);
-        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      };
-
       /** (Re)creates the cache and frame images at the shown style's resolution. */
       const allocTargets = () => {
-        cache?.dispose();
-        work?.dispose();
-        cache = null;
-        work = null;
         const px = shownClassic ? CLASSIC_PIXEL * scale : 1;
         const w = Math.max(1, Math.min(width, Math.round(width / px)));
         const h = Math.max(1, Math.min(height, Math.round(height / px)));
-        cache = createRenderTarget(gl, w, h, gl.RGBA8, { filter: gl.NEAREST });
-        work = createRenderTarget(gl, w, h, gl.RGBA8, { filter: gl.NEAREST });
-        withDepth(cache, cacheDepth);
-        withDepth(work, workDepth);
+        cache.resize(w, h);
+        work.resize(w, h);
         cacheValid = false;
       };
 
@@ -561,8 +532,8 @@ export const pipes = defineEffect(pipesMeta, {
             frozenScan++;
           }
 
-          const c = cache;
-          const w = work;
+          const c = cache.target;
+          const w = work.target;
           if (!c || !w) {
             gl.clearColor(0, 0, 0, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);

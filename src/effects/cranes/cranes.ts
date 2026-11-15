@@ -24,12 +24,11 @@ import {
   beginFrame,
   createFullscreenTriangle,
   createGradientBackground,
-  createRenderTarget,
+  createDepthTarget,
   createUniforms,
   DITHER_GLSL,
   FULLSCREEN_VERTEX,
   glslFloat,
-  type RenderTarget,
   withScope,
   scopedProgram,
 } from "../gl";
@@ -231,13 +230,7 @@ export const cranes = defineEffect(cranesMeta, {
       gl.useProgram(layerProgram);
       gl.uniform1i(gl.getUniformLocation(layerProgram, "uLayer"), 0);
       /** The cranes' layer and its depth buffer, sized with the canvas. */
-      let layer: RenderTarget | null = null;
-      const depth = scope.add(gl.createRenderbuffer(), (r) => {
-        gl.deleteRenderbuffer(r);
-      });
-      scope.defer(() => {
-        layer?.dispose();
-      });
+      const layerTarget = createDepthTarget(gl, scope, { filter: gl.NEAREST });
       const threads = scope.own(createStreakRenderer(gl, MOBILE_CRANES, { blend: "alpha" }));
 
       const vao = scope.add(gl.createVertexArray(), (v) => {
@@ -296,16 +289,7 @@ export const cranes = defineEffect(cranesMeta, {
       return {
         resize(v) {
           ({ width, height, scale } = v);
-          layer?.dispose();
-          layer = createRenderTarget(gl, width, height, gl.RGBA8, { filter: gl.NEAREST });
-          if (layer) {
-            gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, width, height);
-            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-          }
+          layerTarget.resize(width, height);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -348,6 +332,7 @@ export const cranes = defineEffect(cranesMeta, {
           y0 = Math.max(0, y0);
           x1 = Math.min(width, x1);
           y1 = Math.min(height, y1);
+          const layer = layerTarget.target;
           if (n > 0 && layer && x1 > x0 && y1 > y0) {
             gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances, 0, n * INSTANCE_FLOATS);

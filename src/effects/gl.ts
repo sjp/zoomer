@@ -764,6 +764,152 @@ export function createRenderTarget(
   };
 }
 
+/** Options for `createDepthTarget`: the texture's filter and wrap, and `msaa`. */
+interface DepthTargetOptions extends RenderTargetOptions {
+  /**
+   * Draws into a 4x multisampled colour and depth buffer, which `resolve` copies
+   * into the texture, where the GPU allows it; otherwise (the framebuffer is
+   * incomplete) straight into the texture with a plain depth buffer. Defaults to
+   * false.
+   */
+  msaa?: boolean;
+}
+
+/** An RGBA8 render target with a 24-bit depth buffer, resized in place. */
+interface DepthTarget {
+  /**
+   * The colour texture and its framebuffer (with the depth buffer attached,
+   * unless multisampled); null before the first `resize`, after `release`, or
+   * when it couldn't be made.
+   */
+  readonly target: RenderTarget | null;
+  /** Frees the old storage and allocates `width` x `height`, cleared; returns `target`. */
+  resize: (width: number, height: number) => RenderTarget | null;
+  /**
+   * Binds the framebuffer to draw into (the multisampled one when in use) and
+   * sets the viewport to cover it. Call `resolve` after drawing; caller unbinds.
+   */
+  bind: () => void;
+  /**
+   * Copies the multisampled colour into the texture (leaving the read and draw
+   * framebuffers bound); does nothing without multisampling.
+   */
+  resolve: () => void;
+  /** Frees the texture and buffer storage until the next `resize`. */
+  release: () => void;
+}
+
+/**
+ * A render target with a depth buffer, for meshes drawn into their own layer
+ * then composited. The renderbuffers live as long as `scope`; their storage and
+ * the target follow `resize` and `release`.
+ */
+export function createDepthTarget(
+  gl: WebGL2RenderingContext,
+  scope: Scope,
+  options: DepthTargetOptions = {},
+): DepthTarget {
+  const renderbuffer = () =>
+    scope.add(gl.createRenderbuffer(), (r) => {
+      gl.deleteRenderbuffer(r);
+    });
+  const ms =
+    options.msaa === true
+      ? {
+          framebuffer: scope.add(gl.createFramebuffer(), (f) => {
+            gl.deleteFramebuffer(f);
+          }),
+          color: renderbuffer(),
+        }
+      : null;
+  const depth = renderbuffer();
+  let target: RenderTarget | null = null;
+  scope.defer(() => target?.dispose());
+  /** Whether drawing goes through `ms`. */
+  let multisampled = false;
+  /** Empties a renderbuffer's storage (the object itself lives on). */
+  const zero = (r: WebGLRenderbuffer, format: number) => {
+    gl.bindRenderbuffer(gl.RENDERBUFFER, r);
+    gl.renderbufferStorage(gl.RENDERBUFFER, format, 0, 0);
+  };
+  /** Gives the target's framebuffer a plain depth buffer (bound) of its size. */
+  const attachDepth = (t: RenderTarget) => {
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, t.width, t.height);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, t.framebuffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+  };
+  return {
+    get target() {
+      return target;
+    },
+    resize(w, h) {
+      target?.dispose();
+      target = createRenderTarget(gl, w, h, gl.RGBA8, options);
+      multisampled = false;
+      if (!target) {
+        // Free the old size's storage too.
+        if (ms) {
+          zero(ms.color, gl.RGBA8);
+        }
+        zero(depth, gl.DEPTH_COMPONENT24);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+        return null;
+      }
+      if (ms) {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, ms.color);
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.RGBA8, w, h);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, 4, gl.DEPTH_COMPONENT24, w, h);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ms.framebuffer);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, ms.color);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+        multisampled = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+        if (!multisampled) {
+          // No multisampling here: draw straight into the texture, with a plain
+          // depth buffer, and drop the unused multisampled colour.
+          attachDepth(target);
+          zero(ms.color, gl.RGBA8);
+        }
+      } else {
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+        attachDepth(target);
+      }
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return target;
+    },
+    bind() {
+      if (!target) {
+        return;
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, multisampled && ms ? ms.framebuffer : target.framebuffer);
+      gl.viewport(0, 0, target.width, target.height);
+    },
+    resolve() {
+      if (!multisampled || !ms || !target) {
+        return;
+      }
+      const { width, height } = target;
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, ms.framebuffer);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, target.framebuffer);
+      gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    },
+    release() {
+      if (!target) {
+        return;
+      }
+      target.dispose();
+      target = null;
+      multisampled = false;
+      if (ms) {
+        zero(ms.color, gl.RGBA8);
+      }
+      zero(depth, gl.DEPTH_COMPONENT24);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    },
+  };
+}
+
 /**
  * Sets the scissor rectangle to the box centred on (`cx`, `cy`) with half size
  * (`hw`, `hh`), in frame units (frame heights from the canvas centre, y up), padded

@@ -3,6 +3,7 @@ import {
   beginFrame,
   columnTableFormat,
   createColumnTable,
+  createDepthTarget,
   createRenderTarget,
   createScope,
   createUniforms,
@@ -327,6 +328,43 @@ describe("createRenderTarget", () => {
   it("doesn't blame the format for a lost context", () => {
     const { gl } = make(0, true);
     expect(createRenderTarget(gl, 4, 4, 7)).not.toBeNull();
+  });
+});
+
+describe("createDepthTarget", () => {
+  /** Calls named `name` since the last `calls.length = 0`. */
+  const count = (calls: { name: string }[], name: string) =>
+    calls.filter((c) => c.name === name).length;
+
+  it.each([
+    [false, false],
+    [true, false],
+    [true, true],
+  ])("draws, resolves and frees (msaa %s, multisampling %s)", (msaa, multisample) => {
+    const fake = createFakeGl({ record: true, multisample });
+    const { gl, calls, state } = fake;
+    const scope = createScope();
+    const d = createDepthTarget(gl, scope, { msaa });
+    expect(d.target).toBeNull();
+    const t = defined(d.resize(40, 30));
+    expect(d.target).toBe(t);
+    expect([t.width, t.height]).toEqual([40, 30]);
+    expect(state.drawFramebuffer).toBeNull();
+    d.bind();
+    expect(state.viewport).toEqual([0, 0, 40, 30]);
+    // Multisampled drawing goes to its own framebuffer, resolved into the texture.
+    expect(state.drawFramebuffer === t.framebuffer).toBe(!multisample);
+    calls.length = 0;
+    d.resolve();
+    expect(count(calls, "blitFramebuffer")).toBe(multisample ? 1 : 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    d.resize(20, 10);
+    d.release();
+    expect(d.target).toBeNull();
+    scope.dispose();
+    expect(fake.errors).toEqual([]);
+    expect(fake.live()).toEqual([]);
   });
 });
 
