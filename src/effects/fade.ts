@@ -214,3 +214,80 @@ export function createFadeThrough(half: number): FadeThrough {
     },
   };
 }
+
+/**
+ * Two slots crossfading one change at a time: `current` is shown; on a change
+ * the caller fills `next` and calls `start`, then `next` fades in over
+ * `seconds` (`mix` rising linearly from 0 to 1). When it is fully in, the old
+ * slot is handed to `release` (to free its textures), the slots swap and the
+ * fade goes idle. Each frame:
+ *
+ * ```ts
+ * if (!fade.fading && changed) { fill(fade.next); fade.start(); }
+ * fade.step(dt);
+ * draw(fade.current, 1);
+ * if (fade.fading) { draw(fade.next, fade.mix); }
+ * ```
+ *
+ * Allocates nothing per frame.
+ */
+interface CrossfadeSlots<S> {
+  /** The slot shown; while fading, the outgoing one. */
+  readonly current: S;
+  /** The other slot: the incoming one while fading, free otherwise. */
+  readonly next: S;
+  /** Whether `next` is fading in over `current`. */
+  readonly fading: boolean;
+  /** How far the fade has got, linear in [0, 1]; 0 while idle. */
+  readonly mix: number;
+  /** Starts fading `next` in from 0 (the caller has filled it). Ignored while fading. */
+  start: () => void;
+  /**
+   * Steps the fade by `dt` seconds. On the step it completes, releases the old
+   * slot, makes `next` current and goes idle (`mix` back to 0).
+   */
+  step: (dt: number) => void;
+}
+
+export function createCrossfadeSlots<S>(
+  slots: readonly [S, S],
+  seconds: number,
+  release: (slot: S) => void,
+): CrossfadeSlots<S> {
+  let current = 0;
+  let mix = 0;
+  let fading = false;
+  return {
+    get current() {
+      return slots[current];
+    },
+    get next() {
+      return slots[1 - current];
+    },
+    get fading() {
+      return fading;
+    },
+    get mix() {
+      return mix;
+    },
+    start() {
+      if (!fading) {
+        fading = true;
+        mix = 0;
+      }
+    },
+    step(dt) {
+      if (!fading) {
+        return;
+      }
+      const d = Number.isFinite(dt) && dt > 0 ? dt : 0;
+      mix = seconds > 0 ? Math.min(1, mix + d / seconds) : 1;
+      if (mix >= 1) {
+        release(slots[current]);
+        current = 1 - current;
+        fading = false;
+        mix = 0;
+      }
+    },
+  };
+}

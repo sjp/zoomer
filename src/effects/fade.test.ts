@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createCountFade,
+  createCrossfadeSlots,
   createFadeThrough,
   driftPoint,
   FADE_OUT,
@@ -218,5 +219,70 @@ describe("createFadeThrough", () => {
     expect(f.idle).toBe(true);
     expect(f.alpha).toBe(1);
     expect(f.step(1)).toBe(false);
+  });
+});
+
+describe("createCrossfadeSlots", () => {
+  const make = () => {
+    const released: string[] = [];
+    const fade = createCrossfadeSlots(["a", "b"], 1, (s) => {
+      released.push(s);
+    });
+    return { fade, released };
+  };
+
+  it("shows the first slot, idle, until a fade starts", () => {
+    const { fade, released } = make();
+    fade.step(5);
+    expect(fade.current).toBe("a");
+    expect(fade.next).toBe("b");
+    expect(fade.fading).toBe(false);
+    expect(fade.mix).toBe(0);
+    expect(released).toEqual([]);
+  });
+
+  it("fades the next slot in linearly, then releases the old one and swaps", () => {
+    const { fade, released } = make();
+    fade.start();
+    expect(fade.fading).toBe(true);
+    expect(fade.mix).toBe(0);
+    fade.step(0.25);
+    expect(fade.mix).toBe(0.25);
+    fade.step(0.5);
+    expect(fade.mix).toBe(0.75);
+    expect(fade.current).toBe("a");
+    expect(released).toEqual([]);
+    fade.step(0.5);
+    expect(released).toEqual(["a"]);
+    expect(fade.current).toBe("b");
+    expect(fade.next).toBe("a");
+    expect(fade.fading).toBe(false);
+    expect(fade.mix).toBe(0);
+    fade.start();
+    fade.step(1);
+    expect(released).toEqual(["a", "b"]);
+    expect(fade.current).toBe("a");
+  });
+
+  it("takes one change at a time: start is ignored mid-fade", () => {
+    const { fade } = make();
+    fade.start();
+    fade.step(0.5);
+    fade.start();
+    expect(fade.mix).toBe(0.5);
+    expect(fade.next).toBe("b");
+  });
+
+  it("ignores bad steps and finishes at once with no duration", () => {
+    const { fade } = make();
+    fade.start();
+    fade.step(Number.NaN);
+    fade.step(-1);
+    expect(fade.mix).toBe(0);
+    const instant = createCrossfadeSlots([1, 2], 0, () => undefined);
+    instant.start();
+    instant.step(0);
+    expect(instant.current).toBe(2);
+    expect(instant.fading).toBe(false);
   });
 });
