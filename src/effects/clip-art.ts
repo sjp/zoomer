@@ -75,8 +75,8 @@ export function curve(
 
 /**
  * A pupil of an eye of radius `r` at (x, y), looking by (`lookX`, `lookY`)
- * radii: a dark disc with a glint. It stays inside the eye's white for looks
- * up to 1.
+ * radii: a dark disc with a glint. It stays inside the eye's white while the
+ * look is at most 1 long (so not at a full (1, 1) diagonal).
  */
 export function pupil(ctx: Ctx, x: number, y: number, r: number, lookX = 0, lookY = 0.2): void {
   const px = x + lookX * r * 0.4;
