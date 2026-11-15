@@ -60,12 +60,12 @@ describe("lifecycle tests", () => {
   });
 
   it("put every effect in exactly one shard", () => {
-    for (const entry of effects) {
-      const shard = lifecycleShard(entry.id);
-      expect(Number.isInteger(shard)).toBe(true);
-      expect(shard).toBeGreaterThanOrEqual(0);
-      expect(shard).toBeLessThan(LIFECYCLE_SHARDS);
-    }
+    // Pick each shard's effects as its test file does: together they are every
+    // effect once (a shard out of range, or not a whole number, drops an effect).
+    const sharded = Array.from({ length: LIFECYCLE_SHARDS }, (_, n) =>
+      effects.filter((e) => lifecycleShard(e.id) === n).map((e) => e.id),
+    ).flat();
+    expect(sharded.toSorted()).toEqual(effects.map((e) => e.id).toSorted());
   });
 
   it("spread the effects roughly evenly over the shards", () => {
