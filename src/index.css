@@ -533,3 +533,107 @@ select:disabled {
 .link-button:hover:not(:disabled) {
   background: none;
 }
+
+/* Touch screens: finger-sized targets (44 px, or 32 px for the category chips), and
+   16 px fields, since iOS zooms the page into any smaller field that takes focus.
+   Keyed on the pointer rather than the width, so a narrow desktop window keeps
+   mouse-sized controls. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  select,
+  input[type="search"] {
+    min-height: 44px;
+  }
+
+  .star-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .category-chip {
+    min-height: 32px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  /* Inside a list row, which is already tall enough; widen it instead. */
+  .effect-option-star {
+    min-height: 0;
+  }
+
+  .link-button {
+    min-height: 0;
+  }
+
+  /* The label fills the row, so tapping anywhere beside a checkbox or swatch hits it. */
+  .control-inline {
+    min-height: 44px;
+  }
+
+  .control-inline label {
+    align-self: stretch;
+    display: flex;
+    flex: 1;
+    align-items: center;
+  }
+
+  input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+  }
+
+  input[type="color"] {
+    width: 56px;
+    height: 44px;
+  }
+
+  /* A taller track with a bigger thumb; the default thumb is too small for a finger. */
+  input[type="range"] {
+    appearance: none;
+    height: 44px;
+    margin: 0;
+    background: none;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgb(255 255 255 / 0.22);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    margin-top: -11px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgb(255 255 255 / 0.22);
+  }
+
+  input[type="range"]::-moz-range-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+}
