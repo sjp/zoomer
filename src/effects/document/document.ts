@@ -5,7 +5,7 @@ import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { sanitizeText } from "../params";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
+import { createTextLayer, setTextPalette, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
 import { defineEffect } from "../types";
 import {
   caretLine,
@@ -1019,13 +1019,14 @@ export const documentPage = defineEffect(documentMeta, {
 
           // Colours.
           ease.step(THEMES[p.theme] ?? THEMES.light, step, COLOR_EASE);
-          for (let k = 0; k < 3; k++) {
-            textPalette[k] = col[TEXT][k];
-            textPalette[3 + k] = col[MUTED][k];
-            textPalette[6 + k] = col[HEADING][k];
-            textPalette[9 + k] = col[SQUIGGLE][k];
-            textPalette[12 + k] = col[PAGE][k];
-          }
+          setTextPalette(
+            textPalette,
+            col[TEXT],
+            col[MUTED],
+            col[HEADING],
+            col[SQUIGGLE],
+            col[PAGE],
+          );
 
           if (Ld) {
             for (let i = 0; i < Ld.comments.length && i < MAX_COMMENTS; i++) {

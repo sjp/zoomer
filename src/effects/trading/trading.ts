@@ -34,7 +34,13 @@ import { createCountFade, createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { type StepClock, takeSteps } from "../step-clock";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES, type TextLayer } from "../text-layer";
+import {
+  createTextLayer,
+  setTextPalette,
+  TEXT_PALETTE_FLOATS,
+  TEXT_ROLES,
+  type TextLayer,
+} from "../text-layer";
 import { defineEffect } from "../types";
 import {
   COLUMN_HEADS,
@@ -1553,13 +1559,7 @@ export const trading = defineEffect(tradingMeta, {
             }
           }
           ease.step(target, step, COLOR_EASE);
-          for (let k = 0; k < 3; k++) {
-            textPalette[k] = col[TEXT][k];
-            textPalette[3 + k] = col[MUTED][k];
-            textPalette[6 + k] = col[UP][k];
-            textPalette[9 + k] = col[DOWN][k];
-            textPalette[12 + k] = col[BG][k];
-          }
+          setTextPalette(textPalette, col[TEXT], col[MUTED], col[UP], col[DOWN], col[BG]);
 
           // Slides: candle steps, and a new trade row at most once a second.
           stepSlide(mainSlide, step);

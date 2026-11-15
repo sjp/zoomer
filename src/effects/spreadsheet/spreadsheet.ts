@@ -23,7 +23,7 @@ import { createColorEase, hexToUnitRgb, unitRgbMemo } from "../color";
 import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
+import { createTextLayer, setTextPalette, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
 import { defineEffect } from "../types";
 import {
   cellRect,
@@ -903,13 +903,7 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           target.set(base);
           target.set(accentRgb(p.accent), ACCENT * 3);
           ease.step(target, step, COLOR_EASE);
-          for (let k = 0; k < 3; k++) {
-            textPalette[k] = col[TEXT][k];
-            textPalette[3 + k] = col[MUTED][k];
-            textPalette[6 + k] = col[ACCENT][k];
-            textPalette[9 + k] = col[NEG][k];
-            textPalette[12 + k] = col[BG][k];
-          }
+          setTextPalette(textPalette, col[TEXT], col[MUTED], col[ACCENT], col[NEG], col[BG]);
           for (let i = 0; i < TAB_NAMES.length; i++) {
             tabLevel[i] = approach(tabLevel[i], i === s.tab ? 1 : 0, step / TAB_EASE);
           }

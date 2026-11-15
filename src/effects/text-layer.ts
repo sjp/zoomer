@@ -39,6 +39,27 @@ export const TEXT_ROLES = {
 /** Floats in the palette `draw` takes: an RGB triple per role, in `TEXT_ROLES` order. */
 export const TEXT_PALETTE_FLOATS = 15;
 
+/**
+ * Writes the text roles' colours into `palette` (`TEXT_PALETTE_FLOATS` long), in
+ * `TEXT_ROLES` order, for `draw`.
+ */
+export function setTextPalette(
+  palette: Float32Array,
+  primary: ArrayLike<number>,
+  muted: ArrayLike<number>,
+  up: ArrayLike<number>,
+  down: ArrayLike<number>,
+  inverse: ArrayLike<number>,
+): void {
+  for (let k = 0; k < 3; k++) {
+    palette[k] = primary[k];
+    palette[3 + k] = muted[k];
+    palette[6 + k] = up[k];
+    palette[9 + k] = down[k];
+    palette[12 + k] = inverse[k];
+  }
+}
+
 /** Floats per region-quad vertex: screen position, canvas position, opacity. */
 const QUAD_STRIDE = 5;
 

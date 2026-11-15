@@ -38,7 +38,7 @@ import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { sanitizeText } from "../params";
 import { type StepClock, takeSteps } from "../step-clock";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
+import { createTextLayer, setTextPalette, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
 import { defineEffect } from "../types";
 import {
   AXIS_W,
@@ -1299,13 +1299,7 @@ export const dashboard = defineEffect(dashboardMeta, {
           // Eased state: colours, slides, counts, values, axes and tints.
           const scheme = (SCHEMES[p.theme] ?? SCHEMES.dark)[p.palette] ?? SCHEMES.dark.cool;
           ease.step(scheme, step, COLOR_EASE);
-          for (let k = 0; k < 3; k++) {
-            textPalette[k] = col[TEXT][k];
-            textPalette[3 + k] = col[MUTED][k];
-            textPalette[6 + k] = col[GOOD][k];
-            textPalette[9 + k] = col[BAD][k];
-            textPalette[12 + k] = col[CARD][k];
-          }
+          setTextPalette(textPalette, col[TEXT], col[MUTED], col[GOOD], col[BAD], col[CARD]);
           stepSlide(lineSlide, step);
           for (let i = 0; i < KPI_COUNT; i++) {
             stepSlide(sparkSlides[i], step);

@@ -3,7 +3,13 @@ import { createFakeGl } from "../test/fake-gl";
 import { FakeOffscreenCanvas, MeasuringCanvas } from "../test/offscreen-canvas";
 import { hexToUnitRgb } from "./color";
 import { createScope } from "./gl";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES, type TextLayer } from "./text-layer";
+import {
+  createTextLayer,
+  setTextPalette,
+  TEXT_PALETTE_FLOATS,
+  TEXT_ROLES,
+  type TextLayer,
+} from "./text-layer";
 
 /** The shader's role decode, in JS: the weight of each role for a premultiplied texel. */
 function decode(r: number, g: number, b: number): number[] {
@@ -31,6 +37,14 @@ describe("text roles", () => {
       }
     },
   );
+});
+
+describe("setTextPalette", () => {
+  it("writes each role's colour in role order", () => {
+    const palette = new Float32Array(TEXT_PALETTE_FLOATS);
+    setTextPalette(palette, [1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]);
+    expect([...palette]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+  });
 });
 
 describe("createTextLayer", () => {

@@ -14,7 +14,7 @@ import {
 import { approach, clamp, smoothstep } from "../math";
 import { createRng, hash32 } from "../noise";
 import { sanitizeText } from "../params";
-import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
+import { createTextLayer, setTextPalette, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
 import { defineEffect } from "../types";
 import {
   type BoardLayout,
@@ -1103,13 +1103,7 @@ export const kanban = defineEffect(kanbanMeta, {
 
           // Colours, and the card atlases' crossfade to a new look.
           ease.step(LOOKS[look], step, LOOK_EASE);
-          for (let k = 0; k < 3; k++) {
-            textPalette[k] = col[TEXT][k];
-            textPalette[3 + k] = col[MUTED][k];
-            textPalette[6 + k] = col[ACCENT][k];
-            textPalette[9 + k] = col[TEXT][k];
-            textPalette[12 + k] = col[BG][k];
-          }
+          setTextPalette(textPalette, col[TEXT], col[MUTED], col[ACCENT], col[TEXT], col[BG]);
           if (look !== atlasLook[cur]) {
             if (mixT < 1 && look === atlasLook[1 - cur]) {
               // Back to the look still fading out: turn the fade around.
