@@ -1519,7 +1519,7 @@ export const trading = defineEffect(tradingMeta, {
             typeWeight[0] = p.chart === "candles" ? 1 : 0;
             typeWeight[1] = p.chart === "line" ? 1 : 0;
             typeWeight[2] = p.chart === "area" ? 1 : 0;
-            dimLevel = p.dim;
+            dimLevel = clamp(p.dim, 0, 0.6);
             highlight[focus] = 1;
             retile(count, false);
             adopt(market);
