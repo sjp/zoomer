@@ -256,6 +256,8 @@ describe("90s jazz motion", () => {
   });
 
   it("keeps the centre clear while drifting", () => {
+    // The closest any body comes to the clear centre, in body radii (one expect, not thousands).
+    let closest = Infinity;
     for (const aspect of [16 / 9, 9 / 16]) {
       const { jazz, params } = make(aspect, { animation: "drift", speed: 1, scale: MIN_SCALE });
       const ring = edge(jazz.clear);
@@ -272,10 +274,11 @@ describe("90s jazz motion", () => {
           }
         });
         for (const [x, y, r] of bodies) {
-          expect(distanceTo(jazz.clear, ring, x, y, r)).toBeGreaterThanOrEqual(r * 0.999);
+          closest = Math.min(closest, distanceTo(jazz.clear, ring, x, y, r) / r);
         }
       }
     }
+    expect(closest).toBeGreaterThanOrEqual(0.999);
   });
 
   it.each([["paint"], ["wobble"], ["drift"]])(
