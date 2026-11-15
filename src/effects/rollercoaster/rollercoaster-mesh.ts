@@ -8,7 +8,6 @@
  * index into the effect's palette, plus `ROTATING` for the parts of the Ferris
  * wheel that turn about its axle.
  */
-import { TIE_SPACING } from "./rollercoaster-view";
 import type { Track } from "./rollercoaster-track";
 import { createRng } from "../noise";
 
@@ -38,6 +37,8 @@ const SPINE_DROP = 0.6;
 const RAIL_RADIUS = 0.12;
 const SPINE_RADIUS = 0.26;
 const TIE_RADIUS = 0.06;
+/** Spacing of the ties along the track, metres. */
+const TIE_SPACING = 1.6;
 
 /** The Ferris wheel: hub position, rim radius, and half the gap between its two rims. */
 export const WHEEL_CENTRE = [118, 30, -150] as const;

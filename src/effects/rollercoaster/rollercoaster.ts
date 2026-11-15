@@ -30,7 +30,6 @@ import {
   type Camera,
   createCamera,
   rideCamera,
-  rideSpeeds,
   sideCamera,
   sideSpeeds,
   tableAt,
@@ -543,7 +542,7 @@ function meshVao(gl: WebGL2RenderingContext, scope: Scope, mesh: Mesh): WebGLVer
  *
  * The circuit, its frames and the train's physical speed are built once on
  * the CPU (`rollercoaster-track.ts`); the train moves along it at that speed,
- * soft-capped per view so its motion stays codec-friendly. Each frame draws,
+ * soft-capped in the side view so its motion stays codec-friendly. Each frame draws,
  * into a multisampled target at most 1440 px tall: the sky, hills and ground
  * from each pixel's view ray; one static indexed mesh for the track, ties,
  * columns, station, trees and the Ferris wheel (its moving parts turned in the
@@ -639,7 +638,6 @@ export const rollercoaster = defineEffect(rollercoasterMeta, {
       const side = createCamera();
       const ride = createCamera();
       const sideTable = new Float64Array(track.count);
-      const rideTable = new Float64Array(track.count);
       const frame = new Float64Array(12);
       const timeEase = createColorEase(TIME_FLOATS);
       const paletteEase = createColorEase(MATERIAL_COUNT * 4);
@@ -696,7 +694,6 @@ export const rollercoaster = defineEffect(rollercoasterMeta, {
           pass.resize(Math.max(1, Math.round(width * k)), passHeight);
           sideCamera(track, aspect, side);
           sideSpeeds(track, aspect, sideTable);
-          rideSpeeds(track, aspect, rideTable);
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
@@ -717,8 +714,8 @@ export const rollercoaster = defineEffect(rollercoasterMeta, {
             }
           }
 
-          // 2. The train, at its capped speed for the view on show.
-          const table = shownRide ? rideTable : sideTable;
+          // 2. The train: capped across the side view, at its physical speed riding along.
+          const table = shownRide ? track.speed : sideTable;
           const speed = clamp(p.speed, 0, 1);
           s = wrap(s + speed * tableAt(track, table, s) * step, 0, track.length);
           wheelAngle = wrap(wheelAngle + (TAU / WHEEL_PERIOD) * step, 0, TAU);

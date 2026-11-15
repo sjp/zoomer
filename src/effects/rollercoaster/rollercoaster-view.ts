@@ -7,13 +7,13 @@
  * lets the turnarounds run off the sides). Ride along: a camera in the front
  * seat, looking a little down the track.
  *
- * The train's shown speed is its physical speed soft-capped per view, so the
- * motion stays within the codec limits: in the side view the train's own
- * motion across the screen; riding along, the turning of the whole view, the
- * passing of scenery at a few car lengths, and the ties going by.
+ * In the side view the train's shown speed is its physical speed, soft-capped
+ * so its motion across the screen stays within the codec limit. Riding along
+ * shows the physical speed as it is: a ride slowed to the codec limits for
+ * the whole turning view felt like slow motion.
  */
 import { frameAt, type Track, trackBounds } from "./rollercoaster-track";
-import { MAX_FEATURE_PX_PER_FRAME, MAX_PATTERN_HZ, pxPerReferenceFrame } from "../motion-limits";
+import { MAX_FEATURE_PX_PER_FRAME, pxPerReferenceFrame } from "../motion-limits";
 
 export interface Camera {
   readonly eye: Float32Array;
@@ -54,10 +54,6 @@ const RIDE_PITCH = (12 * Math.PI) / 180;
 /** Eye height above the rails and distance ahead of the front car's middle, metres. */
 const RIDE_EYE_UP = 1.45;
 const RIDE_EYE_AHEAD = 0.6;
-/** Nearest scenery the speed cap keeps codec-friendly while riding along, metres. */
-const RIDE_NEAR = 20;
-/** Spacing of the ties along the track, metres. */
-export const TIE_SPACING = 1.6;
 
 const NEAR = { side: 40, ride: 0.08 };
 const FAR = 2400;
@@ -169,59 +165,6 @@ export function sideSpeeds(track: Track, aspect: number, out: Float64Array): voi
     const heightsPerMetre = Math.hypot((b[0] - a[0]) * cam.aspect, b[1] - a[1]) / 2 / track.step;
     const cap = MAX_HEIGHTS_PER_SECOND / Math.max(heightsPerMetre, 1e-6);
     out[i] = softCap(track.speed[i], cap);
-  }
-}
-
-/**
- * The speed the train shows at each sample when riding along at this aspect:
- * soft-capped so the view turns no faster than the codec limit allows at the
- * frame's corners, scenery `RIDE_NEAR` away passes no faster, and the ties
- * pass under at most `MAX_PATTERN_HZ`. Allocates; call on resize only.
- */
-export function rideSpeeds(track: Track, aspect: number, out: Float64Array): void {
-  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 9;
-  // Frame heights a point moves per radian of turn: at the centre 1/(2·tanHalf), at a
-  // corner (rolling) half the diagonal over the height.
-  const heightsPerRadian = Math.max(1 / (2 * RIDE_TAN_HALF), Math.hypot(a, 1) / 2);
-  const maxTurn = MAX_HEIGHTS_PER_SECOND / heightsPerRadian;
-  const linear = Math.min(maxTurn * RIDE_NEAR, MAX_PATTERN_HZ * TIE_SPACING);
-  const fa = new Float64Array(12);
-  const fb = new Float64Array(12);
-  for (let i = 0; i < track.count; i++) {
-    const s = i * track.step;
-    frameAt(track, s, fa);
-    frameAt(track, s + track.step, fb);
-    // Rotation angle between the two frames: each basis vector moves by angle·|axis × e|,
-    // and those squared sum to 2·angle².
-    let sum = 0;
-    for (let k = 3; k < 12; k++) {
-      const d = fb[k] - fa[k];
-      sum += d * d;
-    }
-    const turnPerMetre = Math.sqrt(sum / 2) / track.step;
-    const cap = Math.min(linear, maxTurn / Math.max(turnPerMetre, 1e-6));
-    out[i] = softCap(track.speed[i], cap);
-  }
-  // The caps change sharply where a turn starts: ease them along the track so
-  // the ride slows down and speeds up smoothly. A running minimum then a box
-  // blur of the same radius never rises above the local cap: every value in
-  // the blur's window is the minimum of a window that contains this sample.
-  const n = track.count;
-  const radius = Math.max(1, Math.round(8 / track.step));
-  const eroded = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    let lo = Infinity;
-    for (let k = -radius; k <= radius; k++) {
-      lo = Math.min(lo, out[(i + k + n) % n]);
-    }
-    eroded[i] = lo;
-  }
-  for (let i = 0; i < n; i++) {
-    let sum = 0;
-    for (let k = -radius; k <= radius; k++) {
-      sum += eroded[(i + k + n) % n];
-    }
-    out[i] = sum / (2 * radius + 1);
   }
 }
 

@@ -4,13 +4,11 @@ import {
   type Camera,
   createCamera,
   rideCamera,
-  rideSpeeds,
   sideCamera,
   sideSpeeds,
   tableAt,
-  TIE_SPACING,
 } from "./rollercoaster-view";
-import { MAX_FEATURE_PX_PER_FRAME, MAX_PATTERN_HZ, pxPerReferenceFrame } from "../motion-limits";
+import { MAX_FEATURE_PX_PER_FRAME, pxPerReferenceFrame } from "../motion-limits";
 
 const track = buildTrack();
 const ASPECTS = [
@@ -150,33 +148,6 @@ describe("rideCamera", () => {
       expect(w).toBeGreaterThan(0);
       expect(Math.abs(x)).toBeLessThan(1);
       expect(Math.abs(y)).toBeLessThan(1);
-    }
-  });
-});
-
-describe("rideSpeeds", () => {
-  it.each(ASPECTS)("turns the view and passes the ties within the codec limits at %s", (_n, a) => {
-    const table = new Float64Array(track.count);
-    rideSpeeds(track, a, table);
-    const cam = createCamera();
-    rideCamera(track, 0, a, cam);
-    const heightsPerRadian = Math.max(1 / (2 * cam.tanHalf), Math.hypot(a, 1) / 2);
-    const fa = new Float64Array(12);
-    const fb = new Float64Array(12);
-    for (let i = 0; i < track.count; i++) {
-      const v = table[i];
-      expect(v).toBeGreaterThan(0.3);
-      expect(v / TIE_SPACING).toBeLessThanOrEqual(MAX_PATTERN_HZ + 1e-9);
-      frameAt(track, i * track.step, fa);
-      frameAt(track, (i + 1) * track.step, fb);
-      let sum = 0;
-      for (let k = 3; k < 12; k++) {
-        sum += (fb[k] - fa[k]) ** 2;
-      }
-      const turn = (Math.sqrt(sum / 2) / track.step) * v;
-      expect(pxPerReferenceFrame(turn * heightsPerRadian)).toBeLessThanOrEqual(
-        MAX_FEATURE_PX_PER_FRAME + 1e-6,
-      );
     }
   });
 });
