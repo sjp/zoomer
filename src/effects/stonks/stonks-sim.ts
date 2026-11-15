@@ -187,9 +187,13 @@ const PAN_TO = 0.4;
 const PAN_MIN_SECONDS = 5;
 /**
  * Pans and rescales run this much longer than the codec limits require, so
- * the two together (and the head's own climb) still stay within them.
+ * the two together still stay within them: a pan moves points sideways at most
+ * 0.75 of the limit and a rescale up or down at most 0.65 of it, so even when
+ * they overlap a point moves under hypot(0.75, 0.65) < 1 of it. The pan gets
+ * the larger share, as it must outrun the head on the widest plots.
  */
-const MOTION_SLACK = 1 / 0.75;
+const PAN_SLACK = 1 / 0.75;
+const RESCALE_SLACK = 1 / 0.65;
 /** The least share of its speed a pan keeps once it has outrun the head. */
 const MIN_OUTRUN = 0.2;
 /** Seconds of the fastest climb the log axis keeps room for above the head. */
@@ -278,7 +282,7 @@ export function stepView(v: ChartView, m: Market, dt: number): void {
     const lag = m.pos - x.lo - PAN_TO * v.span;
     // The pan must also cover the head's progress while it runs: solve
     // T = k (lag + rate T) px for T, where a move of d px needs k d seconds.
-    const k = minTweenSeconds(1) * MOTION_SLACK;
+    const k = minTweenSeconds(1) * PAN_SLACK;
     const outrun = Math.max(MIN_OUTRUN, 1 - k * m.rate * pointPx);
     const seconds = Math.max(PAN_MIN_SECONDS, (k * lag * pointPx) / outrun);
     const lo = x.lo + lag + m.rate * seconds;
@@ -288,7 +292,7 @@ export function stepView(v: ChartView, m: Market, dt: number): void {
   dataRange(m, x.lo, range);
   // Room above the head for the next few seconds of the steepest climb.
   const lead = LEAD_SECONDS * m.rate * Math.max(SURGE_MAX, DIP_STEPS[DIP_STEPS.length - 2]) * DRIFT;
-  autoRange(v.y, range.lo, range.hi + lead, v.height, 1 / MOTION_SLACK, Y_RANGE);
+  autoRange(v.y, range.lo, range.hi + lead, v.height, 1 / RESCALE_SLACK, Y_RANGE);
   stepAxis(v.y, step);
 }
 

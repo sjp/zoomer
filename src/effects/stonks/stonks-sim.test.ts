@@ -209,7 +209,7 @@ describe("chart view", () => {
       let lo = Number.NaN;
       let ylo = Number.NaN;
       let yhi = Number.NaN;
-      const worst = { head: 0, pan: 0, panHz: 0, rescale: 0, rescaleHz: 0 };
+      const worst = { head: 0, pan: 0, panHz: 0, rescale: 0, rescaleHz: 0, both: 0 };
       drive(8, w, h, 900, DT, (m, v) => {
         const hx = viewX(v, m.pos);
         const hy = viewY(v, headValue(m));
@@ -225,6 +225,8 @@ describe("chart view", () => {
           worst.rescale = Math.max(worst.rescale, shift);
           const gridYPx = (niceStep(span, GRID_Y_LINES) / span) * h;
           worst.rescaleHz = Math.max(worst.rescaleHz, shift / DT / gridYPx);
+          // A pan and a rescale can overlap: a fixed point moves with both at once.
+          worst.both = Math.max(worst.both, Math.hypot(pan, shift));
         }
         px = hx;
         py = hy;
@@ -237,6 +239,7 @@ describe("chart view", () => {
       expect(worst.panHz).toBeLessThanOrEqual(MAX_PATTERN_HZ);
       expect(worst.rescale).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
       expect(worst.rescaleHz).toBeLessThanOrEqual(MAX_PATTERN_HZ);
+      expect(worst.both).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
       // Both happen in the run.
       expect(worst.pan).toBeGreaterThan(0);
       expect(worst.rescale).toBeGreaterThan(0);
