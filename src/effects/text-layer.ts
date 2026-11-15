@@ -58,7 +58,8 @@ void main() {
 `;
 
 const FRAGMENT = /* glsl */ `#version 300 es
-precision mediump float;
+// highp: the atlas is screen-sized, past what mediump texture coordinates resolve.
+precision highp float;
 uniform sampler2D uTex;
 uniform vec3 uRoles[5];
 in vec2 vUv;

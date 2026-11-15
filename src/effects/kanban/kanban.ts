@@ -201,7 +201,8 @@ void main() {
 
 /** Two atlases of the same cards in two looks, crossfaded: `uMix` 1 shows `uCur` alone. */
 const CARD_FRAGMENT = /* glsl */ `#version 300 es
-precision mediump float;
+// highp: the atlases are screen-sized, past what mediump texture coordinates resolve.
+precision highp float;
 uniform sampler2D uPrev;
 uniform sampler2D uCur;
 uniform float uMix;
@@ -236,7 +237,8 @@ void main() {
 
 /** A soft rounded rect: `vShape` is half size, corner radius, blur. Premultiplied colour. */
 const SHADOW_FRAGMENT = /* glsl */ `#version 300 es
-precision mediump float;
+// highp: the shape is in device px, too coarse in mediump on big cards.
+precision highp float;
 in vec2 vLocal;
 in vec4 vShape;
 in vec4 vColor;
@@ -250,7 +252,8 @@ void main() {
 
 /** Cork: the board colour mottled by a fine grain and larger blotches from one tiling noise texture. */
 const CORK_FRAGMENT = /* glsl */ `#version 300 es
-precision mediump float;
+// highp: gl_FragCoord runs to thousands of px, too coarse in mediump.
+precision highp float;
 uniform sampler2D uNoise;
 uniform vec3 uBase;
 uniform float uAmount;
