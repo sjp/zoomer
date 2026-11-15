@@ -198,13 +198,20 @@ const tickerSymbolFont = (px: number) => `700 ${String(px)}px ${SANS_FONT_STACK}
 const tickerFigureFont = (px: number) => `500 ${String(px)}px ${SANS_FONT_STACK}`;
 const labelFont = (px: number) => `500 ${String(px)}px ${SANS_FONT_STACK}`;
 
-/** The widest symbol and figures an item reserves room for, so a price change never moves the tape. */
+/**
+ * The widest symbol and figures an item reserves room for, so a price change
+ * never moves the tape. Prices and gains past a million read "1.23e403", whose
+ * exponent keeps growing: five exponent digits last over a year of uptime.
+ */
 const WIDEST_SYMBOL = "DIAMND";
-const WIDEST_FIGURES = "▲ 000,000.00 +0,000%";
+const WIDEST_FIGURES = "▲ 0.00e00000 +0.00e00000%";
 
 /** The gap between items and between an item's symbol and figures, in ems. */
 const ITEM_GAP_EM = 1.6;
 const INNER_GAP_EM = 0.45;
+
+/** Where an item starts in its slot, in ems: half the gap leads, half trails. */
+export const TICKER_INDENT_EM = ITEM_GAP_EM / 2;
 
 /** Width of a ticker item's slot at `px` px, gap included. */
 export function tickerSlotWidth(px: number, measure: Measure): number {

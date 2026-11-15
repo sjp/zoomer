@@ -6,6 +6,7 @@ import {
   drawTickerItem,
   paintArrow,
   paintCaption,
+  TICKER_INDENT_EM,
   tickerSlotWidth,
 } from "./stonks-art";
 import { createTicker } from "./stonks-sim";
@@ -83,17 +84,21 @@ describe("ticker items", () => {
 
   it("reserves a slot wide enough for any price, so a tick never moves the tape", () => {
     const measure = createMeasure();
-    const slot = tickerSlotWidth(30, measure);
+    const px = 30;
+    const slot = tickerSlotWidth(px, measure);
+    const indent = TICKER_INDENT_EM * px;
     const item = createTicker(2).items[0];
-    for (const log of [0, 2.5, 5.99, 9, 30, 400]) {
+    // Up to a five-digit exponent on both price and gain (over a year of uptime).
+    for (const log of [0, 2.5, 5.99, 9, 30, 400, 99_999]) {
       item.price = log;
       item.open = 0;
       const ctx = new MeasuringCanvas(1, 1).getContext() as unknown as Ctx;
       MeasuringCanvas.reset(0.5);
-      drawTickerItem(ctx, item, 0, 0, 30);
+      drawTickerItem(ctx, item, indent, 0, px);
       const texts = MeasuringCanvas.calls.filter((c) => c.method === "fillText");
-      const end = Number(texts[1].args[1]) + Array.from(String(texts[1].args[0])).length * 15;
-      expect(end).toBeLessThan(slot);
+      const end = Number(texts[1].args[1]) + Array.from(String(texts[1].args[0])).length * px * 0.5;
+      // The item plus its trailing half gap stays inside the slot.
+      expect(end + indent).toBeLessThanOrEqual(slot);
     }
   });
 });

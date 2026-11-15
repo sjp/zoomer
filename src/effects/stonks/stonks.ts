@@ -32,6 +32,7 @@ import {
   paintArrow,
   paintCaption,
   type StyleId,
+  TICKER_INDENT_EM,
   tickerSlotWidth,
 } from "./stonks-art";
 import {
@@ -681,7 +682,7 @@ export const stonks = defineEffect(stonksMeta, {
               it.changed = false;
               text.clear(0, i * rowH, slotW, rowH);
               // Allocates the item's label, only when its price changes.
-              drawTickerItem(ctx, it, tickerPx * 0.8, i * rowH + rowH / 2, tickerPx);
+              drawTickerItem(ctx, it, tickerPx * TICKER_INDENT_EM, i * rowH + rowH / 2, tickerPx);
             }
           }
           const itemA = bandA * fade;
