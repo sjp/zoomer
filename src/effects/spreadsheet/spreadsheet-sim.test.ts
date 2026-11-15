@@ -161,19 +161,25 @@ describe("edit scheduler", () => {
     for (const seed of [1, 2]) {
       const s = createSheet(seed, seed, 0, L);
       const e = s.editor;
+      // The extremes of the selected and previous cells, and of a fill's selection,
+      // which stretches down from the selected cell (one expect each, not thousands).
+      let minRow = Infinity;
+      let maxRow = -Infinity;
+      let minCol = Infinity;
+      let maxCol = -Infinity;
+      let fillEnd = -Infinity;
       run(s, 300, 2, () => {
-        for (const [row, col] of [
-          [e.row, e.col],
-          [e.fromRow, e.fromCol],
-        ]) {
-          expect(row).toBeGreaterThanOrEqual(1);
-          expect(row).toBeLessThan(L.fullRows);
-          expect(col).toBeGreaterThanOrEqual(1);
-          expect(col).toBeLessThan(L.fullCols);
-        }
-        // A fill's selection stretches down from the selected cell.
-        expect(e.row + extentNow(e)).toBeLessThan(L.fullRows);
+        minRow = Math.min(minRow, e.row, e.fromRow);
+        maxRow = Math.max(maxRow, e.row, e.fromRow);
+        minCol = Math.min(minCol, e.col, e.fromCol);
+        maxCol = Math.max(maxCol, e.col, e.fromCol);
+        fillEnd = Math.max(fillEnd, e.row + extentNow(e));
       });
+      expect(minRow).toBeGreaterThanOrEqual(1);
+      expect(maxRow).toBeLessThan(L.fullRows);
+      expect(minCol).toBeGreaterThanOrEqual(1);
+      expect(maxCol).toBeLessThan(L.fullCols);
+      expect(fillEnd).toBeLessThan(L.fullRows);
       expect(e.edits).toBeGreaterThan(10);
     }
   });
