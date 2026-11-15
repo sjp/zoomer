@@ -195,8 +195,9 @@ body,
   background: none;
 }
 
+/* Dark text on the accent: light text on it is under 3:1 at this size. */
 .category-chip[aria-pressed="true"] {
-  color: var(--text);
+  color: rgb(16 18 24);
   background: var(--accent);
   border-color: transparent;
 }
