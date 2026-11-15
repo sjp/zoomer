@@ -349,6 +349,32 @@ describe("EffectList", () => {
     expect([arrow("left"), arrow("right")]).toEqual([null, null]);
   });
 
+  it("scrolls the chip row sideways with a plain mouse wheel, until it reaches that end", () => {
+    renderList();
+    const group = layoutChips(250);
+    const wheel = (init: WheelEventInit) => {
+      const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, ...init });
+      group.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(wheel({ deltaY: 100 })).toBe(true);
+    expect(group.scrollLeft).toBe(350);
+    expect(wheel({ deltaY: -3, deltaMode: WheelEvent.DOM_DELTA_LINE })).toBe(true);
+    expect(group.scrollLeft).toBe(302);
+    // Sideways deltas are left to the browser.
+    expect(wheel({ deltaX: 40, deltaY: 10 })).toBe(false);
+    expect(group.scrollLeft).toBe(302);
+    // At an end the wheel passes through, to the list or the page.
+    layoutChips(600);
+    expect(wheel({ deltaY: 100 })).toBe(false);
+    expect(wheel({ deltaY: -100 })).toBe(true);
+    layoutChips(0);
+    expect(wheel({ deltaY: -100 })).toBe(false);
+    // As does a row that fits.
+    layoutChips(0, 900);
+    expect(wheel({ deltaY: 100 })).toBe(false);
+  });
+
   it("scrolls a focused chip into view", () => {
     const scrolled = vi.spyOn(Element.prototype, "scrollIntoView");
     renderList();

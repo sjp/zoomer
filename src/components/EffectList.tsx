@@ -172,6 +172,39 @@ export function EffectList(props: EffectListProps) {
     };
   }, [updateChipsMore]);
 
+  // A plain mouse wheel over the chip row scrolls it sideways, until it reaches that
+  // end; then the wheel goes on to the list or page as usual. Sideways deltas (Shift,
+  // trackpads) are the browser's already. Non-passive, to keep the list from scrolling too.
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el || !canHover) {
+      return undefined;
+    }
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY === 0 || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) {
+        return;
+      }
+      const max = el.scrollWidth - el.clientWidth;
+      const atEnd = e.deltaY > 0 ? el.scrollLeft >= max - 1 : el.scrollLeft <= 1;
+      if (max <= 0 || atEnd) {
+        return;
+      }
+      e.preventDefault();
+      // Lines or pages rather than pixels, from some mice and browsers.
+      const unit =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? el.clientWidth
+            : 1;
+      el.scrollLeft += e.deltaY * unit;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, [canHover]);
+
   useEffect(() => {
     if (active) {
       document.getElementById(optionDomId(uid, active.id))?.scrollIntoView({ block: "nearest" });
