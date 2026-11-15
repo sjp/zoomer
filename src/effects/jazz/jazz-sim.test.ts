@@ -223,6 +223,28 @@ describe("90s jazz motion", () => {
     expect(unpainted.size).toBeGreaterThanOrEqual(4);
   });
 
+  it("never pauses for long between changes, even when a spot is hard to find", () => {
+    for (const aspect of [16 / 9, 21 / 9]) {
+      for (const scale of [MIN_SCALE, 1]) {
+        for (const seed of [0, 1, 2, 3]) {
+          const { jazz, params } = make(aspect, { seed, scale });
+          let idle = 0;
+          let worst = 0;
+          for (let f = 0; f < 30 * 120; f++) {
+            stepJazz(jazz, 1 / 30, params);
+            const busy =
+              (jazz.current?.pending ?? null) !== null ||
+              liveElements(jazz).some((e) => isChanging(e));
+            idle = busy ? 0 : idle + 1 / 30;
+            worst = Math.max(worst, idle);
+          }
+          // The longest pause is 3 s, plus a few quick retries.
+          expect(worst).toBeLessThan(4.5);
+        }
+      }
+    }
+  });
+
   it("drifts no faster than the pattern limit for the finest feature", () => {
     for (const scale of [MIN_SCALE, 0.7, 1]) {
       const v = driftSpeed(1, scale);

@@ -107,6 +107,8 @@ const FIRST_EVENT_MAX = 2.2;
  */
 const GROUP_PICK = [0.45, 0.33, 0.1, 0.04, 0.08];
 const EVENT_MAX = 3;
+/** When no spot is found for a replacement, another pick is tried this soon, at rate 1. */
+const EVENT_RETRY = 0.2;
 /** Param changes crossfade over this long, seconds. */
 const CROSSFADE = 1;
 /** Toggled groups fade over this long, seconds. */
@@ -820,6 +822,8 @@ function stepScene(
   // Find the replacement's spot first, so the pattern never thins out.
   const next = place({ scene, clear: jazz.clear, swashes: [] }, el.group, scene.rng, el);
   if (!next) {
+    // Try another pick shortly rather than wait out a whole pause.
+    scene.nextEvent = scene.clock + EVENT_RETRY;
     return;
   }
   el.state = LEAVING;
