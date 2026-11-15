@@ -74,7 +74,16 @@ describe("ControlPanel", () => {
 
   it("records a clip of the chosen length", () => {
     const props = renderPanel();
-    fireEvent.change(screen.getByLabelText("Clip length"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Output" }));
+    const lengths = screen.getByRole("group", { name: "Clip length" });
+    expect([...lengths.querySelectorAll("button")].map((b) => b.textContent)).toEqual([
+      "10s",
+      "20s",
+      "30s",
+      "60s",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "30s" }));
+    expect(screen.getByRole("button", { name: "30s" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Record clip" }));
     expect(props.onRecord).toHaveBeenCalledExactlyOnceWith(30);
   });
@@ -85,7 +94,9 @@ describe("ControlPanel", () => {
       true,
     );
     expect(screen.getByLabelText<HTMLSelectElement>("Resolution").disabled).toBe(true);
-    expect(screen.getByLabelText<HTMLSelectElement>("Clip length").disabled).toBe(true);
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { hidden: true, name: "30s" }).disabled,
+    ).toBe(true);
     expect(screen.getByRole("button", { name: "Recording… 12s" })).toBeTruthy();
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Fullscreen" }).disabled).toBe(
       false,

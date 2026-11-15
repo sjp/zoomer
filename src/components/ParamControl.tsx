@@ -64,16 +64,23 @@ function LabelRow({
   value,
   onReset,
   after,
+  labelId,
 }: {
   inputId: string;
   def: ParamDef;
   value: ParamValue;
   onReset: (() => void) | undefined;
   after?: ReactNode;
+  /** For a group of buttons, which a label element can't name: the text's id. */
+  labelId?: string | undefined;
 }) {
   return (
     <div className="control-label">
-      <label htmlFor={inputId}>{def.label}</label>
+      {labelId === undefined ? (
+        <label htmlFor={inputId}>{def.label}</label>
+      ) : (
+        <span id={labelId}>{def.label}</span>
+      )}
       {onReset && !isDefault(def, value) && (
         <ResetButton inputId={inputId} label={def.label} onReset={onReset} />
       )}
@@ -116,6 +123,70 @@ export function ColourSwatch({ id, def, value, onChange, onReset }: Props) {
           <ResetButton inputId={inputId} label={def.label} onReset={onReset} />
         )}
       </div>
+    </div>
+  );
+}
+
+/** The longest option label a select can have and still show as a segmented control. */
+const SEGMENT_LABEL_MAX = 10;
+
+/** Whether a select is small enough to show all its options at once: 2–3 short ones. */
+function segmentable(options: readonly { label: string }[]): boolean {
+  return (
+    options.length >= 2 &&
+    options.length <= 3 &&
+    options.every((o) => o.label.length <= SEGMENT_LABEL_MAX)
+  );
+}
+
+interface SegmentedProps<T> {
+  /** The group's id, which a reset focuses. */
+  id?: string;
+  /** The id of the text that names the group. */
+  labelledBy: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  disabled?: boolean;
+  title?: string | undefined;
+}
+
+/**
+ * A few options side by side as pressed / unpressed buttons, in place of a select
+ * whose options all fit. The group takes its name from the label beside it.
+ */
+export function Segmented<T extends string | number>({
+  id,
+  labelledBy,
+  options,
+  value,
+  onChange,
+  disabled,
+  title,
+}: SegmentedProps<T>) {
+  return (
+    <div
+      id={id}
+      className="segmented"
+      role="group"
+      aria-labelledby={labelledBy}
+      title={title}
+      // Focusable from script only, so a reset from the keyboard can land here.
+      tabIndex={-1}
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={o.value === value}
+          disabled={disabled}
+          onClick={() => {
+            onChange(o.value);
+          }}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -180,6 +251,26 @@ export function ParamControl({ id, def, value, onChange, onReset }: Props) {
         </div>
       );
     case "select":
+      if (segmentable(def.options)) {
+        return (
+          <div className="control">
+            <LabelRow
+              inputId={inputId}
+              labelId={`${inputId}-label`}
+              def={def}
+              value={value}
+              onReset={onReset}
+            />
+            <Segmented
+              id={inputId}
+              labelledBy={`${inputId}-label`}
+              options={def.options}
+              value={String(value)}
+              onChange={onChange}
+            />
+          </div>
+        );
+      }
       return (
         <div className="control control-inline">
           {label()}

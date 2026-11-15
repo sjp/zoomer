@@ -8,6 +8,7 @@ import { Description } from "./Description";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { categoryFilterLabel } from "../effects/list";
 import { ParamSections, Section } from "./ParamSections";
+import { Segmented } from "./ParamControl";
 import { SheetHandle } from "./SheetHandle";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
@@ -454,22 +455,18 @@ export function ControlPanel(props: Props) {
                   ))}
                 </select>
               </div>
-              <div className="control control-inline">
-                <label htmlFor="clip-length">Clip length</label>
-                <select
-                  id="clip-length"
+              <div className="control">
+                <span id="clip-length-label" className="control-label">
+                  Clip length
+                </span>
+                <Segmented
+                  labelledBy="clip-length-label"
+                  options={DURATIONS.map((d) => ({ value: d, label: `${String(d)}s` }))}
                   value={duration}
+                  onChange={setDuration}
                   disabled={recording}
-                  onChange={(e) => {
-                    setDuration(Number(e.target.value));
-                  }}
-                >
-                  {DURATIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}s
-                    </option>
-                  ))}
-                </select>
+                  title={recording ? "Locked while recording" : undefined}
+                />
               </div>
             </div>
           </Section>

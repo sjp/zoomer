@@ -60,16 +60,56 @@ describe("ParamControl", () => {
         label: "Mode",
         options: [
           { value: "a", label: "Alpha" },
-          { value: "b", label: "Beta" },
+          { value: "b", label: "Beta, the long one" },
         ],
         default: "a",
       },
       "a",
     );
     const select = screen.getByLabelText<HTMLSelectElement>("Mode");
-    expect([...select.options].map((o) => o.textContent)).toEqual(["Alpha", "Beta"]);
+    expect([...select.options].map((o) => o.textContent)).toEqual(["Alpha", "Beta, the long one"]);
     fireEvent.change(select, { target: { value: "b" } });
     expect(onChange).toHaveBeenCalledExactlyOnceWith("b");
+  });
+
+  it("shows two or three short options as a segmented control", () => {
+    const { onChange } = renderControl(
+      {
+        kind: "select",
+        label: "Shape",
+        options: [
+          { value: "circle", label: "Circle" },
+          { value: "hexagon", label: "Hexagon" },
+          { value: "star", label: "Star" },
+        ],
+        default: "circle",
+      },
+      "hexagon",
+    );
+    expect(screen.queryByRole("combobox")).toBeNull();
+    const group = screen.getByRole("group", { name: "Shape" });
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.map((b) => [b.textContent, b.getAttribute("aria-pressed")])).toEqual([
+      ["Circle", "false"],
+      ["Hexagon", "true"],
+      ["Star", "false"],
+    ]);
+    expect(buttons.every((b) => group.contains(b))).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Star" }));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("star");
+  });
+
+  it("keeps a select for four options, or a long option", () => {
+    const options = ["A", "B", "C", "D"].map((l) => ({ value: l, label: l }));
+    renderControl({ kind: "select", label: "Four", options, default: "A" }, "A");
+    expect(screen.getByRole("combobox", { name: "Four" })).toBeTruthy();
+    cleanup();
+    const long = [
+      { value: "a", label: "Short" },
+      { value: "b", label: "Elevenchars" },
+    ];
+    renderControl({ kind: "select", label: "Long", options: long, default: "a" }, "a");
+    expect(screen.getByRole("combobox", { name: "Long" })).toBeTruthy();
   });
 
   describe("reset", () => {
@@ -138,6 +178,23 @@ describe("ParamControl", () => {
       expect(slider.id).toBe("param-p");
       expect(document.querySelector("label")?.htmlFor).toBe("param-p");
       expect(document.querySelector("label")?.contains(screen.getByRole("button"))).toBe(false);
+    });
+
+    it("moves focus to a segmented control's group when reset from the keyboard", () => {
+      renderWithReset(
+        {
+          kind: "select",
+          label: "Mode",
+          options: [
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Beta" },
+          ],
+          default: "a",
+        },
+        "b",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Reset Mode" }), { detail: 0 });
+      expect(document.activeElement).toBe(screen.getByRole("group", { name: "Mode" }));
     });
 
     it("moves focus to the field when reset from the keyboard", () => {
