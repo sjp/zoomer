@@ -1,6 +1,6 @@
 import { SANS_FONT_STACK } from "../canvas-texture";
 import { createChartRenderer, pushPolyline, pushRect, pushRoundRect } from "../charts";
-import { createColorEase, hexToUnitRgb } from "../color";
+import { createColorEase, hexesToUnitRgb } from "../color";
 import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
@@ -136,11 +136,7 @@ for (const [name, hexes] of Object.entries({
     "#3fbf8a",
   ],
 })) {
-  const out = new Float32Array(COLORS * 3);
-  hexes.forEach((hex, i) => {
-    out.set(hexToUnitRgb(hex), i * 3);
-  });
-  THEMES[name] = out;
+  THEMES[name] = hexesToUnitRgb(hexes, COLORS * 3);
 }
 
 /** Style-box labels by block kind. */

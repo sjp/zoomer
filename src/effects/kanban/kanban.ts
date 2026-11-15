@@ -1,6 +1,6 @@
 import { type CanvasAtlas, createCanvasAtlas, SANS_FONT_STACK } from "../canvas-texture";
 import { createChartRenderer, pushRect, pushRoundRect } from "../charts";
-import { createColorEase, hexToUnitRgb } from "../color";
+import { createColorEase, hexesToUnitRgb } from "../color";
 import { createFadeThrough } from "../fade";
 import {
   beginFrame,
@@ -120,10 +120,7 @@ const LOOKS: Float32Array[] = (
     },
   ] as const
 ).map(({ colors, scalars }) => {
-  const out = new Float32Array(LOOK_FLOATS);
-  colors.flat().forEach((hex, i) => {
-    out.set(hexToUnitRgb(hex), i * 3);
-  });
+  const out = hexesToUnitRgb(colors.flat(), LOOK_FLOATS);
   out.set(scalars, PANEL_A);
   return out;
 });

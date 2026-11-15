@@ -32,7 +32,7 @@ import {
   tweenAxis,
   valueY,
 } from "../charts";
-import { createColorEase, hexToUnitRgb } from "../color";
+import { createColorEase, hexesToUnitRgb } from "../color";
 import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
@@ -166,11 +166,7 @@ const SCHEMES: Record<string, Record<string, Float32Array>> = {};
 for (const [theme, base] of Object.entries(THEMES)) {
   SCHEMES[theme] = {};
   for (const [name, series] of Object.entries(PALETTES)) {
-    const out = new Float32Array(COLORS * 3);
-    [...base, ...series[theme]].forEach((hex, i) => {
-      out.set(hexToUnitRgb(hex), i * 3);
-    });
-    SCHEMES[theme][name] = out;
+    SCHEMES[theme][name] = hexesToUnitRgb([...base, ...series[theme]], COLORS * 3);
   }
 }
 

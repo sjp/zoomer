@@ -19,7 +19,7 @@ import {
   tweenAxis,
   valueY,
 } from "../charts";
-import { createColorEase, hexToUnitRgb, unitRgbMemo } from "../color";
+import { createColorEase, hexesToUnitRgb, unitRgbMemo } from "../color";
 import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
@@ -129,11 +129,7 @@ for (const [name, hexes] of Object.entries({
     "#000000",
   ],
 })) {
-  const out = new Float32Array(COLORS * 3);
-  hexes.forEach((hex, i) => {
-    out.set(hexToUnitRgb(hex), i * 3);
-  });
-  THEMES[name] = out;
+  THEMES[name] = hexesToUnitRgb(hexes, COLORS * 3);
 }
 
 /** Fonts at one scale and zoom, built on relayout. */

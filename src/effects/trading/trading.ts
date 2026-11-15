@@ -29,7 +29,7 @@ import {
   tickAt,
   valueY,
 } from "../charts";
-import { createColorEase, hexToUnitRgb } from "../color";
+import { createColorEase, hexesToUnitRgb } from "../color";
 import { createCountFade, createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
@@ -181,11 +181,7 @@ const THEMES: Record<string, readonly string[]> = {
 };
 const THEME_RGB: Record<string, Float32Array> = {};
 for (const [name, hexes] of Object.entries(THEMES)) {
-  const out = new Float32Array(COLORS * 3);
-  hexes.forEach((hex, i) => {
-    out.set(hexToUnitRgb(hex), i * 3);
-  });
-  THEME_RGB[name] = out;
+  THEME_RGB[name] = hexesToUnitRgb(hexes, COLORS * 3);
 }
 
 /** "HH:MM:SS" (or "HH:MM") of `seconds` after midnight. */

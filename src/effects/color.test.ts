@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildGradientLut,
   createColorEase,
+  hexesToUnitRgb,
   hexToLinear,
   hexToRgb,
   hexToUnitRgb,
@@ -151,5 +152,13 @@ describe("hexToLinear", () => {
     const [r] = hexToLinear("#808080");
     expect(r).toBeGreaterThan(0.2);
     expect(r).toBeLessThan(0.25);
+  });
+});
+
+describe("hexesToUnitRgb", () => {
+  it("packs each colour's unit RGB, zero-padded to the length asked", () => {
+    expect([...hexesToUnitRgb(["#ff0000", "#0000ff"])]).toEqual([1, 0, 0, 0, 0, 1]);
+    const out = hexesToUnitRgb(["#00ff00"], 5);
+    expect([...out]).toEqual([0, 1, 0, 0, 0]);
   });
 });

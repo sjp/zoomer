@@ -21,6 +21,18 @@ export function hexToUnitRgb(hex: string): Rgb {
   return [r / 255, g / 255, b / 255];
 }
 
+/**
+ * A list of hex colours as packed 0..1 RGB triples, in a `floats`-long array
+ * (zero past the colours): a theme table for a palette uniform or a colour ease.
+ */
+export function hexesToUnitRgb(hexes: readonly string[], floats = hexes.length * 3): Float32Array {
+  const out = new Float32Array(floats);
+  hexes.forEach((hex, i) => {
+    out.set(hexToUnitRgb(hex), i * 3);
+  });
+  return out;
+}
+
 /** Gamma used to mix in (approximately) linear light; a shader re-encodes with 1 / LINEAR_GAMMA. */
 export const LINEAR_GAMMA = 2.2;
 
