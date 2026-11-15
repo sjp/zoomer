@@ -20,6 +20,7 @@ import { retrobridgeMeta } from "./retrobridge/retrobridge.meta";
 import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
+import { rollercoasterMeta } from "./rollercoaster/rollercoaster.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
@@ -174,6 +175,11 @@ export const effects: readonly EffectEntry[] = [
     ...balloonrideMeta,
     load: () => import("./balloonride/balloonride").then((m) => m.balloonride),
   },
+  {
+    ...rollercoasterMeta,
+    load: () => import("./rollercoaster/rollercoaster").then((m) => m.rollercoaster),
+  },
+
   {
     ...lunarlanderMeta,
     load: () => import("./lunarlander/lunarlander").then((m) => m.lunarlander),
