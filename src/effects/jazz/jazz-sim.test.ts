@@ -153,6 +153,11 @@ describe("90s jazz layout", () => {
     const longest = (els: readonly Element[]) => Math.max(...els.map((e) => e.half));
     expect(longest(small)).toBeLessThan(longest(big));
   });
+
+  it("keeps the scale within the slider's range", () => {
+    expect(make(16 / 9, { scale: 0.1 }).jazz.current?.k).toBe(MIN_SCALE);
+    expect(make(16 / 9, { scale: 3 }).jazz.current?.k).toBe(1);
+  });
 });
 
 describe("90s jazz palettes", () => {

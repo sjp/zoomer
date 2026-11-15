@@ -11,6 +11,7 @@
 import { approach, clamp, smoothstep, wrap } from "../math";
 import { capPatternSpeed, MAX_FEATURE_PX_PER_FRAME } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
+import { MIN_SCALE } from "./jazz.meta";
 
 export const REF_HEIGHT = 1080;
 
@@ -720,7 +721,7 @@ function groupOn(p: JazzParams, g: number): boolean {
 }
 
 /** The scale param as a size factor. */
-const scaleOf = (p: JazzParams) => clamp(Number.isFinite(p.scale) ? p.scale : 1, 0.2, 1);
+const scaleOf = (p: JazzParams) => clamp(Number.isFinite(p.scale) ? p.scale : 1, MIN_SCALE, 1);
 const seedOf = (p: JazzParams) => (Number.isFinite(p.seed) ? Math.round(p.seed) : 0);
 
 /** The extent a transition moves an element's edge or tip over, ref px per unit progress. */
