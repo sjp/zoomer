@@ -84,7 +84,7 @@ export function ControlPanel(props: Props) {
     saveClosedSections(next);
   };
   const pickerRef = useRef<HTMLButtonElement>(null);
-  // Keyboard shortcuts in tooltips and the hint line, left out on touch screens.
+  // Keyboard shortcuts in tooltips and the Shortcuts popover, left out on touch screens.
   const canHover = useCanHover();
   const shortcut = (k: string) => (canHover ? ` (${k})` : "");
   const listOpen = list.open && !recording;
