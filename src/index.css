@@ -180,15 +180,17 @@ body,
   max-width: 45%;
 }
 
-/* Wraps onto more rows rather than widening the panel. */
+/* Wraps onto more rows rather than widening the panel. Chips are at least 24 px tall
+   (WCAG 2.5.8 target size), with room between rows. */
 .category-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px 4px;
 }
 
 .category-chip {
-  padding: 2px 8px;
+  min-height: 24px;
+  padding: 3px 8px;
   border-radius: 999px;
   font-size: 11px;
   color: var(--muted);
