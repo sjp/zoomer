@@ -4,15 +4,50 @@ import { MeasuringCanvas } from "../../test/offscreen-canvas";
 import { tweenPeakPxPerFrame } from "../charts";
 import { MAX_FEATURE_PX_PER_FRAME } from "../motion-limits";
 import { TEXT_ROLES } from "../text-layer";
-import { CANDLE_SPACING, SLIDE_SECONDS, STEP_SECONDS, trading } from "./trading";
-import { createFocusLayout, focusLayout } from "./trading-layout";
+import { CANDLE_SPACING, SLIDE_SECONDS, STEP_SECONDS, TILE_CANDLES, trading } from "./trading";
+import { createFocusLayout, focusLayout, gridTiles, PAD } from "./trading-layout";
+import { HISTORY, MAX_STOCKS } from "./trading-sim";
+import { MAX_COUNT, MIN_COUNT } from "./trading.meta";
 
 describe("trading motion", () => {
-  it("steps the chart one candle within the codec motion limits", () => {
-    expect(tweenPeakPxPerFrame(CANDLE_SPACING, STEP_SECONDS)).toBeLessThanOrEqual(
-      MAX_FEATURE_PX_PER_FRAME,
-    );
-  });
+  const ASPECTS = [
+    [1920, 1080],
+    [1440, 1080],
+    [2560, 1080],
+    [1080, 1080],
+    [1080, 1920],
+  ];
+
+  it.each(ASPECTS)(
+    "steps the main chart one candle within the codec motion limits at %d x %d",
+    (w, h) => {
+      const s = h / 1080;
+      const layout = createFocusLayout();
+      focusLayout(w, h, s, layout);
+      // The effect's candle spacing: at least CANDLE_SPACING, wider to fill a wide plot.
+      const spacingRef = Math.max(CANDLE_SPACING, layout.plot.w / s / (HISTORY - 4));
+      expect(tweenPeakPxPerFrame(spacingRef, STEP_SECONDS)).toBeLessThanOrEqual(
+        MAX_FEATURE_PX_PER_FRAME,
+      );
+    },
+  );
+
+  it.each(ASPECTS)(
+    "steps every grid tile's chart one candle within the codec motion limits at %d x %d",
+    (w, h) => {
+      const s = h / 1080;
+      const tiles = new Float64Array(4 * MAX_STOCKS);
+      for (let count = MIN_COUNT; count <= MAX_COUNT; count++) {
+        gridTiles(count, w, h, s, tiles);
+        for (let i = 0; i < count; i++) {
+          const spacingRef = (tiles[4 * i + 2] - 2 * PAD * s) / TILE_CANDLES / s;
+          expect(tweenPeakPxPerFrame(spacingRef, STEP_SECONDS)).toBeLessThanOrEqual(
+            MAX_FEATURE_PX_PER_FRAME,
+          );
+        }
+      }
+    },
+  );
 
   it.each([
     [1920, 1080],

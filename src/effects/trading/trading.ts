@@ -72,7 +72,7 @@ import { MAX_COUNT, MAX_PACE, MIN_COUNT, MIN_PACE, tradingMeta } from "./trading
 export const CANDLE_SPACING = 14;
 const BODY = 0.62;
 /** Candles across a grid tile's chart, and points in a watchlist sparkline. */
-const TILE_CANDLES = 40;
+export const TILE_CANDLES = 40;
 const SPARK_CANDLES = 30;
 /** Seconds a chart takes to step left one candle, and a new trade row to slide in. */
 export const STEP_SECONDS = 0.6;
