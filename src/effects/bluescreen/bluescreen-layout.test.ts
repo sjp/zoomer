@@ -104,7 +104,8 @@ describe("blue screen layout", () => {
     expect(layout.cursor.y).toBeGreaterThan(layout.y + (layout.lines.length - 1) * 9 * layout.dot);
   });
 
-  it.each(STYLES.flatMap((style) => [1, 20, 72, 100].map((w) => [style, w] as const)))(
+  const NARROW = [1, 20, 72, 100];
+  it.each(STYLES.flatMap((style) => NARROW.map((w) => [style, w] as const)))(
     "lays %s out on a frame %d px wide without throwing",
     (style, refWidth) => {
       const layout = layoutFor(style, LONGEST_MESSAGE, LONGEST_CODE, refWidth, measure);
@@ -112,16 +113,21 @@ describe("blue screen layout", () => {
         expect(b.w).toBeGreaterThanOrEqual(0);
         expect(b.h).toBeGreaterThanOrEqual(0);
       }
-      if (layout.style === "classic") {
-        expect(layout.cols).toBeGreaterThanOrEqual(1);
-        expect(layout.lines.length).toBeGreaterThan(2);
-        expect(Number.isFinite(layout.cursor.x)).toBe(true);
-      } else if (layout.style === "kernel") {
-        expect(layout.size).toBeGreaterThan(0);
-        expect(layout.log.w).toBeGreaterThan(0);
-      }
     },
   );
+
+  it.each(NARROW)("wraps the Classic page to at least one column %d px wide", (refWidth) => {
+    const layout = layoutClassic(LONGEST_MESSAGE, LONGEST_CODE, refWidth);
+    expect(layout.cols).toBeGreaterThanOrEqual(1);
+    expect(layout.lines.length).toBeGreaterThan(2);
+    expect(Number.isFinite(layout.cursor.x)).toBe(true);
+  });
+
+  it.each(NARROW)("gives the kernel text a positive size %d px wide", (refWidth) => {
+    const layout = layoutKernel(LONGEST_CODE, refWidth, measure);
+    expect(layout.size).toBeGreaterThan(0);
+    expect(layout.log.w).toBeGreaterThan(0);
+  });
 
   it("draws the Classic page only in characters its font has", () => {
     const layout = layoutClassic("Ünïcode “quotes” & semis; ☃", "STOP_CODE{1}", 1920);
