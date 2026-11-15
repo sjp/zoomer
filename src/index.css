@@ -360,7 +360,7 @@ body,
   );
 }
 
-/* Arrows over the faded ends, for a mouse (see EffectList). */
+/* Arrows over the faded ends, in the panel's side padding, for a mouse (see EffectList). */
 .category-row {
   position: relative;
 }
@@ -387,11 +387,11 @@ body,
 }
 
 .chips-arrow[data-dir="start"] {
-  left: -6px;
+  left: calc(4px - var(--pad-left));
 }
 
 .chips-arrow[data-dir="end"] {
-  right: -6px;
+  right: calc(4px - var(--pad-right));
 }
 
 .category-chips::-webkit-scrollbar {
