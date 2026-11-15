@@ -21,7 +21,7 @@ describe("useIdle", () => {
     expect(result.current).toBe(true);
   });
 
-  it.each(["pointermove", "pointerdown", "keydown", "wheel"])(
+  it.each(["pointermove", "pointerdown", "keydown", "wheel", "touchstart"])(
     "wakes on %s and restarts",
     (type) => {
       const { result } = renderHook(() => useIdle(1000));
@@ -46,6 +46,21 @@ describe("useIdle", () => {
     },
   );
 
+  it("wakes on a scroll inside any element, which doesn't bubble to the window", () => {
+    const { result } = renderHook(() => useIdle(1000));
+    const scroller = document.createElement("div");
+    document.body.append(scroller);
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current).toBe(true);
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"));
+    });
+    expect(result.current).toBe(false);
+    scroller.remove();
+  });
+
   it("with startIdle, is idle from the start until the first activity", () => {
     const { result } = renderHook(() => useIdle(1000, true));
     expect(result.current).toBe(true);
@@ -61,7 +76,14 @@ describe("useIdle", () => {
     unmount();
     const types = remove.mock.calls.map(([type]) => type);
     expect(types).toEqual(
-      expect.arrayContaining(["pointermove", "pointerdown", "keydown", "wheel"]),
+      expect.arrayContaining([
+        "pointermove",
+        "pointerdown",
+        "keydown",
+        "wheel",
+        "touchstart",
+        "scroll",
+      ]),
     );
   });
 });
