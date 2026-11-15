@@ -227,4 +227,21 @@ describe("typist", () => {
     expect(u.chars).toBeLessThanOrEqual(t.chars);
     expect(u.words).toBe(countWords(typedText(next, u).replaceAll("\n", " ")));
   });
+
+  it("types an emoji title a whole code point at a time", () => {
+    const doc = createDoc(3, 0, "Plans \u{1F680}\u{1F389} 2026");
+    const t = createTypist(doc, 3);
+    const halves = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    let bad = 0;
+    while (t.seg === 0) {
+      stepTypist(doc, t, 1 / 60, 30);
+      if (halves.test(typedText(doc, t))) {
+        bad++;
+      }
+    }
+    expect(bad).toBe(0);
+    const mid = doc.segments[0].text.indexOf("\u{1F680}") + 1;
+    const u = carryTypist(doc, { ...createTypist(doc, 3), chars: mid }, 3);
+    expect(u.chars).toBe(mid - 1);
+  });
 });

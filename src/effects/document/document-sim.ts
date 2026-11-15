@@ -226,6 +226,8 @@ const COMMENTS = [
 
 /** The UTF-16 code unit's value at `i` (0 past the end). */
 const code = (s: string, i: number): number => s.codePointAt(i) ?? 0;
+/** Whether `i` falls between the halves of a surrogate pair in `s` (so a cut there would leave tofu). */
+const midPair = (s: string, i: number): boolean => i > 0 && i < s.length && code(s, i - 1) > 0xffff;
 
 const pick = <T>(rng: () => number, list: readonly T[]): T => list[Math.floor(rng() * list.length)];
 const between = (rng: () => number, lo: number, hi: number) =>
@@ -472,6 +474,9 @@ export function carryTypist(doc: Doc, old: Typist, seed: number): Typist {
   if (t.seg < doc.segments.length && old.seg === t.seg) {
     const text = doc.segments[t.seg].text;
     t.chars = Math.min(old.phase === PHASE_TYPE ? old.chars : old.fixFrom, text.length);
+    if (midPair(text, t.chars)) {
+      t.chars--;
+    }
     t.words = doc.wordsBefore[t.seg] + countWords(text, t.chars);
   }
   return t;
@@ -562,7 +567,8 @@ function typeOne(doc: Doc, t: Typist, base: number): number {
   if (!isSpace(c) && (t.chars === 0 || isSpace(code(text, t.chars - 1)))) {
     t.words++;
   }
-  t.chars++;
+  // A whole code point at a time, so an emoji never shows half typed.
+  t.chars += c > 0xffff ? 2 : 1;
   t.idle = 0;
   if (t.chars >= text.length) {
     return SEGMENT_PAUSE + base * SEGMENT_CHARS;
@@ -608,7 +614,7 @@ function act(doc: Doc, t: Typist, base: number): number {
       return base / BACKSPACE_RATE;
     case PHASE_BACKSPACE: {
       const text = doc.segments[t.seg].text;
-      t.chars--;
+      t.chars -= midPair(text, t.chars - 1) ? 2 : 1;
       t.idle = 0;
       if (t.chars === 0 || isSpace(code(text, t.chars - 1))) {
         t.words--;
