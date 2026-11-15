@@ -1,5 +1,6 @@
 import { type CanvasTexture, createCanvasTexture } from "../canvas-texture";
 import { hexToUnitRgb, type Rgb } from "../color";
+import { createCrossfadeSlots } from "../fade";
 import {
   beginFrame,
   createDataTexture,
@@ -185,9 +186,6 @@ export const bluescreen = defineEffect(bluescreenMeta, {
       let height = 1;
       let scale = 1;
       let size = -1;
-      let current = 0;
-      let mix = 0;
-      let fading = false;
       let time = 0;
       let count = 0;
 
@@ -296,6 +294,7 @@ export const bluescreen = defineEffect(bluescreenMeta, {
         slot.layout = null;
         slot.painted = -1;
       };
+      const fade = createCrossfadeSlots([slots[0], slots[1]], CROSSFADE, empty);
 
       /** Steps a slot's count and log, crossfading the count and scrolling the log as they change. */
       const advance = (slot: Slot, step: number, simStep: number) => {
@@ -444,33 +443,26 @@ export const bluescreen = defineEffect(bluescreenMeta, {
           }
 
           // A new look crossfades in, one change at a time.
-          const shown = slots[current];
+          const shown = fade.current;
           if (shown.painted < 0) {
             fill(shown, null, style, hue, text, code, seed);
           } else if (
-            !fading &&
+            !fade.fading &&
             (shown.style !== style ||
               shown.hue !== hue ||
               shown.text !== text ||
               shown.code !== code ||
               shown.seed !== seed)
           ) {
-            fill(slots[1 - current], shown, style, hue, text, code, seed);
-            fading = true;
-            mix = 0;
+            fill(fade.next, shown, style, hue, text, code, seed);
+            fade.start();
           }
-          if (fading) {
-            mix = Math.min(1, mix + step / CROSSFADE);
-            if (mix >= 1) {
-              empty(slots[current]);
-              current = 1 - current;
-              fading = false;
-              mix = 0;
-            }
-          }
+          fade.step(step);
 
-          const a = slots[current];
-          const b = slots[1 - current];
+          const a = fade.current;
+          const b = fade.next;
+          const fading = fade.fading;
+          const mix = fade.mix;
           advance(a, step, simStep);
           if (fading) {
             advance(b, step, simStep);
