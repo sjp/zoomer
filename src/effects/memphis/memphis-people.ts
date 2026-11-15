@@ -20,6 +20,7 @@ import {
   COIN_R,
   COIN_TOP,
   COIN_X,
+  FOREARM,
   J_BACK_ANKLE,
   J_BACK_ELBOW,
   J_BACK_HAND,
@@ -45,6 +46,7 @@ import {
   POSE_WAVE,
   poseWeight,
   solveRig,
+  UPPER_ARM,
 } from "./memphis-figures";
 import { fillStrip, MAX_SIDE, type Mesh, strip } from "./memphis-mesh";
 import {
@@ -246,6 +248,25 @@ function ellipse(fr: Frame, a: number, c: number, ra: number, rc: number): void 
   outline(fr, ellipseKnots, ra, ra);
 }
 
+const limbBuf: number[] = [];
+
+/**
+ * Knots `k` laid out along a bone usually `nominal` long moved onto one `len`
+ * long: a knot in the bone's first half keeps its distance from the start, one
+ * in the second half its distance from the end. A shorter bone scales them all.
+ */
+export function limbKnots(k: readonly number[], nominal: number, len: number): readonly number[] {
+  const r = Math.min(1, len / nominal);
+  const shift = len - nominal * r;
+  limbBuf.length = k.length;
+  for (let i = 0; i < k.length; i += 3) {
+    limbBuf[i] = k[i] * r + (k[i] > nominal / 2 ? shift : 0);
+    limbBuf[i + 1] = k[i + 1];
+    limbBuf[i + 2] = k[i + 2];
+  }
+  return limbBuf;
+}
+
 // ---------------------------------------------------------------------------
 // Painting
 
@@ -316,16 +337,21 @@ const BOOT_SOLE = [-0.033, -0.023, -0.013, 0.094, -0.023, -0.013];
 const FOOT_BARE = [-0.024, -0.017, 0.02, 0.03, -0.017, 0.013, 0.08, -0.017, 0.007];
 const FLAT = [-0.027, -0.019, 0.008, 0.0, -0.019, 0.01, 0.05, -0.019, 0.008, 0.086, -0.019, 0.006];
 
-/** Arms, as fractions of the bone. */
-const UPPER_ARM_SKIN = [0, -0.023, 0.023, 1, -0.019, 0.019];
-const FOREARM_SKIN = [0, -0.019, 0.019, 0.45, -0.02, 0.018, 1, -0.014, 0.014];
-const SHORT_SLEEVE = [0, -0.033, 0.033, 0.42, -0.03, 0.03];
-const LONG_SLEEVE = [0, -0.031, 0.031, 1, -0.027, 0.027];
-const LONG_SLEEVE_FORE = [0, -0.026, 0.026, 0.9, -0.022, 0.022];
-const CUFF = [0.84, -0.023, 0.023, 0.94, -0.023, 0.023];
-const ROLLED = [0, -0.027, 0.027, 0.24, -0.026, 0.026];
+/**
+ * Arms, figure units along a bone of its usual length. The front arm stretches
+ * in the high five, so `limbKnots` keeps each knot its distance from the nearer
+ * joint: sleeves, cuffs and folds stay their size and only the tube between
+ * them grows.
+ */
+const UPPER_ARM_SKIN = [0, -0.023, 0.023, UPPER_ARM, -0.019, 0.019];
+const FOREARM_SKIN = [0, -0.019, 0.019, 0.1, -0.02, 0.018, FOREARM, -0.014, 0.014];
+const SHORT_SLEEVE = [0, -0.033, 0.033, 0.084, -0.03, 0.03];
+const LONG_SLEEVE = [0, -0.031, 0.031, UPPER_ARM, -0.027, 0.027];
+const LONG_SLEEVE_FORE = [0, -0.026, 0.026, 0.171, -0.022, 0.022];
+const CUFF = [0.16, -0.023, 0.023, 0.179, -0.023, 0.023];
+const ROLLED = [0, -0.027, 0.027, 0.046, -0.026, 0.026];
 /** The fold inside the elbow of a long sleeve. */
-const ELBOW_FOLD = [0.7, 0.012, 0.024, 1, 0.012, 0.022];
+const ELBOW_FOLD = [0.14, 0.012, 0.024, UPPER_ARM, 0.012, 0.022];
 
 /** Hands from the wrist (absolute), thumb side +c. */
 const PALM_OPEN = [0, -0.016, 0.015, 0.035, -0.02, 0.018, 0.06, -0.016, 0.013];
@@ -440,37 +466,37 @@ function drawArm(f: Figure, front: boolean, handShape: number): void {
   const skin = C_SKIN + f.skin;
   const top = C_TOP + f.topColor;
   const upper = bone(fr, J_SHOULDER, elbow);
-  outline(fr, UPPER_ARM_SKIN, 0.023, 0.019, upper);
+  outline(fr, limbKnots(UPPER_ARM_SKIN, UPPER_ARM, upper), 0.023, 0.019);
   paint(skin, shade);
   const fore = bone(sub, elbow, wrist);
-  outline(sub, FOREARM_SKIN, 0.019, 0.012, fore);
+  outline(sub, limbKnots(FOREARM_SKIN, FOREARM, fore), 0.019, 0.012);
   paint(skin, shade);
   drawHand(wrist, hand, handShape, skin, shade);
 
   const long = f.top === TOP_JUMPER || f.top === TOP_JACKET || f.top === TOP_SHIRT;
   if (!long) {
     bone(fr, J_SHOULDER, elbow);
-    outline(fr, SHORT_SLEEVE, 0.033, 0, upper);
+    outline(fr, limbKnots(SHORT_SLEEVE, UPPER_ARM, upper), 0.033, 0);
     paint(top, shade);
     return;
   }
   // Long sleeves: the forearm first so the upper sleeve's elbow covers its top.
   bone(sub, elbow, wrist);
   if (f.top === TOP_SHIRT) {
-    outline(sub, ROLLED, 0.027, 0, fore);
+    outline(sub, limbKnots(ROLLED, FOREARM, fore), 0.027, 0);
     paint(top, shade * FOLD);
   } else {
-    outline(sub, LONG_SLEEVE_FORE, 0.026, 0, fore);
+    outline(sub, limbKnots(LONG_SLEEVE_FORE, FOREARM, fore), 0.026, 0);
     paint(top, shade);
     if (f.top === TOP_JUMPER) {
-      outline(sub, CUFF, 0, 0, fore);
+      outline(sub, limbKnots(CUFF, FOREARM, fore), 0, 0);
       paint(top, shade * FOLD);
     }
   }
   bone(fr, J_SHOULDER, elbow);
-  outline(fr, LONG_SLEEVE, 0.031, 0.027, upper);
+  outline(fr, limbKnots(LONG_SLEEVE, UPPER_ARM, upper), 0.031, 0.027);
   paint(top, shade);
-  outline(fr, ELBOW_FOLD, 0, 0.008, upper);
+  outline(fr, limbKnots(ELBOW_FOLD, UPPER_ARM, upper), 0, 0.008);
   paint(top, shade * FOLD);
 }
 
