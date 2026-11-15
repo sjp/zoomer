@@ -110,6 +110,14 @@ const TAG_HEIGHT = 20;
 const CHIP_WIDTH = 96;
 /** Margin either side of the time-axis band in the text canvas (reference px). */
 const TIME_PAD = 40;
+/**
+ * Top bar, right to left (reference px): the clock's right edge in from the
+ * screen edge, the LIVE label's right edge in from the clock's, and the live
+ * dot's centre in from the label's.
+ */
+const CLOCK_INSET = PAD + 14;
+const LIVE_GAP = 96;
+const LIVE_DOT_GAP = 40;
 
 const RANGE: AutoRangeOptions = {
   pad: 0.12,
@@ -366,12 +374,12 @@ export const trading = defineEffect(tradingMeta, {
         const h = Math.round(TOP_BAR * scale);
         const x0 = Math.round(width * 0.6);
         layer.clear(x0, 0, width - x0, h);
-        const right = width - Math.round((PAD + 14) * scale);
+        const right = width - Math.round(CLOCK_INSET * scale);
         fill(ctx, text, right, h / 2, TEXT_ROLES.primary, "right", fonts.num);
         fill(
           ctx,
           "LIVE",
-          right - Math.round(96 * scale),
+          right - Math.round(LIVE_GAP * scale),
           h / 2,
           TEXT_ROLES.up,
           "right",
@@ -967,7 +975,7 @@ export const trading = defineEffect(tradingMeta, {
         pushRect(mesh, 0, h - Math.max(1, Math.round(scale)), width, h, C(BORDER), a);
         // The live dot: steady, never blinking.
         const r = 4 * scale;
-        const x = width - (PAD + 14 + 96 + 40) * scale;
+        const x = width - (CLOCK_INSET + LIVE_GAP + LIVE_DOT_GAP) * scale;
         pushArc(mesh, x, h / 2, 0, r, 0, 2 * Math.PI, C(UP), a);
       };
 
