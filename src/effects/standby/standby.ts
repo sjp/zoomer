@@ -1,4 +1,5 @@
 import { type CanvasTexture, createCanvasTexture } from "../canvas-texture";
+import { createCrossfadeSlots } from "../fade";
 import {
   beginFrame,
   createFullscreenTriangle,
@@ -238,9 +239,6 @@ export const standby = defineEffect(standbyMeta, {
       let scale = 1;
       let refWidth = 1920;
       let size = -1;
-      let current = 0;
-      let mix = 0;
-      let fading = false;
       let clockAlpha = -1;
       let count = 0;
 
@@ -308,6 +306,7 @@ export const standby = defineEffect(standbyMeta, {
         slot.signed = false;
         slot.painted = -1;
       };
+      const fade = createCrossfadeSlots([slots[0], slots[1]], CROSSFADE, empty);
 
       /** The frame width, reference px, a slot's art was laid out for. */
       const refWidthOf = (slot: Slot) => (slot.layout ? slot.layout.x * 2 : refWidth);
@@ -451,26 +450,17 @@ export const standby = defineEffect(standbyMeta, {
           }
 
           // A new style or text crossfades in, one change at a time.
-          const shown = slots[current];
+          const shown = fade.current;
           if (shown.painted < 0) {
             fill(shown, style, text, subtext);
           } else if (
-            !fading &&
+            !fade.fading &&
             (shown.style !== style || shown.text !== text || shown.subtext !== subtext)
           ) {
-            fill(slots[1 - current], style, text, subtext);
-            fading = true;
-            mix = 0;
+            fill(fade.next, style, text, subtext);
+            fade.start();
           }
-          if (fading) {
-            mix = Math.min(1, mix + step / CROSSFADE);
-            if (mix >= 1) {
-              empty(slots[current]);
-              current = 1 - current;
-              fading = false;
-              mix = 0;
-            }
-          }
+          fade.step(step);
 
           clockAlpha =
             clockAlpha < 0
@@ -486,8 +476,10 @@ export const standby = defineEffect(standbyMeta, {
 
           // The old look stays solid while the new one fades in over it, then
           // fades out underneath, so nothing turns see-through mid-change.
-          const a = slots[current];
-          const b = slots[1 - current];
+          const a = fade.current;
+          const b = fade.next;
+          const fading = fade.fading;
+          const mix = fade.mix;
           const aAlpha = fading ? Math.min(1, 2 * (1 - mix)) : 1;
           const bAlpha = fading ? Math.min(1, 2 * mix) : 0;
 
