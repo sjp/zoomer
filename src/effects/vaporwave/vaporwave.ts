@@ -299,6 +299,8 @@ interface BustLayer {
   begin: () => void;
   /** Resolves the multisampled image into the texture and unbinds. */
   end: () => void;
+  /** Frees the texture and buffer storage until the next `ensure`. */
+  release: () => void;
   readonly texture: WebGLTexture | null;
   /** The angle the texture shows, NaN when it must be redrawn. */
   drawn: number;
@@ -319,6 +321,11 @@ function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
   let msaa = false;
   let width = 0;
   let height = 0;
+  /** Empties a renderbuffer's storage (the object itself lives on). */
+  const zero = (r: WebGLRenderbuffer, format: number) => {
+    gl.bindRenderbuffer(gl.RENDERBUFFER, r);
+    gl.renderbufferStorage(gl.RENDERBUFFER, format, 0, 0);
+  };
   const layer: BustLayer = {
     drawn: Number.NaN,
     get texture() {
@@ -345,8 +352,10 @@ function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
       msaa = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
       if (!msaa) {
-        // No multisampling here: draw straight into the texture, with a plain depth buffer.
+        // No multisampling here: draw straight into the texture, with a plain
+        // depth buffer, and drop the unused multisampled colour.
         gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
+        zero(color, gl.RGBA8);
         gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
         gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
       }
@@ -382,6 +391,19 @@ function createBustLayer(gl: WebGL2RenderingContext, scope: Scope): BustLayer {
         );
       }
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    },
+    release() {
+      if (width === 0) {
+        return;
+      }
+      width = 0;
+      height = 0;
+      layer.drawn = Number.NaN;
+      target?.dispose();
+      target = null;
+      zero(color, gl.RGBA8);
+      zero(depth, gl.DEPTH_COMPONENT24);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     },
   };
   return layer;
@@ -812,6 +834,13 @@ export const vaporwave = defineEffect(vaporwaveMeta, {
             ul.f1("uAlpha", lofiW);
             ul.f2("uBand", band.y, band.strength);
             lofi.blit();
+          }
+          // Free the look that has faded out until it comes back.
+          if (lofiW <= 0) {
+            bustLayers[1].release();
+            lofi.release();
+          } else if (lofiW >= 1) {
+            bustLayers[0].release();
           }
         },
         dispose: () => {

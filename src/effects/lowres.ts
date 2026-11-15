@@ -145,6 +145,11 @@ interface LowResTarget {
    * reports a change. Always takes `key`, so its flag is clear afterwards.
    */
   needsRedraw: (key?: ChangeKey) => boolean;
+  /**
+   * Frees the texture while the target is unused; the next `resize` makes a
+   * new one (cleared to black, so `needsRedraw` reports true).
+   */
+  release: () => void;
   dispose: () => void;
 }
 
@@ -343,6 +348,11 @@ function buildLowResTarget(
       const redraw = direct || stale || changed;
       stale = false;
       return redraw;
+    },
+    release() {
+      rt?.dispose();
+      rt = null;
+      stale = true;
     },
     program,
     dispose: () => {

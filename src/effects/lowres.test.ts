@@ -119,3 +119,24 @@ describe("needsRedraw", () => {
     over.dispose();
   });
 });
+
+describe("release", () => {
+  it("frees the texture until the next resize, which makes a new one", () => {
+    const fake = createFakeGl();
+    const target = createLowResTarget(fake.gl);
+    target.resize(800, 600, 2);
+    target.needsRedraw();
+    const textures = () => fake.live().filter((o) => o.kind === "Texture").length;
+    const before = textures();
+    target.release();
+    expect(target.texture).toBe(null);
+    expect(textures()).toBe(before - 1);
+    target.resize(800, 600, 2);
+    expect(target.texture).not.toBe(null);
+    expect(target.width).toBe(400);
+    expect(target.needsRedraw()).toBe(true);
+    expect(textures()).toBe(before);
+    target.dispose();
+    expect(fake.errors).toEqual([]);
+  });
+});

@@ -26,6 +26,12 @@ export interface FakeGlOptions {
   failCompileAt?: number;
   /** Internal formats whose framebuffers report incomplete. */
   unrenderable?: readonly string[];
+  /**
+   * Framebuffers with a renderbuffer for colour (multisampled ones) report
+   * complete. Defaults to false: they report incomplete, so code takes its
+   * fallback.
+   */
+  multisample?: boolean;
   /** Records every method call in `calls`. Defaults to false. */
   record?: boolean;
 }
@@ -378,10 +384,29 @@ export function createFakeGl(options: FakeGlOptions = {}): FakeGl {
         attachments.set(state.drawFramebuffer, texture);
       }
     },
+    framebufferRenderbuffer: (
+      _target: number,
+      attachment: number,
+      _rbTarget: number,
+      renderbuffer: FakeObject | null,
+    ) => {
+      if (!state.drawFramebuffer) {
+        errors.push("framebufferRenderbuffer on the default framebuffer");
+      } else if (
+        check("framebufferRenderbuffer", "Renderbuffer", renderbuffer) &&
+        renderbuffer &&
+        enumName(attachment) === "COLOR_ATTACHMENT0"
+      ) {
+        attachments.set(state.drawFramebuffer, renderbuffer);
+      }
+    },
     checkFramebufferStatus: () => {
       const texture = state.drawFramebuffer && attachments.get(state.drawFramebuffer);
       const format = texture ? textureFormats.get(texture) : undefined;
-      const ok = format !== undefined && options.unrenderable?.includes(format) !== true;
+      const ok =
+        texture?.kind === "Renderbuffer"
+          ? options.multisample === true
+          : format !== undefined && options.unrenderable?.includes(format) !== true;
       return enumOf(ok ? "FRAMEBUFFER_COMPLETE" : "FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
     },
 
