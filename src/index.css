@@ -129,7 +129,12 @@ body,
   max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 14px;
+  /* The sticky header and footer carry the top and bottom padding (see below). */
+  --pad-left: 14px;
+  --pad-right: 14px;
+  --pad-top: 14px;
+  --pad-bottom: 14px;
+  padding: 0 var(--pad-right) 0 var(--pad-left);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   background: var(--panel-bg);
@@ -145,15 +150,17 @@ body,
 .panel-footer {
   position: sticky;
   z-index: 1;
-  margin-inline: -14px;
-  padding-inline: 14px;
+  margin-right: calc(-1 * var(--pad-right));
+  margin-left: calc(-1 * var(--pad-left));
+  padding-right: var(--pad-right);
+  padding-left: var(--pad-left);
   background: var(--panel-solid);
 }
 
 .panel-header {
   top: 0;
   margin-bottom: -8px;
-  padding-top: 14px;
+  padding-top: var(--pad-top);
   padding-bottom: 8px;
 }
 
@@ -164,10 +171,10 @@ body,
   gap: 12px;
   margin-top: -8px;
   padding-top: 8px;
-  padding-bottom: 14px;
+  padding-bottom: var(--pad-bottom);
 }
 
-.panel-header,
+.panel-header-row,
 .row {
   display: flex;
   gap: 8px;
@@ -675,6 +682,183 @@ select:disabled {
   background: none;
 }
 
+/* Phones: a bottom sheet on narrow screens, or a full-height drawer on the right when
+   held sideways (`usePanelLayout` picks one and sets data-layout on the app). */
+.app[data-layout="sheet"] .panel-wrap {
+  top: auto;
+  right: 0;
+  bottom: var(--keyboard-inset, 0px);
+  left: 0;
+  max-height: none;
+}
+
+.app[data-layout="sheet"] .panel-wrap[data-visible="false"] {
+  opacity: 1;
+  transform: translateY(100%);
+}
+
+.app[data-layout="sheet"] .panel {
+  --pad-left: calc(14px + var(--safe-left));
+  --pad-right: calc(14px + var(--safe-right));
+  --pad-top: 0px;
+  --pad-bottom: calc(14px + var(--safe-bottom));
+  width: 100%;
+  max-width: none;
+  /* About two thirds of the screen, and never under the keyboard or the notch. */
+  height: min(65vh, calc(100vh - var(--keyboard-inset, 0px) - var(--safe-top) - 8px));
+  height: min(65dvh, calc(100dvh - var(--keyboard-inset, 0px) - var(--safe-top) - 8px));
+  max-height: none;
+  border-width: 1px 0 0;
+  border-radius: 16px 16px 0 0;
+  transition: height 250ms ease;
+}
+
+/* The peek bar: the header alone, the rest clipped below it and hidden, so it can't be
+   tabbed to or read out. Visibility waits for the sheet to finish closing. */
+.app[data-layout="sheet"] .panel[data-sheet="collapsed"] {
+  height: calc(var(--peek-height, 76px) + var(--safe-bottom) + 1px);
+  overflow: hidden;
+}
+
+.panel[data-sheet="collapsed"] > :not(.panel-header) {
+  visibility: hidden;
+  transition: visibility 0s 250ms;
+}
+
+.panel[data-sheet="collapsed"] .panel-footer {
+  position: static;
+}
+
+.app[data-layout="sheet"] .panel[data-sheet="dragging"] {
+  overflow: hidden;
+  transition: none;
+}
+
+.sheet-handle {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 22px;
+  min-height: 0;
+  margin-bottom: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: grab;
+  /* The handle alone takes the gesture; sliders and the body keep theirs. */
+  touch-action: none;
+}
+
+.sheet-handle:hover:not(:disabled) {
+  background: none;
+}
+
+.sheet-handle-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.3);
+}
+
+.sheet-handle:focus-visible {
+  outline: none;
+}
+
+.sheet-handle:focus-visible .sheet-handle-bar {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.app[data-layout="drawer"] .panel-wrap {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  max-height: none;
+}
+
+.app[data-layout="drawer"] .panel-wrap[data-visible="false"] {
+  opacity: 1;
+  transform: translateX(100%);
+}
+
+.app[data-layout="drawer"] .panel {
+  --pad-right: calc(14px + var(--safe-right));
+  --pad-top: calc(14px + var(--safe-top));
+  --pad-bottom: calc(14px + var(--safe-bottom));
+  width: min(360px, 50vw);
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border-width: 0 0 0 1px;
+  border-radius: 16px 0 0 16px;
+}
+
+/* An open effect list takes the whole sheet or drawer, and only the list scrolls. */
+.panel[data-list-fills="true"] {
+  overflow: hidden;
+}
+
+.panel[data-list-fills="true"] .effect-list {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: var(--pad-bottom);
+}
+
+/* One row of chips that scrolls sideways, leaving the height to the list. */
+.panel[data-list-fills="true"] .category-chips {
+  flex-wrap: nowrap;
+  margin-inline: calc(-1 * var(--pad-left)) calc(-1 * var(--pad-right));
+  padding-inline: var(--pad-left) var(--pad-right);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.panel[data-list-fills="true"] .category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.panel[data-list-fills="true"] .category-chip {
+  flex: none;
+}
+
+.panel[data-list-fills="true"] .effect-listbox {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.app[data-layout="sheet"] .show-panel {
+  top: auto;
+  bottom: calc(16px + var(--safe-bottom));
+}
+
+/* Over the sheet's peek bar the toast would be hidden; it goes to the top instead. */
+.app[data-layout="sheet"] .toast {
+  top: calc(16px + var(--safe-top));
+  bottom: auto;
+}
+
+/* The header's Record button, in the sheet's peek bar. */
+.record-button {
+  flex: none;
+}
+
+.panel-header-row .record-button {
+  min-width: 72px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-wrap,
+  .panel-wrap[data-visible="false"],
+  .app .panel,
+  .show-panel,
+  .show-panel[data-visible="false"] {
+    transition: none;
+  }
+}
+
 /* Touch screens: finger-sized targets (44 px, or 32 px for the category chips), and
    16 px fields, since iOS zooms the page into any smaller field that takes focus.
    Keyed on the pointer rather than the width, so a narrow desktop window keeps
@@ -711,6 +895,11 @@ select:disabled {
 
   .link-button {
     min-height: 0;
+  }
+
+  .output summary {
+    min-height: 44px;
+    padding-top: 0;
   }
 
   /* The label fills the row, so tapping anywhere beside a checkbox or swatch hits it. */

@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { AnyParamValues, EffectMeta, ParamValue } from "../effects/types";
 import type { FrameStats } from "./EffectCanvas";
 import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
@@ -7,9 +7,10 @@ import type { Store } from "../lib/store";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { categoryFilterLabel } from "../effects/list";
 import { ParamControl } from "./ParamControl";
+import { SheetHandle } from "./SheetHandle";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
-import { useCanHover } from "../hooks/useMediaQuery";
+import { useCanHover, type PanelLayout } from "../hooks/useMediaQuery";
 import { loadOutputOpen, saveOutputOpen } from "../lib/preferences";
 
 const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
@@ -23,6 +24,8 @@ type EffectListState = Omit<EffectListProps, "currentId" | "onSelect" | "onClose
 
 interface Props {
   list: EffectListState;
+  /** A floating card (the default), a bottom sheet or a drawer: see `usePanelLayout`. */
+  layout?: PanelLayout;
   effect: EffectMeta;
   values: AnyParamValues;
   /** Why the current effect failed to load or start, or stopped, if it did. */
@@ -72,38 +75,137 @@ export function ControlPanel(props: Props) {
     pickerRef.current?.focus();
   };
 
+  const layout = props.layout ?? "float";
+  const sheet = layout === "sheet";
+  // On a phone the open list takes the whole sheet or drawer, and only it scrolls.
+  const listFills = layout !== "float" && listOpen;
+  // The bottom sheet: collapsed to a peek bar or expanded. An open list expands it.
+  const [expanded, setExpanded] = useState(false);
+  const sheetOpen = expanded || listOpen;
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  // The peek bar's height is the header's, which depends on the font and the effect's
+  // name; it's measured so the collapsed sheet can animate to it.
+  const [peek, setPeek] = useState<number>();
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!sheet || !header) {
+      return undefined;
+    }
+    const measure = () => {
+      setPeek(header.offsetHeight);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+    };
+  }, [sheet]);
+  const changeSheet = (open: boolean) => {
+    setExpanded(open);
+    if (!open && list.open) {
+      list.onOpenChange(false);
+    }
+  };
+  const sheetStyle: Record<string, string> = {};
+  if (sheet && peek !== undefined) {
+    sheetStyle["--peek-height"] = `${String(peek)}px`;
+  }
+  if (sheet && dragHeight !== null) {
+    // Below the peek bar the whole sheet slides down with the finger, towards hiding.
+    const floor = peek ?? 0;
+    sheetStyle.height = `${String(Math.max(floor, dragHeight))}px`;
+    if (dragHeight < floor) {
+      sheetStyle.transform = `translateY(${String(floor - dragHeight)}px)`;
+    }
+  }
+
+  const recordButton = (
+    <button
+      type="button"
+      className="primary record-button"
+      disabled={recording || !props.canRecord}
+      title="Keep this tab visible while recording"
+      aria-label={
+        sheet ? (recording ? `Recording… ${String(recordingLeft)}s` : "Record clip") : undefined
+      }
+      onClick={() => {
+        props.onRecord(duration);
+      }}
+    >
+      {sheet
+        ? recording
+          ? `${String(recordingLeft)}s`
+          : "Record"
+        : recording
+          ? `Recording… ${String(recordingLeft)}s`
+          : "Record clip"}
+    </button>
+  );
+
   return (
-    <aside className="panel">
-      <header className="panel-header">
-        <button
-          ref={pickerRef}
-          type="button"
-          className="effect-picker"
-          aria-expanded={listOpen}
-          disabled={recording}
-          title={recording ? "Locked while recording" : `Choose an effect${shortcut("/")}`}
-          onClick={() => {
-            list.onOpenChange(!list.open);
-          }}
-        >
-          <span className="sr-only">Effect: </span>
-          <span className="effect-picker-name">{effect.name}</span>
-          <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-            <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        </button>
-        <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />
-        <StarButton
-          starred={list.options.favourites?.has(effect.id) ?? false}
-          name={effect.name}
-          titleSuffix={shortcut("S")}
-          onToggle={() => {
-            list.onToggleFavourite(effect.id);
-          }}
-        />
-        <button type="button" onClick={props.onHide} title={`Hide controls${shortcut("H")}`}>
-          Hide
-        </button>
+    <aside
+      ref={panelRef}
+      className="panel"
+      data-sheet={
+        sheet
+          ? dragHeight !== null
+            ? "dragging"
+            : sheetOpen
+              ? "expanded"
+              : "collapsed"
+          : undefined
+      }
+      data-list-fills={listFills}
+      style={sheetStyle}
+    >
+      <header ref={headerRef} className="panel-header">
+        {sheet && (
+          <SheetHandle
+            open={sheetOpen}
+            onOpenChange={changeSheet}
+            onDismiss={props.onHide}
+            onDrag={setDragHeight}
+            sheetHeight={() => panelRef.current?.getBoundingClientRect().height ?? 0}
+          />
+        )}
+        <div className="panel-header-row">
+          <button
+            ref={pickerRef}
+            type="button"
+            className="effect-picker"
+            aria-expanded={listOpen}
+            disabled={recording}
+            title={recording ? "Locked while recording" : `Choose an effect${shortcut("/")}`}
+            onClick={() => {
+              list.onOpenChange(!list.open);
+            }}
+          >
+            <span className="sr-only">Effect: </span>
+            <span className="effect-picker-name">{effect.name}</span>
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+              <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
+          <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />
+          <StarButton
+            starred={list.options.favourites?.has(effect.id) ?? false}
+            name={effect.name}
+            titleSuffix={shortcut("S")}
+            onToggle={() => {
+              list.onToggleFavourite(effect.id);
+            }}
+          />
+          {sheet && recordButton}
+          <button type="button" onClick={props.onHide} title={`Hide controls${shortcut("H")}`}>
+            Hide
+          </button>
+        </div>
       </header>
       {listOpen && (
         <EffectList
@@ -116,195 +218,190 @@ export function ControlPanel(props: Props) {
           onClose={closeList}
         />
       )}
-      {!listOpen && (filter !== "" || categoryFilter !== "") && (
-        <p className="hint filter-hint">
-          ← → step through {list.effects.length} {list.effects.length === 1 ? "match" : "matches"}
-          {filter !== "" && <> for “{filter}”</>}
-          {categoryFilter !== "" && <> in {categoryFilter}</>}{" "}
-          <button
-            type="button"
-            className="link-button"
-            onClick={() => {
-              list.onQueryChange("");
-              list.onCategoriesChange(new Set());
-            }}
-          >
-            Clear
-          </button>
-        </p>
-      )}
-      <p className="description">{effect.description}</p>
-      {props.loading && (
-        <p className="loading" role="status">
-          Loading…
-        </p>
-      )}
-      {props.error !== undefined && props.error !== "" && (
-        <div className="effect-error" role="alert">
-          <p>{props.error}</p>
-          {props.onReload && (
-            <button type="button" onClick={props.onReload}>
-              Reload page
-            </button>
+      {!listFills && (
+        <>
+          {!listOpen && (filter !== "" || categoryFilter !== "") && (
+            <p className="hint filter-hint">
+              ← → step through {list.effects.length}{" "}
+              {list.effects.length === 1 ? "match" : "matches"}
+              {filter !== "" && <> for “{filter}”</>}
+              {categoryFilter !== "" && <> in {categoryFilter}</>}{" "}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  list.onQueryChange("");
+                  list.onCategoriesChange(new Set());
+                }}
+              >
+                Clear
+              </button>
+            </p>
           )}
-        </div>
-      )}
-
-      <section className="controls">
-        {Object.entries(effect.params).map(([key, def]) => (
-          <ParamControl
-            key={`${effect.id}-${key}`}
-            id={key}
-            def={def}
-            value={values[key] ?? def.default}
-            onChange={(v) => {
-              props.onParamChange(key, v);
-            }}
-            onReset={() => {
-              props.onParamChange(key, def.default);
-            }}
-          />
-        ))}
-      </section>
-
-      <details
-        className="output"
-        open={outputOpen}
-        onToggle={(e) => {
-          const open = e.currentTarget.open;
-          setOutputOpen(open);
-          saveOutputOpen(open);
-        }}
-      >
-        <summary>Output &amp; recording</summary>
-        <div className="control control-inline">
-          <label htmlFor="resolution">Resolution</label>
-          <select
-            id="resolution"
-            value={props.resolution}
-            disabled={recording}
-            title={recording ? "Locked while recording" : undefined}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (isResolution(value)) {
-                props.onResolutionChange(value);
-              }
-            }}
-          >
-            {Object.entries(RESOLUTIONS).map(([key, r]) => (
-              <option key={key} value={key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="control control-inline">
-          <label htmlFor="frame-rate">Frame rate</label>
-          <select
-            id="frame-rate"
-            value={props.frameRate}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (isFrameRate(value)) {
-                props.onFrameRateChange(value);
-              }
-            }}
-          >
-            {Object.entries(FRAME_RATES).map(([key, r]) => (
-              <option key={key} value={key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="row">
-          <select
-            aria-label="Clip length"
-            value={duration}
-            disabled={recording}
-            onChange={(e) => {
-              setDuration(Number(e.target.value));
-            }}
-          >
-            {DURATIONS.map((d) => (
-              <option key={d} value={d}>
-                {d}s
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="primary"
-            disabled={recording || !props.canRecord}
-            title="Keep this tab visible while recording"
-            onClick={() => {
-              props.onRecord(duration);
-            }}
-          >
-            {recording ? `Recording… ${String(recordingLeft)}s` : "Record clip"}
-          </button>
-        </div>
-        {recording && (
-          <p className="hint" role="status">
-            Keep this tab visible until the recording finishes; hidden tabs make clips run long.
-          </p>
-        )}
-      </details>
-
-      <footer className="panel-footer">
-        <div className="footer-actions">
-          {/* Apart from the others and quieter, since it throws away every change. */}
-          <button
-            type="button"
-            className="text-button"
-            title="Put every setting of this effect back to its default"
-            onClick={props.onReset}
-          >
-            Reset all
-          </button>
-          {props.onFullscreen && (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Fullscreen"
-              title={`Fullscreen${shortcut("F")}`}
-              onClick={props.onFullscreen}
-            >
-              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-                <path
-                  d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+          <p className="description">{effect.description}</p>
+          {props.loading && (
+            <p className="loading" role="status">
+              Loading…
+            </p>
           )}
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Copy link"
-            title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
-            onClick={props.onCopyLink}
-          >
-            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-              <path
-                d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {props.error !== undefined && props.error !== "" && (
+            <div className="effect-error" role="alert">
+              <p>{props.error}</p>
+              {props.onReload && (
+                <button type="button" onClick={props.onReload}>
+                  Reload page
+                </button>
+              )}
+            </div>
+          )}
+
+          <section className="controls">
+            {Object.entries(effect.params).map(([key, def]) => (
+              <ParamControl
+                key={`${effect.id}-${key}`}
+                id={key}
+                def={def}
+                value={values[key] ?? def.default}
+                onChange={(v) => {
+                  props.onParamChange(key, v);
+                }}
+                onReset={() => {
+                  props.onParamChange(key, def.default);
+                }}
               />
-            </svg>
-          </button>
-        </div>
-        {canHover && (
-          <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
-        )}
-      </footer>
+            ))}
+          </section>
+
+          <details
+            className="output"
+            open={outputOpen}
+            onToggle={(e) => {
+              const open = e.currentTarget.open;
+              setOutputOpen(open);
+              saveOutputOpen(open);
+            }}
+          >
+            <summary>Output &amp; recording</summary>
+            <div className="control control-inline">
+              <label htmlFor="resolution">Resolution</label>
+              <select
+                id="resolution"
+                value={props.resolution}
+                disabled={recording}
+                title={recording ? "Locked while recording" : undefined}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (isResolution(value)) {
+                    props.onResolutionChange(value);
+                  }
+                }}
+              >
+                {Object.entries(RESOLUTIONS).map(([key, r]) => (
+                  <option key={key} value={key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="control control-inline">
+              <label htmlFor="frame-rate">Frame rate</label>
+              <select
+                id="frame-rate"
+                value={props.frameRate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (isFrameRate(value)) {
+                    props.onFrameRateChange(value);
+                  }
+                }}
+              >
+                {Object.entries(FRAME_RATES).map(([key, r]) => (
+                  <option key={key} value={key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="row">
+              <select
+                aria-label="Clip length"
+                value={duration}
+                disabled={recording}
+                onChange={(e) => {
+                  setDuration(Number(e.target.value));
+                }}
+              >
+                {DURATIONS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}s
+                  </option>
+                ))}
+              </select>
+              {!sheet && recordButton}
+            </div>
+            {recording && (
+              <p className="hint" role="status">
+                Keep this tab visible until the recording finishes; hidden tabs make clips run long.
+              </p>
+            )}
+          </details>
+
+          <footer className="panel-footer">
+            <div className="footer-actions">
+              {/* Apart from the others and quieter, since it throws away every change. */}
+              <button
+                type="button"
+                className="text-button"
+                title="Put every setting of this effect back to its default"
+                onClick={props.onReset}
+              >
+                Reset all
+              </button>
+              {props.onFullscreen && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Fullscreen"
+                  title={`Fullscreen${shortcut("F")}`}
+                  onClick={props.onFullscreen}
+                >
+                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                    <path
+                      d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Copy link"
+                title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
+                onClick={props.onCopyLink}
+              >
+                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                  <path
+                    d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            {canHover && (
+              <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
+            )}
+          </footer>
+        </>
+      )}
     </aside>
   );
 }

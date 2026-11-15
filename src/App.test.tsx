@@ -6,6 +6,7 @@ import { App } from "./App";
 import { defaults, encodeHash } from "./effects/params";
 import { getEffect } from "./effects/registry";
 import type { EffectEntry } from "./effects/loader";
+import { mockMedia } from "./test/media";
 
 // No WebGL here: a bare canvas stands in for the effect canvas.
 vi.mock("./components/EffectCanvas", () => ({
@@ -240,6 +241,20 @@ describe("App", () => {
     } finally {
       Reflect.deleteProperty(document, "fullscreenEnabled");
     }
+  });
+
+  it.each([
+    [[], "float"],
+    [["(max-width: 640px)"], "sheet"],
+    [["(orientation: landscape) and (max-height: 500px)"], "drawer"],
+    [["(max-width: 640px)", "(orientation: landscape) and (max-height: 500px)"], "drawer"],
+  ] as const)("with media %j, lays the panel out as a %s", (matching, layout) => {
+    mockMedia(matching);
+    render(<App />);
+    expect(document.querySelector(".app")?.getAttribute("data-layout")).toBe(layout);
+    expect(screen.queryByRole("button", { name: "Expand controls" }) !== null).toBe(
+      layout === "sheet",
+    );
   });
 
   it("F asks for fullscreen, and says so when refused", async () => {

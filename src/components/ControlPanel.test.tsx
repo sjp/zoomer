@@ -234,6 +234,93 @@ describe("ControlPanel", () => {
   );
 });
 
+describe("ControlPanel as a bottom sheet", () => {
+  const sheetState = () => document.querySelector(".panel")?.getAttribute("data-sheet");
+  const handle = () => screen.getByRole("button", { name: /^(Expand|Collapse) controls$/ });
+  const drag = (from: number, to: number) => {
+    const el = handle();
+    fireEvent.pointerDown(el, { pointerId: 1, button: 0, clientY: from });
+    fireEvent.pointerMove(el, { pointerId: 1, clientY: (from + to) / 2 });
+    fireEvent.pointerMove(el, { pointerId: 1, clientY: to });
+    fireEvent.pointerUp(el, { pointerId: 1, clientY: to });
+    // The click a browser sends after the press: ignored after a drag.
+    fireEvent.click(el, { detail: 1 });
+  };
+
+  it("has no handle as a floating card", () => {
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Expand controls" })).toBeNull();
+    expect(sheetState()).toBeNull();
+  });
+
+  it("starts collapsed to its peek bar, with Record in it, and a tap on the handle expands it", () => {
+    const props = renderPanel({ layout: "sheet" });
+    expect(sheetState()).toBe("collapsed");
+    expect(handle().getAttribute("aria-expanded")).toBe("false");
+    const record = screen.getByRole("button", { name: "Record clip" });
+    expect(record.closest("header")).toBeTruthy();
+    expect(record.textContent).toBe("Record");
+    fireEvent.click(record);
+    expect(props.onRecord).toHaveBeenCalledExactlyOnceWith(20);
+    fireEvent.click(handle(), { detail: 1 });
+    expect(sheetState()).toBe("expanded");
+    expect(handle().getAttribute("aria-label")).toBe("Collapse controls");
+    expect(handle().getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(handle(), { detail: 0 });
+    expect(sheetState()).toBe("collapsed");
+  });
+
+  it("follows a drag on the handle and snaps on release", () => {
+    renderPanel({ layout: "sheet" });
+    const el = handle();
+    fireEvent.pointerDown(el, { pointerId: 1, button: 0, clientY: 700 });
+    fireEvent.pointerMove(el, { pointerId: 1, clientY: 600 });
+    expect(sheetState()).toBe("dragging");
+    expect(document.querySelector<HTMLElement>(".panel")?.style.height).toMatch(/px$/);
+    fireEvent.pointerUp(el, { pointerId: 1, clientY: 600 });
+    expect(sheetState()).toBe("expanded");
+    // A short drag springs back.
+    drag(600, 580);
+    expect(sheetState()).toBe("expanded");
+    drag(500, 700);
+    expect(sheetState()).toBe("collapsed");
+  });
+
+  it("hides the panel when dragged down from the peek bar", () => {
+    const props = renderPanel({ layout: "sheet" });
+    drag(700, 800);
+    expect(props.onHide).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a cancelled drag", () => {
+    renderPanel({ layout: "sheet" });
+    const el = handle();
+    fireEvent.pointerDown(el, { pointerId: 1, button: 0, clientY: 700 });
+    fireEvent.pointerMove(el, { pointerId: 1, clientY: 500 });
+    fireEvent.pointerCancel(el, { pointerId: 1, clientY: 500 });
+    expect(sheetState()).toBe("collapsed");
+  });
+
+  it("lets an open effect list take the whole expanded sheet", () => {
+    const list = { ...renderPanelList(), open: true };
+    renderPanel({ layout: "sheet", list });
+    expect(sheetState()).toBe("expanded");
+    expect(document.querySelector(".panel")?.getAttribute("data-list-fills")).toBe("true");
+    expect(screen.getByLabelText("Search effects")).toBeTruthy();
+    expect(document.querySelector(".description")).toBeNull();
+    expect(screen.queryByRole("slider")).toBeNull();
+    // Collapsing the sheet closes the list.
+    fireEvent.click(handle(), { detail: 1 });
+    expect(list.onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it("keeps the list beside the controls on a floating card", () => {
+    renderPanel({ list: { ...renderPanelList(), open: true } });
+    expect(document.querySelector(".panel")?.getAttribute("data-list-fills")).toBe("false");
+    expect(document.querySelector(".description")).toBeTruthy();
+  });
+});
+
 function renderPanelList() {
   return {
     effects: [warp],

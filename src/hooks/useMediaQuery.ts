@@ -27,3 +27,15 @@ export function useMediaQuery(query: string): boolean {
 export function useCanHover(): boolean {
   return !useMediaQuery("(hover: none)");
 }
+
+/**
+ * Where the control panel goes: a floating card, a bottom sheet on narrow screens, or
+ * a full-height drawer on the right on phones held sideways.
+ */
+export type PanelLayout = "float" | "sheet" | "drawer";
+
+export function usePanelLayout(): PanelLayout {
+  const drawer = useMediaQuery("(orientation: landscape) and (max-height: 500px)");
+  const sheet = useMediaQuery("(max-width: 640px)");
+  return drawer ? "drawer" : sheet ? "sheet" : "float";
+}

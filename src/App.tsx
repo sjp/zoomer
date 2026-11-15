@@ -8,7 +8,8 @@ import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectCategory, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
-import { useCanHover } from "./hooks/useMediaQuery";
+import { useKeyboardInset } from "./hooks/useKeyboardInset";
+import { useCanHover, usePanelLayout } from "./hooks/useMediaQuery";
 import { useTouchInput } from "./hooks/useTouchInput";
 import { copyText } from "./lib/clipboard";
 import { describeError } from "./lib/errors";
@@ -93,6 +94,9 @@ export function App() {
   // touch screens it stays until hidden instead of fading out mid-use.
   const touchInput = useTouchInput();
   const canHover = useCanHover();
+  // A floating card, or on phones a bottom sheet or a drawer on the right.
+  const layout = usePanelLayout();
+  useKeyboardInset(layout !== "float");
   // The effect list: its sort and favourites are remembered, its search and category
   // filter aren't. Both stay while the list is closed, because ← / → follow the
   // filtered list.
@@ -410,7 +414,7 @@ export function App() {
   const showPanel = !panelHidden && (!idle || hoveringPanel || recording || listOpen || touchInput);
 
   return (
-    <main className="app" data-idle={idle && !hoveringPanel}>
+    <main className="app" data-idle={idle && !hoveringPanel} data-layout={layout}>
       <EffectCanvas
         ref={canvasRef}
         effect={running}
@@ -434,6 +438,7 @@ export function App() {
       >
         <PanelErrorBoundary>
           <ControlPanel
+            layout={layout}
             list={{
               effects: visible,
               options: listOptions,
