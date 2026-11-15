@@ -11,6 +11,7 @@
 import { approach, clamp, smoothstep, wrap } from "../math";
 import { capPatternSpeed, MAX_FEATURE_PX_PER_FRAME } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
+import { createSettledValue } from "../rebuild";
 import { MIN_SCALE } from "./jazz.meta";
 
 export const REF_HEIGHT = 1080;
@@ -109,8 +110,13 @@ const GROUP_PICK = [0.45, 0.33, 0.1, 0.04, 0.08];
 const EVENT_MAX = 3;
 /** When no spot is found for a replacement, another pick is tried this soon, at rate 1. */
 const EVENT_RETRY = 0.2;
-/** Param changes crossfade over this long, seconds. */
+/** Param changes and resizes crossfade over this long, seconds. */
 const CROSSFADE = 1;
+/**
+ * A new size, seed or scale must hold this long, seconds, before the pattern is
+ * laid out again, so a resize or slider drag rebuilds once, when it stops.
+ */
+const SETTLE = 0.3;
 /** Toggled groups fade over this long, seconds. */
 const TOGGLE_FADE = 1;
 
@@ -180,8 +186,16 @@ export interface Element {
   t: number;
 }
 
+/** A frame size asked for, ref px; a new object for each new size. */
+interface FrameSize {
+  width: number;
+  height: number;
+}
+
 interface Scene {
   elements: Element[];
+  /** The frame size it was laid out for. */
+  size: FrameSize;
   /** Laid out on a torus round the frame for Drift, with no clear centre. */
   uniform: boolean;
   seed: number;
@@ -211,20 +225,24 @@ export interface JazzParams {
 }
 
 export interface Jazz {
+  /** The current layout's frame, ref px, and its clear centre. */
   width: number;
   height: number;
   clear: Ellipse;
+  /** The latest size from `resizeJazz`, and the size, seed and scale once each has settled. */
+  request: FrameSize;
+  size: ReturnType<typeof createSettledValue<FrameSize>>;
+  seed: ReturnType<typeof createSettledValue<number>>;
+  scale: ReturnType<typeof createSettledValue<number>>;
   current: Scene | null;
   previous: Scene | null;
-  /** Crossfade from `previous` to `current`, 0..1. */
+  /** Crossfade from `previous` to `current`, 0..1. One crossfade runs at a time. */
   fade: number;
   groupAlpha: Float32Array;
   wobble: number;
   wobbleClock: number;
   driftX: number;
   driftY: number;
-  /** Set by a resize: the next step rebuilds without a crossfade. */
-  dirty: boolean;
   started: boolean;
 }
 
@@ -658,10 +676,14 @@ function place(ctx: PlaceContext, group: number, rng: () => number, skip: Elemen
   return null;
 }
 
-function buildScene(jazz: Jazz, seed: number, k: number, uniform: boolean): Scene {
+function buildScene(jazz: Jazz, size: FrameSize, seed: number, k: number, uniform: boolean): Scene {
+  jazz.width = size.width;
+  jazz.height = size.height;
+  clearEllipse(size.width, size.height, jazz.clear);
   const pad = uniform ? DRIFT_PAD * k : 0;
   const scene: Scene = {
     elements: [],
+    size,
     uniform,
     seed,
     k,
@@ -696,6 +718,10 @@ export function createJazz(): Jazz {
     width: 1,
     height: 1,
     clear: { cx: 0, cy: 0, rx: 1, ry: 1 },
+    request: { width: 1, height: 1 },
+    size: createSettledValue<FrameSize>(SETTLE),
+    seed: createSettledValue<number>(SETTLE),
+    scale: createSettledValue<number>(SETTLE),
     current: null,
     previous: null,
     fade: 1,
@@ -704,22 +730,20 @@ export function createJazz(): Jazz {
     wobbleClock: 0,
     driftX: 0,
     driftY: 0,
-    dirty: true,
     started: false,
   };
 }
 
-/** Lays the pattern out again for a `width` x `height` ref px frame, at the next step, without a crossfade. */
+/**
+ * Asks for the pattern laid out for a `width` x `height` ref px frame: at the
+ * first step, or, once the size has settled, crossfading from the old layout.
+ */
 export function resizeJazz(jazz: Jazz, width: number, height: number): void {
   const w = Math.max(1, width);
   const h = Math.max(1, height);
-  if (w === jazz.width && h === jazz.height && jazz.current) {
-    return;
+  if (w !== jazz.request.width || h !== jazz.request.height) {
+    jazz.request = { width: w, height: h };
   }
-  jazz.width = w;
-  jazz.height = h;
-  clearEllipse(w, h, jazz.clear);
-  jazz.dirty = true;
 }
 
 function groupOn(p: JazzParams, g: number): boolean {
@@ -861,18 +885,23 @@ function pickWeighted(candidates: readonly Element[], rng: () => number): Elemen
 export function stepJazz(jazz: Jazz, dt: number, p: JazzParams): void {
   const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
   const rate = rateFor(Number.isFinite(p.speed) ? p.speed : 0);
-  const k = scaleOf(p);
-  const seed = seedOf(p);
+  const size = jazz.size.update(jazz.request, step);
+  const seed = jazz.seed.update(seedOf(p), step);
+  const k = jazz.scale.update(scaleOf(p), step);
   const uniform = p.animation === "drift";
   let cur = jazz.current;
-  if (jazz.dirty || !cur) {
-    cur = buildScene(jazz, seed, k, uniform);
+  if (!cur) {
+    cur = buildScene(jazz, size, seed, k, uniform);
     jazz.previous = null;
     jazz.fade = 1;
-    jazz.dirty = false;
-  } else if (cur.seed !== seed || cur.k !== k || cur.uniform !== uniform) {
+  } else if (
+    jazz.previous === null &&
+    (cur.size !== size || cur.seed !== seed || cur.k !== k || cur.uniform !== uniform)
+  ) {
+    // One crossfade at a time: a change made during one waits for it to finish,
+    // so the layout on screen never vanishes.
     jazz.previous = cur;
-    cur = buildScene(jazz, seed, k, uniform);
+    cur = buildScene(jazz, size, seed, k, uniform);
     jazz.fade = 0;
   }
   jazz.current = cur;
@@ -890,9 +919,11 @@ export function stepJazz(jazz: Jazz, dt: number, p: JazzParams): void {
     jazz.previous = null;
   }
   jazz.wobbleClock += step * rate;
-  // Drift keeps going under a fading-out drift layout, so it doesn't stop dead.
-  if (uniform || jazz.previous?.uniform === true) {
-    const v = driftSpeed(p.speed, k) * step;
+  // Drift keeps going under a fading-out drift layout, so it doesn't stop dead,
+  // capped for the finer of the two layouts.
+  const prev = jazz.previous;
+  if (cur.uniform || prev?.uniform === true) {
+    const v = driftSpeed(p.speed, prev ? Math.min(cur.k, prev.k) : cur.k) * step;
     jazz.driftX += DRIFT_DIR_X * v;
     jazz.driftY += DRIFT_DIR_Y * v;
   }

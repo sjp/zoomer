@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hexToRgb } from "../color";
+import { smoothstep } from "../math";
 import { MAX_FEATURE_PX_PER_FRAME, MAX_PATTERN_HZ } from "../motion-limits";
 import {
   C_BG,
@@ -333,17 +334,117 @@ describe("90s jazz motion", () => {
     }
   });
 
-  it("crossfades to a new seed and fades toggled groups", () => {
+  it("crossfades to a new seed once it settles, and fades toggled groups", () => {
     const { jazz, params } = make(16 / 9, { animation: "still" });
     const old = liveElements(jazz);
-    stepJazz(jazz, 1 / 30, { ...params, seed: 9, confetti: false });
+    const next = { ...params, seed: 9, confetti: false };
+    stepJazz(jazz, 1 / 30, next);
+    expect(jazz.previous).toBeNull();
+    expect(jazz.groupAlpha[G_CONFETTI]).toBeGreaterThan(0.9);
+    for (let i = 0; i < 10; i++) {
+      stepJazz(jazz, 1 / 30, next);
+    }
     expect(jazz.previous).not.toBeNull();
     expect(liveElements(jazz)).not.toBe(old);
-    expect(jazz.groupAlpha[G_CONFETTI]).toBeGreaterThan(0.9);
     for (let i = 0; i < 40; i++) {
-      stepJazz(jazz, 1 / 30, { ...params, seed: 9, confetti: false });
+      stepJazz(jazz, 1 / 30, next);
     }
     expect(jazz.previous).toBeNull();
     expect(jazz.groupAlpha[G_CONFETTI]).toBe(0);
+  });
+});
+
+type Scene = NonNullable<Jazz["current"]>;
+
+/** How much each layout on screen shows. */
+function weights(jazz: Jazz): Map<Scene, number> {
+  const out = new Map<Scene, number>();
+  const fade = jazz.previous ? smoothstep(0, 1, jazz.fade) : 1;
+  if (jazz.current) {
+    out.set(jazz.current, fade);
+  }
+  if (jazz.previous) {
+    out.set(jazz.previous, 1 - fade);
+  }
+  return out;
+}
+
+/** The most a crossfade changes a layout's share in a frame: smoothstep's slope is at most 1.5. */
+const MAX_JUMP = 1.5 / 30 + 1e-9;
+
+/**
+ * Steps `frames` frames with the params `change` gives for each; returns every
+ * layout shown and the most any layout's share of the frame changed in a frame.
+ */
+function stepWatching(
+  jazz: Jazz,
+  frames: number,
+  change: (f: number) => JazzParams,
+): { scenes: Set<Scene>; jump: number } {
+  let last = weights(jazz);
+  const scenes = new Set(last.keys());
+  let jump = 0;
+  for (let f = 0; f < frames; f++) {
+    stepJazz(jazz, 1 / 30, change(f));
+    const now = weights(jazz);
+    for (const scene of new Set([...now.keys(), ...last.keys()])) {
+      scenes.add(scene);
+      jump = Math.max(jump, Math.abs((now.get(scene) ?? 0) - (last.get(scene) ?? 0)));
+    }
+    last = now;
+  }
+  return { scenes, jump };
+}
+
+describe("90s jazz rebuilds", () => {
+  it("lays out once after a slider drag, crossfading without a cut", () => {
+    const { jazz, params } = make(16 / 9);
+    // Seed and scale dragged a step every frame for a second, then let go.
+    const { scenes, jump } = stepWatching(jazz, 30 * 4, (f) => {
+      const t = Math.min(f, 30);
+      return { ...params, seed: 1 + t, scale: 1 - t / 60 };
+    });
+    expect(jump).toBeLessThanOrEqual(MAX_JUMP);
+    expect(scenes.size).toBe(2);
+    expect(jazz.previous).toBeNull();
+    expect(jazz.current?.seed).toBe(31);
+    expect(jazz.current?.k).toBeCloseTo(0.5);
+  });
+
+  it("finishes one crossfade before starting the next", () => {
+    const { jazz, params } = make(16 / 9);
+    const first = jazz.current;
+    // A new seed every half second, slower than the settle time.
+    const { scenes, jump } = stepWatching(jazz, 30 * 6, (f) => ({
+      ...params,
+      seed: f < 30 * 2 ? 2 + Math.floor(f / 15) : 9,
+    }));
+    expect(jump).toBeLessThanOrEqual(MAX_JUMP);
+    expect(scenes.has(first as Scene)).toBe(true);
+    // Never more than one crossfade a second, plus the settle.
+    expect(scenes.size).toBeLessThanOrEqual(1 + 4);
+    expect(jazz.current?.seed).toBe(9);
+  });
+
+  it("lays out again for a resize once it settles, crossfading", () => {
+    const { jazz, params } = make(16 / 9);
+    const first = jazz.current;
+    const during = new Set<Scene | null>();
+    const { scenes, jump } = stepWatching(jazz, 30 * 3, (f) => {
+      if (f < 30) {
+        // A window drag: a new width every frame.
+        resizeJazz(jazz, REF_HEIGHT * (16 / 9 - f / 60), REF_HEIGHT);
+      }
+      if (f < 30 + 5) {
+        during.add(jazz.current);
+      }
+      return params;
+    });
+    expect([...during]).toEqual([first]);
+    expect(jump).toBeLessThanOrEqual(MAX_JUMP);
+    expect(scenes.size).toBe(2);
+    expect(jazz.previous).toBeNull();
+    expect(jazz.width).toBeCloseTo(REF_HEIGHT * (16 / 9 - 29 / 60));
+    expect(jazz.clear.cx).toBeCloseTo(jazz.width / 2);
   });
 });

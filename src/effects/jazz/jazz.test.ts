@@ -66,6 +66,31 @@ describe("90s jazz", () => {
     expect(fake.live()).toEqual([]);
   });
 
+  it("keeps drawing the pattern through a window drag and slider drags", () => {
+    const { fake, gl, uploads } = recording();
+    const effect: EffectDefinition = jazz;
+    const instance = effect.create(gl);
+    const params = defaults(effect.params);
+    instance.resize({ width: 640, height: 360, scale: 1 / 3 });
+    for (let i = 0; i < 30 * 3; i++) {
+      if (i < 30) {
+        instance.resize({ width: 640 - 4 * i, height: 360, scale: 1 / 3 });
+      }
+      instance.frame(1 / 30, {
+        ...params,
+        seed: 1 + Math.min(i, 45),
+        scale: 1 - Math.min(i, 30) / 60,
+      });
+    }
+    expect(uploads).toHaveLength(30 * 3);
+    for (const u of uploads) {
+      expect(u.length).toBeGreaterThan(20 * INSTANCE_FLOATS);
+    }
+    instance.dispose?.();
+    expect(fake.errors).toEqual([]);
+    expect(fake.live()).toEqual([]);
+  });
+
   it("eases the paper into a new palette", () => {
     const { fake, gl, papers } = recording();
     const effect: EffectDefinition = jazz;
