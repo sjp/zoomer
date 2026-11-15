@@ -217,9 +217,11 @@ export const suchwow = defineEffect(suchwowMeta, {
           const motion = clamp(p.motion, 0, 1);
           const text = settledText.update(p.phrases, step);
 
+          // A variation swaps the whole arrangement, so wait for the slider to settle.
+          const nextSeed = settledSeed.update(p.seed, step);
           if (!field) {
             listText = text;
-            seed = settledSeed.update(p.seed, step);
+            seed = nextSeed;
             field = createField(seed, refWidth, phraseList(text), measure);
             shiba = createShiba(seed);
           }
@@ -228,8 +230,6 @@ export const suchwow = defineEffect(suchwowMeta, {
             listText = text;
             setList(f, phraseList(text));
           }
-          // A variation swaps the whole arrangement, so wait for the slider to settle.
-          const nextSeed = settledSeed.update(p.seed, step);
           if (nextSeed !== seed) {
             seed = nextSeed;
             reseed(f, seed);
