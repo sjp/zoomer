@@ -96,27 +96,80 @@ describe("ControlPanel", () => {
 
   it("keeps output in a section that starts closed and remembers its state", () => {
     renderPanel();
-    const section = () => defined(document.querySelector("details"), "the output section");
-    expect(section().open).toBe(false);
-    expect(section().querySelector("summary")?.textContent).toBe("Output");
+    const toggle = () => screen.getByRole("button", { name: "Output" });
+    const region = () =>
+      defined(
+        document.getElementById(toggle().getAttribute("aria-controls") ?? ""),
+        "the output region",
+      );
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(region().hidden).toBe(true);
     for (const control of [
       screen.getByLabelText("Resolution"),
       screen.getByLabelText("Frame rate"),
       screen.getByLabelText("Clip length"),
     ]) {
-      expect(section().contains(control)).toBe(true);
+      expect(region().contains(control)).toBe(true);
     }
-    // As a click on the summary does.
-    section().open = true;
-    fireEvent(section(), new Event("toggle"));
+    fireEvent.click(toggle());
+    expect(region().hidden).toBe(false);
     cleanup();
     renderPanel();
-    expect(section().open).toBe(true);
-    section().open = false;
-    fireEvent(section(), new Event("toggle"));
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(toggle());
     cleanup();
     renderPanel();
-    expect(section().open).toBe(false);
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    // Its own key, apart from the param sections'.
+    expect(window.localStorage.getItem("zoomer.outputOpen")).toBe("closed");
+  });
+
+  it("shows grouped params in sections that remember being closed across effects", () => {
+    const bokeh = defined(getEffect("bokeh"), "bokeh");
+    renderPanel({ effect: bokeh, values: { ...defaults(bokeh.params), speed: 3, wander: 0.1 } });
+    const headers = screen
+      .getAllByRole("button", { expanded: true })
+      .filter((b) => b.classList.contains("section-header"));
+    expect(headers.map((b) => b.textContent)).toEqual(["Lights", "Motion2 changed", "Colours"]);
+    // Output comes last.
+    expect([...document.querySelectorAll(".section-header")].map((b) => b.textContent).at(-1)).toBe(
+      "Output",
+    );
+    const motion = screen.getByRole("region", { name: "Motion" });
+    expect(motion.contains(screen.getByRole("slider", { name: /^Drift speed/ }))).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Colours" }));
+    expect(screen.getByRole("button", { name: "Colours" }).getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    cleanup();
+    // Another effect's Colours section starts closed too.
+    const aurora = defined(getEffect("aurora"), "aurora");
+    renderPanel({ effect: aurora, values: defaults(aurora.params) });
+    expect(screen.getByRole("button", { name: "Colours" }).getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Settings" }).getAttribute("aria-expanded")).toBe(
+      "true",
+    );
+  });
+
+  it("still works when storage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+    const bokeh = defined(getEffect("bokeh"), "bokeh");
+    renderPanel({ effect: bokeh, values: defaults(bokeh.params) });
+    fireEvent.click(screen.getByRole("button", { name: "Motion" }));
+    expect(screen.getByRole("button", { name: "Motion" }).getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Output" }));
+    expect(screen.getByRole("button", { name: "Output" }).getAttribute("aria-expanded")).toBe(
+      "true",
+    );
   });
 
   it("shows the frame rate meter in the header", () => {

@@ -7,12 +7,17 @@ import type { Store } from "../lib/store";
 import { Description } from "./Description";
 import { EffectList, type EffectListProps } from "./EffectList";
 import { categoryFilterLabel } from "../effects/list";
-import { ParamControl } from "./ParamControl";
+import { ParamSections, Section } from "./ParamSections";
 import { SheetHandle } from "./SheetHandle";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
 import { useCanHover, type PanelLayout } from "../hooks/useMediaQuery";
-import { loadOutputOpen, saveOutputOpen } from "../lib/preferences";
+import {
+  loadClosedSections,
+  loadOutputOpen,
+  saveClosedSections,
+  saveOutputOpen,
+} from "../lib/preferences";
 
 const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
 const isFrameRate = (v: string): v is FrameRate => has(FRAME_RATES, v);
@@ -64,6 +69,15 @@ export function ControlPanel(props: Props) {
   const [duration, setDuration] = useState(20);
   // Remembered per browser rather than in the link, which describes the effect only.
   const [outputOpen, setOutputOpen] = useState(() => loadOutputOpen());
+  const [closedSections, setClosedSections] = useState(() => loadClosedSections());
+  const toggleSection = (name: string) => {
+    const next = new Set(closedSections);
+    if (!next.delete(name)) {
+      next.add(name);
+    }
+    setClosedSections(next);
+    saveClosedSections(next);
+  };
   const pickerRef = useRef<HTMLButtonElement>(null);
   // Keyboard shortcuts in tooltips and the hint line, left out on touch screens.
   const canHover = useCanHover();
@@ -382,91 +396,83 @@ export function ControlPanel(props: Props) {
             </div>
           )}
 
-          <section className="controls">
-            {Object.entries(effect.params).map(([key, def]) => (
-              <ParamControl
-                key={`${effect.id}-${key}`}
-                id={key}
-                def={def}
-                value={values[key] ?? def.default}
-                onChange={(v) => {
-                  props.onParamChange(key, v);
-                }}
-                onReset={() => {
-                  props.onParamChange(key, def.default);
-                }}
-              />
-            ))}
-          </section>
+          <ParamSections
+            effectId={effect.id}
+            schema={effect.params}
+            values={values}
+            closed={closedSections}
+            onToggle={toggleSection}
+            onParamChange={props.onParamChange}
+          />
 
-          <details
-            className="output"
+          <Section
+            title="Output"
             open={outputOpen}
-            onToggle={(e) => {
-              const open = e.currentTarget.open;
-              setOutputOpen(open);
-              saveOutputOpen(open);
+            onToggle={() => {
+              setOutputOpen(!outputOpen);
+              saveOutputOpen(!outputOpen);
             }}
           >
-            <summary>Output</summary>
-            <div className="control control-inline">
-              <label htmlFor="resolution">Resolution</label>
-              <select
-                id="resolution"
-                value={props.resolution}
-                disabled={recording}
-                title={recording ? "Locked while recording" : undefined}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (isResolution(value)) {
-                    props.onResolutionChange(value);
-                  }
-                }}
-              >
-                {Object.entries(RESOLUTIONS).map(([key, r]) => (
-                  <option key={key} value={key}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
+            <div className="controls">
+              <div className="control control-inline">
+                <label htmlFor="resolution">Resolution</label>
+                <select
+                  id="resolution"
+                  value={props.resolution}
+                  disabled={recording}
+                  title={recording ? "Locked while recording" : undefined}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isResolution(value)) {
+                      props.onResolutionChange(value);
+                    }
+                  }}
+                >
+                  {Object.entries(RESOLUTIONS).map(([key, r]) => (
+                    <option key={key} value={key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="control control-inline">
+                <label htmlFor="frame-rate">Frame rate</label>
+                <select
+                  id="frame-rate"
+                  value={props.frameRate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isFrameRate(value)) {
+                      props.onFrameRateChange(value);
+                    }
+                  }}
+                >
+                  {Object.entries(FRAME_RATES).map(([key, r]) => (
+                    <option key={key} value={key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="control control-inline">
+                <label htmlFor="clip-length">Clip length</label>
+                <select
+                  id="clip-length"
+                  value={duration}
+                  disabled={recording}
+                  onChange={(e) => {
+                    setDuration(Number(e.target.value));
+                  }}
+                >
+                  {DURATIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}s
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="control control-inline">
-              <label htmlFor="frame-rate">Frame rate</label>
-              <select
-                id="frame-rate"
-                value={props.frameRate}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (isFrameRate(value)) {
-                    props.onFrameRateChange(value);
-                  }
-                }}
-              >
-                {Object.entries(FRAME_RATES).map(([key, r]) => (
-                  <option key={key} value={key}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="control control-inline">
-              <label htmlFor="clip-length">Clip length</label>
-              <select
-                id="clip-length"
-                value={duration}
-                disabled={recording}
-                onChange={(e) => {
-                  setDuration(Number(e.target.value));
-                }}
-              >
-                {DURATIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}s
-                  </option>
-                ))}
-              </select>
-            </div>
-          </details>
+          </Section>
 
           <footer className="panel-footer">
             <div className="footer-actions">

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  loadClosedSections,
   loadOutputOpen,
   loadSort,
   readPreference,
+  saveClosedSections,
   saveOutputOpen,
   saveSort,
   writePreference,
@@ -77,5 +79,31 @@ describe("output section preference", () => {
       saveOutputOpen(true, () => throwing);
     }).not.toThrow();
     expect(loadOutputOpen(() => throwing)).toBe(false);
+  });
+});
+
+describe("closed sections preference", () => {
+  it("survives a reload", () => {
+    const storage = memoryStorage();
+    expect(loadClosedSections(() => storage)).toEqual(new Set());
+    saveClosedSections(new Set(["Colours", "Motion"]), () => storage);
+    expect(loadClosedSections(() => storage)).toEqual(new Set(["Colours", "Motion"]));
+  });
+
+  it("ignores a malformed stored value", () => {
+    const storage = memoryStorage();
+    for (const raw of ["{", '"Colours"', '{"a":1}', "null"]) {
+      storage.setItem("zoomer.closedSections", raw);
+      expect(loadClosedSections(() => storage)).toEqual(new Set());
+    }
+    storage.setItem("zoomer.closedSections", '["Colours", 3]');
+    expect(loadClosedSections(() => storage)).toEqual(new Set(["Colours"]));
+  });
+
+  it("opens everything when storage throws", () => {
+    expect(() => {
+      saveClosedSections(new Set(["Colours"]), () => throwing);
+    }).not.toThrow();
+    expect(loadClosedSections(() => throwing)).toEqual(new Set());
   });
 });

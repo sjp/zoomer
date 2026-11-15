@@ -53,11 +53,41 @@ export function saveSort(sort: EffectSort, storage?: () => PreferenceStorage | u
 
 const OUTPUT_OPEN_KEY = "zoomer.outputOpen";
 
-/** Whether the panel's "Output & recording" section is open; closed by default. */
+/** Whether the panel's Output section is open; closed by default. */
 export function loadOutputOpen(storage?: () => PreferenceStorage | undefined): boolean {
   return readPreference(OUTPUT_OPEN_KEY, storage) === "open";
 }
 
 export function saveOutputOpen(open: boolean, storage?: () => PreferenceStorage | undefined): void {
   writePreference(OUTPUT_OPEN_KEY, open ? "open" : "closed", storage);
+}
+
+const CLOSED_SECTIONS_KEY = "zoomer.closedSections";
+
+/**
+ * The names of the panel sections the viewer has closed, such as "Colours". Sections
+ * are open by default, and a name stays closed across every effect that uses it.
+ */
+export function loadClosedSections(
+  storage?: () => PreferenceStorage | undefined,
+): ReadonlySet<string> {
+  const raw = readPreference(CLOSED_SECTIONS_KEY, storage);
+  if (raw === null) {
+    return new Set();
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === "string") : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveClosedSections(
+  closed: ReadonlySet<string>,
+  storage?: () => PreferenceStorage | undefined,
+): void {
+  writePreference(CLOSED_SECTIONS_KEY, JSON.stringify([...closed]), storage);
 }

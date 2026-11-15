@@ -528,54 +528,68 @@ input[type="search"]:focus-visible {
   text-align: center;
 }
 
-.controls,
-.output[open] {
+.controls {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.output {
+/* Sections of the panel body, split by hairlines. */
+.panel-section + .panel-section {
   border-top: 1px solid var(--panel-border);
 }
 
-.output summary {
+.section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-top: 12px;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   color: var(--muted);
-  cursor: pointer;
-  list-style: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
 }
 
-.output summary::-webkit-details-marker {
-  display: none;
-}
-
-.output summary::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  margin: 0 3px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 150ms ease;
-}
-
-.output[open] summary::before {
-  transform: rotate(45deg);
-}
-
-.output summary:hover {
+.section-header:hover:not(:disabled) {
+  background: none;
   color: var(--text);
 }
 
-.output summary:focus-visible {
+.section-header:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
   border-radius: 4px;
+}
+
+.section-chevron {
+  flex: none;
+  transition: transform 150ms ease;
+}
+
+.section-header[aria-expanded="true"] .section-chevron {
+  transform: rotate(90deg);
+}
+
+.section-changed {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.section-body {
+  padding-bottom: 14px;
+}
+
+.section-body[hidden] {
+  display: none;
 }
 
 .control {
@@ -950,7 +964,8 @@ select:disabled {
   .panel-wrap[data-visible="false"],
   .app .panel,
   .show-panel,
-  .show-panel[data-visible="false"] {
+  .show-panel[data-visible="false"],
+  .section-chevron {
     transition: none;
   }
 }
@@ -993,9 +1008,8 @@ select:disabled {
     min-height: 0;
   }
 
-  .output summary {
+  .section-header {
     min-height: 44px;
-    padding-top: 0;
   }
 
   .description-toggle {
