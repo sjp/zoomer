@@ -1,4 +1,4 @@
-import { createCanvasTexture, MONO_FONT_STACK } from "../canvas-texture";
+import { createCanvasTexture, MONO_FONT_STACK, paintCanvas } from "../canvas-texture";
 import {
   beginFrame,
   createDataTexture,
@@ -468,14 +468,6 @@ function osdText(
   ctx.fillText(text, x, y);
 }
 
-/** A 2D context on a new canvas of the given size, or null without OffscreenCanvas (tests, old browsers). */
-function canvas2d(w: number, h: number): OffscreenCanvasRenderingContext2D | null {
-  if (typeof OffscreenCanvas === "undefined") {
-    return null;
-  }
-  return new OffscreenCanvas(w, h).getContext("2d");
-}
-
 /**
  * The Backrooms: a slow first-person walk through endless empty yellow office
  * rooms, on a long straight route that bends only now and then. A fragment shader casts one ray per pixel through a window of cells
@@ -582,17 +574,20 @@ export const backrooms = defineEffect(backroomsMeta, {
         recW = Math.round(size * 2.4);
         recH = Math.round(size * 1.3);
         dotSize = Math.round(size * 1.1);
-        stampCtx = canvas2d(stampW, stampH);
+        // Kept to repaint each second; null without OffscreenCanvas (tests, old browsers).
+        stampCtx = paintCanvas(stampW, stampH, () => undefined)?.getContext("2d") ?? null;
         stampSecond = Number.NaN;
-        const rec = canvas2d(recW, recH);
+        const rec = paintCanvas(recW, recH, (ctx) => {
+          paintRec(ctx, recW, recH);
+        });
         if (rec) {
-          paintRec(rec, recW, recH);
-          recTex.upload(rec.canvas);
+          recTex.upload(rec);
         }
-        const dot = canvas2d(dotSize, dotSize);
+        const dot = paintCanvas(dotSize, dotSize, (ctx) => {
+          paintDot(ctx, dotSize);
+        });
         if (dot) {
-          paintDot(dot, dotSize);
-          dotTex.upload(dot.canvas);
+          dotTex.upload(dot);
         }
       };
 
