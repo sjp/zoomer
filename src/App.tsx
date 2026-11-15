@@ -8,6 +8,7 @@ import { createLatest, whenIdle, type EffectEntry } from "./effects/loader";
 import { defaultEffect, effectLoader, effects, getEffect } from "./effects/registry";
 import type { AnyParamValues, EffectCategory, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
+import { useTouchInput } from "./hooks/useTouchInput";
 import { copyText } from "./lib/clipboard";
 import { describeError } from "./lib/errors";
 import { download, recordCanvas, type FrameSubscriber } from "./lib/recorder";
@@ -87,6 +88,9 @@ export function App() {
   // A page opened with the panel hidden (e.g. an OBS browser source) starts idle, so
   // neither the cursor nor the show-controls button appears until there's input.
   const idle = useIdle(3000, initial.panelHidden);
+  // A touch "leaves" the panel when the finger lifts, so hover can't keep it up; on
+  // touch screens it stays until hidden instead of fading out mid-use.
+  const touchInput = useTouchInput();
   // The effect list: its sort and favourites are remembered, its search and category
   // filter aren't. Both stay while the list is closed, because ← / → follow the
   // filtered list.
@@ -397,7 +401,7 @@ export function App() {
   };
 
   // An open effect list keeps the panel up, so it doesn't fade out mid-search.
-  const showPanel = !panelHidden && (!idle || hoveringPanel || recording || listOpen);
+  const showPanel = !panelHidden && (!idle || hoveringPanel || recording || listOpen || touchInput);
 
   return (
     <main className="app" data-idle={idle && !hoveringPanel}>

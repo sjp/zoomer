@@ -197,6 +197,31 @@ describe("App", () => {
     expect(panelVisible()).toBe(true);
   });
 
+  it("fades the panel out when idle, but not after touch input", () => {
+    render(<App />);
+    const pointer = (type: string, pointerType: string) => {
+      act(() => {
+        window.dispatchEvent(new PointerEvent(type, { pointerType, bubbles: true }));
+      });
+    };
+    pointer("pointermove", "mouse");
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(panelVisible()).toBe(false);
+    pointer("pointerdown", "touch");
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(panelVisible()).toBe(true);
+    // Back to the mouse: it fades again.
+    pointer("pointermove", "mouse");
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(panelVisible()).toBe(false);
+  });
+
   it("F asks for fullscreen, and says so when refused", async () => {
     const request = vi.fn<() => Promise<void>>(() => Promise.reject(new Error("no")));
     document.documentElement.requestFullscreen = request;
