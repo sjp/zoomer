@@ -3,6 +3,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
 import { EFFECT_CATEGORIES } from "../effects/types";
+import { defined } from "../test/defined";
+import { mockMedia } from "../test/media";
 import { EffectList, type EffectListProps } from "./EffectList";
 
 const effect = (
@@ -25,6 +27,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 function renderList(overrides: Partial<EffectListProps> = {}) {
@@ -278,6 +281,72 @@ describe("EffectList", () => {
     expect(fades()).toEqual(["true", "true"]);
     layout(600);
     expect(fades()).toEqual(["true", "false"]);
+  });
+
+  /** Lays the chip row out as `width` of a 900px row scrolled to `scrollLeft`. */
+  function layoutChips(scrollLeft: number, width = 300) {
+    const group = screen.getByRole("group", { name: "Filter by category" });
+    Object.defineProperties(group, {
+      clientWidth: { configurable: true, value: width },
+      scrollWidth: { configurable: true, value: 900 },
+      scrollLeft: { configurable: true, writable: true, value: scrollLeft },
+    });
+    fireEvent.scroll(group);
+    return group;
+  }
+  const arrow = (dir: "left" | "right") =>
+    screen.queryByRole("button", { name: `Scroll categories ${dir}` });
+
+  it("shows an arrow at each end of the chip row with more chips beyond it", () => {
+    renderList();
+    expect([arrow("left"), arrow("right")]).toEqual([null, null]);
+    layoutChips(0);
+    expect(arrow("left")).toBeNull();
+    expect(arrow("right")).toBeTruthy();
+    layoutChips(250);
+    expect(arrow("left")).toBeTruthy();
+    expect(arrow("right")).toBeTruthy();
+    layoutChips(600);
+    expect(arrow("left")).toBeTruthy();
+    expect(arrow("right")).toBeNull();
+    // A row that fits has none.
+    layoutChips(0, 900);
+    expect([arrow("left"), arrow("right")]).toEqual([null, null]);
+  });
+
+  it("scrolls the chip row by most of its width, keeping focus in the search box", () => {
+    renderList();
+    const group = layoutChips(250);
+    const scrollBy = vi.fn<(options: ScrollToOptions) => void>();
+    group.scrollBy = scrollBy as unknown as typeof group.scrollBy;
+    const search = screen.getByRole("combobox", { name: "Search effects" });
+    const right = defined(arrow("right"), "the right arrow");
+    expect(right.tabIndex).toBe(-1);
+    expect(fireEvent.mouseDown(right)).toBe(false);
+    fireEvent.click(right);
+    fireEvent.click(defined(arrow("left"), "the left arrow"));
+    expect(scrollBy.mock.calls).toEqual([
+      [{ left: 240, behavior: "smooth" }],
+      [{ left: -240, behavior: "smooth" }],
+    ]);
+    expect(document.activeElement).toBe(search);
+  });
+
+  it("jumps the chip row without smooth scrolling under reduced motion", () => {
+    mockMedia(["(prefers-reduced-motion: reduce)"]);
+    renderList();
+    const group = layoutChips(0);
+    const scrollBy = vi.fn<(options: ScrollToOptions) => void>();
+    group.scrollBy = scrollBy as unknown as typeof group.scrollBy;
+    fireEvent.click(defined(arrow("right"), "the right arrow"));
+    expect(scrollBy).toHaveBeenCalledExactlyOnceWith({ left: 240, behavior: "auto" });
+  });
+
+  it("leaves the chip row to swiping on touch screens", () => {
+    mockMedia(["(hover: none)"]);
+    renderList();
+    layoutChips(250);
+    expect([arrow("left"), arrow("right")]).toEqual([null, null]);
   });
 
   it("scrolls a focused chip into view", () => {

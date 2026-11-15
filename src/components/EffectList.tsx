@@ -18,6 +18,7 @@ import {
   type ListOptions,
 } from "../effects/list";
 import { EFFECT_CATEGORIES, type EffectCategory } from "../effects/types";
+import { useCanHover } from "../hooks/useMediaQuery";
 import { StarButton } from "./StarButton";
 
 /** The heading for the effects below the favourites, in sorts without groups. */
@@ -107,6 +108,47 @@ export function EffectList(props: EffectListProps) {
     const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
     setChipsMore((m) => (m.start === start && m.end === end ? m : { start, end }));
   }, []);
+  // A mouse can't swipe the row and its scrollbar is hidden, so pointers that hover get
+  // arrows at the ends with more chips beyond them. Touch screens swipe instead.
+  const canHover = useCanHover();
+  const scrollChips = (dir: 1 | -1) => {
+    const el = chipsRef.current;
+    if (!el) {
+      return;
+    }
+    const reduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Most of a row's width, so a chip cut off at the edge stays in view.
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: reduce ? "auto" : "smooth" });
+  };
+  const chipArrow = (dir: 1 | -1) => (
+    <button
+      type="button"
+      className="chips-arrow"
+      data-dir={dir === 1 ? "end" : "start"}
+      aria-label={dir === 1 ? "Scroll categories right" : "Scroll categories left"}
+      // The chips are reachable from the keyboard already; this keeps focus in the search box.
+      tabIndex={-1}
+      onMouseDown={(e) => {
+        e.preventDefault();
+      }}
+      onClick={() => {
+        scrollChips(dir);
+      }}
+    >
+      <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
+        <path
+          d={dir === 1 ? "M7.5 4.5L13 10l-5.5 5.5" : "M12.5 4.5L7 10l5.5 5.5"}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
   const active =
     effects.find((e) => e.id === activeId) ??
     (query !== "" ? undefined : effects.find((e) => e.id === currentId)) ??
@@ -324,58 +366,62 @@ export function EffectList(props: EffectListProps) {
         {props.sortBesideSearch === true && sortSelect}
         {props.searchEnd}
       </div>
-      <div
-        role="group"
-        aria-label="Filter by category"
-        ref={chipsRef}
-        className="category-chips"
-        data-own-keys
-        data-more-start={chipsMore.start}
-        data-more-end={chipsMore.end}
-        onScroll={updateChipsMore}
-        onKeyDown={(e) => {
-          const last = EFFECT_CATEGORIES.length - 1;
-          const to =
-            e.key === "ArrowRight"
-              ? Math.min(chipIndex + 1, last)
-              : e.key === "ArrowLeft"
-                ? Math.max(chipIndex - 1, 0)
-                : e.key === "Home"
-                  ? 0
-                  : e.key === "End"
-                    ? last
-                    : undefined;
-          if (to !== undefined) {
-            e.preventDefault();
-            setChipIndex(to);
-            chipRefs.current[to]?.focus();
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            escape();
-          }
-        }}
-      >
-        {EFFECT_CATEGORIES.map((category, i) => (
-          <button
-            key={category}
-            ref={(el) => {
-              chipRefs.current[i] = el;
-            }}
-            type="button"
-            className="category-chip"
-            aria-pressed={categories.has(category)}
-            tabIndex={i === chipIndex ? 0 : -1}
-            onFocus={(e) => {
-              setChipIndex(i);
-              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
-            }}
-            onClick={() => {
-              toggleCategory(category);
-            }}
-          >
-            {category}
-          </button>
-        ))}
+      <div className="category-row">
+        {canHover && chipsMore.start && chipArrow(-1)}
+        <div
+          role="group"
+          aria-label="Filter by category"
+          ref={chipsRef}
+          className="category-chips"
+          data-own-keys
+          data-more-start={chipsMore.start}
+          data-more-end={chipsMore.end}
+          onScroll={updateChipsMore}
+          onKeyDown={(e) => {
+            const last = EFFECT_CATEGORIES.length - 1;
+            const to =
+              e.key === "ArrowRight"
+                ? Math.min(chipIndex + 1, last)
+                : e.key === "ArrowLeft"
+                  ? Math.max(chipIndex - 1, 0)
+                  : e.key === "Home"
+                    ? 0
+                    : e.key === "End"
+                      ? last
+                      : undefined;
+            if (to !== undefined) {
+              e.preventDefault();
+              setChipIndex(to);
+              chipRefs.current[to]?.focus();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              escape();
+            }
+          }}
+        >
+          {EFFECT_CATEGORIES.map((category, i) => (
+            <button
+              key={category}
+              ref={(el) => {
+                chipRefs.current[i] = el;
+              }}
+              type="button"
+              className="category-chip"
+              aria-pressed={categories.has(category)}
+              tabIndex={i === chipIndex ? 0 : -1}
+              onFocus={(e) => {
+                setChipIndex(i);
+                e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+              }}
+              onClick={() => {
+                toggleCategory(category);
+              }}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+        {canHover && chipsMore.end && chipArrow(1)}
       </div>
       {props.sortBesideSearch !== true && (
         <div className="effect-list-sort">

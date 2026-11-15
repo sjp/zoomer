@@ -360,6 +360,40 @@ body,
   );
 }
 
+/* Arrows over the faded ends, for a mouse (see EffectList). */
+.category-row {
+  position: relative;
+}
+
+.chips-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--panel-solid);
+  color: var(--muted);
+}
+
+.chips-arrow:hover:not(:disabled) {
+  background: var(--panel-solid);
+  color: var(--text);
+}
+
+.chips-arrow[data-dir="start"] {
+  left: -6px;
+}
+
+.chips-arrow[data-dir="end"] {
+  right: -6px;
+}
+
 .category-chips::-webkit-scrollbar {
   display: none;
 }
