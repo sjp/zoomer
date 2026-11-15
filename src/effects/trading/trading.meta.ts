@@ -92,7 +92,6 @@ export const tradingMeta = defineEffectMeta({
     "wall street",
     "shares",
     "day trading",
-    "bloomberg",
   ],
   cost: "low",
   context: "webgl2",
