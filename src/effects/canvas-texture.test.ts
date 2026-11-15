@@ -42,6 +42,32 @@ describe("createCanvasAtlas", () => {
     expect(fake.errors).toEqual([]);
   });
 
+  it("uploads rects that touch along a side as one", () => {
+    const { fake, scope, atlas, uploads } = build();
+    atlas.resize(200, 100);
+    atlas.flush();
+    const before = uploads();
+    // Three stacked rows, then three cells side by side.
+    atlas.clear(10, 0, 50, 10);
+    atlas.clear(10, 10, 50, 10);
+    atlas.clear(10, 20, 50, 10);
+    atlas.clear(100, 50, 20, 10);
+    atlas.clear(120, 50, 20, 10);
+    atlas.clear(140, 50, 20, 10);
+    // Apart from the last: a separate rect.
+    atlas.clear(0, 90, 5, 5);
+    atlas.flush();
+    expect(uploads()).toEqual({ full: before.full, rects: before.rects + 3 });
+    const sub = fake.calls.filter((c) => c.name === "texSubImage2D").map((c) => c.args.slice(2, 6));
+    expect(sub.slice(-3)).toEqual([
+      [10, 0, 50, 30],
+      [100, 50, 60, 10],
+      [0, 90, 5, 5],
+    ]);
+    scope.dispose();
+    expect(fake.errors).toEqual([]);
+  });
+
   it("comes back after release at the same size, with a full upload", () => {
     const { fake, scope, atlas, uploads } = build();
     atlas.resize(64, 32);

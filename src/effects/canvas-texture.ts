@@ -228,6 +228,25 @@ export function createCanvasAtlas(gl: WebGL2RenderingContext, scope: Scope): Can
       if (fullDirty) {
         return;
       }
+      // A rect touching the last one along a shared side (stacked rows, cells in
+      // a row) grows it instead, so they go up in one upload.
+      if (dirtyCount > 0) {
+        const o = (dirtyCount - 1) * 4;
+        const lx0 = dirty[o];
+        const ly0 = dirty[o + 1];
+        const lx1 = lx0 + dirty[o + 2];
+        const ly1 = ly0 + dirty[o + 3];
+        if (x0 === lx0 && x1 === lx1 && y0 <= ly1 && y1 >= ly0) {
+          dirty[o + 1] = Math.min(y0, ly0);
+          dirty[o + 3] = Math.max(y1, ly1) - dirty[o + 1];
+          return;
+        }
+        if (y0 === ly0 && y1 === ly1 && x0 <= lx1 && x1 >= lx0) {
+          dirty[o] = Math.min(x0, lx0);
+          dirty[o + 2] = Math.max(x1, lx1) - dirty[o];
+          return;
+        }
+      }
       if (dirtyCount >= MAX_DIRTY) {
         fullDirty = true;
         return;
