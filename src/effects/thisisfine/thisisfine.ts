@@ -367,6 +367,8 @@ export const thisisfine = defineEffect(thisisfineMeta, {
       /** Current room slot, and what it shows. */
       let roomSlot = 0;
       let roomOld = 0;
+      /** Whether the old slot still holds a room. */
+      let oldHeld = false;
       let paintedRoom = "";
       let paintedSeed = Number.NaN;
       let paintedSize = -1;
@@ -435,8 +437,14 @@ export const thisisfine = defineEffect(thisisfineMeta, {
             paintedRoom = p.room;
             paintedSeed = seed;
             roomOld = 1;
+            oldHeld = true;
           }
           roomOld = Math.max(0, roomOld - step / ROOM_EASE);
+          if (roomOld <= 0 && oldHeld) {
+            // The faded-out room's canvas-sized texture is no longer shown.
+            rooms[1 - roomSlot].upload(null);
+            oldHeld = false;
+          }
 
           const targetStyle = p.style === "painted" ? 1 : 0;
           style = style < 0 ? targetStyle : approach(style, targetStyle, step / STYLE_EASE);

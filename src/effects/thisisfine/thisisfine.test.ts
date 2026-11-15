@@ -91,17 +91,28 @@ describe("this is fine", () => {
     expect(fake.live()).toEqual([]);
   });
 
-  it("crossfades a room change and frees everything", () => {
-    const fake = createFakeGl();
+  it("crossfades a room change, frees the faded-out room, and frees everything", () => {
+    const fake = createFakeGl({ record: true });
     const effect: EffectDefinition = thisisfine;
     const instance = effect.create(fake.gl);
     const params = defaults(effect.params);
     instance.resize({ width: 640, height: 360, scale: 1 / 3 });
     instance.frame(1 / 60, params);
-    for (let i = 0; i < 90; i++) {
+    const blanks = () =>
+      fake.calls.filter((c) => c.name === "texImage2D" && c.args[3] === 1 && c.args[4] === 1)
+        .length;
+    const before = blanks();
+    for (let i = 0; i < 60; i++) {
+      instance.frame(1 / 60, { ...params, room: "kitchen", style: "painted", caption: true });
+    }
+    // Mid-fade both rooms are held.
+    expect(blanks()).toBe(before);
+    for (let i = 0; i < 30; i++) {
       instance.frame(1 / 60, { ...params, room: "kitchen", style: "painted", caption: true });
     }
     expect(MeasuringCanvas.made.filter((c) => c.width === 640).length).toBe(2);
+    // Once the old room has faded out, its slot drops to one texel.
+    expect(blanks()).toBe(before + 1);
     instance.dispose?.();
     expect(fake.errors).toEqual([]);
     expect(fake.live()).toEqual([]);
