@@ -56,9 +56,11 @@ export interface EffectListProps {
  * screen reader users star the active option with `*` in the search box (search ignores
  * punctuation, so the key isn't needed for typing), and the option says it's starred.
  *
- * Between the search box and the list, a group of category chips (toggle buttons,
- * reached by Tab) narrows the list to effects in any of the pressed categories. Esc
- * clears the search, then the chips, then closes the list.
+ * Between the search box and the list, a group of category chips (toggle buttons)
+ * narrows the list to effects in any of the pressed categories. The group is one Tab
+ * stop (a roving tabindex): ← / → move between chips, Home / End go to the ends, and
+ * the app's single-key shortcuts leave keys pressed in it alone (`data-own-keys`).
+ * Esc clears the search, then the chips, then closes the list.
  */
 export function EffectList(props: EffectListProps) {
   const { effects, options, currentId, onPrefetch } = props;
@@ -75,6 +77,9 @@ export function EffectList(props: EffectListProps) {
   const [scrollRequest, setScrollRequest] = useState(0);
   // Read out by the status region, in place of the count, after starring with `*`.
   const [announcement, setAnnouncement] = useState<string>();
+  // The chip that takes the group's one Tab stop: the last one focused.
+  const [chipIndex, setChipIndex] = useState(0);
+  const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const active =
     effects.find((e) => e.id === activeId) ??
     (query !== "" ? undefined : effects.find((e) => e.id === currentId)) ??
@@ -278,19 +283,42 @@ export function EffectList(props: EffectListProps) {
         role="group"
         aria-label="Filter by category"
         className="category-chips"
+        data-own-keys
         onKeyDown={(e) => {
-          if (e.key === "Escape") {
+          const last = EFFECT_CATEGORIES.length - 1;
+          const to =
+            e.key === "ArrowRight"
+              ? Math.min(chipIndex + 1, last)
+              : e.key === "ArrowLeft"
+                ? Math.max(chipIndex - 1, 0)
+                : e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                    ? last
+                    : undefined;
+          if (to !== undefined) {
+            e.preventDefault();
+            setChipIndex(to);
+            chipRefs.current[to]?.focus();
+          } else if (e.key === "Escape") {
             e.preventDefault();
             escape();
           }
         }}
       >
-        {EFFECT_CATEGORIES.map((category) => (
+        {EFFECT_CATEGORIES.map((category, i) => (
           <button
             key={category}
+            ref={(el) => {
+              chipRefs.current[i] = el;
+            }}
             type="button"
             className="category-chip"
             aria-pressed={categories.has(category)}
+            tabIndex={i === chipIndex ? 0 : -1}
+            onFocus={() => {
+              setChipIndex(i);
+            }}
             onClick={() => {
               toggleCategory(category);
             }}

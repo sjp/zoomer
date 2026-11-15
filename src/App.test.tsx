@@ -243,4 +243,16 @@ describe("App", () => {
     });
     expect(panelVisible()).toBe(true);
   });
+
+  it("ignores shortcuts pressed on a category chip", () => {
+    render(<App />);
+    press("/");
+    const chip = screen.getByRole("button", { name: "Space" });
+    press("ArrowRight", chip);
+    press("h", chip);
+    expect(panelVisible()).toBe(true);
+    expect(screen.getByRole("button", { expanded: true, name: /^Effect: / }).textContent).toContain(
+      WARP.name,
+    );
+  });
 });

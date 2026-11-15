@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
 import { EFFECT_CATEGORIES } from "../effects/types";
@@ -144,6 +144,37 @@ describe("EffectList", () => {
     expect(props.onCategoriesChange).toHaveBeenLastCalledWith(new Set(["Water", "Space"]));
     fireEvent.click(within(group).getByRole("button", { name: "Water" }));
     expect(props.onCategoriesChange).toHaveBeenLastCalledWith(new Set());
+  });
+
+  it("makes the chips one Tab stop, moved with ← / →, Home and End", () => {
+    renderList();
+    const group = screen.getByRole("group", { name: "Filter by category" });
+    const chips = within(group).getAllByRole("button");
+    const tabStops = () => chips.filter((c) => c.tabIndex === 0);
+    expect(tabStops()).toEqual([chips[0]]);
+    act(() => {
+      chips[0]?.focus();
+    });
+    fireEvent.keyDown(chips[0]!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(chips[1]);
+    expect(tabStops()).toEqual([chips[1]]);
+    fireEvent.keyDown(chips[1]!, { key: "End" });
+    expect(document.activeElement).toBe(chips.at(-1));
+    fireEvent.keyDown(chips.at(-1)!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(chips.at(-1));
+    fireEvent.keyDown(chips.at(-1)!, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(chips.at(-2));
+    fireEvent.keyDown(chips.at(-2)!, { key: "Home" });
+    expect(document.activeElement).toBe(chips[0]);
+    fireEvent.keyDown(chips[0]!, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(chips[0]);
+    // A chip focused by the pointer takes the Tab stop too.
+    act(() => {
+      chips[4]?.focus();
+    });
+    expect(tabStops()).toEqual([chips[4]]);
+    // The app's shortcuts leave keys pressed in the group alone.
+    expect(chips[4]?.closest("[data-own-keys]")).toBe(group);
   });
 
   it("announces the count with the category filter", () => {

@@ -33,8 +33,9 @@ const SHORT_CLIP_TOLERANCE = 0.5;
 /** How long a toast stays up, in ms. */
 const TOAST_MS = 2500;
 
-const isFormField = (target: EventTarget | null) =>
-  target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
+/** Whether a key goes to a form field or a widget that handles its own keys (`data-own-keys`). */
+const ownsKeys = (target: EventTarget | null) =>
+  target instanceof Element && target.closest("input, select, textarea, [data-own-keys]") !== null;
 
 export function App() {
   const [initial] = useState(initialState);
@@ -334,7 +335,7 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isFormField(e.target)) {
+      if (e.metaKey || e.ctrlKey || e.altKey || ownsKeys(e.target)) {
         return;
       }
       if (e.key === "/") {
