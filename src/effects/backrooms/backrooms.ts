@@ -140,11 +140,8 @@ ivec2 cellAt(ivec2 c) {
   return ivec2(texelFetch(uCells, c, 0).rg * 255.0 + 0.5);
 }
 
-/** Brightness of the panel over cell c: 0 if none or dead. */
-float panelLevel(ivec2 c) {
-  if (cellAt(c).y != PANEL_LIT) {
-    return 0.0;
-  }
+/** Brightness of a lit panel over cell c: 1, or less while it flickers. */
+float flickerOf(ivec2 c) {
   float b = 1.0;
   for (int k = 0; k < FLICKERS; k++) {
     if (c == ivec2(uFlick[k].xy)) {
@@ -154,15 +151,20 @@ float panelLevel(ivec2 c) {
   return b;
 }
 
+/** Brightness of the panel over cell c: 0 if none or dead. */
+float panelLevel(ivec2 c) {
+  return cellAt(c).y == PANEL_LIT ? flickerOf(c) : 0.0;
+}
+
 /**
- * The panels' light at p (window cells, z up) on a surface facing n: x the
- * direct light, y the glow round them on the ceiling. Panels sit on the even
- * cells; the nine nearest are summed, each faded out by 3 cells so none pops as
- * the set changes. No shadows.
+ * The panels' direct light at p (window cells, z up) on a surface facing n
+ * (walls, pillars and carpet). Panels sit on the even cells; the nine nearest
+ * are summed, each faded out by 3 cells so none pops as the set changes. No
+ * shadows.
  */
-vec2 panelLight(vec3 p, vec3 n) {
+float panelLight(vec3 p, vec3 n) {
   ivec2 mid = ivec2(round((p.xy - 0.5) * 0.5)) * 2;
-  vec2 sum = vec2(0.0);
+  float sum = 0.0;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
       ivec2 c = mid + ivec2(i, j) * 2;
@@ -176,8 +178,27 @@ vec2 panelLight(vec3 p, vec3 n) {
       w *= w;
       float d2 = r2 + l.z * l.z;
       float lambert = max(dot(n, l), 0.0) * inversesqrt(max(d2, 1e-4));
-      sum.x += b * w * lambert * 2.5 / (2.5 + d2);
-      sum.y += b * w * exp(-2.0 * r2);
+      sum += b * w * lambert * 2.5 / (2.5 + d2);
+    }
+  }
+  return sum;
+}
+
+/** The glow round the nine nearest panels on the ceiling at q (window cells), windowed as in panelLight. */
+float panelGlow(vec2 q) {
+  ivec2 mid = ivec2(round((q - 0.5) * 0.5)) * 2;
+  float sum = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      ivec2 c = mid + ivec2(i, j) * 2;
+      float b = panelLevel(c);
+      if (b <= 0.0) {
+        continue;
+      }
+      vec2 l = vec2(c) + 0.5 - q;
+      float r2 = dot(l, l);
+      float w = max(1.0 - r2 / 9.0, 0.0);
+      sum += b * w * w * exp(-2.0 * r2);
     }
   }
   return sum;
@@ -218,7 +239,14 @@ vec3 wallpaperColour(vec2 g, float fw) {
 vec3 carpetColour(vec2 g, float fw) {
   float k1 = 1.0 - smoothstep(0.02, 0.08, fw);
   float k2 = 1.0 - smoothstep(0.008, 0.03, fw);
-  float pile = (vnoise(g * 9.0, 5.0) - 0.5) * k1 + 0.6 * (vnoise(g * 23.0, 6.0) - 0.5) * k2;
+  // The pile's noise is skipped where it has filtered out (mid-distance on).
+  float pile = 0.0;
+  if (k1 > 0.0) {
+    pile = (vnoise(g * 9.0, 5.0) - 0.5) * k1;
+  }
+  if (k2 > 0.0) {
+    pile += 0.6 * (vnoise(g * 23.0, 6.0) - 0.5) * k2;
+  }
   vec3 c = CARPET * (1.0 + 0.16 * pile);
   float damp = smoothstep(0.6, 0.78, 0.7 * vnoise(g * 0.45, 9.0) + 0.3 * vnoise(g * 1.3, 10.0));
   return mix(c, DAMP, 0.65 * damp);
@@ -232,17 +260,17 @@ vec3 ceilingColour(vec2 q, vec2 g, float fw) {
   float grout = 1.0 - smoothstep(0.006, 0.01 + 1.5 * fw, d);
   float v = hash2(floor(vec2(g.x + 0.25, g.y) * 2.0), 21.0);
   vec3 c = mix(TILE * (0.97 + 0.05 * v), GROUT, grout * (1.0 - smoothstep(0.02, 0.06, fw)));
-  float glow = panelLight(vec3(q, CEIL), vec3(0.0, 0.0, -1.0)).y;
+  float glow = panelGlow(q);
   c *= 0.62 + 0.4 * glow;
   // A diffuser one tile wide and two long in a metal frame, lit or dead.
   ivec2 cell = ivec2(floor(q));
   if (((cell.x | cell.y) & 1) == 0) {
     int panel = cellAt(cell).y;
-    if (panel > 0) {
+    if (panel != 0) {
       vec2 o = abs(q - vec2(cell) - 0.5);
       float frame = smoothstep(-fw, fw, min(0.25 - o.x, 0.5 - o.y));
       float lens = smoothstep(-fw, fw, min(0.215 - o.x, 0.465 - o.y));
-      vec3 lit = mix(LENS_OFF, LENS_ON, panelLevel(cell));
+      vec3 lit = mix(LENS_OFF, LENS_ON, panel == PANEL_LIT ? flickerOf(cell) : 0.0);
       c = mix(mix(c, FRAME * (0.62 + 0.4 * glow), frame), lit, lens);
     }
   }
@@ -308,19 +336,20 @@ void main() {
     : (acrossX ? vec2(hit.y + uOrigin.y, hit.z) : vec2(hit.x + uOrigin.x, hit.z));
   float fw = min(length(fwidth(g)), 1.0);
 
+  // Far rooms dissolve into the haze, completely by uFar; where they have all
+  // but gone, the haze alone is drawn (it differs by under a level).
+  float x = t * length(rd.xy) / uFar;
+  float fog = clamp((1.0 - exp(-4.0 * x * x)) / (1.0 - exp(-4.0)), 0.0, 1.0);
   vec3 col;
-  if (surf == 4) {
+  if (surf == 4 || fog > 0.995) {
     col = HAZE;
   } else if (surf == 0 && rd.z > 0.0) {
     col = ceilingColour(hit.xy, g, fw) * TINT;
   } else {
     vec3 albedo = surf == 0 ? carpetColour(g, fw) : wallpaperColour(g, fw);
-    float light = AMBIENT + DIRECT * panelLight(hit + n * 0.02, n).x;
+    float light = AMBIENT + DIRECT * panelLight(hit + n * 0.02, n);
     col = albedo * light * TINT;
   }
-  // Far rooms dissolve into the haze, completely by uFar.
-  float x = t * length(rd.xy) / uFar;
-  float fog = clamp((1.0 - exp(-4.0 * x * x)) / (1.0 - exp(-4.0)), 0.0, 1.0);
   col = mix(col, HAZE, fog);
   outColor = vec4(clamp(col * uFade, 0.0, 1.0) + dither8(gl_FragCoord.xy), 1.0);
 }
