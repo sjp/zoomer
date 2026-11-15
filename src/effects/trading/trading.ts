@@ -318,9 +318,9 @@ export const trading = defineEffect(tradingMeta, {
        * the blocks whose text changed; "" until painted. Watchlist rows and tiles
        * are painted up to `watchRows` / `tileRows`, the live count when last painted.
        */
-      const watchKeys: string[] = new Array<string>(MAX_STOCKS).fill("");
-      const tileKeys: string[] = new Array<string>(MAX_STOCKS).fill("");
-      const indexKeys: string[] = new Array<string>(INDEX_COUNT).fill("");
+      const watchKeys: string[] = Array.from({ length: MAX_STOCKS }, () => "");
+      const tileKeys: string[] = Array.from({ length: MAX_STOCKS }, () => "");
+      const indexKeys: string[] = Array.from({ length: INDEX_COUNT }, () => "");
       let headerKey = "";
       let bookKey = "";
       let watchRows = 0;
@@ -597,7 +597,7 @@ export const trading = defineEffect(tradingMeta, {
       };
 
       /** The book's text: ask price and size, then bid price and size per level, then spread and last. */
-      const bookText: string[] = new Array<string>(4 * BOOK_LEVELS + 2).fill("");
+      const bookText: string[] = Array.from({ length: 4 * BOOK_LEVELS + 2 }, () => "");
       const paintBook = (m: Market) => {
         const ctx = focusText.ctx;
         const r = layout.book;
