@@ -763,7 +763,8 @@ export function createScene(seed: number): Scene {
     morph: 0,
     motion: 0,
     nextChange: CHANGE_MIN,
-    rng: Math.random,
+    // A placeholder: applySeed below seeds it.
+    rng: createRng(0),
     propsAlpha: 0,
     swap: 1,
     targetSeed: seed,
