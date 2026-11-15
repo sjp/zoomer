@@ -234,8 +234,11 @@ export const geocities = defineEffect(geocitiesMeta, {
         slot.ky = slot.th / layout.height;
         slot.layout = layout;
         slot.page.upload(paintPage(layout, slot.tile, slot.tw, slot.th, classic));
-        slot.art = paintParts(layout, slot.kx, slot.ky, classic);
-        slot.parts.upload(slot.art.canvas);
+        const art = paintParts(layout, slot.kx, slot.ky, classic);
+        slot.parts.upload(art.canvas);
+        // The texture holds the parts now: keep only where each one sits.
+        art.canvas = null;
+        slot.art = art;
         const strip = paintMarquee(slot.marquee, layout, measure, slot.kx, slot.ky, classic);
         slot.period = strip.period;
         slot.strip.upload(strip.canvas);
@@ -252,11 +255,13 @@ export const geocities = defineEffect(geocitiesMeta, {
         slot.tile = tile;
         paint(slot);
       };
-      /** Frees a slot's textures once nothing shows it. */
+      /** Frees a slot's textures and layout once nothing shows it. */
       const empty = (slot: Slot) => {
         slot.page.upload(null);
         slot.parts.upload(null);
         slot.strip.upload(null);
+        slot.layout = null;
+        slot.art = null;
         slot.painted = -1;
       };
 
