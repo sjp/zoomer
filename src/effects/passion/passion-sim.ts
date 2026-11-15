@@ -664,9 +664,10 @@ export function sparkleAt(
   const offset = (hash32(Math.floor(seed) * 131 + k * 17 + 3) / 4294967296) * period;
   const n = Math.floor((time + offset) / period);
   const local = time + offset - n * period;
-  const rng = createRng(hash32(Math.floor(seed) * 977 + k * 7919 + n * 104729 + 29));
-  out.x = refWidth * (0.06 + 0.88 * rng());
-  out.y = 40 + 560 * rng();
+  // Straight from hashes, not a `createRng` closure: this runs per sparkle per frame.
+  const h = hash32(Math.floor(seed) * 977 + k * 7919 + n * 104729 + 29);
+  out.x = refWidth * (0.06 + (0.88 * hash32(h ^ 0x68e31da4)) / 4294967296);
+  out.y = 40 + (560 * hash32(h ^ 0xb5297a4d)) / 4294967296;
   out.alpha = local < SPARKLE_ON ? Math.sin((Math.PI * local) / SPARKLE_ON) ** 2 : 0;
   return out;
 }
