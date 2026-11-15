@@ -125,3 +125,18 @@ describe("text params", () => {
     expect(sanitizeText(def, def.default)).toBe(def.default);
   });
 });
+
+describe("param groups", () => {
+  // "Output" is the panel's own section for resolution, frame rate and recording.
+  it("are non-empty names other than Output, where set", () => {
+    const bad = effects.flatMap((e) =>
+      Object.entries(e.params)
+        .filter(
+          ([, def]) =>
+            def.group !== undefined && (def.group.trim() === "" || def.group === "Output"),
+        )
+        .map(([key]) => `${e.id}.${key}`),
+    );
+    expect(bad).toEqual([]);
+  });
+});

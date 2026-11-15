@@ -4,30 +4,36 @@
  * schema and the URL hash stores the values.
  */
 
-export interface NumberParam {
-  kind: "number";
+/**
+ * What every param kind shares. `group` names the panel section the param is shown
+ * in; params without one fall into default sections (colours, everything else). It
+ * is display metadata only: keys, defaults and the URL hash don't depend on it.
+ */
+interface ParamBase {
   label: string;
+  group?: string;
+}
+
+export interface NumberParam extends ParamBase {
+  kind: "number";
   min: number;
   max: number;
   step: number;
   default: number;
 }
 
-interface ColorParam {
+interface ColorParam extends ParamBase {
   kind: "color";
-  label: string;
   default: string;
 }
 
-interface BooleanParam {
+interface BooleanParam extends ParamBase {
   kind: "boolean";
-  label: string;
   default: boolean;
 }
 
-interface SelectParam {
+interface SelectParam extends ParamBase {
   kind: "select";
-  label: string;
   options: readonly { value: string; label: string }[];
   default: string;
 }
@@ -38,9 +44,8 @@ interface SelectParam {
  * no control or bidi characters, no emoji, at most `maxLines` lines of at most
  * `maxLength` code points each (longer lines are truncated, not wrapped).
  */
-export interface TextParam {
+export interface TextParam extends ParamBase {
   kind: "text";
-  label: string;
   default: string;
   /** Code points per line. */
   maxLength: number;
