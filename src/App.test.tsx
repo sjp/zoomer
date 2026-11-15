@@ -276,6 +276,22 @@ describe("App", () => {
     expect(screen.getByText(`Removed ${WARP.name} from favourites`)).toBeTruthy();
   });
 
+  it("? toggles the shortcuts, bringing a hidden panel back for them", () => {
+    render(<App />);
+    const popover = () => screen.queryByRole("dialog", { name: "Keyboard shortcuts" });
+    press("?");
+    expect(popover()).toBeTruthy();
+    press("?");
+    expect(popover()).toBeNull();
+    press("h");
+    expect(panelVisible()).toBe(false);
+    press("?");
+    expect(panelVisible()).toBe(true);
+    expect(popover()).toBeTruthy();
+    press("Escape");
+    expect(popover()).toBeNull();
+  });
+
   it("/ opens the effect list with the search box focused", () => {
     render(<App />);
     press("/");

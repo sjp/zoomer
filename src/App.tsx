@@ -101,6 +101,7 @@ export function App() {
   // filter aren't. Both stay while the list is closed, because ← / → follow the
   // filtered list.
   const [listOpen, setListOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [listFocus, setListFocus] = useState(0);
   const [sort, setSort] = useState<EffectSort>(loadSort);
   const [query, setQuery] = useState("");
@@ -361,6 +362,11 @@ export function App() {
         toggleFullscreen();
       } else if (e.key === "s" || e.key === "S") {
         toggleCurrentFavourite();
+      } else if (e.key === "?") {
+        // Brings a hidden panel back to show them in.
+        const hidden = current.current.panelHidden;
+        setShortcutsOpen((open) => !open || hidden);
+        openPanel();
       } else if (e.key === "ArrowRight") {
         step(1);
       } else if (e.key === "ArrowLeft") {
@@ -371,7 +377,7 @@ export function App() {
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [step, togglePanel, toggleFullscreen, openList, toggleCurrentFavourite]);
+  }, [step, togglePanel, toggleFullscreen, openList, openPanel, toggleCurrentFavourite]);
 
   const record = async (seconds: number) => {
     const canvas = canvasRef.current;
@@ -410,8 +416,11 @@ export function App() {
     }
   };
 
-  // An open effect list keeps the panel up, so it doesn't fade out mid-search.
-  const showPanel = !panelHidden && (!idle || hoveringPanel || recording || listOpen || touchInput);
+  // An open effect list or shortcuts popover keeps the panel up, so it doesn't fade
+  // out mid-search or mid-read.
+  const showPanel =
+    !panelHidden &&
+    (!idle || hoveringPanel || recording || listOpen || shortcutsOpen || touchInput);
 
   return (
     <main className="app" data-idle={idle && !hoveringPanel} data-layout={layout}>
@@ -479,6 +488,8 @@ export function App() {
             onCopyLink={copyLink}
             onHide={hidePanel}
             onStep={step}
+            shortcutsOpen={shortcutsOpen}
+            onShortcutsOpenChange={setShortcutsOpen}
           />
         </PanelErrorBoundary>
       </div>

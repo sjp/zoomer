@@ -905,12 +905,70 @@ select:disabled {
 }
 
 /* Reset sits on the left, the everyday actions on the right. */
-.footer-actions .text-button {
+.footer-actions > .text-button {
   margin-right: auto;
 }
 
+.shortcuts {
+  position: relative;
+}
+
+/* Opens upwards from the footer, over the controls. */
+.shortcuts-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: 236px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-solid);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+
+.shortcuts-popover[hidden] {
+  display: none;
+}
+
+.shortcuts-popover dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.shortcuts-popover dl > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shortcuts-popover dt {
+  display: flex;
+  flex: none;
+  gap: 3px;
+  width: 52px;
+}
+
+.shortcuts-popover dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+kbd {
+  min-width: 22px;
+  padding: 1px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  background: rgb(255 255 255 / 0.06);
+}
+
 .text-button {
-  padding: 6px 4px;
+  padding: 6px 0;
+  font-size: 12.5px;
   border-color: transparent;
   background: none;
   color: var(--muted);

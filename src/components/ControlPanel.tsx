@@ -10,6 +10,7 @@ import { categoryFilterLabel } from "../effects/list";
 import { ParamSections, Section } from "./ParamSections";
 import { Segmented } from "./ParamControl";
 import { SheetHandle } from "./SheetHandle";
+import { Shortcuts } from "./Shortcuts";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
 import { useCanHover, type PanelLayout } from "../hooks/useMediaQuery";
@@ -56,6 +57,9 @@ interface Props {
   /** Copies a link with every setting spelled out that opens with the panel hidden. */
   onCopyLink: () => void;
   onHide: () => void;
+  /** Whether the keyboard shortcuts popover is open; `?` toggles it too. */
+  shortcutsOpen: boolean;
+  onShortcutsOpenChange: (open: boolean) => void;
   /** Steps to the previous (-1) or next (1) effect in the list, as ← / → do. */
   onStep?: ((dir: 1 | -1) => void) | undefined;
   /** Shown with the error when the effect's code failed to load, e.g. after a redeploy. */
@@ -485,10 +489,10 @@ export function ControlPanel(props: Props) {
               {compact && fps}
               {compact && fullscreenButton}
               {compact && copyLinkButton}
+              {canHover && (
+                <Shortcuts open={props.shortcutsOpen} onOpenChange={props.onShortcutsOpenChange} />
+              )}
             </div>
-            {canHover && (
-              <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
-            )}
           </footer>
         </>
       )}

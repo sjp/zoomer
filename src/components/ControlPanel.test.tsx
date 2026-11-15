@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEffect } from "../effects/registry";
 import { defaults } from "../effects/params";
@@ -26,8 +26,8 @@ const warp = (() => {
 
 type Props = ComponentProps<typeof ControlPanel>;
 
-function renderPanel(overrides: Partial<Props> = {}) {
-  const props: Props = {
+function panelProps(overrides: Partial<Props> = {}): Props {
+  return {
     list: renderPanelList(),
     effect: warp,
     values: defaults(warp.params),
@@ -47,8 +47,14 @@ function renderPanel(overrides: Partial<Props> = {}) {
     onCopyLink: vi.fn<() => void>(),
     onHide: vi.fn<() => void>(),
     onStep: vi.fn<(dir: 1 | -1) => void>(),
+    shortcutsOpen: false,
+    onShortcutsOpenChange: vi.fn<(open: boolean) => void>(),
     ...overrides,
   };
+}
+
+function renderPanel(overrides: Partial<Props> = {}) {
+  const props = panelProps(overrides);
   render(<ControlPanel {...props} />);
   return props;
 }
@@ -261,18 +267,43 @@ describe("ControlPanel", () => {
 
   it("shows keyboard shortcuts where the pointer can hover, and not on touch screens", () => {
     renderPanel();
-    expect(screen.getByText(/S star · H hide/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Shortcuts" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Hide controls" }).title).toBe("Hide controls (H)");
     expect(screen.getByRole("button", { name: "Next effect" }).title).toBe("Next effect (→)");
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).toMatch(/\(S\)$/);
     cleanup();
     mockMedia(["(hover: none)"]);
     renderPanel();
-    expect(screen.queryByText(/S star · H hide/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Shortcuts" })).toBeNull();
     expect(screen.getByRole("button", { name: "Hide controls" }).title).toBe("Hide controls");
     expect(screen.getByRole("button", { name: "Fullscreen" }).title).toBe("Fullscreen");
     expect(screen.getByRole("button", { name: /^Effect: / }).title).toBe("Choose an effect");
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).not.toMatch(/\(S\)$/);
+  });
+
+  it("toggles the shortcuts popover from its button, and closes it on Escape or a click outside", () => {
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <ControlPanel {...panelProps()} shortcutsOpen={open} onShortcutsOpenChange={setOpen} />
+      );
+    }
+    render(<Host />);
+    const button = screen.getByRole("button", { name: "Shortcuts" });
+    const popover = () => screen.queryByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(popover()).toBeNull();
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(popover()?.textContent).toContain("Star the effect");
+    expect(button.getAttribute("aria-controls")).toBe(popover()?.id);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(popover()).toBeNull();
+    fireEvent.click(button);
+    // Clicks inside it leave it open.
+    fireEvent.pointerDown(defined(popover(), "the popover"));
+    expect(popover()).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(popover()).toBeNull();
   });
 
   it("offers Reset all apart from the icon buttons, which keep their names", () => {
