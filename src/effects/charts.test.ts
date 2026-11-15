@@ -365,6 +365,37 @@ describe("mesh", () => {
     }
   });
 
+  it("draws a filled dot as a fan with no overlap at the centre", () => {
+    for (const r0 of [-1, 0]) {
+      const m = createChartMesh(4096);
+      pushArc(m, 50, 50, r0, 10, 0, 2 * Math.PI, c, 0.5);
+      expect(m.count % 3).toBe(0);
+      const at = (v: number, k: number) => m.data[v * CHART_STRIDE + k] ?? Number.NaN;
+      let area = 0;
+      let reach = 0;
+      for (let v = 0; v < m.count; v += 3) {
+        const [x0, y0, x1, y1, x2, y2] = [0, 1, 2].flatMap((k) => [at(v + k, 0), at(v + k, 1)]);
+        area += Math.abs((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) / 2;
+        for (let k = 0; k < 3; k++) {
+          reach = Math.max(reach, Math.hypot(at(v + k, 0) - 50, at(v + k, 1) - 50));
+        }
+      }
+      // The triangles tile the outer polygon (to float32 precision): none doubles up.
+      const segments = m.count / 3;
+      const polygon = (segments / 2) * reach * reach * Math.sin((2 * Math.PI) / segments);
+      expect(area).toBeCloseTo(polygon, 2);
+      // The centre vertices carry the cover the centre has: over 1 (full) for the dot trick.
+      const centre = [];
+      for (let v = 0; v < m.count; v++) {
+        if (at(v, 0) === 50 && at(v, 1) === 50) {
+          centre.push(at(v, 3) + 0.5 - Math.abs(at(v, 2)));
+        }
+      }
+      expect(centre).toHaveLength(segments);
+      expect(Math.min(...centre)).toBeCloseTo(0.5 - r0, 5);
+    }
+  });
+
   it("keeps a polyline's width through a bend", () => {
     const m = createChartMesh(64);
     pushPolyline(m, [0, 10, 20], [0, 0, 10], 0, 3, 2, c, 1);

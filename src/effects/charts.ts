@@ -842,7 +842,9 @@ const MAX_ARC_SEGMENTS = 128;
 /**
  * A donut segment around (`cx`, `cy`) between radii `r0` and `r1`, from angle
  * `a0` to `a1` in radians, clockwise from twelve o'clock, with antialiased inner
- * and outer edges.
+ * and outer edges. An `r0` under a pixel (such as 0, or -1 for a dot with a solid
+ * centre) draws a filled pie as a fan, so a translucent one doesn't overlap itself
+ * at the centre.
  */
 export function pushArc(
   m: ChartMesh,
@@ -875,6 +877,18 @@ export function pushArc(
     const t = a0 + (sweep * i) / segments;
     const s1 = Math.sin(t);
     const c1 = Math.cos(t);
+    if (mid < ext) {
+      // The inner fringe would cross the centre (a filled dot, `r0` <= 0), so the
+      // segments overlap there: stop it at the centre, as a fan, with the edge
+      // distance it has there.
+      const out = mid + ext;
+      vertex(m, cx + s0 * out, cy - c0 * out, ext, hw, c, a);
+      vertex(m, cx + s1 * out, cy - c1 * out, ext, hw, c, a);
+      vertex(m, cx, cy, -mid, hw, c, a);
+      s0 = s1;
+      c0 = c1;
+      continue;
+    }
     // Points on the mid radius, pushed out and in along the radius by `ext`.
     quadAcross(
       m,
