@@ -595,7 +595,7 @@ input[type="search"]:focus-visible {
 .control {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .control-label {
@@ -606,10 +606,17 @@ input[type="search"]:focus-visible {
 }
 
 .control label {
-  display: flex;
-  flex: 1;
-  justify-content: space-between;
-  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+/* A slider's value, at the end of its label row. */
+.control-value {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Small and quiet: it only appears once a value has moved off its default. */
@@ -632,20 +639,74 @@ input[type="search"]:focus-visible {
   color: var(--text);
 }
 
-.control output {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .control-inline {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
 }
 
+/* A thin track, filled with the accent up to the thumb (`--p`, set from the value). */
 input[type="range"] {
+  appearance: none;
   width: 100%;
-  accent-color: var(--accent);
+  height: 20px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) var(--p, 0%),
+    rgb(255 255 255 / 0.16) var(--p, 0%)
+  );
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) var(--p, 0%),
+    rgb(255 255 255 / 0.16) var(--p, 0%)
+  );
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 input[type="checkbox"] {
@@ -1048,47 +1109,29 @@ select:disabled {
     height: 44px;
   }
 
-  /* A taller track with a bigger thumb; the default thumb is too small for a finger. */
+  /* A taller hit area and a bigger thumb, which is too fiddly for a finger at desktop size. */
   input[type="range"] {
-    appearance: none;
     height: 44px;
-    margin: 0;
-    background: none;
   }
 
   input[type="range"]::-webkit-slider-runnable-track {
     height: 6px;
     border-radius: 3px;
-    background: rgb(255 255 255 / 0.22);
-  }
-
-  input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    width: 28px;
-    height: 28px;
-    margin-top: -11px;
-    border: none;
-    border-radius: 50%;
-    background: var(--accent);
   }
 
   input[type="range"]::-moz-range-track {
     height: 6px;
     border-radius: 3px;
-    background: rgb(255 255 255 / 0.22);
   }
 
-  input[type="range"]::-moz-range-progress {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--accent);
+  input[type="range"]::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    margin-top: -11px;
   }
 
   input[type="range"]::-moz-range-thumb {
     width: 28px;
     height: 28px;
-    border: none;
-    border-radius: 50%;
-    background: var(--accent);
   }
 }

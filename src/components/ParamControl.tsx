@@ -12,29 +12,26 @@ interface Props {
 }
 
 /**
- * The label, and beside it a reset button while the value differs from the default.
- * The button sits outside the label element, so the field's accessible name stays the
- * label alone.
+ * The label, then a reset button while the value differs from the default, then
+ * `after` (a slider's value, which the slider itself also reports) at the end of the row. The button sits outside the label
+ * element, so the field's accessible name stays the label alone.
  */
 function LabelRow({
   inputId,
   def,
   value,
   onReset,
-  children,
+  after,
 }: {
   inputId: string;
   def: ParamDef;
   value: ParamValue;
   onReset: (() => void) | undefined;
-  children?: ReactNode;
+  after?: ReactNode;
 }) {
   return (
     <div className="control-label">
-      <label htmlFor={inputId}>
-        {def.label}
-        {children}
-      </label>
+      <label htmlFor={inputId}>{def.label}</label>
       {onReset && !isDefault(def, value) && (
         <button
           type="button"
@@ -50,7 +47,7 @@ function LabelRow({
             }
           }}
         >
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
             <path
               d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2M3.5 2.5v2.6h2.6"
               fill="none"
@@ -62,35 +59,42 @@ function LabelRow({
           </svg>
         </button>
       )}
+      {after}
     </div>
   );
 }
 
 export function ParamControl({ id, def, value, onChange, onReset }: Props) {
   const inputId = `param-${id}`;
-  const label = (children?: ReactNode) => (
-    <LabelRow inputId={inputId} def={def} value={value} onReset={onReset}>
-      {children}
-    </LabelRow>
+  const label = (after?: ReactNode) => (
+    <LabelRow inputId={inputId} def={def} value={value} onReset={onReset} after={after} />
   );
   switch (def.kind) {
-    case "number":
+    case "number": {
+      const n = Number(value);
+      // How far along the track the thumb is, for the accent fill up to it.
+      const fill = def.max > def.min ? ((n - def.min) / (def.max - def.min)) * 100 : 0;
+      const track: Record<string, string> = {
+        "--p": `${String(Math.min(100, Math.max(0, fill)))}%`,
+      };
       return (
         <div className="control">
-          {label(<output>{Number(value).toFixed(stepDecimals(def.step))}</output>)}
+          {label(<span className="control-value">{n.toFixed(stepDecimals(def.step))}</span>)}
           <input
             id={inputId}
             type="range"
+            style={track}
             min={def.min}
             max={def.max}
             step={def.step}
-            value={Number(value)}
+            value={n}
             onChange={(e) => {
               onChange(Number(e.target.value));
             }}
           />
         </div>
       );
+    }
     case "color":
       return (
         <div className="control control-inline">

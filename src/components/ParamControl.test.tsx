@@ -28,6 +28,12 @@ describe("ParamControl", () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith(0.25);
   });
 
+  it("fills the slider's track up to its value", () => {
+    renderControl({ kind: "number", label: "Speed", min: 1, max: 3, step: 0.5, default: 1 }, 2.5);
+    expect(screen.getByRole("slider").style.getPropertyValue("--p")).toBe("75%");
+    expect(screen.getByText("2.5").className).toBe("control-value");
+  });
+
   it("renders a colour input and reports the hex string", () => {
     const { onChange } = renderControl(
       { kind: "color", label: "Tint", default: "#000000" },
