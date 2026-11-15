@@ -239,26 +239,28 @@ export function ControlPanel(props: Props) {
         )}
       </section>
 
-      <footer className="row">
-        <button type="button" onClick={props.onReset}>
-          Reset
-        </button>
-        {props.onFullscreen && (
-          <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
-            Fullscreen
+      <footer className="panel-footer">
+        <div className="row">
+          <button type="button" onClick={props.onReset}>
+            Reset
           </button>
+          {props.onFullscreen && (
+            <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
+              Fullscreen
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={props.onCopyLink}
+            title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
+          >
+            Copy link
+          </button>
+        </div>
+        {canHover && (
+          <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
         )}
-        <button
-          type="button"
-          onClick={props.onCopyLink}
-          title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
-        >
-          Copy link
-        </button>
       </footer>
-      {canHover && (
-        <p className="hint">/ search · S star · H hide · F fullscreen · ← → switch effect</p>
-      )}
     </aside>
   );
 }

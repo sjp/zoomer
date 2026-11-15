@@ -3,6 +3,8 @@
   /* Opaque enough to read without backdrop-filter, which would re-blur the animated
      canvas behind the panel on every frame. */
   --panel-bg: rgb(16 18 24 / 0.9);
+  /* Behind the pinned header and footer, so controls scrolling under them don't show. */
+  --panel-solid: rgb(16 18 24);
   --panel-border: rgb(255 255 255 / 0.12);
   --text: #e8eaf0;
   --muted: #9aa0ae;
@@ -126,13 +128,43 @@ body,
   max-height: calc(100vh - 32px - var(--safe-top) - var(--safe-bottom));
   max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
   overflow-y: auto;
-  padding: 14px;
+  overscroll-behavior: contain;
+  padding: 0 14px;
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   background: var(--panel-bg);
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* The header and footer stay in reach while the controls scroll between them. Each
+   bleeds over the panel's side padding and carries the top or bottom padding itself,
+   so nothing shows above or below it; the negative margin keeps the usual gap. */
+.panel-header,
+.panel-footer {
+  position: sticky;
+  z-index: 1;
+  margin-inline: -14px;
+  padding-inline: 14px;
+  background: var(--panel-solid);
+}
+
+.panel-header {
+  top: 0;
+  margin-bottom: -8px;
+  padding-top: 14px;
+  padding-bottom: 8px;
+}
+
+.panel-footer {
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: -8px;
+  padding-top: 8px;
+  padding-bottom: 14px;
 }
 
 .panel-header,
