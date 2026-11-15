@@ -50,3 +50,14 @@ export function loadSort(storage?: () => PreferenceStorage | undefined): EffectS
 export function saveSort(sort: EffectSort, storage?: () => PreferenceStorage | undefined): void {
   writePreference(SORT_KEY, sort, storage);
 }
+
+const OUTPUT_OPEN_KEY = "zoomer.outputOpen";
+
+/** Whether the panel's "Output & recording" section is open; closed by default. */
+export function loadOutputOpen(storage?: () => PreferenceStorage | undefined): boolean {
+  return readPreference(OUTPUT_OPEN_KEY, storage) === "open";
+}
+
+export function saveOutputOpen(open: boolean, storage?: () => PreferenceStorage | undefined): void {
+  writePreference(OUTPUT_OPEN_KEY, open ? "open" : "closed", storage);
+}

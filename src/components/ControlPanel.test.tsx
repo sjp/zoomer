@@ -6,12 +6,14 @@ import { getEffect } from "../effects/registry";
 import { defaults } from "../effects/params";
 import { createStore } from "../lib/store";
 import type { FrameStats } from "../lib/renderLoop";
+import { defined } from "../test/defined";
 import { mockMedia } from "../test/media";
 import { ControlPanel } from "./ControlPanel";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  window.localStorage.clear();
 });
 
 const warp = (() => {
@@ -87,6 +89,46 @@ describe("ControlPanel", () => {
     );
     // An open list closes while recording.
     expect(screen.queryByLabelText("Search effects")).toBeNull();
+  });
+
+  it("keeps output and recording in a section that starts closed and remembers its state", () => {
+    renderPanel();
+    const section = () => defined(document.querySelector("details"), "the output section");
+    expect(section().open).toBe(false);
+    expect(section().querySelector("summary")?.textContent).toBe("Output & recording");
+    for (const control of [
+      screen.getByLabelText("Resolution"),
+      screen.getByLabelText("Frame rate"),
+      screen.getByLabelText("Clip length"),
+      screen.getByRole("button", { name: "Record clip" }),
+    ]) {
+      expect(section().contains(control)).toBe(true);
+    }
+    // As a click on the summary does.
+    section().open = true;
+    fireEvent(section(), new Event("toggle"));
+    cleanup();
+    renderPanel();
+    expect(section().open).toBe(true);
+    section().open = false;
+    fireEvent(section(), new Event("toggle"));
+    cleanup();
+    renderPanel();
+    expect(section().open).toBe(false);
+  });
+
+  it("shows the frame rate meter in the header", () => {
+    const stats = createStore<FrameStats | undefined>({
+      fps: 59.6,
+      frameMs: 4,
+      source: "gpu",
+      displayMs: 1000 / 60,
+    });
+    renderPanel({ stats });
+    const meter = defined(document.querySelector(".fps-meter"), "the meter");
+    expect(meter.closest("header")).toBeTruthy();
+    expect(meter.textContent).toBe("60 fps4.0 ms");
+    expect(meter.getAttribute("title")).toMatch(/GPU time/);
   });
 
   it("can't record before the selected effect runs", () => {

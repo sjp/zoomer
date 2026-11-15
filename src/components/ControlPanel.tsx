@@ -10,6 +10,7 @@ import { ParamControl } from "./ParamControl";
 import { StarButton } from "./StarButton";
 import { has } from "../effects/lookup";
 import { useCanHover } from "../hooks/useMediaQuery";
+import { loadOutputOpen, saveOutputOpen } from "../lib/preferences";
 
 const isResolution = (v: string): v is Resolution => has(RESOLUTIONS, v);
 const isFrameRate = (v: string): v is FrameRate => has(FRAME_RATES, v);
@@ -55,6 +56,8 @@ export function ControlPanel(props: Props) {
   const { effect, values, recordingLeft, list } = props;
   const recording = recordingLeft !== undefined;
   const [duration, setDuration] = useState(20);
+  // Remembered per browser rather than in the link, which describes the effect only.
+  const [outputOpen, setOutputOpen] = useState(() => loadOutputOpen());
   const pickerRef = useRef<HTMLButtonElement>(null);
   // Keyboard shortcuts in tooltips and the hint line, left out on touch screens.
   const canHover = useCanHover();
@@ -84,11 +87,12 @@ export function ControlPanel(props: Props) {
           }}
         >
           <span className="sr-only">Effect: </span>
-          {effect.name}
+          <span className="effect-picker-name">{effect.name}</span>
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
             <path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
+        <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />
         <StarButton
           starred={list.options.favourites?.has(effect.id) ?? false}
           name={effect.name}
@@ -163,7 +167,16 @@ export function ControlPanel(props: Props) {
         ))}
       </section>
 
-      <section className="output">
+      <details
+        className="output"
+        open={outputOpen}
+        onToggle={(e) => {
+          const open = e.currentTarget.open;
+          setOutputOpen(open);
+          saveOutputOpen(open);
+        }}
+      >
+        <summary>Output &amp; recording</summary>
         <div className="control control-inline">
           <label htmlFor="resolution">Resolution</label>
           <select
@@ -204,7 +217,6 @@ export function ControlPanel(props: Props) {
             ))}
           </select>
         </div>
-        <FpsMeter stats={props.stats} target={FRAME_RATES[props.frameRate].fps} />
         <div className="row">
           <select
             aria-label="Clip length"
@@ -237,7 +249,7 @@ export function ControlPanel(props: Props) {
             Keep this tab visible until the recording finishes; hidden tabs make clips run long.
           </p>
         )}
-      </section>
+      </details>
 
       <footer className="panel-footer">
         <div className="row">
@@ -266,7 +278,7 @@ export function ControlPanel(props: Props) {
 }
 
 /**
- * Live performance readout. Frame time is the GPU cost of the effect's draw calls
+ * Live performance readout, a small badge in the header. Frame time is the GPU cost of the effect's draw calls
  * where the browser supports timer queries, otherwise the CPU cost of issuing them;
  * it turns amber past 75% of the frame budget and red once over it. The budget is the
  * display's refresh interval, or the capped rate's interval if that is longer.
@@ -298,9 +310,7 @@ function FpsMeter({
       }. Budget ${budget.toFixed(1)} ms a frame (display ≈ ${String(Math.round(1000 / current.displayMs))} Hz).`}
     >
       <span>{Math.round(current.fps)} fps</span>
-      <span>
-        {current.frameMs.toFixed(1)} {current.source === "gpu" ? "GPU" : "CPU"} ms
-      </span>
+      <span>{current.frameMs.toFixed(1)} ms</span>
     </div>
   );
 }
