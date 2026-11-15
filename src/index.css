@@ -360,38 +360,57 @@ body,
   );
 }
 
-/* Arrows over the faded ends, in the panel's side padding, for a mouse (see EffectList). */
-.category-row {
-  position: relative;
+/* For a mouse (see EffectList), arrows sit in their own slots either side of the chips,
+   never over them: the row runs into the panel's side padding, the arrows take its
+   ends and the chips scroll in the column between. An arrow's slot stays reserved
+   while it's hidden, so the chips don't shift as the arrows come and go. */
+.category-row[data-arrows="true"] {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 6px;
+  margin-inline: calc(6px - var(--pad-left)) calc(6px - var(--pad-right));
+}
+
+.category-row[data-arrows="true"] .category-chips {
+  grid-column: 2;
+  margin-inline: 0;
+  padding-inline: 0;
+  scroll-padding-inline: 16px;
+}
+
+.category-row[data-arrows="true"] .category-chips[data-more-start="true"] {
+  --fade-start: 16px;
+}
+
+.category-row[data-arrows="true"] .category-chips[data-more-end="true"] {
+  --fade-end: 16px;
 }
 
 .chips-arrow {
-  position: absolute;
-  top: 50%;
-  z-index: 1;
   display: grid;
   place-items: center;
   width: 24px;
   height: 24px;
   min-height: 0;
   padding: 0;
-  border-radius: 999px;
-  transform: translateY(-50%);
-  background: var(--panel-solid);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: none;
   color: var(--muted);
 }
 
 .chips-arrow:hover:not(:disabled) {
-  background: var(--panel-solid);
+  background: var(--panel-border);
   color: var(--text);
 }
 
 .chips-arrow[data-dir="start"] {
-  left: calc(4px - var(--pad-left));
+  grid-column: 1;
 }
 
 .chips-arrow[data-dir="end"] {
-  right: calc(4px - var(--pad-right));
+  grid-column: 3;
 }
 
 .category-chips::-webkit-scrollbar {

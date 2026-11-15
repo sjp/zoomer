@@ -399,7 +399,7 @@ export function EffectList(props: EffectListProps) {
         {props.sortBesideSearch === true && sortSelect}
         {props.searchEnd}
       </div>
-      <div className="category-row">
+      <div className="category-row" data-arrows={canHover}>
         {canHover && chipsMore.start && chipArrow(-1)}
         <div
           role="group"
