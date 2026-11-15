@@ -33,6 +33,7 @@ import {
   valueY,
 } from "../charts";
 import { createColorEase, hexToUnitRgb } from "../color";
+import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { sanitizeText } from "../params";
@@ -314,8 +315,7 @@ export const dashboard = defineEffect(dashboardMeta, {
       let wantFull = true;
       /** Opacity of the Full-only cards. */
       let fullLevel = 1;
-      let swapPhase = 0;
-      let swapT = 0;
+      const swap = createFadeThrough(SWAP_HALF);
       let paintedLo = 0;
       let paintedHi = 0;
       let paintedBarHi = 0;
@@ -1253,32 +1253,16 @@ export const dashboard = defineEffect(dashboardMeta, {
           }
 
           // A new variation fades the screen out, swaps the data, and fades back in.
-          if (swapPhase === 0 && data.seed !== p.seed) {
-            swapPhase = 1;
-            swapT = 0;
+          if (swap.idle && data.seed !== p.seed) {
+            swap.start();
           }
-          if (swapPhase === 1) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              // Allocates: new data, once per variation change.
-              data = createDashboard(p.seed);
-              adopt(data);
-              swapPhase = 2;
-              swapT = 0;
-            }
-          } else if (swapPhase === 2) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              swapPhase = 0;
-            }
+          if (swap.step(step)) {
+            // Allocates: new data, once per variation change.
+            data = createDashboard(p.seed);
+            adopt(data);
           }
           const d = data;
-          const ca =
-            swapPhase === 1
-              ? 1 - smoothstep(0, 1, swapT)
-              : swapPhase === 2
-                ? smoothstep(0, 1, swapT)
-                : 1;
+          const ca = swap.alpha;
 
           if (p.title !== rawTitle) {
             rawTitle = p.title;

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createCountFade, driftPoint, FADE_OUT, growLive, stepLife, trimLive } from "./fade";
+import {
+  createCountFade,
+  createFadeThrough,
+  driftPoint,
+  FADE_OUT,
+  growLive,
+  stepLife,
+  trimLive,
+} from "./fade";
 import { createRng } from "./noise";
 
 /** One frame of the documented loop; returns the new live count. */
@@ -177,5 +185,38 @@ describe("createCountFade", () => {
     // A target that isn't a number counts as none.
     fade.step(Number.NaN, FADE_OUT, 1);
     expect(fade.live).toBe(0);
+  });
+});
+
+describe("createFadeThrough", () => {
+  it("fades out, swaps once at the bottom, then fades back in", () => {
+    const f = createFadeThrough(0.5);
+    expect(f.idle).toBe(true);
+    expect(f.alpha).toBe(1);
+    expect(f.step(0.1)).toBe(false);
+    f.start();
+    expect(f.fadingOut).toBe(true);
+    expect(f.alpha).toBe(1);
+    expect(f.step(0.25)).toBe(false);
+    expect(f.alpha).toBeCloseTo(0.5);
+    expect(f.step(0.25)).toBe(true);
+    expect(f.fadingOut).toBe(false);
+    expect(f.idle).toBe(false);
+    expect(f.alpha).toBe(0);
+    expect(f.step(0.25)).toBe(false);
+    expect(f.alpha).toBeCloseTo(0.5);
+    expect(f.step(1)).toBe(false);
+    expect(f.idle).toBe(true);
+    expect(f.alpha).toBe(1);
+  });
+
+  it("cancels to fully shown", () => {
+    const f = createFadeThrough(0.5);
+    f.start();
+    f.step(0.2);
+    f.cancel();
+    expect(f.idle).toBe(true);
+    expect(f.alpha).toBe(1);
+    expect(f.step(1)).toBe(false);
   });
 });

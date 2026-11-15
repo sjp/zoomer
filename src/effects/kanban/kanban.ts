@@ -1,6 +1,7 @@
 import { type CanvasAtlas, createCanvasAtlas, SANS_FONT_STACK } from "../canvas-texture";
 import { createChartRenderer, pushRect, pushRoundRect } from "../charts";
 import { createColorEase, hexToUnitRgb } from "../color";
+import { createFadeThrough } from "../fade";
 import {
   beginFrame,
   createDataTexture,
@@ -1045,8 +1046,7 @@ export const kanban = defineEffect(kanbanMeta, {
       };
 
       /** Board swap: 1 fading out, 2 fading in. */
-      let swapPhase = 0;
-      let swapT = 0;
+      const swap = createFadeThrough(SWAP_HALF);
 
       return {
         resize(vp) {
@@ -1099,32 +1099,16 @@ export const kanban = defineEffect(kanbanMeta, {
           }
 
           // A new variation fades the cards out and a fresh board in.
-          if (swapPhase === 0 && b.seed !== p.seed) {
-            swapPhase = 1;
-            swapT = 0;
+          if (swap.idle && b.seed !== p.seed) {
+            swap.start();
           }
-          if (swapPhase === 1) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              // Allocates: the new board, once per change.
-              b = createBoard(p.seed, L, pace);
-              board = b;
-              swapPhase = 2;
-              swapT = 0;
-            }
-          } else if (swapPhase === 2) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              swapPhase = 0;
-            }
+          if (swap.step(step)) {
+            // Allocates: the new board, once per change.
+            b = createBoard(p.seed, L, pace);
+            board = b;
           }
-          const ca =
-            swapPhase === 1
-              ? 1 - smoothstep(0, 1, swapT)
-              : swapPhase === 2
-                ? smoothstep(0, 1, swapT)
-                : 1;
-          if (swapPhase !== 1) {
+          const ca = swap.alpha;
+          if (!swap.fadingOut) {
             stepBoard(b, step, pace);
           }
 

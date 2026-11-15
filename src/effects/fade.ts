@@ -1,4 +1,4 @@
-import { wrap } from "./math";
+import { smoothstep, wrap } from "./math";
 
 /**
  * Count fades: when a count param rises, the added items start at life 0 and fade
@@ -143,4 +143,74 @@ export function driftPoint(
   xs[i] = wx;
   ys[i] = wy;
   return wx !== x || wy !== y;
+}
+
+/**
+ * A fade-through: fades something out over `half` seconds, lets the caller swap
+ * it at the bottom, then fades it back in over `half` seconds. Each frame:
+ *
+ * ```ts
+ * if (swap.idle && wantsChange) { swap.start(); }
+ * if (swap.step(dt)) { ...swap now, while it is invisible... }
+ * draw(swap.alpha);
+ * ```
+ *
+ * Allocates nothing.
+ */
+interface FadeThrough {
+  /** Neither fading out nor in. */
+  readonly idle: boolean;
+  /** Fading out, before the swap. */
+  readonly fadingOut: boolean;
+  /** The eased opacity: 1 while idle, smoothstepping down to 0 and back up. */
+  readonly alpha: number;
+  /** Starts fading out (from the top, whatever the phase). */
+  start: () => void;
+  /** Stops at once, fully shown. */
+  cancel: () => void;
+  /**
+   * Steps by `dt` seconds. Returns true on the frame the fade-out ends: the
+   * caller swaps then, and the fade-in starts from the next step.
+   */
+  step: (dt: number) => boolean;
+}
+
+export function createFadeThrough(half: number): FadeThrough {
+  /** 0 idle, 1 fading out, 2 fading in. */
+  let phase = 0;
+  let t = 0;
+  return {
+    get idle() {
+      return phase === 0;
+    },
+    get fadingOut() {
+      return phase === 1;
+    },
+    get alpha() {
+      return phase === 1 ? 1 - smoothstep(0, 1, t) : phase === 2 ? smoothstep(0, 1, t) : 1;
+    },
+    start() {
+      phase = 1;
+      t = 0;
+    },
+    cancel() {
+      phase = 0;
+    },
+    step(dt) {
+      if (phase === 1) {
+        t = Math.min(1, t + dt / half);
+        if (t >= 1) {
+          phase = 2;
+          t = 0;
+          return true;
+        }
+      } else if (phase === 2) {
+        t = Math.min(1, t + dt / half);
+        if (t >= 1) {
+          phase = 0;
+        }
+      }
+      return false;
+    },
+  };
 }

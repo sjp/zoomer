@@ -1,6 +1,7 @@
 import { SANS_FONT_STACK } from "../canvas-texture";
 import { createChartRenderer, pushPolyline, pushRect, pushRoundRect } from "../charts";
 import { createColorEase, hexToUnitRgb } from "../color";
+import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { sanitizeText } from "../params";
@@ -271,8 +272,7 @@ export const documentPage = defineEffect(documentMeta, {
       let cChars = -1;
 
       /** Document swap: 1 fading out, 2 fading in; whether the pages fade too (a zoom change). */
-      let swapPhase = 0;
-      let swapT = 0;
+      const swap = createFadeThrough(SWAP_HALF);
       let swapPages = false;
       let doneT = 0;
 
@@ -1006,47 +1006,31 @@ export const documentPage = defineEffect(documentMeta, {
           }
           const retitled = d.title !== (title === "" ? UNTITLED : title);
           if (
-            swapPhase === 0 &&
+            swap.idle &&
             (d.seed !== p.seed || retitled || wantZoom !== zoom || doneT > DONE_HOLD)
           ) {
-            swapPhase = 1;
-            swapT = 0;
+            swap.start();
             swapPages = wantZoom !== zoom;
           }
-          if (swapPhase === 1) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              // Allocates: a new document or layout, once per change.
-              zoom = wantZoom;
-              if (d.seed !== p.seed) {
-                d = createDoc(p.seed, 0, title);
-                t = createTypist(d, p.seed, startSegment(d, p.seed));
-              } else if (typistDone(t) && doneT > DONE_HOLD) {
-                d = createDoc(d.seed, d.generation + 1, title);
-                t = createTypist(d, d.seed, 0);
-              } else if (retitled) {
-                d = createDoc(d.seed, d.generation, title);
-                t = carryTypist(d, t, d.seed);
-              }
-              adopt(d, t);
-              swapPhase = 2;
-              swapT = 0;
+          if (swap.step(step)) {
+            // Allocates: a new document or layout, once per change.
+            zoom = wantZoom;
+            if (d.seed !== p.seed) {
+              d = createDoc(p.seed, 0, title);
+              t = createTypist(d, p.seed, startSegment(d, p.seed));
+            } else if (typistDone(t) && doneT > DONE_HOLD) {
+              d = createDoc(d.seed, d.generation + 1, title);
+              t = createTypist(d, d.seed, 0);
+            } else if (retitled) {
+              d = createDoc(d.seed, d.generation, title);
+              t = carryTypist(d, t, d.seed);
             }
-          } else if (swapPhase === 2) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              swapPhase = 0;
-            }
+            adopt(d, t);
           }
-          const ca =
-            swapPhase === 1
-              ? 1 - smoothstep(0, 1, swapT)
-              : swapPhase === 2
-                ? smoothstep(0, 1, swapT)
-                : 1;
+          const ca = swap.alpha;
           const pa = swapPages ? ca : 1;
 
-          if (swapPhase !== 1) {
+          if (!swap.fadingOut) {
             stepTypist(d, t, step, speed);
           }
           const Ld = L;

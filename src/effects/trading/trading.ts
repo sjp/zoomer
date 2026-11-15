@@ -30,7 +30,7 @@ import {
   valueY,
 } from "../charts";
 import { createColorEase, hexToUnitRgb } from "../color";
-import { createCountFade } from "../fade";
+import { createCountFade, createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { type StepClock, takeSteps } from "../step-clock";
@@ -291,12 +291,10 @@ export const trading = defineEffect(tradingMeta, {
       let market: Market | null = null;
       let focus = 0;
       let nextFocus = 0;
-      /** Focus swap: 0 idle, 1 fading out, 2 fading in; and its progress. */
-      let focusPhase = 0;
-      let focusT = 0;
+      /** Focus swap: fades the focus panels out, moves the focus, and fades them back in. */
+      const focusFade = createFadeThrough(SWAP_HALF);
       /** Variation swap, the same way, for the whole screen. */
-      let swapPhase = 0;
-      let swapT = 0;
+      const swap = createFadeThrough(SWAP_HALF);
       let focusWeight = 1;
       let started = false;
       let rotateTimer = 0;
@@ -1490,26 +1488,15 @@ export const trading = defineEffect(tradingMeta, {
           }
 
           // A new variation fades the screen out, swaps the market, and fades back in.
-          if (swapPhase === 0 && market.seed !== p.seed) {
-            swapPhase = 1;
-            swapT = 0;
+          if (swap.idle && market.seed !== p.seed) {
+            swap.start();
           }
-          if (swapPhase === 1) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              // Allocates: a new market, once per variation change.
-              market = startMarket(p.seed);
-              focus = Math.min(focus, count - 1);
-              focusPhase = 0;
-              adoptMarket(market);
-              swapPhase = 2;
-              swapT = 0;
-            }
-          } else if (swapPhase === 2) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              swapPhase = 0;
-            }
+          if (swap.step(step)) {
+            // Allocates: a new market, once per variation change.
+            market = startMarket(p.seed);
+            focus = Math.min(focus, count - 1);
+            focusFade.cancel();
+            adoptMarket(market);
           }
           const m = market;
 
@@ -1523,44 +1510,24 @@ export const trading = defineEffect(tradingMeta, {
           // Focus stock: rotates on a timer, or moves when the count drops below it.
           const period = p.rotate === "2" ? 120 : p.rotate === "5" ? 300 : 0;
           rotateTimer = period > 0 ? rotateTimer + step : 0;
-          if (focusPhase === 0 && swapPhase === 0) {
+          if (focusFade.idle && swap.idle) {
             if (focus >= count) {
               nextFocus = 0;
-              focusPhase = 1;
-              focusT = 0;
+              focusFade.start();
             } else if (period > 0 && rotateTimer >= period) {
               rotateTimer = 0;
               nextFocus = (focus + 1) % count;
-              focusPhase = nextFocus === focus ? 0 : 1;
-              focusT = 0;
+              if (nextFocus !== focus) {
+                focusFade.start();
+              }
             }
           }
-          if (focusPhase === 1) {
-            focusT = Math.min(1, focusT + step / SWAP_HALF);
-            if (focusT >= 1) {
-              focus = nextFocus;
-              adoptFocus(m);
-              focusPhase = 2;
-              focusT = 0;
-            }
-          } else if (focusPhase === 2) {
-            focusT = Math.min(1, focusT + step / SWAP_HALF);
-            if (focusT >= 1) {
-              focusPhase = 0;
-            }
+          if (focusFade.step(step)) {
+            focus = nextFocus;
+            adoptFocus(m);
           }
-          const chartAlpha =
-            focusPhase === 1
-              ? 1 - smoothstep(0, 1, focusT)
-              : focusPhase === 2
-                ? smoothstep(0, 1, focusT)
-                : 1;
-          const swapAlpha =
-            swapPhase === 1
-              ? 1 - smoothstep(0, 1, swapT)
-              : swapPhase === 2
-                ? smoothstep(0, 1, swapT)
-                : 1;
+          const chartAlpha = focusFade.alpha;
+          const swapAlpha = swap.alpha;
 
           // Eased state: layout, counts, chart type, highlight, dim, tints, colours.
           focusWeight = approach(focusWeight, wantGrid ? 0 : 1, step / LAYOUT_FADE);

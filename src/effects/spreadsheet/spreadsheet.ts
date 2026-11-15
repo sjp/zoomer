@@ -20,6 +20,7 @@ import {
   valueY,
 } from "../charts";
 import { createColorEase, hexToUnitRgb, unitRgbMemo } from "../color";
+import { createFadeThrough } from "../fade";
 import { beginFrame, withScope } from "../gl";
 import { approach, clamp, smoothstep } from "../math";
 import { createTextLayer, TEXT_PALETTE_FLOATS, TEXT_ROLES } from "../text-layer";
@@ -219,8 +220,7 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
       let painted = false;
       let paintedHi = 0;
       /** Sheet change: 1 fading out, 2 fading in; whether the grid fades too (a zoom change). */
-      let swapPhase = 0;
-      let swapT = 0;
+      const swap = createFadeThrough(SWAP_HALF);
       let swapGrid = false;
       let chartLevel = 1;
       let lineLevel = 0;
@@ -892,46 +892,30 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           }
 
           // A new variation, cell size or a full sheet fades the sheet out and back in.
-          if (swapPhase === 0 && (s.seed !== p.seed || wantZoom !== zoom || s.editor.done)) {
-            swapPhase = 1;
-            swapT = 0;
+          if (swap.idle && (s.seed !== p.seed || wantZoom !== zoom || s.editor.done)) {
+            swap.start();
             swapGrid = wantZoom !== zoom;
           }
-          if (swapPhase === 1) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              // Allocates: a new sheet, once per change.
-              if (wantZoom !== zoom) {
-                zoom = wantZoom;
-                relayout();
-              }
-              if (s.seed !== p.seed) {
-                s = createSheet(p.seed, s.tab, 0, L);
-              } else if (s.editor.done) {
-                s = createSheet(s.seed, s.tab + 1, s.generation + 1, L);
-              } else {
-                s = reshapeSheet(s, L);
-              }
-              adopt(s);
-              swapPhase = 2;
-              swapT = 0;
+          if (swap.step(step)) {
+            // Allocates: a new sheet, once per change.
+            if (wantZoom !== zoom) {
+              zoom = wantZoom;
+              relayout();
             }
-          } else if (swapPhase === 2) {
-            swapT = Math.min(1, swapT + step / SWAP_HALF);
-            if (swapT >= 1) {
-              swapPhase = 0;
+            if (s.seed !== p.seed) {
+              s = createSheet(p.seed, s.tab, 0, L);
+            } else if (s.editor.done) {
+              s = createSheet(s.seed, s.tab + 1, s.generation + 1, L);
+            } else {
+              s = reshapeSheet(s, L);
             }
+            adopt(s);
           }
-          const ca =
-            swapPhase === 1
-              ? 1 - smoothstep(0, 1, swapT)
-              : swapPhase === 2
-                ? smoothstep(0, 1, swapT)
-                : 1;
+          const ca = swap.alpha;
           const ga = swapGrid ? ca : 1;
 
           // The typist works on while the sheet is showing.
-          if (swapPhase !== 1) {
+          if (!swap.fadingOut) {
             stepSheet(s, step, pace);
           }
 
