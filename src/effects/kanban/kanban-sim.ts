@@ -12,6 +12,7 @@
  */
 import { minTweenSeconds } from "../charts";
 import { clamp, smoothstep } from "../math";
+import { EASE_PEAK } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
 import { type BoardLayout, cardHeight } from "./kanban-layout";
 
@@ -23,8 +24,6 @@ const MIN_GLIDE_SECONDS = 1.5;
 const MIN_SLIDE_SECONDS = 0.7;
 /** How far a gliding card's path arcs upwards, px at 1080p. */
 const ARC_PX = 30;
-/** Headroom on the codec limit for every move: durations are this much longer than the minimum. */
-const SPEED_MARGIN = 1.1;
 /** A new card fades in while it drops this far (px at 1080p) into place. */
 const ARRIVE_SECONDS = 0.9;
 const ARRIVE_DROP_PX = 24;
@@ -201,16 +200,28 @@ interface Pose {
 
 export const createPose = (): Pose => ({ x: 0, y: 0, lift: 0, alpha: 1, moving: false });
 
-/** Seconds for a lifted glide of `dist` px with an arc of `arc` px, at scale `s`. */
-function glideSeconds(dist: number, arc: number, s: number): number {
-  // The arc adds at most pi * arc to the speed's bound (its derivative peaks there).
-  const ref = (dist + Math.PI * arc) / (s > 0 ? s : 1);
-  return Math.max(MIN_GLIDE_SECONDS, minTweenSeconds(ref) * SPEED_MARGIN);
+/** Samples of a glide's ease checked for its fastest moment (fine enough to miss it by under 1e-5). */
+const GLIDE_SAMPLES = 512;
+
+/**
+ * Seconds for a lifted glide of (`dx`, `dy`) px with an arc of `arc` px, at scale `s`:
+ * the shortest whose fastest moment (the ease's slope times the arced path's) keeps
+ * to the codec's limit.
+ */
+function glideSeconds(dx: number, dy: number, arc: number, s: number): number {
+  let peak = 0;
+  for (let i = 0; i <= GLIDE_SAMPLES; i++) {
+    const t = i / GLIDE_SAMPLES;
+    const u = smoothstep(0, 1, t);
+    const vy = dy - Math.PI * arc * Math.cos(Math.PI * u);
+    peak = Math.max(peak, 6 * t * (1 - t) * Math.hypot(dx, vy));
+  }
+  return Math.max(MIN_GLIDE_SECONDS, minTweenSeconds(peak / EASE_PEAK / (s > 0 ? s : 1)));
 }
 
 /** Seconds for a reflow slide of `dist` px at scale `s`. */
 function slideSeconds(dist: number, s: number): number {
-  return Math.max(MIN_SLIDE_SECONDS, minTweenSeconds(dist / (s > 0 ? s : 1)) * SPEED_MARGIN);
+  return Math.max(MIN_SLIDE_SECONDS, minTweenSeconds(dist / (s > 0 ? s : 1)));
 }
 
 /** Writes card `c`'s pose at time `now` into `out`. */
@@ -301,7 +312,7 @@ function retarget(b: Board, c: Card, x: number, y: number, snap: boolean, delay 
     }
     c.tx = x;
     c.ty = y;
-    c.dur = glideSeconds(Math.hypot(x - c.fx, y - c.fy), c.arc, s);
+    c.dur = glideSeconds(x - c.fx, y - c.fy, c.arc, s);
     if (b.mover === c) {
       // The carry lasts as long as the new glide; the next move waits for it.
       b.moveEnd = c.t0 + 2 * LIFT_SECONDS + c.dur;
@@ -535,7 +546,7 @@ function tryMove(b: Board): boolean {
   card.t0 = now;
   card.lifted = true;
   card.arc = ARC_PX * b.layout.s;
-  card.dur = glideSeconds(Math.hypot(card.tx - card.fx, card.ty - card.fy), card.arc, b.layout.s);
+  card.dur = glideSeconds(card.tx - card.fx, card.ty - card.fy, card.arc, b.layout.s);
   b.mover = card;
   b.moveEnd = now + 2 * LIFT_SECONDS + card.dur;
   b.moveCount++;
