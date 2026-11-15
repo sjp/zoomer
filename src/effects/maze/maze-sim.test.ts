@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DIR_X, DIR_Y, EASE_PEAK, SEG_WALK, walkEase } from "../grid-walk";
-import { MAX_PATTERN_HZ } from "../motion-limits";
+import { DIR_X, DIR_Y, SEG_WALK, walkEase } from "../grid-walk";
+import { EASE_PEAK, MAX_PATTERN_HZ } from "../motion-limits";
 import { MAX_SIZE, MAX_SPEED, MIN_SIZE, MIN_SPEED } from "./maze.meta";
 import {
   advanceRat,

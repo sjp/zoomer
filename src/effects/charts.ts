@@ -14,7 +14,7 @@
  */
 import { createUniforms, type Scope, scopedProgram } from "./gl";
 import { smoothstep } from "./math";
-import { MAX_FEATURE_PX_PER_FRAME, pxPerReferenceFrame } from "./motion-limits";
+import { EASE_PEAK, MAX_FEATURE_PX_PER_FRAME, pxPerReferenceFrame } from "./motion-limits";
 
 // ---------------------------------------------------------------------------
 // Ticks and number formatting
@@ -208,9 +208,6 @@ export const priceDecimals = (price: number): number =>
 // ---------------------------------------------------------------------------
 // Motion
 
-/** Steepest slope of the smoothstep ease: its peak speed is this times the average. */
-export const EASE_PEAK_SLOPE = 1.5;
-
 /** Reference frame height (px) that `MAX_FEATURE_PX_PER_FRAME` is measured at. */
 const REFERENCE_HEIGHT = 1080;
 
@@ -223,7 +220,7 @@ export function minTweenSeconds(refPx: number): number {
     return 0;
   }
   // Px per reference frame at one second's duration; it scales as 1 / seconds.
-  const perFrameAtOneSecond = pxPerReferenceFrame((EASE_PEAK_SLOPE * refPx) / REFERENCE_HEIGHT);
+  const perFrameAtOneSecond = pxPerReferenceFrame((EASE_PEAK * refPx) / REFERENCE_HEIGHT);
   return perFrameAtOneSecond / MAX_FEATURE_PX_PER_FRAME;
 }
 
@@ -233,7 +230,7 @@ export function minTweenSeconds(refPx: number): number {
  */
 export const tweenPeakPxPerFrame = (refPx: number, seconds: number): number =>
   seconds > 0
-    ? pxPerReferenceFrame((EASE_PEAK_SLOPE * Math.abs(refPx)) / REFERENCE_HEIGHT / seconds)
+    ? pxPerReferenceFrame((EASE_PEAK * Math.abs(refPx)) / REFERENCE_HEIGHT / seconds)
     : Infinity;
 
 /**

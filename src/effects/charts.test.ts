@@ -13,7 +13,6 @@ import {
   createChartRenderer,
   createStepSlide,
   createTicks,
-  EASE_PEAK_SLOPE,
   formatCompact,
   formatFixed,
   formatPercent,
@@ -50,7 +49,7 @@ import {
   tweenPeakPxPerFrame,
   valueY,
 } from "./charts";
-import { MAX_FEATURE_PX_PER_FRAME } from "./motion-limits";
+import { EASE_PEAK, MAX_FEATURE_PX_PER_FRAME } from "./motion-limits";
 
 describe("niceStep", () => {
   it.each([
@@ -237,7 +236,7 @@ describe("step slide", () => {
       peak = Math.max(peak, (last - o) / 0.001);
       last = o;
     }
-    expect(peak).toBeCloseTo(EASE_PEAK_SLOPE * 100, 0);
+    expect(peak).toBeCloseTo(EASE_PEAK * 100, 0);
   });
 });
 

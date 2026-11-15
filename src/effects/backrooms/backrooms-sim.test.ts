@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DIR_X, DIR_Y, EASE_PEAK } from "../grid-walk";
-import { MAX_PATTERN_HZ } from "../motion-limits";
+import { DIR_X, DIR_Y } from "../grid-walk";
+import { EASE_PEAK, MAX_PATTERN_HZ } from "../motion-limits";
 import { backroomsMeta, MAX_SPEED, MIN_SPEED } from "./backrooms.meta";
 import {
   advanceFlicker,

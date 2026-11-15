@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  EASE_PEAK,
   easedMoveSeconds,
   type GridPose,
   SEG_HOLD,
@@ -8,7 +7,7 @@ import {
   SEG_WALK,
   updateGridPose,
 } from "./grid-walk";
-import { MAX_PATTERN_HZ } from "./motion-limits";
+import { EASE_PEAK, MAX_PATTERN_HZ } from "./motion-limits";
 
 const pose = (kind: number, dir: number, progress: number, turn = 0): GridPose => ({
   cx: 3,

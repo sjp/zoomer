@@ -11,7 +11,6 @@
 import {
   DIR_X,
   DIR_Y,
-  EASE_PEAK,
   easedMoveSeconds,
   type GridPose,
   SEG_HOLD,
@@ -19,7 +18,7 @@ import {
   SEG_WALK,
   updateGridPose,
 } from "../grid-walk";
-import { MAX_PATTERN_HZ } from "../motion-limits";
+import { EASE_PEAK, MAX_PATTERN_HZ } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
 import { MAX_SIZE, MIN_SIZE, MIN_SPEED, MAX_SPEED } from "./maze.meta";
 

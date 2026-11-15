@@ -22,9 +22,9 @@
  * it passes are always open: lined-up doorways through the rooms, a corridor
  * now and then, an open pillared hall now and then, and a hall at every bend.
  */
-import { DIR_X, DIR_Y, EASE_PEAK } from "../grid-walk";
+import { DIR_X, DIR_Y } from "../grid-walk";
 import { approach, clamp, smoothstep } from "../math";
-import { capPatternSpeed, MAX_PATTERN_HZ } from "../motion-limits";
+import { capPatternSpeed, EASE_PEAK, MAX_PATTERN_HZ } from "../motion-limits";
 import { createRng, hash32 } from "../noise";
 import { MAX_SPEED, MIN_SPEED } from "./backrooms.meta";
 

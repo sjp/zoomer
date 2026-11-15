@@ -7,14 +7,11 @@
  * Cell (x, y) covers [x, x + 1] x [y, y + 1] and y points north. Headings are
  * 0..3 for east, north, west and south; a left turn adds 1.
  */
-import { capPatternSpeed } from "./motion-limits";
+import { capPatternSpeed, EASE_PEAK } from "./motion-limits";
 
 /** Unit steps for the headings east, north, west, south. */
 export const DIR_X: readonly number[] = [1, 0, -1, 0];
 export const DIR_Y: readonly number[] = [0, 1, 0, -1];
-
-/** Peak over mean rate of a smoothstep ease (3x^2 - 2x^3 peaks at slope 1.5). */
-export const EASE_PEAK = 1.5;
 
 /**
  * Seconds for an eased move of `span` (a cell, or a quarter turn in radians) at

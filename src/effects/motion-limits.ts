@@ -12,6 +12,9 @@ export const MAX_PATTERN_HZ = 5;
 /** No thin bright feature moves further than this per frame, in px at 1080p and 30 fps. */
 export const MAX_FEATURE_PX_PER_FRAME = 10;
 
+/** Peak over mean speed of a smoothstep ease (3x^2 - 2x^3 peaks at slope 1.5). */
+export const EASE_PEAK = 1.5;
+
 /** The reference frame the per-frame limit is measured in: 1080 px tall, 30 fps. */
 const REFERENCE_HEIGHT = 1080;
 const REFERENCE_FPS = 30;
