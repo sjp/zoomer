@@ -82,12 +82,10 @@ describe("this is fine", () => {
     for (frame = 0; frame < 8; frame++) {
       instance.frame(1 / 60, params);
     }
-    // After the bubble has started fading in, nothing but its opacity changes.
+    // After the bubble has started fading in, nothing but its opacity changes,
+    // and the still flame profile isn't rebuilt or uploaded.
     expect(new Set(uniforms)).toEqual(new Set(["uniform1f"]));
-    expect(uploads.length).toBe(5);
-    for (const u of uploads) {
-      expect(u).toEqual(uploads[0]);
-    }
+    expect(uploads).toEqual([]);
     instance.dispose?.();
     expect(fake.errors).toEqual([]);
     expect(fake.live()).toEqual([]);

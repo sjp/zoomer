@@ -331,9 +331,9 @@ function updateTargets(fire: Fire): void {
 /**
  * Advances the eased spread and smoke towards their settings and each anchor's
  * size towards its target, by `dt` seconds. The first step starts everything at
- * its target.
+ * its target. Returns whether anything changed.
  */
-export function stepFire(fire: Fire, dt: number, intensity: number, smoke: number): void {
+export function stepFire(fire: Fire, dt: number, intensity: number, smoke: number): boolean {
   const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
   if (!fire.started) {
     fire.started = true;
@@ -341,10 +341,13 @@ export function stepFire(fire: Fire, dt: number, intensity: number, smoke: numbe
     fire.smoke = clamp(smoke, 0, 1);
     updateTargets(fire);
     fire.size.set(fire.target);
-    return;
+    return true;
   }
+  const was = fire.intensity;
+  const wasSmoke = fire.smoke;
   fire.intensity = approach(fire.intensity, clamp(intensity, 0, 1), PARAM_RATE * step);
   fire.smoke = approach(fire.smoke, clamp(smoke, 0, 1), PARAM_RATE * step);
+  let changed = fire.intensity !== was || fire.smoke !== wasSmoke;
   updateTargets(fire);
   for (let e = 0; e < EDGE_COUNT; e++) {
     const maxStep = SIZE_RATE * step;
@@ -352,9 +355,14 @@ export function stepFire(fire: Fire, dt: number, intensity: number, smoke: numbe
       const s = e * MAX_PER_EDGE + i;
       // Rate relative to the anchor's band, so a big anchor doesn't take longer.
       const band = Math.max(fire.limit[s], 1);
-      fire.size[s] = approach(fire.size[s], fire.target[s], maxStep * band);
+      const size = approach(fire.size[s], fire.target[s], maxStep * band);
+      if (size !== fire.size[s]) {
+        fire.size[s] = size;
+        changed = true;
+      }
     }
   }
+  return changed;
 }
 
 /** Total target flame size round the room: grows with the spread. */

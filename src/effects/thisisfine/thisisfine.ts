@@ -360,6 +360,9 @@ export const thisisfine = defineEffect(thisisfineMeta, {
       let clock = CLOCK_START;
       let style = -1;
       let layout: RoomLayout | null = null;
+      /** Motion clock and flicker amount the profile table was last built for. */
+      let profileClock = Number.NaN;
+      let profileMotion = Number.NaN;
 
       /** Current room slot, and what it shows. */
       let roomSlot = 0;
@@ -389,6 +392,7 @@ export const thisisfine = defineEffect(thisisfineMeta, {
           const refH = height / scale;
           const seed = Math.round(p.seed);
 
+          let profileStale = false;
           if (
             layout === null ||
             layout.width !== refW ||
@@ -397,11 +401,20 @@ export const thisisfine = defineEffect(thisisfineMeta, {
           ) {
             layout = roomLayout(refW, refH, seed);
             layoutFire(fire, refW, refH, seed);
+            profileStale = true;
           }
-          stepFire(fire, step, p.intensity, p.smoke);
-          buildProfile(fire, profile.data, flickerNoise, clock, motion);
-          gl.activeTexture(gl.TEXTURE0 + UNIT_PROFILE);
-          profile.upload();
+          // The flame profile only changes as the fire eases or the flicker moves.
+          if (
+            stepFire(fire, step, p.intensity, p.smoke) ||
+            profileStale ||
+            clock !== profileClock ||
+            motion !== profileMotion
+          ) {
+            buildProfile(fire, profile.data, flickerNoise, clock, motion);
+            profile.upload();
+            profileClock = clock;
+            profileMotion = motion;
+          }
 
           // The room: repaint on a room or variation change (crossfading from the
           // old slot), or on a settled resize (in place).
