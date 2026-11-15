@@ -722,6 +722,66 @@ input[type="color"] {
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   background: none;
+  cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
+/* Consecutive colours: a grid of swatches, captioned underneath. Five a row where
+   the panel is wide enough for a one-word caption like "Background", else fewer. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(58px, calc((100% - 32px) / 5)), 1fr));
+  gap: 10px 8px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.swatch input[type="color"] {
+  width: 100%;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.swatch-caption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--muted);
+  text-align: center;
+}
+
+.swatch-caption label {
+  min-width: 0;
+  overflow-wrap: break-word;
+  cursor: pointer;
+}
+
+/* Beside the caption, on its first line, without making the row taller. */
+.swatch-caption .param-reset {
+  width: 14px;
+  height: 14px;
+  margin: 0 -4px 0 0;
 }
 
 textarea {
@@ -1104,9 +1164,25 @@ select:disabled {
     height: 24px;
   }
 
-  input[type="color"] {
+  input[type="color"],
+  .swatch input[type="color"] {
     width: 56px;
     height: 44px;
+  }
+
+  .swatch input[type="color"] {
+    width: 100%;
+  }
+
+  .swatch-caption {
+    font-size: 12px;
+  }
+
+  /* A finger-sized target that overhangs the caption rather than pushing it about. */
+  .swatch-caption .param-reset {
+    width: 28px;
+    height: 28px;
+    margin: -7px -14px -7px -6px;
   }
 
   /* A taller hit area and a bigger thumb, which is too fiddly for a finger at desktop size. */

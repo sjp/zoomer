@@ -12,9 +12,51 @@ interface Props {
 }
 
 /**
+ * Puts one param back to its default. It goes away with the change, so from the
+ * keyboard (no click count) focus moves to the field instead; a tap leaves focus
+ * alone, so it opens no on-screen keyboard.
+ */
+function ResetButton({
+  inputId,
+  label,
+  onReset,
+}: {
+  inputId: string;
+  label: string;
+  onReset: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="param-reset"
+      aria-label={`Reset ${label}`}
+      title={`Reset ${label}`}
+      onClick={(e) => {
+        onReset();
+        if (e.detail === 0) {
+          document.getElementById(inputId)?.focus();
+        }
+      }}
+    >
+      <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+        <path
+          d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2M3.5 2.5v2.6h2.6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
+/**
  * The label, then a reset button while the value differs from the default, then
- * `after` (a slider's value, which the slider itself also reports) at the end of the row. The button sits outside the label
- * element, so the field's accessible name stays the label alone.
+ * `after` (a slider's value, which the slider itself also reports) at the end of the
+ * row. The button sits outside the label element, so the field's accessible name
+ * stays the label alone.
  */
 function LabelRow({
   inputId,
@@ -33,33 +75,47 @@ function LabelRow({
     <div className="control-label">
       <label htmlFor={inputId}>{def.label}</label>
       {onReset && !isDefault(def, value) && (
-        <button
-          type="button"
-          className="param-reset"
-          aria-label={`Reset ${def.label}`}
-          title={`Reset ${def.label}`}
-          onClick={(e) => {
-            onReset();
-            // The button goes away with the change; from the keyboard (no click count),
-            // keep focus nearby on the field. A tap doesn't, so it opens no keyboard.
-            if (e.detail === 0) {
-              document.getElementById(inputId)?.focus();
-            }
-          }}
-        >
-          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-            <path
-              d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2M3.5 2.5v2.6h2.6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <ResetButton inputId={inputId} label={def.label} onReset={onReset} />
       )}
       {after}
+    </div>
+  );
+}
+
+/**
+ * A colour's caption under its swatch: the label without a trailing "colour", which
+ * the grid makes plain ("Sky top colour" → "Sky top"), keeping a number or a note in
+ * brackets after it ("Light colour 1" → "Light 1", "Wax colour (top)" → "Wax (top)").
+ */
+function swatchCaption(label: string): string {
+  return label.replace(/ colour(?=(?: \d+| \([^)]*\))?$)/i, "");
+}
+
+/**
+ * A colour param as one cell of a swatch grid: the swatch, and under it a short
+ * caption that also opens the picker. The full label stays the input's accessible
+ * name. The reset button sits beside the caption, clear of the swatch.
+ */
+export function ColourSwatch({ id, def, value, onChange, onReset }: Props) {
+  const inputId = `param-${id}`;
+  return (
+    <div className="swatch">
+      <input
+        id={inputId}
+        type="color"
+        aria-label={def.label}
+        title={def.label}
+        value={String(value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
+      />
+      <div className="swatch-caption">
+        <label htmlFor={inputId}>{swatchCaption(def.label)}</label>
+        {onReset && !isDefault(def, value) && (
+          <ResetButton inputId={inputId} label={def.label} onReset={onReset} />
+        )}
+      </div>
     </div>
   );
 }

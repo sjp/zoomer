@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { changedCount, groupParams } from "../effects/param-groups";
 import type { AnyParamValues, ParamSchema, ParamValue } from "../effects/types";
-import { ParamControl } from "./ParamControl";
+import { ColourSwatch, ParamControl } from "./ParamControl";
 
 interface SectionProps {
   title: string;
@@ -63,6 +63,24 @@ export function Section({ title, open, onToggle, changed = 0, children }: Sectio
   );
 }
 
+/**
+ * Splits keys into runs, so consecutive colours can share a swatch grid while every
+ * other param, and a colour on its own, keeps its own row.
+ */
+function colourRuns(schema: ParamSchema, keys: readonly string[]) {
+  const runs: { colours: boolean; keys: string[] }[] = [];
+  for (const key of keys) {
+    const colours = schema[key].kind === "color";
+    const last = runs.at(-1);
+    if (last && last.colours && colours) {
+      last.keys.push(key);
+    } else {
+      runs.push({ colours, keys: [key] });
+    }
+  }
+  return runs;
+}
+
 interface Props {
   /** Keys the controls' ids, so switching effect gives every control a fresh state. */
   effectId: string;
@@ -87,25 +105,38 @@ export function ParamSections({
   onParamChange,
 }: Props) {
   const groups = groupParams(schema);
+  const props = (key: string) => {
+    const def = schema[key];
+    return {
+      key: `${effectId}-${key}`,
+      id: key,
+      def,
+      value: values[key] ?? def.default,
+      onChange: (v: ParamValue) => {
+        onParamChange(key, v);
+      },
+      onReset: () => {
+        onParamChange(key, def.default);
+      },
+    };
+  };
   const controls = (keys: readonly string[]) => (
     <div className="controls">
-      {keys.map((key) => {
-        const def = schema[key];
-        return (
-          <ParamControl
-            key={`${effectId}-${key}`}
-            id={key}
-            def={def}
-            value={values[key] ?? def.default}
-            onChange={(v) => {
-              onParamChange(key, v);
-            }}
-            onReset={() => {
-              onParamChange(key, def.default);
-            }}
-          />
-        );
-      })}
+      {colourRuns(schema, keys).map((run) =>
+        run.colours && run.keys.length > 1 ? (
+          <div key={`${effectId}-${run.keys.join(",")}`} className="swatches">
+            {run.keys.map((key) => {
+              const { key: reactKey, ...rest } = props(key);
+              return <ColourSwatch key={reactKey} {...rest} />;
+            })}
+          </div>
+        ) : (
+          run.keys.map((key) => {
+            const { key: reactKey, ...rest } = props(key);
+            return <ParamControl key={reactKey} {...rest} />;
+          })
+        ),
+      )}
     </div>
   );
   if (groups.length === 1) {

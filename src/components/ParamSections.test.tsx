@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParamSchema, ParamValue } from "../effects/types";
+import { defined } from "../test/defined";
 import { ParamSections } from "./ParamSections";
 
 afterEach(() => {
@@ -74,6 +75,41 @@ describe("ParamSections", () => {
     expect(onParamChange.mock.calls).toEqual([
       ["a", 3],
       ["b", 5],
+    ]);
+  });
+
+  it("shows consecutive colours as captioned swatches, named by their full label", () => {
+    const { onParamChange } = renderSections(
+      {
+        a: colour("Light colour 1", "Look"),
+        b: colour("Sky top colour", "Look"),
+        c: colour("Wax colour (top)", "Look"),
+        d: num("Size", "Look"),
+        e: colour("Background", "Look"),
+      },
+      { b: "#ffffff" },
+    );
+    expect(document.querySelectorAll(".swatches")).toHaveLength(1);
+    const grid = [defined(document.querySelector(".swatches"), "the swatch grid")];
+    expect([...grid[0].querySelectorAll("label")].map((l) => l.textContent)).toEqual([
+      "Light 1",
+      "Sky top",
+      "Wax (top)",
+    ]);
+    const sky = screen.getByLabelText<HTMLInputElement>("Sky top colour");
+    expect(sky.type).toBe("color");
+    expect(grid[0].contains(sky)).toBe(true);
+    // The caption opens the same picker.
+    expect(screen.getByText("Sky top").closest("label")?.htmlFor).toBe(sky.id);
+    // A colour on its own keeps an ordinary row.
+    expect(grid[0].contains(screen.getByLabelText("Background"))).toBe(false);
+    fireEvent.input(sky, { target: { value: "#123456" } });
+    const reset = screen.getByRole("button", { name: "Reset Sky top colour" });
+    expect(reset.closest("label")).toBeNull();
+    fireEvent.click(reset);
+    expect(onParamChange.mock.calls).toEqual([
+      ["b", "#123456"],
+      ["b", "#000000"],
     ]);
   });
 });
