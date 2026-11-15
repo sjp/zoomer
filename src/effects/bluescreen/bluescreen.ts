@@ -16,6 +16,7 @@ import {
   classicCursor,
   createMeasure,
   CURSOR_INK,
+  logLineHeight,
   paintLog,
   paintPercent,
   paintScreen,
@@ -342,7 +343,7 @@ export const bluescreen = defineEffect(bluescreenMeta, {
           put(0, 0, 0, 0, 0, 0, 0, 0, WHITE, 0);
         }
         if (layout?.style === "kernel") {
-          const lh = layout.lineHeight * scale;
+          const lh = logLineHeight(layout, scale);
           const e = smoothstep(0, 1, slot.scroll) * lh;
           const v0 = e / slot.logHeight;
           const v1 = (e + TRACE_ROWS * lh) / slot.logHeight;
@@ -365,7 +366,12 @@ export const bluescreen = defineEffect(bluescreenMeta, {
           classicCursor(layout, scale, cursorBox);
         } else if (layout?.style === "kernel") {
           cursorBox[0] = Math.round(layout.cursor.x * scale);
-          cursorBox[1] = Math.round(layout.cursor.y * scale);
+          // Under the log's last whole-pixel line, wherever its rounding left it.
+          const logBottom = layout.log.y + layout.log.h;
+          cursorBox[1] =
+            Math.round(layout.log.y * scale) +
+            TRACE_ROWS * logLineHeight(layout, scale) +
+            Math.round((layout.cursor.y - logBottom) * scale);
           cursorBox[2] = Math.max(1, Math.round(layout.cursor.w * scale));
           cursorBox[3] = Math.max(1, Math.round(layout.cursor.h * scale));
         }

@@ -218,20 +218,25 @@ export function paintPercent(layout: ModernLayout, text: string, scale: number) 
   });
 }
 
+/** The kernel log's line pitch in whole device px, so every line lands on the pixel grid. */
+export function logLineHeight(layout: KernelLayout, scale: number): number {
+  return Math.max(1, Math.round(layout.lineHeight * scale));
+}
+
 /**
  * The kernel log's lines, one under another, on a transparent canvas as wide as
  * the log window and `lines.length` lines tall, device px.
  */
 export function paintLog(layout: KernelLayout, lines: readonly string[], scale: number) {
-  const lineHeight = layout.lineHeight * scale;
+  const lineHeight = logLineHeight(layout, scale);
   const w = Math.max(1, Math.ceil(layout.log.w * scale) + 4);
-  const h = Math.max(1, Math.ceil(lines.length * lineHeight));
+  const h = Math.max(1, lines.length * lineHeight);
   return paintCanvas(w, h, (ctx) => {
     ctx.fillStyle = KERNEL_INK;
     ctx.textBaseline = "top";
     ctx.font = fontFor("mono", layout.size * scale);
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], 0, Math.round(i * lineHeight));
+      ctx.fillText(lines[i], 0, i * lineHeight);
     }
   });
 }

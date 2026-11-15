@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeasuringCanvas } from "../../test/offscreen-canvas";
-import { createMeasure, paintLog, paintScreen } from "./bluescreen-art";
+import { createMeasure, logLineHeight, paintLog, paintScreen } from "./bluescreen-art";
 import { layoutClassic, layoutKernel, layoutModern } from "./bluescreen-layout";
 import { bluescreenMeta } from "./bluescreen.meta";
 
@@ -46,8 +46,16 @@ describe("blue screen art", () => {
   it("paints the kernel log one line under another", () => {
     const layout = layoutKernel(CODE, 1920, createMeasure());
     const canvas = paintLog(layout, ["a", "b", "c"], 1) as unknown as MeasuringCanvas;
-    expect(canvas.height).toBe(Math.ceil(3 * layout.lineHeight));
+    const lh = logLineHeight(layout, 1);
+    expect(canvas.height).toBe(3 * lh);
     const ys = MeasuringCanvas.calls.filter((c) => c.method === "fillText").map((c) => c.args[2]);
-    expect(ys).toEqual([0, Math.round(layout.lineHeight), Math.round(2 * layout.lineHeight)]);
+    expect(ys).toEqual([0, lh, 2 * lh]);
+  });
+
+  it.each([1, 1.25, 1.5, 2])("steps the kernel log in whole device px at scale %d", (scale) => {
+    const layout = layoutKernel(CODE, 1920, createMeasure());
+    const lh = logLineHeight(layout, scale);
+    expect(Number.isInteger(lh)).toBe(true);
+    expect(Math.abs(lh - layout.lineHeight * scale)).toBeLessThanOrEqual(0.5);
   });
 });
