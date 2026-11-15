@@ -267,6 +267,26 @@ describe("route", () => {
     expect(corners).toBeLessThanOrEqual(2);
   });
 
+  it.each(SEEDS)("leads on from chunk to chunk for hundreds of legs (seed %d)", (seed) => {
+    const world = createWorld(seed);
+    let cx = 0;
+    let cy = 0;
+    let heading = laneAt(world, cx, cy).dirOut;
+    let corners = 0;
+    for (let i = 0; i < 5000; i++) {
+      cx += DIR_X[heading];
+      cy += DIR_Y[heading];
+      const lane = laneAt(world, cx, cy);
+      expect(lane.style).not.toBe(STYLE_NONE);
+      expect(lane.dirIn).toBe(heading);
+      corners += lane.corner ? 1 : 0;
+      heading = lane.dirOut;
+    }
+    // Legs are 6 to 11 chunks long.
+    expect(corners).toBeGreaterThan(5000 / 12);
+    expect(corners).toBeLessThan(5000 / 6);
+  });
+
   it("has every kind of stretch across the variations", () => {
     const styles = new Set<number>();
     let corners = 0;

@@ -178,8 +178,9 @@ function lane(world: World, u: number, v: number, d: number, e: number): LaneInf
 
 /**
  * The route's place in world chunk (cx, cy). Behind the start the route runs
- * on straight forever; ahead, the corners rise in both u and v, so the search
- * stops at the first corner past the chunk.
+ * on straight forever; ahead, the corners rise in both u and v, so the corners
+ * at or below the chunk in both are a prefix of the route, and only the leg
+ * from the last of them (found by bisection) can pass through it.
  */
 export function laneAt(world: World, cx: number, cy: number): LaneInfo {
   const [u, v] = toCanonical(world.orient, cx, cy);
@@ -190,21 +191,25 @@ export function laneAt(world: World, cx: number, cy: number): LaneInfo {
     return NO_LANE;
   }
   const { routeU, routeV } = world;
-  for (let k = 0; ; k++) {
-    extendRoute(world, k + 2);
-    const au = routeU[k];
-    const av = routeV[k];
-    if (au > u || av > v) {
-      return NO_LANE;
-    }
-    const bu = routeU[k + 1];
-    const bv = routeV[k + 1];
-    const on = legDir(k) === 0 ? v === av && u <= bu : u === au && v <= bv;
-    if (on) {
-      const d = legDir(k);
-      return u === bu && v === bv ? lane(world, u, v, d, legDir(k + 1)) : lane(world, u, v, d, d);
+  while (routeU[routeU.length - 1] <= u && routeV[routeV.length - 1] <= v) {
+    extendRoute(world, routeU.length);
+  }
+  // Corner lo is at or below (u, v) in both, corner hi is not.
+  let lo = 0;
+  let hi = routeU.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (routeU[mid] <= u && routeV[mid] <= v) {
+      lo = mid;
+    } else {
+      hi = mid;
     }
   }
+  if (lo > 0 && u === routeU[lo] && v === routeV[lo]) {
+    return lane(world, u, v, legDir(lo - 1), legDir(lo));
+  }
+  const d = legDir(lo);
+  return (d === 0 ? v === routeV[lo] : u === routeU[lo]) ? lane(world, u, v, d, d) : NO_LANE;
 }
 
 /** The route's doorway in an edge, as an `edgeDoors` bit. */
