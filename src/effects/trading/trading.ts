@@ -406,16 +406,15 @@ export const trading = defineEffect(tradingMeta, {
       };
 
       /** Watchlist column positions: sparkline span, and the right edges of last and change. */
+      const cols = { sparkX: 0, sparkW: 0, lastX: 0, chgX: 0, pad: 0 };
       const watchCols = (r: Rect) => {
         const pad = Math.round(PAD * scale);
-        return {
-          sparkX: r.x + Math.round(r.w * 0.34),
-          sparkW: Math.round(r.w * 0.22),
-          lastX: r.x + Math.round(r.w * 0.79),
-          chgX: r.x + r.w - pad,
-          chgW: Math.round(r.w * 0.2),
-          pad,
-        };
+        cols.sparkX = r.x + Math.round(r.w * 0.34);
+        cols.sparkW = Math.round(r.w * 0.22);
+        cols.lastX = r.x + Math.round(r.w * 0.79);
+        cols.chgX = r.x + r.w - pad;
+        cols.pad = pad;
+        return cols;
       };
 
       const paintWatchRow = (m: Market, i: number) => {
