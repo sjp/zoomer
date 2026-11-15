@@ -23,7 +23,6 @@ import {
   STYLE_BODY,
   STYLE_COMMENT,
   STYLE_COUNT,
-  STYLE_TITLE,
   ZOOM_MARGINS,
   ZOOM_PAGE,
 } from "./document-layout";
@@ -60,8 +59,9 @@ const CARET_HOLD = 0.5;
 const CARET_HZ = 1;
 /** Chart vertices, text regions a frame, comments and toolbar blocks drawn at most. */
 const MESH_CAPACITY = 20000;
-const MAX_QUADS = 40;
 const MAX_COMMENTS = 48;
+/** The page and each comment may wrap round the ring (two quads each), plus the chrome labels. */
+const MAX_QUADS = 2 * MAX_COMMENTS + 4;
 const MAX_ICONS = 24;
 /** Points in one squiggle's zigzag at most. */
 const SQUIGGLE_POINTS = 96;
@@ -181,9 +181,11 @@ function withCommas(n: number): string {
  * A word-processor window drafting a report: a toolbar with a style box, a ruler,
  * one or more white pages on a grey desk, and a status strip with a page and word
  * count. Text types itself a character at a time (`document-sim.ts`) onto a
- * device-pixel canvas (`text-layer.ts`) that redraws only the line being typed;
- * when the caret nears the bottom the view scrolls a paragraph at a time, the
- * canvas redrawn once for the whole step and slid on the GPU while it eases.
+ * device-pixel canvas (`text-layer.ts`) that redraws only the line being typed.
+ * The canvas holds the doc rows in view as a ring: when the caret nears the
+ * bottom the view eases down a paragraph at a time, each frame painting just
+ * the rows it reveals over the ones it hides, the view drawn as two quads where
+ * the ring wraps.
  * Pages, tables, bullets, comment balloons, the caret and spelling squiggles are
  * triangles in one chart mesh rebuilt each frame.
  */
@@ -200,6 +202,11 @@ export const documentPage = defineEffect(documentMeta, {
       }
       const C = (i: number) => col[i];
       const textPalette = new Float32Array(TEXT_PALETTE_FLOATS);
+      const maxTexture = Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 4096;
+      /** Up to three canvas row ranges (and doc-to-canvas y shifts) a doc row range lands on: see `ringPieces`. */
+      const pieceA = new Int32Array(3);
+      const pieceB = new Int32Array(3);
+      const pieceShift = new Int32Array(3);
       const commentLevel = new Float32Array(MAX_COMMENTS);
       const iconX = new Float32Array(MAX_ICONS);
       const sqKnown = new Int32Array(MAX_SQUIGGLES);
@@ -229,11 +236,20 @@ export const documentPage = defineEffect(documentMeta, {
       let iconCount = 0;
       let styleX = 0;
 
-      /** The canvas: the document region (`docW` x `docH`, from doc y `canvasTop`), then a band of chrome labels. */
+      /**
+       * The canvas: a ring of `docH` doc rows (doc y lands on canvas row
+       * `mod(y, docH) + 1`, holding the rows from `ringTop`), with a guard row on
+       * each side copying the row across the wrap so filtering reads the right
+       * neighbour, then a band of chrome labels. Columns: the page's on-screen
+       * columns from page x `pageLeft` (`pageCols` wide), then the comment
+       * pane's on-screen columns (`commentCols` wide).
+       */
       let painted = false;
-      let docW = 1;
       let docH = 1;
-      let canvasTop = 0;
+      let ringTop = 0;
+      let pageLeft = 0;
+      let pageCols = 1;
+      let commentCols = 0;
       let bandY = 0;
       /** What the canvas shows of the typist: segment and characters, the status and style labels. */
       let pSeg = -1;
@@ -301,15 +317,51 @@ export const documentPage = defineEffect(documentMeta, {
       };
       const R = (n: number) => Math.round(n * scale);
 
-      /** Repaints line `i` with whatever of it is typed. */
-      const paintLine = (d: Doc, t: Typist, Ld: DocLayout, i: number) => {
-        const y = Ld.lineY[i] - canvasTop;
-        const h = Ld.lineH[i];
-        if (y + h <= 0 || y >= docH) {
-          return;
+      /**
+       * Fills `pieceA/B/Shift` with where doc rows `y0 .. y1` (clipped to the
+       * ring's rows) land on the canvas: the ring row range, cut where it wraps,
+       * plus the guard rows; returns how many pieces.
+       */
+      const ringPieces = (y0: number, y1: number): number => {
+        const a = Math.max(y0, ringTop);
+        const b = Math.min(y1, ringTop + docH);
+        if (b <= a) {
+          return 0;
         }
+        const shift = (((a % docH) + docH) % docH) + 1 - a;
+        let n = 0;
+        for (let k = -1; k <= 1; k++) {
+          const sh = shift + k * docH;
+          const pa = Math.max(0, a + sh);
+          const pb = Math.min(docH + 2, b + sh);
+          if (pb > pa) {
+            pieceA[n] = pa;
+            pieceB[n] = pb;
+            pieceShift[n] = sh;
+            n++;
+          }
+        }
+        return n;
+      };
+
+      /** Clips drawing to canvas rect `x .. x + w` by rows `a .. b`, and clears it; undo with `ctx.restore()`. */
+      const clipClear = (
+        ctx: OffscreenCanvasRenderingContext2D,
+        x: number,
+        w: number,
+        a: number,
+        b: number,
+      ) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, a, w, b - a);
+        ctx.clip();
+        text.clear(x, a, w, b - a);
+      };
+
+      /** Draws whatever of line `i` is typed, doc y shifted by `shift` onto the canvas. */
+      const drawLine = (d: Doc, t: Typist, Ld: DocLayout, i: number, shift: number) => {
         const s = Ld.lineSeg[i];
-        text.clear(Ld.lineX[i] - 2, y, Ld.lineW[i] + 4, h);
         const end = Math.min(Ld.lineEnd[i], typedChars(d, t, s));
         if (end <= Ld.lineStart[i]) {
           return;
@@ -318,12 +370,60 @@ export const documentPage = defineEffect(documentMeta, {
         const kind = d.blocks[d.segments[s].block].kind;
         fill(
           d.segments[s].text.slice(Ld.lineStart[i], end),
-          Ld.lineX[i],
-          y + h / 2,
+          Ld.lineX[i] - pageLeft,
+          Ld.lineY[i] + shift + Ld.lineH[i] / 2,
           kind === BLOCK_TITLE || kind === BLOCK_HEADING ? TEXT_ROLES.up : TEXT_ROLES.primary,
           fonts[style],
           Ld.lineW[i] + (kind === BLOCK_TABLE ? 0 : 2 * geom.k),
         );
+      };
+
+      /** Draws comment `c`'s author and text, doc y shifted by `shift` onto the canvas. */
+      const drawComment = (Ld: DocLayout, ci: number, shift: number) => {
+        const g = geom;
+        const c = Ld.comments[ci];
+        const tx = pageCols + g.commentBar + g.commentPad;
+        const tw = g.commentW - g.commentBar - 2 * g.commentPad;
+        let ty = c.y + shift + g.commentPad;
+        fill(
+          AUTHOR_NAMES[c.author],
+          tx,
+          ty + g.lineH[STYLE_AUTHOR] / 2,
+          TEXT_ROLES.muted,
+          fonts[STYLE_AUTHOR],
+          tw,
+        );
+        ty += g.lineH[STYLE_AUTHOR];
+        for (let i = 0; i < c.starts.length; i++) {
+          fill(
+            c.text.slice(c.starts[i], c.ends[i]),
+            tx,
+            ty + g.lineH[STYLE_COMMENT] / 2,
+            TEXT_ROLES.primary,
+            fonts[STYLE_COMMENT],
+            tw + 2,
+          );
+          ty += g.lineH[STYLE_COMMENT];
+        }
+      };
+
+      /** Repaints line `i` with whatever of it is typed. */
+      const paintLine = (d: Doc, t: Typist, Ld: DocLayout, i: number) => {
+        const ctx = text.ctx;
+        if (!ctx) {
+          return;
+        }
+        const x0 = Math.max(0, Ld.lineX[i] - pageLeft - 2);
+        const x1 = Math.min(pageCols, Ld.lineX[i] - pageLeft + Ld.lineW[i] + 2);
+        if (x1 <= x0) {
+          return;
+        }
+        const n = ringPieces(Ld.lineY[i], Ld.lineY[i] + Ld.lineH[i]);
+        for (let k = 0; k < n; k++) {
+          clipClear(ctx, x0, x1 - x0, pieceA[k], pieceB[k]);
+          drawLine(d, t, Ld, i, pieceShift[k]);
+          ctx.restore();
+        }
       };
 
       /** Repaints the lines of segment `s` whose text spans characters `a` .. `b`. */
@@ -338,37 +438,32 @@ export const documentPage = defineEffect(documentMeta, {
         }
       };
 
-      const paintComments = (Ld: DocLayout) => {
-        const g = geom;
-        const x = g.pageW + g.commentGap;
-        for (const c of Ld.comments) {
-          const y = c.y - canvasTop;
-          if (y + c.h <= 0 || y >= docH) {
-            continue;
+      /** Clears and paints doc rows `y0 .. y1` (within the ring's rows): the lines and comments on them. */
+      const paintRows = (d: Doc, t: Typist, Ld: DocLayout, y0: number, y1: number) => {
+        const ctx = text.ctx;
+        if (!ctx) {
+          return;
+        }
+        const n = ringPieces(y0, y1);
+        for (let k = 0; k < n; k++) {
+          const a = pieceA[k] - pieceShift[k];
+          const b = pieceB[k] - pieceShift[k];
+          clipClear(ctx, 0, pageCols, pieceA[k], pieceB[k]);
+          for (let i = 0; i < Ld.lineCount; i++) {
+            if (Ld.lineY[i] + Ld.lineH[i] > a && Ld.lineY[i] < b) {
+              drawLine(d, t, Ld, i, pieceShift[k]);
+            }
           }
-          text.clear(x, y, g.commentW, c.h);
-          const tx = x + g.commentBar + g.commentPad;
-          const tw = g.commentW - g.commentBar - 2 * g.commentPad;
-          let ty = y + g.commentPad;
-          fill(
-            AUTHOR_NAMES[c.author],
-            tx,
-            ty + g.lineH[STYLE_AUTHOR] / 2,
-            TEXT_ROLES.muted,
-            fonts[STYLE_AUTHOR],
-            tw,
-          );
-          ty += g.lineH[STYLE_AUTHOR];
-          for (let i = 0; i < c.starts.length; i++) {
-            fill(
-              c.text.slice(c.starts[i], c.ends[i]),
-              tx,
-              ty + g.lineH[STYLE_COMMENT] / 2,
-              TEXT_ROLES.primary,
-              fonts[STYLE_COMMENT],
-              tw + 2,
-            );
-            ty += g.lineH[STYLE_COMMENT];
+          ctx.restore();
+          if (commentCols > 0) {
+            clipClear(ctx, pageCols, commentCols, pieceA[k], pieceB[k]);
+            for (let i = 0; i < Ld.comments.length; i++) {
+              const c = Ld.comments[i];
+              if (c.y + c.h > a && c.y < b) {
+                drawComment(Ld, i, pieceShift[k]);
+              }
+            }
+            ctx.restore();
           }
         }
       };
@@ -409,17 +504,46 @@ export const documentPage = defineEffect(documentMeta, {
       const paintRuler = () => {
         const g = geom;
         const y = bandY + S.toolbarH + S.statusH;
-        text.clear(0, y, g.pageW, S.rulerH);
+        text.clear(0, y, pageCols, S.rulerH);
         const n = Math.floor(g.contentW / g.inch + 1e-6);
         for (let i = 1; i <= n; i++) {
           const x = g.margin + i * g.inch;
           if (x < g.pageW - g.margin - 2) {
-            fill(String(i), x - R(3), y + S.rulerH / 2, TEXT_ROLES.muted, chromeFonts[2], R(14));
+            fill(
+              String(i),
+              x - R(3) - pageLeft,
+              y + S.rulerH / 2,
+              TEXT_ROLES.muted,
+              chromeFonts[2],
+              R(14),
+            );
           }
         }
       };
 
-      /** Positions the canvas from doc y `top` and paints everything on it. */
+      /**
+       * Moves the ring to hold the doc rows from `top` and paints the rows that
+       * come into it (over the ones that leave); the rows it kept stay as they are.
+       */
+      const moveRing = (top: number) => {
+        const d = doc;
+        const t = typist;
+        const Ld = L;
+        const from = ringTop;
+        ringTop = Math.floor(top);
+        if (!painted || !d || !t || !Ld) {
+          return;
+        }
+        if (ringTop > from && ringTop < from + docH) {
+          paintRows(d, t, Ld, from + docH, ringTop + docH);
+        } else if (ringTop < from && ringTop + docH > from) {
+          paintRows(d, t, Ld, ringTop, from);
+        } else if (ringTop !== from) {
+          paintRows(d, t, Ld, ringTop, ringTop + docH);
+        }
+      };
+
+      /** Positions the ring from doc y `top` and paints everything on the canvas. */
       const paintAll = (top: number) => {
         const d = doc;
         const t = typist;
@@ -428,14 +552,9 @@ export const documentPage = defineEffect(documentMeta, {
           painted = false;
           return;
         }
-        canvasTop = Math.floor(top);
+        ringTop = Math.floor(top);
         text.clear(0, 0, text.width, text.height);
-        for (let i = 0; i < Ld.lineCount; i++) {
-          if (Ld.lineY[i] + Ld.lineH[i] > canvasTop && Ld.lineY[i] < canvasTop + docH) {
-            paintLine(d, t, Ld, i);
-          }
-        }
-        paintComments(Ld);
+        paintRows(d, t, Ld, ringTop, ringTop + docH);
         paintStyle(d.blocks[d.segments[Math.min(t.seg, d.segments.length - 1)].block].kind);
         paintStatus(t, Ld);
         paintRuler();
@@ -490,13 +609,17 @@ export const documentPage = defineEffect(documentMeta, {
         for (const m of measured) {
           m.clear();
         }
-        const pad = geom.lineH[STYLE_TITLE];
-        docW = geom.pageW + geom.commentGap + geom.commentW;
-        docH = S.viewH + S.maxStep + 2 * pad;
-        bandY = docH;
+        // Only the columns on screen, and the view's rows (one more for a
+        // fractional scroll, a guard row each side): a window's size and a few rows.
+        pageLeft = clamp(-S.pageX, 0, geom.pageW - 1);
+        pageCols = clamp(width - S.pageX, pageLeft + 1, geom.pageW) - pageLeft;
+        commentCols = clamp(width - S.paneX, 0, geom.commentW);
+        const band = S.toolbarH + S.statusH + S.rulerH;
+        docH = S.viewH + 1;
+        bandY = docH + 2;
         text.resize(
-          Math.max(docW, R(STATUS_W), R(STYLE_W)),
-          docH + S.toolbarH + S.statusH + S.rulerH,
+          Math.min(maxTexture, Math.max(pageCols + commentCols, R(STATUS_W), R(STYLE_W))),
+          Math.min(maxTexture, bandY + band),
         );
         sqKnown.fill(0);
         // Toolbar blocks: a group, the style box, then more groups, all on the left.
@@ -532,7 +655,7 @@ export const documentPage = defineEffect(documentMeta, {
         scrollFrom = scroll;
         scrollTo = scroll;
         scrollT = 1;
-        paintAll(scroll - pad);
+        paintAll(scroll);
       };
 
       /** Shows document `d` with typist `t`, laid out from scratch. */
@@ -796,23 +919,31 @@ export const documentPage = defineEffect(documentMeta, {
 
       // ---- Text regions (per frame).
 
-      /** Queues the canvas's doc rows `y0 .. y1` at canvas x `cx` (width `w`), on screen at `x`, clipped to the view. */
+      /**
+       * Queues the ring's doc rows `y0 .. y1` at canvas x `cx` (width `w`), on
+       * screen at `x`, clipped to the view: two quads if they wrap.
+       */
       const docQuad = (cx: number, y0: number, y1: number, w: number, x: number, alpha: number) => {
-        const a = Math.max(y0, scroll, canvasTop);
-        const b = Math.min(y1, scroll + S.viewH, canvasTop + docH);
-        if (b > a) {
-          text.quad(cx, a - canvasTop, w, b - a, x, sy(a), w, b - a, alpha);
+        const a = Math.max(y0, scroll, ringTop);
+        const b = Math.min(y1, scroll + S.viewH, ringTop + docH);
+        if (!(b > a) || !(w > 0)) {
+          return;
+        }
+        const c = (((a % docH) + docH) % docH) + 1;
+        const first = Math.min(b - a, docH + 1 - c);
+        text.quad(cx, c, w, first, x, sy(a), w, first, alpha);
+        if (b - a > first) {
+          text.quad(cx, 1, w, b - a - first, x, sy(a) + first, w, b - a - first, alpha);
         }
       };
 
       const queueDocText = (Ld: DocLayout, ca: number) => {
-        docQuad(0, scroll, scroll + S.viewH, geom.pageW, S.pageX, ca);
-        const cx = geom.pageW + geom.commentGap;
+        docQuad(0, scroll, scroll + S.viewH, pageCols, S.pageX + pageLeft, ca);
         for (let i = 0; i < Ld.comments.length && i < MAX_COMMENTS; i++) {
           const k = smoothstep(0, 1, commentLevel[i]) * ca;
           const c = Ld.comments[i];
           if (k > 0) {
-            docQuad(cx, c.y, c.y + c.h, geom.commentW, S.paneX, k);
+            docQuad(pageCols, c.y, c.y + c.h, commentCols, S.paneX, k);
           }
         }
       };
@@ -824,7 +955,7 @@ export const documentPage = defineEffect(documentMeta, {
         const stw = R(STATUS_W);
         text.quad(0, bandY + sb, stw, S.statusH, 0, height - S.statusH, stw, S.statusH, 1);
         const ry = bandY + sb + S.statusH;
-        text.quad(0, ry, geom.pageW, S.rulerH, S.pageX, S.toolbarH, geom.pageW, S.rulerH, 1);
+        text.quad(0, ry, pageCols, S.rulerH, S.pageX + pageLeft, S.toolbarH, pageCols, S.rulerH, 1);
       };
 
       return {
@@ -959,7 +1090,7 @@ export const documentPage = defineEffect(documentMeta, {
               }
             }
 
-            // Scrolling: a paragraph at a time, the canvas redrawn once for the whole step.
+            // Scrolling: a paragraph at a time, painting just the rows each frame reveals.
             if (scrollT >= 1) {
               const target = scrollTarget(Ld, S, scrollTo, caretIdx);
               if (target !== scrollTo) {
@@ -967,12 +1098,12 @@ export const documentPage = defineEffect(documentMeta, {
                 scrollTo = target;
                 scrollT = 0;
                 scrollDur = scrollSeconds(target - scrollFrom, scale);
-                paintAll(scrollFrom - geom.lineH[STYLE_TITLE]);
               }
             }
             if (scrollT < 1) {
               scrollT = Math.min(1, scrollT + step / scrollDur);
               scroll = scrollFrom + (scrollTo - scrollFrom) * smoothstep(0, 1, scrollT);
+              moveRing(scroll);
             }
           }
           text.flush();

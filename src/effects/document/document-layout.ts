@@ -13,7 +13,7 @@ import { minTweenSeconds } from "../charts";
 import { BLOCK_BULLETS, BLOCK_HEADING, BLOCK_TABLE, BLOCK_TITLE, type Doc } from "./document-sim";
 
 /** Text styles, each with its own font size and line height. */
-export const STYLE_TITLE = 0;
+const STYLE_TITLE = 0;
 const STYLE_HEADING = 1;
 export const STYLE_BODY = 2;
 const STYLE_TABLE = 3;
