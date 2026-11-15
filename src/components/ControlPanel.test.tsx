@@ -131,6 +131,11 @@ describe("ControlPanel", () => {
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).not.toMatch(/\(S\)$/);
   });
 
+  it("leaves the Fullscreen button out when fullscreen isn't offered", () => {
+    renderPanel({ onFullscreen: undefined });
+    expect(screen.queryByRole("button", { name: "Fullscreen" })).toBeNull();
+  });
+
   it("shows an error, with a reload button when one is offered", () => {
     const onReload = vi.fn<() => void>();
     renderPanel({ error: "This effect failed to load: offline", onReload });

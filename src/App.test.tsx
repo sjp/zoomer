@@ -222,6 +222,26 @@ describe("App", () => {
     expect(panelVisible()).toBe(false);
   });
 
+  it("offers a Fullscreen button only where the browser allows fullscreen", () => {
+    const allow = (enabled: boolean | undefined) => {
+      Object.defineProperty(document, "fullscreenEnabled", { value: enabled, configurable: true });
+    };
+    try {
+      // iPhone Safari lacks the property altogether.
+      for (const enabled of [undefined, false]) {
+        allow(enabled);
+        render(<App />);
+        expect(screen.queryByRole("button", { name: "Fullscreen" })).toBeNull();
+        cleanup();
+      }
+      allow(true);
+      render(<App />);
+      expect(screen.getByRole("button", { name: "Fullscreen" })).toBeTruthy();
+    } finally {
+      Reflect.deleteProperty(document, "fullscreenEnabled");
+    }
+  });
+
   it("F asks for fullscreen, and says so when refused", async () => {
     const request = vi.fn<() => Promise<void>>(() => Promise.reject(new Error("no")));
     document.documentElement.requestFullscreen = request;

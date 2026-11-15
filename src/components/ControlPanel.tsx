@@ -40,7 +40,8 @@ interface Props {
   onResolutionChange: (resolution: Resolution) => void;
   onFrameRateChange: (frameRate: FrameRate) => void;
   onRecord: (seconds: number) => void;
-  onFullscreen: () => void;
+  /** Left out where the browser has no fullscreen for pages (iPhone Safari): no button. */
+  onFullscreen?: (() => void) | undefined;
   /** Copies a link with every setting spelled out that opens with the panel hidden. */
   onCopyLink: () => void;
   onHide: () => void;
@@ -239,9 +240,11 @@ export function ControlPanel(props: Props) {
         <button type="button" onClick={props.onReset}>
           Reset
         </button>
-        <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
-          Fullscreen
-        </button>
+        {props.onFullscreen && (
+          <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
+            Fullscreen
+          </button>
+        )}
         <button
           type="button"
           onClick={props.onCopyLink}

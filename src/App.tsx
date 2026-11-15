@@ -296,8 +296,12 @@ export function App() {
     setListFocus((n) => n + 1);
   }, [recording]);
 
-  // Fullscreen can be refused (in an iframe, without a user gesture, or on iPhone,
-  // which lacks the API); say so briefly rather than failing silently.
+  // iPhone Safari has no fullscreen for pages, so the panel leaves its button out there.
+  const [fullscreenEnabled] = useState(
+    () => (document.fullscreenEnabled as boolean | undefined) === true,
+  );
+  // Fullscreen can still be refused (in an iframe, without a user gesture, or by F where
+  // the API is missing); say so briefly rather than failing silently.
   const toggleFullscreen = useCallback(() => {
     const fail = () => {
       showToast("Fullscreen unavailable");
@@ -466,7 +470,7 @@ export function App() {
             onResolutionChange={setResolution}
             onFrameRateChange={setFrameRate}
             onRecord={(s) => void record(s)}
-            onFullscreen={toggleFullscreen}
+            onFullscreen={fullscreenEnabled ? toggleFullscreen : undefined}
             onCopyLink={copyLink}
             onHide={hidePanel}
           />
