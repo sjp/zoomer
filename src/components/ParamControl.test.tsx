@@ -66,6 +66,82 @@ describe("ParamControl", () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith("b");
   });
 
+  describe("reset", () => {
+    const speed: ParamDef = {
+      kind: "number",
+      label: "Speed",
+      min: 0,
+      max: 2,
+      step: 0.05,
+      default: 1,
+    };
+
+    function renderWithReset(def: ParamDef, value: ParamValue) {
+      const onReset = vi.fn<() => void>();
+      render(
+        <ParamControl
+          id="p"
+          def={def}
+          value={value}
+          onChange={vi.fn<(v: ParamValue) => void>()}
+          onReset={onReset}
+        />,
+      );
+      return onReset;
+    }
+
+    it("offers a reset only while the value differs from the default", () => {
+      renderWithReset(speed, 1);
+      expect(screen.queryByRole("button", { name: "Reset Speed" })).toBeNull();
+      cleanup();
+      const onReset = renderWithReset(speed, 1.5);
+      fireEvent.click(screen.getByRole("button", { name: "Reset Speed" }));
+      expect(onReset).toHaveBeenCalledTimes(1);
+    });
+
+    it.each<[ParamDef, ParamValue, ParamValue]>([
+      [{ kind: "color", label: "Tint", default: "#AABBCC" }, "#aabbcc", "#000000"],
+      [{ kind: "boolean", label: "Glow", default: true }, true, false],
+      [
+        {
+          kind: "select",
+          label: "Mode",
+          options: [
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Beta" },
+          ],
+          default: "a",
+        },
+        "a",
+        "b",
+      ],
+      [{ kind: "text", label: "Sign", default: "HI", maxLength: 5, maxLines: 2 }, "HI", "YO"],
+    ])("compares a %s param with its default", (def, same, other) => {
+      renderWithReset(def, same);
+      expect(screen.queryByRole("button", { name: `Reset ${def.label}` })).toBeNull();
+      cleanup();
+      renderWithReset(def, other);
+      expect(screen.getByRole("button", { name: `Reset ${def.label}` })).toBeTruthy();
+    });
+
+    it("keeps the field named by its label alone", () => {
+      renderWithReset(speed, 1.5);
+      const slider = screen.getByRole("slider", {
+        name: (name) => name.startsWith("Speed") && !name.includes("Reset"),
+      });
+      expect(slider.id).toBe("param-p");
+      expect(document.querySelector("label")?.htmlFor).toBe("param-p");
+      expect(document.querySelector("label")?.contains(screen.getByRole("button"))).toBe(false);
+    });
+
+    it("moves focus to the field when reset from the keyboard", () => {
+      renderWithReset(speed, 1.5);
+      // A keyboard-activated click has no click count.
+      fireEvent.click(screen.getByRole("button", { name: "Reset Speed" }), { detail: 0 });
+      expect(document.activeElement).toBe(screen.getByRole("slider"));
+    });
+  });
+
   describe("text", () => {
     const def: ParamDef = { kind: "text", label: "Sign", default: "", maxLength: 5, maxLines: 2 };
 

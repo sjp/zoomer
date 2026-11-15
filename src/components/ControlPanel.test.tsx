@@ -58,6 +58,15 @@ describe("ControlPanel", () => {
     expect(props.onParamChange).toHaveBeenCalledExactlyOnceWith("speed", 2);
   });
 
+  it("resets one param to its default", () => {
+    const props = renderPanel({ values: { ...defaults(warp.params), speed: 2 } });
+    expect(
+      screen.getAllByRole("button", { name: /^Reset / }).map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Reset Speed"]);
+    fireEvent.click(screen.getByRole("button", { name: "Reset Speed" }));
+    expect(props.onParamChange).toHaveBeenCalledExactlyOnceWith("speed", warp.params.speed.default);
+  });
+
   it("records a clip of the chosen length", () => {
     const props = renderPanel();
     fireEvent.change(screen.getByLabelText("Clip length"), { target: { value: "30" } });

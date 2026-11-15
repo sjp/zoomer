@@ -156,6 +156,9 @@ export function ControlPanel(props: Props) {
             onChange={(v) => {
               props.onParamChange(key, v);
             }}
+            onReset={() => {
+              props.onParamChange(key, def.default);
+            }}
           />
         ))}
       </section>

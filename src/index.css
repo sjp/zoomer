@@ -416,9 +416,36 @@ input[type="search"]:focus-visible {
   gap: 4px;
 }
 
+.control-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .control label {
   display: flex;
+  flex: 1;
   justify-content: space-between;
+  gap: 8px;
+}
+
+/* Small and quiet: it only appears once a value has moved off its default. */
+.param-reset {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  background: none;
+}
+
+.param-reset:hover:not(:disabled) {
+  color: var(--text);
 }
 
 .control output {
@@ -576,11 +603,19 @@ select:disabled {
     min-height: 44px;
   }
 
+  .control-inline .control-label,
   .control-inline label {
     align-self: stretch;
     display: flex;
     flex: 1;
     align-items: center;
+  }
+
+  /* Wide, but no taller than the label row, which would push the controls apart. */
+  .param-reset {
+    width: 40px;
+    height: 32px;
+    min-height: 0;
   }
 
   input[type="checkbox"] {

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { sanitizeText, stepDecimals } from "../effects/params";
 import type { ParamDef, ParamValue, TextParam } from "../effects/types";
 
@@ -7,18 +7,88 @@ interface Props {
   def: ParamDef;
   value: ParamValue;
   onChange: (value: ParamValue) => void;
+  /** Puts the param back to its default; offered while it differs from it. */
+  onReset?: (() => void) | undefined;
 }
 
-export function ParamControl({ id, def, value, onChange }: Props) {
+/** Whether a value is the param's default, as its control would show it. */
+function isDefault(def: ParamDef, value: ParamValue): boolean {
+  if (def.kind === "number") {
+    return Number(value) === def.default;
+  }
+  if (def.kind === "color") {
+    return String(value).toLowerCase() === def.default.toLowerCase();
+  }
+  return value === def.default;
+}
+
+/**
+ * The label, and beside it a reset button while the value differs from the default.
+ * The button sits outside the label element, so the field's accessible name stays the
+ * label alone.
+ */
+function LabelRow({
+  inputId,
+  def,
+  value,
+  onReset,
+  children,
+}: {
+  inputId: string;
+  def: ParamDef;
+  value: ParamValue;
+  onReset: (() => void) | undefined;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="control-label">
+      <label htmlFor={inputId}>
+        {def.label}
+        {children}
+      </label>
+      {onReset && !isDefault(def, value) && (
+        <button
+          type="button"
+          className="param-reset"
+          aria-label={`Reset ${def.label}`}
+          title={`Reset ${def.label}`}
+          onClick={(e) => {
+            onReset();
+            // The button goes away with the change; from the keyboard (no click count),
+            // keep focus nearby on the field. A tap doesn't, so it opens no keyboard.
+            if (e.detail === 0) {
+              document.getElementById(inputId)?.focus();
+            }
+          }}
+        >
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+              d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2M3.5 2.5v2.6h2.6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function ParamControl({ id, def, value, onChange, onReset }: Props) {
   const inputId = `param-${id}`;
+  const label = (children?: ReactNode) => (
+    <LabelRow inputId={inputId} def={def} value={value} onReset={onReset}>
+      {children}
+    </LabelRow>
+  );
   switch (def.kind) {
     case "number":
       return (
         <div className="control">
-          <label htmlFor={inputId}>
-            {def.label}
-            <output>{Number(value).toFixed(stepDecimals(def.step))}</output>
-          </label>
+          {label(<output>{Number(value).toFixed(stepDecimals(def.step))}</output>)}
           <input
             id={inputId}
             type="range"
@@ -35,7 +105,7 @@ export function ParamControl({ id, def, value, onChange }: Props) {
     case "color":
       return (
         <div className="control control-inline">
-          <label htmlFor={inputId}>{def.label}</label>
+          {label()}
           <input
             id={inputId}
             type="color"
@@ -49,7 +119,7 @@ export function ParamControl({ id, def, value, onChange }: Props) {
     case "boolean":
       return (
         <div className="control control-inline">
-          <label htmlFor={inputId}>{def.label}</label>
+          {label()}
           <input
             id={inputId}
             type="checkbox"
@@ -63,7 +133,7 @@ export function ParamControl({ id, def, value, onChange }: Props) {
     case "select":
       return (
         <div className="control control-inline">
-          <label htmlFor={inputId}>{def.label}</label>
+          {label()}
           <select
             id={inputId}
             value={String(value)}
@@ -80,7 +150,15 @@ export function ParamControl({ id, def, value, onChange }: Props) {
         </div>
       );
     case "text":
-      return <TextControl inputId={inputId} def={def} value={String(value)} onChange={onChange} />;
+      return (
+        <TextControl
+          inputId={inputId}
+          def={def}
+          value={String(value)}
+          onChange={onChange}
+          label={label()}
+        />
+      );
     default:
       return null;
   }
@@ -91,6 +169,7 @@ interface TextProps {
   def: TextParam;
   value: string;
   onChange: (value: string) => void;
+  label: ReactNode;
 }
 
 /**
@@ -102,7 +181,7 @@ interface TextProps {
  * writes the new value into the textarea, which moves the caret to the end; it is put
  * back where it was, less whatever was removed before it.
  */
-function TextControl({ inputId, def, value, onChange }: TextProps) {
+function TextControl({ inputId, def, value, onChange, label }: TextProps) {
   const [composing, setComposing] = useState<string | null>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<number | null>(null);
@@ -129,7 +208,7 @@ function TextControl({ inputId, def, value, onChange }: TextProps) {
   };
   return (
     <div className="control">
-      <label htmlFor={inputId}>{def.label}</label>
+      {label}
       <textarea
         ref={areaRef}
         id={inputId}
