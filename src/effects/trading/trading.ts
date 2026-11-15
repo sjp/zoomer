@@ -1673,22 +1673,31 @@ export const trading = defineEffect(tradingMeta, {
               autoRange(tileRanges[i], dataLo, dataHi, Math.max(1, chh), scale, range);
               stepAxis(tileRanges[i], step);
             }
+            // Tiles faded out stop following their stock: snap when they come back.
+            for (let i = fade.live; i < MAX_STOCKS; i++) {
+              tileRanges[i].ready = false;
+            }
           }
 
-          // Text canvases: painted whole when first needed, freed when hidden.
+          // Text canvases: painted whole when first needed, freed when hidden. A
+          // hidden layout's axes stop following the market, so they snap on return.
           if (needFocus && !focusPainted) {
             paintFocusAll(m);
             focusPainted = true;
-          } else if (!needFocus && focusPainted) {
+          } else if (!needFocus && (focusPainted || focusText.width > 0)) {
             focusText.release();
             focusPainted = false;
+            mainRange.ready = false;
           }
           if (needGrid && !gridPainted) {
             paintGridAll(m);
             gridPainted = true;
-          } else if (!needGrid && gridPainted) {
+          } else if (!needGrid && (gridPainted || gridText.width > 0)) {
             gridText.release();
             gridPainted = false;
+            for (const r of tileRanges) {
+              r.ready = false;
+            }
           }
           if (focusPainted) {
             const moved =
