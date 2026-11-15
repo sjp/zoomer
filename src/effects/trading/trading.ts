@@ -313,6 +313,18 @@ export const trading = defineEffect(tradingMeta, {
       let rightWidth = 1;
       let focusPainted = false;
       let gridPainted = false;
+      /**
+       * What each text block shows (its changing values), so a tick repaints only
+       * the blocks whose text changed; "" until painted. Watchlist rows and tiles
+       * are painted up to `watchRows` / `tileRows`, the live count when last painted.
+       */
+      const watchKeys: string[] = new Array<string>(MAX_STOCKS).fill("");
+      const tileKeys: string[] = new Array<string>(MAX_STOCKS).fill("");
+      const indexKeys: string[] = new Array<string>(INDEX_COUNT).fill("");
+      let headerKey = "";
+      let bookKey = "";
+      let watchRows = 0;
+      let tileRows = 0;
       let paintedLo = 0;
       let paintedHi = 0;
       let paintedPrice = 0;
@@ -426,6 +438,15 @@ export const trading = defineEffect(tradingMeta, {
           return;
         }
         const s = m.stocks[i];
+        const d = priceDecimals(s.price);
+        const delta = s.price - s.ref;
+        const price = formatFixed(s.price, d);
+        const change = formatPercent(delta / s.ref);
+        const key = price + " " + change;
+        if (key === watchKeys[i]) {
+          return;
+        }
+        watchKeys[i] = key;
         const h = layout.watchRow;
         const y = layout.watchRowsY + i * h;
         focusText.clear(r.x, y, r.w, h);
@@ -441,26 +462,8 @@ export const trading = defineEffect(tradingMeta, {
           fonts.name,
           r.w * 0.31,
         );
-        const d = priceDecimals(s.price);
-        fill(
-          ctx,
-          formatFixed(s.price, d),
-          c.lastX,
-          y + h * 0.5,
-          TEXT_ROLES.primary,
-          "right",
-          fonts.num,
-        );
-        const delta = s.price - s.ref;
-        fill(
-          ctx,
-          formatPercent(delta / s.ref),
-          c.chgX,
-          y + h * 0.36,
-          roleOf(delta),
-          "right",
-          fonts.num,
-        );
+        fill(ctx, price, c.lastX, y + h * 0.5, TEXT_ROLES.primary, "right", fonts.num);
+        fill(ctx, change, c.chgX, y + h * 0.36, roleOf(delta), "right", fonts.num);
         fill(
           ctx,
           formatSigned(delta, d),
@@ -479,6 +482,15 @@ export const trading = defineEffect(tradingMeta, {
           return;
         }
         const s = m.stocks[focus];
+        const d = priceDecimals(s.price);
+        const delta = s.price - s.ref;
+        const price = formatFixed(s.price, d);
+        const change = formatSigned(delta, d) + "  " + formatPercent(delta / s.ref);
+        const key = s.ticker + " " + price + " " + change;
+        if (key === headerKey) {
+          return;
+        }
+        headerKey = key;
         focusText.clear(r.x, r.y, r.w, r.h);
         const pad = Math.round(PAD * scale);
         fill(
@@ -501,26 +513,8 @@ export const trading = defineEffect(tradingMeta, {
           r.w * 0.4,
         );
         const right = layout.plot.x + layout.plot.w;
-        const d = priceDecimals(s.price);
-        fill(
-          ctx,
-          formatFixed(s.price, d),
-          right,
-          r.y + r.h * 0.38,
-          TEXT_ROLES.primary,
-          "right",
-          fonts.bigPrice,
-        );
-        const delta = s.price - s.ref;
-        fill(
-          ctx,
-          formatSigned(delta, d) + "  " + formatPercent(delta / s.ref),
-          right,
-          r.y + r.h * 0.8,
-          roleOf(delta),
-          "right",
-          fonts.change,
-        );
+        fill(ctx, price, right, r.y + r.h * 0.38, TEXT_ROLES.primary, "right", fonts.bigPrice);
+        fill(ctx, change, right, r.y + r.h * 0.8, roleOf(delta), "right", fonts.change);
       };
 
       const tagY = (m: Market) =>
@@ -602,78 +596,48 @@ export const trading = defineEffect(tradingMeta, {
         }
       };
 
+      /** The book's text: ask price and size, then bid price and size per level, then spread and last. */
+      const bookText: string[] = new Array<string>(4 * BOOK_LEVELS + 2).fill("");
       const paintBook = (m: Market) => {
         const ctx = focusText.ctx;
         const r = layout.book;
         if (!ctx || r.w <= 0) {
           return;
         }
+        const s = m.stocks[focus];
+        const d = priceDecimals(s.price);
+        const t = bookText;
+        for (let l = 0; l < BOOK_LEVELS; l++) {
+          t[4 * l] = formatFixed(book.askPrice[l], d);
+          t[4 * l + 1] = formatCompact(book.askSize[l]);
+          t[4 * l + 2] = formatFixed(book.bidPrice[l], d);
+          t[4 * l + 3] = formatCompact(book.bidSize[l]);
+        }
+        const n = 4 * BOOK_LEVELS;
+        t[n] = "Spread " + formatFixed(book.askPrice[0] - book.bidPrice[0], d);
+        t[n + 1] = formatFixed(s.price, d);
+        const key = t.join(" ");
+        if (key === bookKey) {
+          return;
+        }
+        bookKey = key;
         const pad = Math.round(PAD * scale);
         const h = layout.bookRow;
         const y0 = layout.bookRowsY;
         focusText.clear(r.x, y0, r.w, (2 * BOOK_LEVELS + 1) * h);
-        const s = m.stocks[focus];
-        const d = priceDecimals(s.price);
+        const left = r.x + pad;
+        const right = r.x + r.w - pad;
         for (let l = 0; l < BOOK_LEVELS; l++) {
           const ya = y0 + (BOOK_LEVELS - 1 - l) * h + h / 2;
-          fill(
-            ctx,
-            formatFixed(book.askPrice[l], d),
-            r.x + pad,
-            ya,
-            TEXT_ROLES.down,
-            "left",
-            fonts.num,
-          );
-          fill(
-            ctx,
-            formatCompact(book.askSize[l]),
-            r.x + r.w - pad,
-            ya,
-            TEXT_ROLES.primary,
-            "right",
-            fonts.num,
-          );
+          fill(ctx, t[4 * l], left, ya, TEXT_ROLES.down, "left", fonts.num);
+          fill(ctx, t[4 * l + 1], right, ya, TEXT_ROLES.primary, "right", fonts.num);
           const yb = y0 + (BOOK_LEVELS + 1 + l) * h + h / 2;
-          fill(
-            ctx,
-            formatFixed(book.bidPrice[l], d),
-            r.x + pad,
-            yb,
-            TEXT_ROLES.up,
-            "left",
-            fonts.num,
-          );
-          fill(
-            ctx,
-            formatCompact(book.bidSize[l]),
-            r.x + r.w - pad,
-            yb,
-            TEXT_ROLES.primary,
-            "right",
-            fonts.num,
-          );
+          fill(ctx, t[4 * l + 2], left, yb, TEXT_ROLES.up, "left", fonts.num);
+          fill(ctx, t[4 * l + 3], right, yb, TEXT_ROLES.primary, "right", fonts.num);
         }
         const ys0 = y0 + BOOK_LEVELS * h + h / 2;
-        const spread = book.askPrice[0] - book.bidPrice[0];
-        fill(
-          ctx,
-          "Spread " + formatFixed(spread, d),
-          r.x + pad,
-          ys0,
-          TEXT_ROLES.muted,
-          "left",
-          fonts.head,
-        );
-        fill(
-          ctx,
-          formatFixed(s.price, d),
-          r.x + r.w - pad,
-          ys0,
-          TEXT_ROLES.primary,
-          "right",
-          fonts.num,
-        );
+        fill(ctx, t[n], left, ys0, TEXT_ROLES.muted, "left", fonts.head);
+        fill(ctx, t[n + 1], right, ys0, TEXT_ROLES.primary, "right", fonts.num);
       };
 
       const paintTrades = (m: Market) => {
@@ -720,11 +684,19 @@ export const trading = defineEffect(tradingMeta, {
         if (!ctx || r.w <= 0) {
           return;
         }
+        const idx = m.indices[k];
+        const delta = idx.value - idx.ref;
+        const value = formatFixed(idx.value, 2);
+        const change = formatSigned(delta, 2) + "  " + formatPercent(delta / idx.ref);
+        const key = value + " " + change;
+        if (key === indexKeys[k]) {
+          return;
+        }
+        indexKeys[k] = key;
         const cw = r.w / INDEX_COUNT;
         const x = Math.round(r.x + k * cw);
         const pad = Math.round(PAD * scale) + 4;
         focusText.clear(x, r.y, Math.round(cw), r.h);
-        const idx = m.indices[k];
         fill(
           ctx,
           idx.name.toUpperCase(),
@@ -734,19 +706,10 @@ export const trading = defineEffect(tradingMeta, {
           "left",
           fonts.panel,
         );
+        fill(ctx, value, x + pad, r.y + r.h * 0.68, TEXT_ROLES.primary, "left", fonts.num);
         fill(
           ctx,
-          formatFixed(idx.value, 2),
-          x + pad,
-          r.y + r.h * 0.68,
-          TEXT_ROLES.primary,
-          "left",
-          fonts.num,
-        );
-        const delta = idx.value - idx.ref;
-        fill(
-          ctx,
-          formatSigned(delta, 2) + "  " + formatPercent(delta / idx.ref),
+          change,
           x + Math.round(cw) - pad,
           r.y + r.h * 0.68,
           roleOf(delta),
@@ -755,10 +718,12 @@ export const trading = defineEffect(tradingMeta, {
         );
       };
 
+      /** Repaints the Focus layout's ticking text that changed: live watchlist rows, header, book and indices. */
       const paintFocusTicked = (m: Market) => {
-        for (let i = 0; i < MAX_STOCKS; i++) {
+        for (let i = 0; i < fade.live; i++) {
           paintWatchRow(m, i);
         }
+        watchRows = fade.live;
         paintChartHeader(m);
         paintBook(m);
         for (let k = 0; k < INDEX_COUNT; k++) {
@@ -775,6 +740,10 @@ export const trading = defineEffect(tradingMeta, {
           return;
         }
         focusText.clear(0, 0, focusText.width, focusText.height);
+        watchKeys.fill("");
+        indexKeys.fill("");
+        headerKey = "";
+        bookKey = "";
         paintTopBar(focusText);
         paintClock(focusText, paintedClock);
         panelTitle(focusText, layout.watch, "WATCHLIST", ["Symbol", "Last", "Chg"]);
@@ -791,10 +760,18 @@ export const trading = defineEffect(tradingMeta, {
         if (!ctx) {
           return;
         }
+        const s = m.stocks[i];
+        const delta = s.price - s.ref;
+        const price = formatFixed(s.price, priceDecimals(s.price));
+        const change = formatPercent(delta / s.ref);
+        const key = price + " " + change;
+        if (key === tileKeys[i]) {
+          return;
+        }
+        tileKeys[i] = key;
         const h = Math.round(TILE_HEADER * scale);
         const y = Math.round(TOP_BAR * scale) + i * h;
         gridText.clear(0, y, leftWidth + rightWidth, h);
-        const s = m.stocks[i];
         fill(
           ctx,
           s.ticker,
@@ -807,10 +784,9 @@ export const trading = defineEffect(tradingMeta, {
         );
         fill(ctx, s.name, 0, y + h * 0.74, TEXT_ROLES.muted, "left", fonts.name, leftWidth);
         const right = leftWidth + rightWidth;
-        const d = priceDecimals(s.price);
         fill(
           ctx,
-          formatFixed(s.price, d),
+          price,
           right,
           y + h * 0.32,
           TEXT_ROLES.primary,
@@ -818,16 +794,23 @@ export const trading = defineEffect(tradingMeta, {
           fonts.bigPrice,
           rightWidth,
         );
-        const delta = s.price - s.ref;
         fill(
           ctx,
-          formatPercent(delta / s.ref),
+          change,
           right - Math.round(8 * scale),
           y + h * 0.76,
           roleOf(delta),
           "right",
           fonts.num,
         );
+      };
+
+      /** Repaints the live tiles whose text changed. */
+      const paintGridTicked = (m: Market) => {
+        for (let i = 0; i < fade.live; i++) {
+          paintTile(m, i);
+        }
+        tileRows = fade.live;
       };
 
       const paintGridAll = (m: Market) => {
@@ -841,11 +824,10 @@ export const trading = defineEffect(tradingMeta, {
           return;
         }
         gridText.clear(0, 0, gridText.width, gridText.height);
+        tileKeys.fill("");
         paintTopBar(gridText);
         paintClock(gridText, paintedClock);
-        for (let i = 0; i < MAX_STOCKS; i++) {
-          paintTile(m, i);
-        }
+        paintGridTicked(m);
       };
 
       // ---- Market events.
@@ -937,9 +919,7 @@ export const trading = defineEffect(tradingMeta, {
           paintFocusTicked(m);
         }
         if (gridPainted) {
-          for (let i = 0; i < MAX_STOCKS; i++) {
-            paintTile(m, i);
-          }
+          paintGridTicked(m);
         }
       };
 
@@ -1699,6 +1679,19 @@ export const trading = defineEffect(tradingMeta, {
               r.ready = false;
             }
           }
+          // Rows and tiles coming back into the live range catch up with the market.
+          if (focusPainted) {
+            for (let i = watchRows; i < fade.live; i++) {
+              paintWatchRow(m, i);
+            }
+          }
+          watchRows = fade.live;
+          if (gridPainted) {
+            for (let i = tileRows; i < fade.live; i++) {
+              paintTile(m, i);
+            }
+          }
+          tileRows = fade.live;
           if (focusPainted) {
             const moved =
               rangeShiftPx(paintedLo, paintedHi, mainRange.lo, mainRange.hi, layout.plot.h) >= 0.5;

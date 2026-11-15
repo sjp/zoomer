@@ -114,4 +114,33 @@ describe("trading renderer", () => {
     expect(Math.min(...labels)).toBeLessThan(price);
     expect(Math.max(...labels)).toBeGreaterThan(price);
   });
+
+  it("repaints only the live watchlist rows whose text changed", () => {
+    run([30, { count: 4, rotate: "off" }]);
+    const rows = MeasuringCanvas.calls.filter(
+      (c) => c.method === "fillText" && c.font.startsWith("600 15px"),
+    );
+    // The four live rows' tickers, never the hidden rows', at most once a tick (30) plus the first paint.
+    expect(new Set(rows.map((c) => c.args[0])).size).toBe(4);
+    expect(rows.length).toBeLessThanOrEqual(4 * 31);
+  });
+
+  it("paints watchlist rows and tiles as a higher count fades them in", () => {
+    // One tick every 5 s, so nothing between ticks repaints the rows already shown.
+    const slow = { pace: 5, rotate: "off" };
+    const marks = run(
+      [6, { ...slow, count: 4 }],
+      [2, { ...slow, count: 6 }],
+      [1.5, { ...slow, count: 6, layout: "grid" }],
+    );
+    const texts = (from: number, to: number | undefined, font: string) =>
+      MeasuringCanvas.calls
+        .slice(from, to)
+        .filter((c) => c.method === "fillText" && c.font.startsWith(font))
+        .map((c) => c.args[0]);
+    // The two rows faded in, at once, between ticks.
+    expect(texts(marks[1], marks[2], "600 15px")).toHaveLength(2);
+    // The Grid layout's first paint: every live tile (and the Focus header as it fades out).
+    expect(new Set(texts(marks[2], undefined, "700 22px")).size).toBe(6);
+  });
 });
