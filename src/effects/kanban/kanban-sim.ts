@@ -302,6 +302,11 @@ function retarget(b: Board, c: Card, x: number, y: number, snap: boolean, delay 
     c.tx = x;
     c.ty = y;
     c.dur = glideSeconds(Math.hypot(x - c.fx, y - c.fy), c.arc, s);
+    if (b.mover === c) {
+      // The carry lasts as long as the new glide; the next move waits for it.
+      b.moveEnd = c.t0 + 2 * LIFT_SECONDS + c.dur;
+      b.nextMove = Math.max(b.nextMove, b.moveEnd + 1);
+    }
     return;
   }
   c.fx = p.x;

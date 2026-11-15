@@ -229,6 +229,34 @@ describe("kanban board", () => {
     });
   });
 
+  it("keeps carrying a card retargeted mid-glide until it lands", () => {
+    const b = createBoard(4, layoutFor(1920, 1080, 3), 8);
+    // Step until a card is gliding, past its lift.
+    let guard = 0;
+    while ((b.mover === null || b.time < b.mover.t0 + 0.5) && guard++ < 30 * 120) {
+      stepBoard(b, 1 / 30, 8);
+    }
+    const m = b.mover;
+    expect(m).not.toBeNull();
+    if (!m) {
+      return;
+    }
+    const moves = b.moveCount;
+    // Opening a fourth column sends the card further than its first glide.
+    applyLayout(b, layoutFor(1920, 1080, 4), false);
+    expect(m.col).toBeGreaterThanOrEqual(0);
+    const pose = createPose();
+    while (b.mover === m) {
+      stepBoard(b, 1 / 30, 8);
+    }
+    // Released only once it has landed and settled, and no other move began mid-glide.
+    cardPose(m, b.time, pose);
+    expect(pose.lift).toBe(0);
+    expect(pose.x).toBeCloseTo(m.tx, 6);
+    expect(pose.y).toBeCloseTo(m.ty, 6);
+    expect(b.moveCount).toBe(moves);
+  });
+
   it("snaps to a resize, dropping what no longer fits", () => {
     const b = createBoard(10, layoutFor(1920, 1080), 8);
     run(b, 20, 8);
