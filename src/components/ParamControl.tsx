@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { sanitizeText, stepDecimals } from "../effects/params";
+import { isDefault, sanitizeText, stepDecimals } from "../effects/params";
 import type { ParamDef, ParamValue, TextParam } from "../effects/types";
 
 interface Props {
@@ -9,17 +9,6 @@ interface Props {
   onChange: (value: ParamValue) => void;
   /** Puts the param back to its default; offered while it differs from it. */
   onReset?: (() => void) | undefined;
-}
-
-/** Whether a value is the param's default, as its control would show it. */
-function isDefault(def: ParamDef, value: ParamValue): boolean {
-  if (def.kind === "number") {
-    return Number(value) === def.default;
-  }
-  if (def.kind === "color") {
-    return String(value).toLowerCase() === def.default.toLowerCase();
-  }
-  return value === def.default;
 }
 
 /**

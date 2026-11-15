@@ -16,6 +16,17 @@ export function defaults(schema: ParamSchema): AnyParamValues {
   return values;
 }
 
+/** Whether a value is the param's default, as its control would show it. */
+export function isDefault(def: ParamDef, value: ParamValue): boolean {
+  if (def.kind === "number") {
+    return Number(value) === def.default;
+  }
+  if (def.kind === "color") {
+    return String(value).toLowerCase() === def.default.toLowerCase();
+  }
+  return value === def.default;
+}
+
 /**
  * Clamps `n` to the param's range and snaps it to the nearest `min + k·step`, the
  * values its slider can produce, so a hand-edited URL can't give an effect a
