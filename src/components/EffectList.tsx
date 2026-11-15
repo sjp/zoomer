@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   EFFECT_SORTS,
   FAVOURITES_GROUP,
@@ -56,8 +64,8 @@ export interface EffectListProps {
  * screen reader users star the active option with `*` in the search box (search ignores
  * punctuation, so the key isn't needed for typing), and the option says it's starred.
  *
- * Between the search box and the list, a group of category chips (toggle buttons)
- * narrows the list to effects in any of the pressed categories. The group is one Tab
+ * Between the search box and the list, a row of category chips (toggle buttons, scrolling
+ * sideways) narrows the list to effects in any of the pressed categories. The group is one Tab
  * stop (a roving tabindex): ← / → move between chips, Home / End go to the ends, and
  * the app's single-key shortcuts leave keys pressed in it alone (`data-own-keys`).
  * Esc clears the search, then the chips, then closes the list.
@@ -80,6 +88,18 @@ export function EffectList(props: EffectListProps) {
   // The chip that takes the group's one Tab stop: the last one focused.
   const [chipIndex, setChipIndex] = useState(0);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  // Whether chips are scrolled out of view past each end of their row, for the fades.
+  const [chipsMore, setChipsMore] = useState({ start: false, end: false });
+  const updateChipsMore = useCallback(() => {
+    const el = chipsRef.current;
+    if (!el) {
+      return;
+    }
+    const start = el.scrollLeft > 1;
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setChipsMore((m) => (m.start === start && m.end === end ? m : { start, end }));
+  }, []);
   const active =
     effects.find((e) => e.id === activeId) ??
     (query !== "" ? undefined : effects.find((e) => e.id === currentId)) ??
@@ -89,6 +109,19 @@ export function EffectList(props: EffectListProps) {
     inputRef.current?.focus();
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- focusRequest is a counter whose only job is to re-run this effect
   }, [props.focusRequest]);
+
+  useEffect(() => {
+    updateChipsMore();
+    const el = chipsRef.current;
+    if (!el || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+    const observer = new ResizeObserver(updateChipsMore);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [updateChipsMore]);
 
   useEffect(() => {
     if (active) {
@@ -282,8 +315,12 @@ export function EffectList(props: EffectListProps) {
       <div
         role="group"
         aria-label="Filter by category"
+        ref={chipsRef}
         className="category-chips"
         data-own-keys
+        data-more-start={chipsMore.start}
+        data-more-end={chipsMore.end}
+        onScroll={updateChipsMore}
         onKeyDown={(e) => {
           const last = EFFECT_CATEGORIES.length - 1;
           const to =
@@ -316,8 +353,9 @@ export function EffectList(props: EffectListProps) {
             className="category-chip"
             aria-pressed={categories.has(category)}
             tabIndex={i === chipIndex ? 0 : -1}
-            onFocus={() => {
+            onFocus={(e) => {
               setChipIndex(i);
+              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
             }}
             onClick={() => {
               toggleCategory(category);

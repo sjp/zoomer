@@ -310,15 +310,45 @@ body,
   max-width: 45%;
 }
 
-/* Wraps onto more rows rather than widening the panel. Chips are at least 24 px tall
-   (WCAG 2.5.8 target size), with room between rows. */
+/* One row of chips that scrolls sideways, leaving the height to the list. It runs to
+   the panel's edges, and a soft fade marks an edge with more chips beyond it
+   (`data-more-start` / `data-more-end`, kept up to date by `EffectList`). Chips are at
+   least 24 px tall (WCAG 2.5.8 target size). */
 .category-chips {
+  --fade-start: 0px;
+  --fade-end: 0px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 4px;
+  gap: 4px;
+  margin-inline: calc(-1 * var(--pad-left)) calc(-1 * var(--pad-right));
+  padding-inline: var(--pad-left) var(--pad-right);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* A focused chip scrolls into view clear of the fade. */
+  scroll-padding-inline: 28px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent
+  );
+}
+
+.category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.category-chips[data-more-start="true"] {
+  --fade-start: 28px;
+}
+
+.category-chips[data-more-end="true"] {
+  --fade-end: 28px;
 }
 
 .category-chip {
+  flex: none;
   min-height: 24px;
   padding: 3px 8px;
   border-radius: 999px;
@@ -1162,24 +1192,6 @@ kbd {
   flex: 1;
   min-height: 0;
   padding-bottom: var(--pad-bottom);
-}
-
-/* One row of chips that scrolls sideways, leaving the height to the list. */
-.panel[data-list-fills="true"] .category-chips {
-  flex-wrap: nowrap;
-  margin-inline: calc(-1 * var(--pad-left)) calc(-1 * var(--pad-right));
-  padding-inline: var(--pad-left) var(--pad-right);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.panel[data-list-fills="true"] .category-chips::-webkit-scrollbar {
-  display: none;
-}
-
-.panel[data-list-fills="true"] .category-chip {
-  flex: none;
 }
 
 .panel[data-list-fills="true"] .effect-listbox {

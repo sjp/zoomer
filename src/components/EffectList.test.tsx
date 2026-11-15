@@ -257,4 +257,37 @@ describe("EffectList", () => {
     fireEvent.click(screen.getByText("F"));
     expect(props.onSelect).toHaveBeenCalledExactlyOnceWith("f");
   });
+
+  it("fades the ends of the chip row that have chips scrolled out past them", () => {
+    renderList();
+    const group = screen.getByRole("group", { name: "Filter by category" });
+    const layout = (scrollLeft: number) => {
+      Object.defineProperties(group, {
+        clientWidth: { configurable: true, value: 300 },
+        scrollWidth: { configurable: true, value: 900 },
+        scrollLeft: { configurable: true, value: scrollLeft },
+      });
+      fireEvent.scroll(group);
+    };
+    const fades = () => [group.dataset.moreStart, group.dataset.moreEnd];
+    // Nothing lays out in happy-dom, so the row starts out fitting.
+    expect(fades()).toEqual(["false", "false"]);
+    layout(0);
+    expect(fades()).toEqual(["false", "true"]);
+    layout(250);
+    expect(fades()).toEqual(["true", "true"]);
+    layout(600);
+    expect(fades()).toEqual(["true", "false"]);
+  });
+
+  it("scrolls a focused chip into view", () => {
+    const scrolled = vi.spyOn(Element.prototype, "scrollIntoView");
+    renderList();
+    const chip = screen.getByRole("button", { name: EFFECT_CATEGORIES[5] });
+    act(() => {
+      chip.focus();
+    });
+    expect(scrolled.mock.contexts).toContain(chip);
+    scrolled.mockRestore();
+  });
 });
