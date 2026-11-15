@@ -21,6 +21,7 @@ import {
   pushArc,
   pushArea,
   pushPolyline,
+  pushGridlines,
   pushRect,
   pushRoundRect,
   rangeShiftPx,
@@ -923,12 +924,7 @@ export const dashboard = defineEffect(dashboardMeta, {
           Math.max(2, Math.floor(p.h / (GRID_GAP * scale))),
           ticks,
         );
-        for (let i = 0; i < ticks.count; i++) {
-          const gy = Math.round(valueY(tickAt(ticks, i), lineRange, p.y, p.y + p.h));
-          if (gy >= p.y && gy <= p.y + p.h) {
-            pushRect(mesh, p.x, gy, p.x + p.w, gy + 1, C(GRID), a);
-          }
-        }
+        pushGridlines(mesh, ticks, lineRange, p.x, p.y, p.w, p.h, C(GRID), a, 1, true);
         const sp = p.w / (LINE_POINTS - 1);
         const off = lineSlide.offset * sp;
         const newest = d.lineWalks[0].steps - 1;
@@ -980,12 +976,7 @@ export const dashboard = defineEffect(dashboardMeta, {
           return;
         }
         niceTicks(0, barRange.hi, 4, ticks);
-        for (let i = 0; i < ticks.count; i++) {
-          const gy = Math.round(valueY(tickAt(ticks, i), barRange, p.y, p.y + p.h));
-          if (gy >= p.y && gy < p.y + p.h) {
-            pushRect(mesh, p.x, gy, p.x + p.w, gy + 1, C(GRID), a);
-          }
-        }
+        pushGridlines(mesh, ticks, barRange, p.x, p.y, p.w, p.h, C(GRID), a);
         const gw = p.w / BAR_GROUPS;
         const bw = Math.max(1, Math.round(gw * 0.26));
         const gap = Math.max(1, S(3));

@@ -21,6 +21,7 @@ import {
   pushArea,
   pushCandle,
   pushPolyline,
+  pushGridlines,
   pushRect,
   rangeShiftPx,
   settleSlide,
@@ -1059,12 +1060,7 @@ export const trading = defineEffect(tradingMeta, {
           return;
         }
         niceTicks(r.lo, r.hi, steps, ticks);
-        for (let i = 0; i < ticks.count; i++) {
-          const gy = Math.round(valueY(tickAt(ticks, i), r, y, y + h));
-          if (gy >= y && gy < y + h) {
-            pushRect(mesh, x, gy, x + w, gy + 1, C(GRID), a);
-          }
-        }
+        pushGridlines(mesh, ticks, r, x, y, w, h, C(GRID), a);
       };
 
       const drawFocus = (m: Market, la: number, ca: number, fa: number) => {

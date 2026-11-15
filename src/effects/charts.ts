@@ -533,6 +533,33 @@ export function pushRect(
 }
 
 /**
+ * Horizontal gridlines `lineW` px thick across the plot (`x`, `y`, `w`, `h`) at
+ * each of `ticks`, placed by `r` and rounded to whole pixels. A line that lands
+ * above the plot or on or below its bottom edge is skipped (on the bottom edge
+ * kept with `withBottom`).
+ */
+export function pushGridlines(
+  m: ChartMesh,
+  ticks: Ticks,
+  r: AxisRange,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  c: Rgb,
+  a: number,
+  lineW = 1,
+  withBottom = false,
+): void {
+  for (let i = 0; i < ticks.count; i++) {
+    const gy = Math.round(valueY(tickAt(ticks, i), r, y, y + h));
+    if (gy >= y && (withBottom ? gy <= y + h : gy < y + h)) {
+      pushRect(m, x, gy, x + w, gy + lineW, c, a);
+    }
+  }
+}
+
+/**
  * A solid quad through (`x0`, `y0`), (`x1`, `y1`), (`x2`, `y2`), (`x3`, `y3`) in
  * order round its edge, not snapped: for slanted faces, such as the top and side
  * of a bar drawn in 3D. Its edges aren't antialiased.

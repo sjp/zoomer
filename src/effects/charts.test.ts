@@ -28,6 +28,7 @@ import {
   pushArea,
   pushQuad,
   pushCandle,
+  pushGridlines,
   pushLine,
   pushPolyline,
   pushRect,
@@ -365,6 +366,26 @@ describe("mesh", () => {
     expect(Math.min(...xs)).toBe(10);
     expect(Math.max(...xs)).toBe(30);
     expect(Math.max(...ys) - Math.min(...ys)).toBe(1);
+  });
+
+  it("draws gridlines at the ticks inside the plot", () => {
+    const r = createAxisRange();
+    snapAxis(r, 0, 10);
+    const ticks = niceTicks(0, 10, 2, createTicks());
+    const lineYs = (m: ChartMesh) => {
+      const ys = new Set<number>();
+      for (let i = 0; i < m.count; i++) {
+        ys.add(m.data[i * CHART_STRIDE + 1]);
+      }
+      return [...ys].toSorted((a, b) => a - b);
+    };
+    // Ticks 0, 5, 10 over y 100..200: 10 lands on the top, 0 on the bottom edge.
+    const m = createChartMesh(64);
+    pushGridlines(m, ticks, r, 0, 100, 50, 100, c, 1);
+    expect(lineYs(m)).toEqual([100, 101, 150, 151]);
+    const thick = createChartMesh(64);
+    pushGridlines(thick, ticks, r, 0, 100, 50, 100, c, 1, 2, true);
+    expect(lineYs(thick)).toEqual([100, 102, 150, 152, 200, 202]);
   });
 
   it("skips empty, invisible and overflowing marks", () => {

@@ -11,6 +11,7 @@ import {
   niceTicks,
   pushArea,
   pushPolyline,
+  pushGridlines,
   pushRect,
   pushRoundRect,
   rangeShiftPx,
@@ -745,12 +746,7 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
           return;
         }
         niceTicks(0, range.hi, 4, ticks);
-        for (let i = 0; i < ticks.count; i++) {
-          const gy = Math.round(valueY(tickAt(ticks, i), range, plot.y, plot.y + plot.h));
-          if (gy >= plot.y && gy < plot.y + plot.h) {
-            pushRect(mesh, plot.x, gy, plot.x + plot.w, gy + one, C(GRID), a);
-          }
-        }
+        pushGridlines(mesh, ticks, range, plot.x, plot.y, plot.w, plot.h, C(GRID), a, one);
         const base = plot.y + plot.h;
         const slot = plot.w / t.items;
         const bars = a * (1 - smoothstep(0, 1, lineLevel));
