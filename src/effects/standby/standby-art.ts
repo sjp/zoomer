@@ -27,8 +27,8 @@ type Ctx = OffscreenCanvasRenderingContext2D;
 /** A hand-lettered look for the Cartoon card; no font is bundled. */
 const CARTOON_FONT_STACK = `"Comic Sans MS", "Chalkboard SE", "Comic Neue", "Marker Felt", cursive`;
 
-/** Largest side the card is painted at, px; flat bars upscale cleanly past that. */
-const MAX_CARD = 2048;
+/** Largest side the card is painted at, px: 4K paints one to one, so Digital's pill and edges stay crisp. */
+const MAX_CARD = 4096;
 /** Largest side of the sign and parts textures, px. */
 const MAX_TEXTURE = 4096;
 /** Transparent margin round the sign for its shadow, reference px. */

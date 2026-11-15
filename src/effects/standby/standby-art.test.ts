@@ -50,7 +50,8 @@ describe("standby art", () => {
 
   it.each(sizes)("paints the %s card and parts at %i x %i within texture limits", (style, w, h) => {
     const card = paintCard(style, w, h) as unknown as MeasuringCanvas;
-    expect(Math.max(card.width, card.height)).toBeLessThanOrEqual(2048);
+    // Painted one to one up to 4K, never past the texture limit.
+    expect([card.width, card.height]).toEqual([w, h]);
     expect(card.width / card.height).toBeCloseTo(w / h, 2);
     const parts = paintParts(style, (220 * h) / 1080) as unknown as MeasuringCanvas;
     expect(parts.width).toBe(parts.height * PART_CELLS);
