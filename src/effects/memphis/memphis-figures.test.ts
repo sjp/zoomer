@@ -109,6 +109,10 @@ describe("corporate memphis poses", () => {
     blendPose(POSE_HIGH_FIVE, from, 0.2, 5, 7, pose);
     expect(pose[STRETCH_UPPER]).toBeGreaterThan(1);
     expect(pose[STRETCH_FORE]).toBeGreaterThan(1);
+    solveRig(pose, joints);
+    // Still up and reaching forward while it shrinks.
+    expect(joints[2 * J_FRONT_ELBOW + 1]).toBeGreaterThan(joints[2 * J_SHOULDER + 1]);
+    expect(dist(J_FRONT_ELBOW, J_FRONT_WRIST)).toBeGreaterThan(FOREARM);
     expect(joints[2 * J_FRONT_WRIST]).toBeGreaterThan(joints[2 * J_BACK_WRIST]);
     expect(joints[2 * J_BACK_HAND]).toBeLessThan(joints[2 * J_FRONT_HAND]);
   });
