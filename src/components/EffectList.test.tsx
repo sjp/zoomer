@@ -151,22 +151,23 @@ describe("EffectList", () => {
     const group = screen.getByRole("group", { name: "Filter by category" });
     const chips = within(group).getAllByRole("button");
     const tabStops = () => chips.filter((c) => c.tabIndex === 0);
+    const press = (key: string) => fireEvent.keyDown(document.activeElement ?? group, { key });
     expect(tabStops()).toEqual([chips[0]]);
     act(() => {
       chips[0]?.focus();
     });
-    fireEvent.keyDown(chips[0]!, { key: "ArrowRight" });
+    press("ArrowRight");
     expect(document.activeElement).toBe(chips[1]);
     expect(tabStops()).toEqual([chips[1]]);
-    fireEvent.keyDown(chips[1]!, { key: "End" });
+    press("End");
     expect(document.activeElement).toBe(chips.at(-1));
-    fireEvent.keyDown(chips.at(-1)!, { key: "ArrowRight" });
+    press("ArrowRight");
     expect(document.activeElement).toBe(chips.at(-1));
-    fireEvent.keyDown(chips.at(-1)!, { key: "ArrowLeft" });
+    press("ArrowLeft");
     expect(document.activeElement).toBe(chips.at(-2));
-    fireEvent.keyDown(chips.at(-2)!, { key: "Home" });
+    press("Home");
     expect(document.activeElement).toBe(chips[0]);
-    fireEvent.keyDown(chips[0]!, { key: "ArrowLeft" });
+    press("ArrowLeft");
     expect(document.activeElement).toBe(chips[0]);
     // A chip focused by the pointer takes the Tab stop too.
     act(() => {
