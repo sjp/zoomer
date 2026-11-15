@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFakeGl } from "../test/fake-gl";
-import { createSpriteBatch, polygonStrip, ribbonStrip } from "./sprites";
+import { createSpriteBatch, polygonStrip, ribbonStrip, writeSprite } from "./sprites";
 
 const named = (calls: { name: string; args: unknown[] }[], name: string) =>
   calls.filter((c) => c.name === name).map((c) => c.args);
@@ -80,6 +80,22 @@ describe("createSpriteBatch", () => {
     calls.length = 0;
     batch.upload(3);
     expect(named(calls, "bufferSubData")[0][4]).toBe(30);
+  });
+});
+
+describe("writeSprite", () => {
+  it("writes the rect and uv, and the spin pair when the batch has one", () => {
+    const { gl } = createFakeGl();
+    const spun = createSpriteBatch(gl, 3, [4, 4, 1], undefined, { rotation: true });
+    expect(writeSprite(spun, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1)).toBe(11);
+    expect([...spun.data.subarray(11, 22)]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 0, 9, -1]);
+    // Spin defaults to none, unflipped.
+    writeSprite(spun, 2, 1, 2, 3, 4, 5, 6, 7, 8);
+    expect([...spun.data.subarray(30, 33)]).toEqual([0, 0, 1]);
+
+    const plain = createSpriteBatch(gl, 2, [4, 4, 4]);
+    expect(writeSprite(plain, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9)).toBe(12);
+    expect([...plain.data.subarray(12, 24)]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0]);
   });
 });
 

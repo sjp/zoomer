@@ -11,7 +11,7 @@ import {
 } from "../gl";
 import { clamp, smoothstep } from "../math";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch } from "../sprites";
+import { createSpriteBatch, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import {
   classicCursor,
@@ -180,7 +180,6 @@ export const bluescreen = defineEffect(bluescreenMeta, {
       const settledSize = createSettledValue<number>(SETTLE);
       const cursorBox = new Float64Array(4);
       const data = batch.data;
-      const stride = batch.stride;
 
       let width = 1;
       let height = 1;
@@ -201,20 +200,11 @@ export const bluescreen = defineEffect(bluescreenMeta, {
         rgb: readonly number[],
         alpha: number,
       ) => {
-        const o = count * stride;
-        data[o] = x + w / 2;
-        data[o + 1] = y + h / 2;
-        data[o + 2] = w / 2;
-        data[o + 3] = h / 2;
-        data[o + 4] = u0;
-        data[o + 5] = v0;
-        data[o + 6] = u1;
-        data[o + 7] = v1;
+        const o = writeSprite(batch, count++, x + w / 2, y + h / 2, w / 2, h / 2, u0, v0, u1, v1);
         data[o + 8] = rgb[0];
         data[o + 9] = rgb[1];
         data[o + 10] = rgb[2];
         data[o + 11] = alpha;
-        count++;
       };
       const WHITE = [1, 1, 1] as const;
 

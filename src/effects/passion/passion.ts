@@ -3,7 +3,7 @@ import { createCountFade } from "../fade";
 import { beginFrame, createUniforms, scopedProgram, TO_CLIP_GLSL, withScope } from "../gl";
 import { approach, clamp } from "../math";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
+import { createSpriteBatch, SPRITE_SPIN_GLSL, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import { CRITTER_FRAMES, paintCritterAtlas } from "./critters";
 import {
@@ -183,7 +183,6 @@ export const passion = defineEffect(passionMeta, {
       const box: CritterBox = { x: 0, y: 0, size: 0 };
       const sparkle: Sparkle = { x: 0, y: 0, alpha: 0 };
       const data = batch.data;
-      const stride = batch.stride;
 
       let width = 1;
       let height = 1;
@@ -219,22 +218,11 @@ export const passion = defineEffect(passionMeta, {
         angle: number,
         flip: number,
       ) => {
-        const o = count * stride;
-        data[o] = cx;
-        data[o + 1] = cy;
-        data[o + 2] = hw;
-        data[o + 3] = hh;
-        data[o + 4] = u0;
-        data[o + 5] = v0;
-        data[o + 6] = u1;
-        data[o + 7] = v1;
+        const o = writeSprite(batch, count++, cx, cy, hw, hh, u0, v0, u1, v1, angle, flip);
         data[o + 8] = alpha;
         data[o + 9] = shade;
         data[o + 10] = add;
         data[o + 11] = 0;
-        data[o + 12] = angle;
-        data[o + 13] = flip;
-        count++;
       };
       /** A sprite from a misc atlas cell `rect` ([column, row, columns, rows]). */
       const putMisc = (

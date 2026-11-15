@@ -4,7 +4,7 @@ import { beginFrame, createUniforms, scopedProgram, TO_CLIP_GLSL, withScope } fr
 import { createLowResTarget, lowResSize } from "../lowres";
 import { clamp } from "../math";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
+import { createSpriteBatch, SPRITE_SPIN_GLSL, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import type { TileId } from "./geocities.meta";
 import {
@@ -168,7 +168,6 @@ export const geocities = defineEffect(geocitiesMeta, {
       const clock = createGeoClock();
       let counter: HitCounter | null = null;
       const data = batch.data;
-      const stride = batch.stride;
 
       let width = 1;
       let height = 1;
@@ -188,22 +187,11 @@ export const geocities = defineEffect(geocitiesMeta, {
         angle: number,
         flip: number,
       ) => {
-        const o = count * stride;
-        data[o] = cx;
-        data[o + 1] = cy;
-        data[o + 2] = hw;
-        data[o + 3] = hh;
-        data[o + 4] = u0;
-        data[o + 5] = v0;
-        data[o + 6] = u1;
-        data[o + 7] = v1;
+        const o = writeSprite(batch, count++, cx, cy, hw, hh, u0, v0, u1, v1, angle, flip);
         data[o + 8] = 1;
         data[o + 9] = 1;
         data[o + 10] = 1;
         data[o + 11] = alpha;
-        data[o + 12] = angle;
-        data[o + 13] = flip;
-        count++;
       };
 
       /** Sets a texture's filter and horizontal wrap. */

@@ -13,7 +13,7 @@ import { createDayClock } from "../horizon/horizon-sim";
 import { approach, clamp } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
+import { createSpriteBatch, SPRITE_SPIN_GLSL, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import { clockHands } from "../wall-clock";
 import {
@@ -232,7 +232,6 @@ export const standby = defineEffect(standbyMeta, {
       const hands = new Float64Array(3);
       const grain = new Float64Array(2);
       const data = batch.data;
-      const stride = batch.stride;
 
       let width = 1;
       let height = 1;
@@ -257,22 +256,11 @@ export const standby = defineEffect(standbyMeta, {
         alpha: number,
         angle: number,
       ) => {
-        const o = count * stride;
-        data[o] = cx;
-        data[o + 1] = cy;
-        data[o + 2] = hw;
-        data[o + 3] = hh;
-        data[o + 4] = u0;
-        data[o + 5] = v0;
-        data[o + 6] = u1;
-        data[o + 7] = v1;
+        const o = writeSprite(batch, count++, cx, cy, hw, hh, u0, v0, u1, v1, angle);
         data[o + 8] = r;
         data[o + 9] = g;
         data[o + 10] = b;
         data[o + 11] = alpha;
-        data[o + 12] = angle;
-        data[o + 13] = 1;
-        count++;
       };
 
       /** Draws a slot's card, sign and parts for its params at the current size. */

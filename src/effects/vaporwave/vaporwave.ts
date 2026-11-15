@@ -17,7 +17,7 @@ import { createLowResTarget } from "../lowres";
 import { approach, clamp, smoothstep } from "../math";
 import { VALUE_FBM_GLSL, VALUE_NOISE_GLSL } from "../noise";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
+import { createSpriteBatch, SPRITE_SPIN_GLSL, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import { BUST_FLOATS, BUST_RADIUS, buildBustMesh } from "./bust-mesh";
 import { canDrawKana, paintCaption, paintDialog, paintPalmAtlas } from "./vaporwave-art";
@@ -471,18 +471,8 @@ export const vaporwave = defineEffect(vaporwaveMeta, {
         angle: number,
         flip: number,
       ) => {
-        const o = index * stride;
-        data[o] = cx;
-        data[o + 1] = cy;
-        data[o + 2] = hw;
-        data[o + 3] = hh;
-        data[o + 4] = u0;
-        data[o + 5] = v0;
-        data[o + 6] = u1;
-        data[o + 7] = v1;
+        const o = writeSprite(batch, index, cx, cy, hw, hh, u0, v0, u1, v1, angle, flip);
         data[o + 8] = alpha;
-        data[o + 9] = angle;
-        data[o + 10] = flip;
       };
 
       /** Repaints any art whose content or scale changed. */

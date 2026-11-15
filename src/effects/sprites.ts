@@ -56,6 +56,45 @@ vec2 spinCorner(vec2 corner, vec2 spin) {
 }
 `;
 
+/**
+ * Writes instance `i` of a textured sprite batch, one whose first attributes
+ * are `[4, 4, ...]`: centre and half size, then the uv rect. With a spin pair
+ * (`{ rotation: true }`) it also writes `angle` and `flip` there. Returns the
+ * instance's first float, so the caller writes its own attributes from
+ * `data[o + 8]` on.
+ */
+export function writeSprite(
+  batch: SpriteBatch,
+  i: number,
+  cx: number,
+  cy: number,
+  hw: number,
+  hh: number,
+  u0: number,
+  v0: number,
+  u1: number,
+  v1: number,
+  angle = 0,
+  flip = 1,
+): number {
+  const data = batch.data;
+  const o = i * batch.stride;
+  data[o] = cx;
+  data[o + 1] = cy;
+  data[o + 2] = hw;
+  data[o + 3] = hh;
+  data[o + 4] = u0;
+  data[o + 5] = v0;
+  data[o + 6] = u1;
+  data[o + 7] = v1;
+  const spin = batch.spinOffset;
+  if (spin >= 0) {
+    data[o + spin] = angle;
+    data[o + spin + 1] = flip;
+  }
+  return o;
+}
+
 /** A unit quad, corners at ±1, as a triangle strip. */
 export const QUAD: readonly number[] = [-1, -1, 1, -1, -1, 1, 1, 1];
 

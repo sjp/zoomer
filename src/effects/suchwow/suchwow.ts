@@ -12,7 +12,7 @@ import {
 } from "../gl";
 import { clamp } from "../math";
 import { createSettledValue } from "../rebuild";
-import { createSpriteBatch, SPRITE_SPIN_GLSL } from "../sprites";
+import { createSpriteBatch, SPRITE_SPIN_GLSL, writeSprite } from "../sprites";
 import { defineEffect } from "../types";
 import {
   CELL_OPEN,
@@ -165,7 +165,6 @@ export const suchwow = defineEffect(suchwowMeta, {
       const stops = new Float32Array(9);
       const corner: Box = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
       const data = batch.data;
-      const stride = batch.stride;
 
       let width = 1;
       let height = 1;
@@ -194,19 +193,8 @@ export const suchwow = defineEffect(suchwowMeta, {
         alpha: number,
         angle: number,
       ) => {
-        const o = count * stride;
-        data[o] = cx;
-        data[o + 1] = cy;
-        data[o + 2] = hw;
-        data[o + 3] = hh;
-        data[o + 4] = u0;
-        data[o + 5] = 0;
-        data[o + 6] = u1;
-        data[o + 7] = 1;
+        const o = writeSprite(batch, count++, cx, cy, hw, hh, u0, 0, u1, 1, angle);
         data[o + 8] = alpha;
-        data[o + 9] = angle;
-        data[o + 10] = 1;
-        count++;
       };
 
       return {
