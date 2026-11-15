@@ -6,6 +6,7 @@ import {
   type AxisRange,
   autoRange,
   CHART_STRIDE,
+  clipLine,
   type ChartMesh,
   type ChartRenderer,
   createAxisRange,
@@ -317,6 +318,34 @@ describe("axis range", () => {
     expect(valueY(10, r, 100, 300)).toBe(100);
     tweenAxis(r, 0, 20, 0);
     expect(r.hi).toBe(20);
+  });
+});
+
+describe("clipLine", () => {
+  it("moves the first point outside each edge onto it, interpolated", () => {
+    const xs = [0, 10, 20, 30, 40];
+    const ys = [0, 10, 20, 30, 40];
+    const clip = { from: -1, count: -1 };
+    expect(clipLine(xs, ys, 5, 15, 25, clip)).toBe(3);
+    expect(clip.from).toBe(1);
+    expect(xs.slice(1, 4)).toEqual([15, 20, 25]);
+    expect(ys.slice(1, 4)).toEqual([15, 20, 25]);
+  });
+
+  it("keeps a line that is already inside as it is", () => {
+    const xs = [1, 2, 3];
+    const ys = [5, 6, 7];
+    const clip = { from: -1, count: -1 };
+    expect(clipLine(xs, ys, 3, 0, 4, clip)).toBe(3);
+    expect(clip.from).toBe(0);
+    expect(xs).toEqual([1, 2, 3]);
+    expect(ys).toEqual([5, 6, 7]);
+  });
+
+  it("leaves nothing when every point is left of the plot", () => {
+    const clip = { from: -1, count: -1 };
+    expect(clipLine([0, 1], [0, 1], 2, 5, 9, clip)).toBe(0);
+    expect(clip.count).toBe(0);
   });
 });
 

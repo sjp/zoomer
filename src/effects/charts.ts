@@ -689,6 +689,56 @@ export function pushLine(
   quadAcross(m, x0, y0, nx, ny, x1, y1, nx, ny, ext, hw, c, a);
 }
 
+/** The clipped run of a line's points, set by `clipLine`. */
+export interface LineClip {
+  from: number;
+  count: number;
+}
+
+/**
+ * Clips points `0 .. n - 1` of `xs` / `ys` (x ascending) to [left, right] in
+ * place: the first point outside each end moves onto the edge, interpolated, so
+ * the line runs right up to it. Sets `out` to the run left inside (count 0 when
+ * every point is left of `left`) and returns its count.
+ */
+export function clipLine(
+  xs: { [i: number]: number },
+  ys: { [i: number]: number },
+  n: number,
+  left: number,
+  right: number,
+  out: LineClip,
+): number {
+  let i0 = 0;
+  while (i0 < n && xs[i0] < left) {
+    i0++;
+  }
+  if (i0 >= n) {
+    out.from = 0;
+    out.count = 0;
+    return 0;
+  }
+  if (i0 > 0) {
+    const t = (left - xs[i0 - 1]) / (xs[i0] - xs[i0 - 1]);
+    ys[i0 - 1] += (ys[i0] - ys[i0 - 1]) * t;
+    xs[i0 - 1] = left;
+    i0--;
+  }
+  let i1 = n - 1;
+  while (i1 > i0 && xs[i1] > right) {
+    i1--;
+  }
+  if (i1 < n - 1) {
+    const t = (right - xs[i1]) / (xs[i1 + 1] - xs[i1]);
+    ys[i1 + 1] = ys[i1] + (ys[i1 + 1] - ys[i1]) * t;
+    xs[i1 + 1] = right;
+    i1++;
+  }
+  out.from = i0;
+  out.count = i1 - i0 + 1;
+  return out.count;
+}
+
 /** Longest a miter may get, as a multiple of the half width, before it is cut short. */
 const MITER_LIMIT = 2.5;
 

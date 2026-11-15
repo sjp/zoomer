@@ -1,8 +1,9 @@
 import { MONO_FONT_STACK, SANS_FONT_STACK } from "../canvas-texture";
 import {
+  autoRange,
   type AutoRangeOptions,
   type AxisRange,
-  autoRange,
+  clipLine,
   createAxisRange,
   createChartRenderer,
   createStepSlide,
@@ -12,6 +13,7 @@ import {
   formatPercent,
   formatSigned,
   kickSlide,
+  type LineClip,
   minTweenSeconds,
   niceTicks,
   priceDecimals,
@@ -978,38 +980,7 @@ export const trading = defineEffect(tradingMeta, {
         pushArc(mesh, x, h / 2, 0, r, 0, 2 * Math.PI, C(UP), a);
       };
 
-      /** First and count of the clipped line points, set by `clipLine`. */
-      let clipFrom = 0;
-      let clipCount = 0;
-      /** Clips points `0 .. n - 1` of xs / ys (x ascending) to [left, right], interpolating the ends. */
-      const clipLine = (n: number, left: number, right: number) => {
-        let i0 = 0;
-        while (i0 < n && xs[i0] < left) {
-          i0++;
-        }
-        if (i0 >= n) {
-          clipCount = 0;
-          return;
-        }
-        if (i0 > 0) {
-          const t = (left - xs[i0 - 1]) / (xs[i0] - xs[i0 - 1]);
-          ys[i0 - 1] += (ys[i0] - ys[i0 - 1]) * t;
-          xs[i0 - 1] = left;
-          i0--;
-        }
-        let i1 = n - 1;
-        while (i1 > i0 && xs[i1] > right) {
-          i1--;
-        }
-        if (i1 < n - 1) {
-          const t = (right - xs[i1]) / (xs[i1 + 1] - xs[i1]);
-          ys[i1 + 1] = ys[i1] + (ys[i1 + 1] - ys[i1]) * t;
-          xs[i1 + 1] = right;
-          i1++;
-        }
-        clipFrom = i0;
-        clipCount = i1 - i0 + 1;
-      };
+      const clip: LineClip = { from: 0, count: 0 };
 
       /** Lowest low and highest high of a stock's last `n` candles. */
       let dataLo = 0;
@@ -1081,10 +1052,10 @@ export const trading = defineEffect(tradingMeta, {
           np++;
         }
         if (wl > 0 && np >= 2) {
-          clipLine(np, left, right);
-          if (clipCount >= 2) {
-            pushArea(mesh, xs, ys, clipFrom, clipCount, bottom, C(ACCENT), 0.3 * wa, 0.02 * wa);
-            pushPolyline(mesh, xs, ys, clipFrom, clipCount, LINE_WIDTH * scale, C(ACCENT), wl);
+          clipLine(xs, ys, np, left, right, clip);
+          if (clip.count >= 2) {
+            pushArea(mesh, xs, ys, clip.from, clip.count, bottom, C(ACCENT), 0.3 * wa, 0.02 * wa);
+            pushPolyline(mesh, xs, ys, clip.from, clip.count, LINE_WIDTH * scale, C(ACCENT), wl);
           }
         }
       };

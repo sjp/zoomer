@@ -1,7 +1,8 @@
 import { SANS_FONT_STACK } from "../canvas-texture";
 import {
-  type AutoRangeOptions,
   autoRange,
+  type AutoRangeOptions,
+  clipLine,
   CORNER_TOP_LEFT,
   CORNER_TOP_RIGHT,
   coverTicks,
@@ -14,6 +15,7 @@ import {
   formatPercent,
   formatTickCompact,
   kickSlide,
+  type LineClip,
   minTweenSeconds,
   niceTicks,
   pushArc,
@@ -888,45 +890,14 @@ export const dashboard = defineEffect(dashboardMeta, {
           ys[n] = bottom - ((walkAt(w, b) - lo) / span) * (bottom - top);
           n++;
         }
-        clipLine(n, left, right);
-        if (clipCount >= 2) {
-          pushArea(mesh, xs, ys, clipFrom, clipCount, bottom, C(SERIES), 0.16 * a, 0);
-          pushPolyline(mesh, xs, ys, clipFrom, clipCount, SPARK_WIDTH * scale, C(SERIES), a);
+        clipLine(xs, ys, n, left, right, clip);
+        if (clip.count >= 2) {
+          pushArea(mesh, xs, ys, clip.from, clip.count, bottom, C(SERIES), 0.16 * a, 0);
+          pushPolyline(mesh, xs, ys, clip.from, clip.count, SPARK_WIDTH * scale, C(SERIES), a);
         }
       };
 
-      /** First and count of the clipped line points, set by `clipLine`. */
-      let clipFrom = 0;
-      let clipCount = 0;
-      /** Clips points `0 .. n - 1` of xs / ys (x ascending) to [left, right], interpolating the ends. */
-      const clipLine = (n: number, left: number, right: number) => {
-        let i0 = 0;
-        while (i0 < n && xs[i0] < left) {
-          i0++;
-        }
-        if (i0 >= n) {
-          clipCount = 0;
-          return;
-        }
-        if (i0 > 0) {
-          const t = (left - xs[i0 - 1]) / (xs[i0] - xs[i0 - 1]);
-          ys[i0 - 1] += (ys[i0] - ys[i0 - 1]) * t;
-          xs[i0 - 1] = left;
-          i0--;
-        }
-        let i1 = n - 1;
-        while (i1 > i0 && xs[i1] > right) {
-          i1--;
-        }
-        if (i1 < n - 1) {
-          const t = (right - xs[i1]) / (xs[i1 + 1] - xs[i1]);
-          ys[i1 + 1] = ys[i1] + (ys[i1 + 1] - ys[i1]) * t;
-          xs[i1 + 1] = right;
-          i1++;
-        }
-        clipFrom = i0;
-        clipCount = i1 - i0 + 1;
-      };
+      const clip: LineClip = { from: 0, count: 0 };
 
       const drawLine = (d: Dashboard, a: number) => {
         card(line, a);
@@ -976,10 +947,10 @@ export const dashboard = defineEffect(dashboardMeta, {
           }
           const endY = ys[n - 1];
           const endX = xs[n - 1];
-          clipLine(n, p.x, p.x + p.w);
-          if (clipCount >= 2) {
-            pushArea(mesh, xs, ys, clipFrom, clipCount, p.y + p.h, C(SERIES + s), 0.12 * a, 0);
-            pushPolyline(mesh, xs, ys, clipFrom, clipCount, LINE_WIDTH * scale, C(SERIES + s), a);
+          clipLine(xs, ys, n, p.x, p.x + p.w, clip);
+          if (clip.count >= 2) {
+            pushArea(mesh, xs, ys, clip.from, clip.count, p.y + p.h, C(SERIES + s), 0.12 * a, 0);
+            pushPolyline(mesh, xs, ys, clip.from, clip.count, LINE_WIDTH * scale, C(SERIES + s), a);
           }
           // The newest point: a dot with a ring of card colour, once it is inside the plot.
           const edge = clamp((p.x + p.w - endX) / (0.25 * sp) + 1, 0, 1);
