@@ -194,11 +194,9 @@ interface Pose {
   /** 0 at rest, 1 fully lifted. */
   lift: number;
   alpha: number;
-  /** Whether the card is between places (it may sit off the pixel grid). */
-  moving: boolean;
 }
 
-export const createPose = (): Pose => ({ x: 0, y: 0, lift: 0, alpha: 1, moving: false });
+export const createPose = (): Pose => ({ x: 0, y: 0, lift: 0, alpha: 1 });
 
 /** Samples of a glide's ease checked for its fastest moment (fine enough to miss it by under 1e-5). */
 const GLIDE_SAMPLES = 512;
@@ -246,7 +244,6 @@ export function cardPose(c: Card, now: number, out: Pose): Pose {
   out.x = c.fx + (c.tx - c.fx) * u;
   out.y = c.fy + (c.ty - c.fy) * u - (c.lifted ? c.arc * Math.sin(Math.PI * u) : 0);
   out.lift = lift;
-  out.moving = (u > 0 && u < 1) || lift > 0;
   let a = 1;
   if (now < c.born + ARRIVE_SECONDS) {
     a = smoothstep(0, 1, (now - c.born) / ARRIVE_SECONDS);
@@ -498,7 +495,8 @@ function tryMove(b: Board): boolean {
     }
     const r = rng();
     const i = r < 0.7 ? col.length - 1 : Math.floor(((r - 0.7) / 0.3) * col.length);
-    const card = col[Math.min(col.length - 1, i)];
+    const at = Math.min(col.length - 1, i);
+    const card = col[at];
     if (
       b.time < card.born + ARRIVE_SECONDS ||
       !hasRoom(b, c + 1, cardHeight(b.layout, card.lines.length))
@@ -510,7 +508,7 @@ function tryMove(b: Board): boolean {
     if (c === n - 2 && card.checkDone < card.checkTotal) {
       w *= 0.4;
     }
-    pick[c] = col.indexOf(card);
+    pick[c] = at;
     weight[c] = w;
     total += w;
   }
