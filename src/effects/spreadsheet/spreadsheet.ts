@@ -983,7 +983,9 @@ export const spreadsheet = defineEffect(spreadsheetMeta, {
               }
             }
             if (s.changesOverflow && painted) {
+              // Clearing the sheet clears the chart card's labels too.
               paintSheet(s);
+              paintChart(s);
             }
             s.changeCount = 0;
             s.changesOverflow = false;
