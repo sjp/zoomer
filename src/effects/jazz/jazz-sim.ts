@@ -152,6 +152,9 @@ export interface Element {
   x: number;
   y: number;
   angle: number;
+  /** cos and sin of `angle`, kept for placement, which samples the centreline a lot. */
+  cos: number;
+  sin: number;
   /** Quad half extents, ref px, unrotated. */
   hx: number;
   hy: number;
@@ -290,14 +293,15 @@ const PATH_SAMPLES = 9;
 function pathPoint(el: Element, s: number, ox: number, oy: number, out: { x: number; y: number }) {
   const lx = s * el.half;
   const ly = el.half > 0 ? el.p0 * (1 - s * s) : 0;
-  const c = Math.cos(el.angle);
-  const n = Math.sin(el.angle);
+  const c = el.cos;
+  const n = el.sin;
   out.x = el.x + ox + lx * c - ly * n;
   out.y = el.y + oy + lx * n + ly * c;
   return out;
 }
 
 const scratch = { x: 0, y: 0 };
+const scratchB = { x: 0, y: 0 };
 
 /** How far the element (at an offset) keeps from the clear centre, ref px; negative when it enters. */
 function clearance(el: Element, c: Ellipse, ox = 0, oy = 0): number {
@@ -331,7 +335,7 @@ function gapBetween(a: Element, b: Element): number {
     return gapTo(b, a.x, a.y) - a.radius;
   }
   let min = Infinity;
-  const p = { x: 0, y: 0 };
+  const p = scratchB;
   for (let i = 0; i < PATH_SAMPLES; i++) {
     pathPoint(a, -1 + (2 * i) / (PATH_SAMPLES - 1), 0, 0, p);
     min = Math.min(min, gapTo(b, p.x, p.y) - a.thick);
@@ -358,6 +362,8 @@ function blank(group: number, kind: number, rng: () => number): Element {
     x: 0,
     y: 0,
     angle: rng() * Math.PI * 2,
+    cos: 1,
+    sin: 0,
     hx: 0,
     hy: 0,
     p0: 0,
@@ -520,6 +526,8 @@ const DRIFT_PAD = 520;
 interface PlaceContext {
   scene: Scene;
   clear: Ellipse;
+  /** The scene's swashes, which squiggles and splatter attach to. */
+  swashes: Element[];
 }
 
 /** Size factor for a spot: smaller towards the centre (in the static layout). */
@@ -537,6 +545,7 @@ function others(scene: Scene, group: number, skip: Element | null): Element[] {
 
 /** One placement try for `group`; null when the spot is taken or not allowed. */
 function attempt(ctx: PlaceContext, group: number, rng: () => number, skip: Element | null) {
+  const swashes = ctx.swashes;
   const s = ctx.scene;
   let x = s.x0 + rng() * s.w;
   let y = s.y0 + rng() * s.h;
@@ -546,7 +555,6 @@ function attempt(ctx: PlaceContext, group: number, rng: () => number, skip: Elem
     el = makeSwash(rng, f);
   } else if (group === G_SQUIGGLE) {
     el = makeSquiggle(rng, f);
-    const swashes = others(s, G_SWASH, null);
     // Most squiggles ride along or across a swash, as on the cup.
     if (swashes.length > 0 && rng() < 0.65) {
       const host = swashes[Math.floor(rng() * swashes.length)];
@@ -562,7 +570,6 @@ function attempt(ctx: PlaceContext, group: number, rng: () => number, skip: Elem
     el = makeShape(rng, f);
   } else if (group === G_SPLAT) {
     el = makeSplat(rng, f);
-    const swashes = others(s, G_SWASH, null);
     // Near a swash's tail, in its colour.
     if (swashes.length > 0) {
       const host = swashes[Math.floor(rng() * swashes.length)];
@@ -577,6 +584,8 @@ function attempt(ctx: PlaceContext, group: number, rng: () => number, skip: Elem
   }
   el.x = x;
   el.y = y;
+  el.cos = Math.cos(el.angle);
+  el.sin = Math.sin(el.angle);
 
   if (!s.uniform) {
     const room = clearance(el, ctx.clear);
@@ -637,6 +646,7 @@ function spaced(el: Element, o: Element): boolean {
 }
 
 function place(ctx: PlaceContext, group: number, rng: () => number, skip: Element | null) {
+  ctx.swashes = others(ctx.scene, G_SWASH, null);
   for (let i = 0; i < 60; i++) {
     const el = attempt(ctx, group, rng, skip);
     if (el) {
@@ -664,7 +674,7 @@ function buildScene(jazz: Jazz, seed: number, k: number, uniform: boolean): Scen
     rng: createRng(hash32(Math.round(seed) * 7919 + 101)),
   };
   const rng = createRng(hash32(Math.round(seed) + 1));
-  const ctx: PlaceContext = { scene, clear: jazz.clear };
+  const ctx: PlaceContext = { scene, clear: jazz.clear, swashes: [] };
   const area = (scene.w * scene.h) / BASE_AREA / (k * k);
   for (let g = 0; g < GROUP_COUNT; g++) {
     const n = Math.max(1, Math.round(COUNTS[g] * area));
@@ -808,7 +818,7 @@ function stepScene(
   }
   const el = pickWeighted(candidates, scene.rng);
   // Find the replacement's spot first, so the pattern never thins out.
-  const next = place({ scene, clear: jazz.clear }, el.group, scene.rng, el);
+  const next = place({ scene, clear: jazz.clear, swashes: [] }, el.group, scene.rng, el);
   if (!next) {
     return;
   }
