@@ -1183,9 +1183,15 @@ kbd {
   border-radius: 16px 0 0 16px;
 }
 
-/* An open effect list takes the whole sheet or drawer, and only the list scrolls. */
+/* An open effect list takes over the panel, and only the list scrolls. The floating
+   card grows to its full height to give it the room. */
 .panel[data-list-fills="true"] {
   overflow: hidden;
+}
+
+.app[data-layout="float"] .panel[data-list-fills="true"] {
+  height: calc(100vh - 32px - var(--safe-top) - var(--safe-bottom));
+  height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
 }
 
 .panel[data-list-fills="true"] .effect-list {

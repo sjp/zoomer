@@ -449,10 +449,24 @@ describe("ControlPanel as a bottom sheet", () => {
     expect(list.onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 
-  it("keeps the list beside the controls on a floating card", () => {
-    renderPanel({ list: { ...renderPanelList(), open: true } });
-    expect(document.querySelector(".panel")?.getAttribute("data-list-fills")).toBe("false");
-    expect(document.querySelector(".description")).toBeTruthy();
+  it("lets an open effect list take over a floating card too", () => {
+    renderPanel({
+      list: {
+        ...renderPanelList(),
+        open: true,
+        options: { sort: "featured", query: "warp", favourites: new Set<string>() },
+      },
+    });
+    expect(document.querySelector(".panel")?.getAttribute("data-list-fills")).toBe("true");
+    expect(screen.getByLabelText("Search effects")).toBeTruthy();
+    // The description, the toolbar, the filter hint, the sections and the footer.
+    expect(document.querySelector(".description")).toBeNull();
+    expect(document.querySelector(".panel-toolbar")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(screen.queryByText(/step through/)).toBeNull();
+    expect(screen.queryByRole("slider")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Output" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reset all" })).toBeNull();
   });
 });
 

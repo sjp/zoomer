@@ -99,8 +99,8 @@ export function ControlPanel(props: Props) {
 
   const layout = props.layout ?? "float";
   const sheet = layout === "sheet";
-  // On a phone the open list takes the whole sheet or drawer, and only it scrolls.
-  const listFills = layout !== "float" && listOpen;
+  // The open list takes over the panel below its top row, and only the list scrolls.
+  const listFills = listOpen;
   // The bottom sheet: collapsed to a peek bar or expanded. An open list expands it.
   const [expanded, setExpanded] = useState(false);
   const sheetOpen = expanded || listOpen;
@@ -337,8 +337,10 @@ export function ControlPanel(props: Props) {
             </svg>
           </button>
         </div>
-        {!compact && <Description key={effect.id} text={effect.description} clamp={false} />}
-        {!compact && (
+        {!compact && !listOpen && (
+          <Description key={effect.id} text={effect.description} clamp={false} />
+        )}
+        {!compact && !listOpen && (
           <div className="panel-toolbar">
             {star}
             {copyLinkButton}
@@ -361,7 +363,7 @@ export function ControlPanel(props: Props) {
       )}
       {!listFills && (
         <>
-          {!listOpen && (filter !== "" || categoryFilter !== "") && (
+          {(filter !== "" || categoryFilter !== "") && (
             <p className="hint filter-hint">
               ← → step through {list.effects.length}{" "}
               {list.effects.length === 1 ? "match" : "matches"}
