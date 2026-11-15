@@ -285,9 +285,14 @@ describe("corporate memphis people", () => {
       // Room to spare for the busiest outfits.
       expect(mesh.vertexCount).toBeLessThan(0.75 * MAX_VERTICES);
       expect(mesh.indexCount).toBeLessThan(0.75 * MAX_INDICES);
-      for (let i = 0; i < mesh.vertexCount * VERTEX_FLOATS; i++) {
-        expect(Number.isFinite(mesh.vertices[i])).toBe(true);
+      // One expect per mesh, not per float: millions of expect calls took seconds.
+      let bad = -1;
+      for (let i = 0; i < mesh.vertexCount * VERTEX_FLOATS && bad < 0; i++) {
+        if (!Number.isFinite(mesh.vertices[i])) {
+          bad = i;
+        }
       }
+      expect(bad).toBe(-1);
     }
   });
 });
