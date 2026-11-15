@@ -6,8 +6,10 @@
  */
 import { describe, expect, it } from "vitest";
 
+// No `<string>` type argument: Vitest's module cache skips only files containing the literal
+// `import.meta.glob(`, so with one this test would keep checking stale cached sources.
 const files = Object.entries(
-  import.meta.glob<string>(["./*.ts", "./*/*.ts", "!./**/*.test.ts"], {
+  import.meta.glob(["./*.ts", "./*/*.ts", "!./**/*.test.ts"], {
     query: "?raw",
     import: "default",
     eager: true,

@@ -12,8 +12,10 @@
 import { describe, expect, it } from "vitest";
 import { effects } from "./registry";
 
+// No `<string>` type argument: Vitest's module cache skips only files containing the literal
+// `import.meta.glob(`, so with one this test would keep checking stale cached sources.
 const files = Object.entries(
-  import.meta.glob<string>("./*/*.ts", { query: "?raw", import: "default", eager: true }),
+  import.meta.glob("./*/*.ts", { query: "?raw", import: "default", eager: true }),
 ).map(([path, text]) => [path.replace(/^\.\//, ""), text] as const);
 
 const sceneFolders = new Set(

@@ -11,11 +11,13 @@ import type { TextParam } from "./types";
 const sources = (files: Record<string, string>) =>
   Object.entries(files).map(([path, text]) => [path.replace(/^\.\//, ""), text] as const);
 
+// No `<string>` type argument: Vitest's module cache skips only files containing the literal
+// `import.meta.glob(`, so with one this test would keep checking stale cached sources.
 const metaFiles = sources(
-  import.meta.glob<string>("./*/*.meta.ts", { query: "?raw", import: "default", eager: true }),
+  import.meta.glob("./*/*.meta.ts", { query: "?raw", import: "default", eager: true }),
 );
 const leafFiles = sources(
-  import.meta.glob<string>(["./types.ts", "./param-options.ts"], {
+  import.meta.glob(["./types.ts", "./param-options.ts"], {
     query: "?raw",
     import: "default",
     eager: true,
@@ -23,7 +25,7 @@ const leafFiles = sources(
 );
 
 const registrySource = Object.values(
-  import.meta.glob<string>("./registry.ts", { query: "?raw", import: "default", eager: true }),
+  import.meta.glob("./registry.ts", { query: "?raw", import: "default", eager: true }),
 )[0];
 
 /**
