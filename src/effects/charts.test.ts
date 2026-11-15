@@ -406,6 +406,26 @@ describe("mesh", () => {
     expect(Math.hypot(ex, ey)).toBeGreaterThan(2);
   });
 
+  it("draws repeated polyline points as if they were one", () => {
+    const plain = createChartMesh(64);
+    pushPolyline(plain, [0, 10, 20], [0, 0, 10], 0, 3, 2, c, 1);
+    for (const [xs, ys] of [
+      [
+        [0, 10, 10, 20],
+        [0, 0, 0, 10],
+      ],
+      [
+        [0, 0, 10, 10, 10, 20, 20],
+        [0, 0, 0, 0, 0, 10, 10],
+      ],
+    ]) {
+      const m = createChartMesh(64);
+      pushPolyline(m, xs, ys, 0, xs.length, 2, c, 1);
+      expect(m.count).toBe(plain.count);
+      expect(m.data).toEqual(plain.data);
+    }
+  });
+
   it("starts arcs at twelve o'clock and runs clockwise", () => {
     const m = createChartMesh(4096);
     pushArc(m, 0, 0, 9, 11, 0, Math.PI / 2, c, 1);

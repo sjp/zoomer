@@ -719,34 +719,35 @@ export function pushPolyline(
   let py = 0;
   let pex = 0;
   let pey = 0;
+  // Unit normal of the segment into the current point; none before the first.
+  let n0x = 0;
+  let n0y = 0;
+  let kept = false;
   for (let i = 0; i < n; i++) {
     const x = xs[from + i];
     const y = ys[from + i];
-    // Unit normals of the segments either side of point i (the one side at an end).
-    let n0x = 0;
-    let n0y = 0;
-    let n1x = 0;
-    let n1y = 0;
-    if (i > 0) {
-      const dx = x - xs[from + i - 1];
-      const dy = y - ys[from + i - 1];
-      const l = Math.hypot(dx, dy) || 1;
-      n0x = -dy / l;
-      n0y = dx / l;
+    // A repeat of the last point adds no segment, and its zero normal would bend
+    // the joints either side of it, so skip it.
+    if (kept && x === px && y === py) {
+      continue;
     }
-    if (i < n - 1) {
-      const dx = xs[from + i + 1] - x;
-      const dy = ys[from + i + 1] - y;
+    // Unit normal of the segment out of point i, to the next point that differs.
+    let j = i + 1;
+    while (j < n && xs[from + j] === x && ys[from + j] === y) {
+      j++;
+    }
+    let n1x = n0x;
+    let n1y = n0y;
+    if (j < n) {
+      const dx = xs[from + j] - x;
+      const dy = ys[from + j] - y;
       const l = Math.hypot(dx, dy) || 1;
       n1x = -dy / l;
       n1y = dx / l;
     }
-    if (i === 0) {
+    if (!kept) {
       n0x = n1x;
       n0y = n1y;
-    } else if (i === n - 1) {
-      n1x = n0x;
-      n1y = n0y;
     }
     let mx = n0x + n1x;
     let my = n0y + n1y;
@@ -763,13 +764,16 @@ export function pushPolyline(
     const k = Math.min(MITER_LIMIT, 1 / Math.max(1 / MITER_LIMIT, cos));
     const ex = mx * ext * k;
     const ey = my * ext * k;
-    if (i > 0 && Number.isFinite(px + py + x + y)) {
+    if (kept && Number.isFinite(px + py + x + y)) {
       quadAcross(m, px, py, pex, pey, x, y, ex, ey, ext, hw, c, a);
     }
+    kept = true;
     px = x;
     py = y;
     pex = ex;
     pey = ey;
+    n0x = n1x;
+    n0y = n1y;
   }
 }
 
