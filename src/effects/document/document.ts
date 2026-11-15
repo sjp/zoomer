@@ -835,7 +835,8 @@ export const documentPage = defineEffect(documentMeta, {
         }
       };
 
-      const drawChrome = () => {
+      /** The toolbar, ruler and status strip; the ruler's page marks and the zoom knob at opacity `pa` (they fade through a zoom change). */
+      const drawChrome = (pa: number) => {
         const g = geom;
         const one = Math.max(1, R(1));
         // Toolbar: icon blocks, the style box, a search pill on the right.
@@ -883,8 +884,8 @@ export const documentPage = defineEffect(documentMeta, {
         const px0 = S.pageX;
         const left = px0 + g.margin;
         const right = px0 + g.pageW - g.margin;
-        pushRect(mesh, px0, sTop, px0 + g.pageW, sBottom, C(RULER_MARGIN), 1);
-        pushRect(mesh, left, sTop, right, sBottom, C(PAGE), 1);
+        pushRect(mesh, px0, sTop, px0 + g.pageW, sBottom, C(RULER_MARGIN), pa);
+        pushRect(mesh, left, sTop, right, sBottom, C(PAGE), pa);
         const quarter = g.inch / 4;
         for (let q = -Math.floor(g.margin / quarter); left + q * quarter < px0 + g.pageW; q++) {
           if (q % 4 === 0) {
@@ -893,12 +894,12 @@ export const documentPage = defineEffect(documentMeta, {
           const x = Math.round(left + q * quarter);
           const th = q % 2 === 0 ? R(6) : R(3);
           const mid = (sTop + sBottom) / 2;
-          pushRect(mesh, x, mid - th / 2, x + one, mid + th / 2, C(MUTED), 0.8);
+          pushRect(mesh, x, mid - th / 2, x + one, mid + th / 2, C(MUTED), 0.8 * pa);
         }
         const mk = R(5);
-        pushRect(mesh, left - mk, sTop - R(3), left + mk, sTop + R(2), C(MUTED), 1);
-        pushRect(mesh, left - mk, sBottom - R(2), left + mk, sBottom + R(3), C(MUTED), 1);
-        pushRect(mesh, right - mk, sBottom - R(2), right + mk, sBottom + R(3), C(MUTED), 1);
+        pushRect(mesh, left - mk, sTop - R(3), left + mk, sTop + R(2), C(MUTED), pa);
+        pushRect(mesh, left - mk, sBottom - R(2), left + mk, sBottom + R(3), C(MUTED), pa);
+        pushRect(mesh, right - mk, sBottom - R(2), right + mk, sBottom + R(3), C(MUTED), pa);
         pushRect(mesh, 0, ry + rh - one, width, ry + rh, C(BORDER), 1);
         // Status strip: the label on the left, view blocks and a zoom slider on the right.
         const st = height - S.statusH;
@@ -914,7 +915,7 @@ export const documentPage = defineEffect(documentMeta, {
         x += R(14);
         pushRect(mesh, x, cy - one / 2, width - R(20), cy + one / 2 + 1, C(ICON), 1);
         const knob = x + (width - R(20) - x) * (zoom === ZOOM_PAGE ? 0.4 : 0.62);
-        pushRoundRect(mesh, knob - R(3), cy - R(6), knob + R(3), cy + R(6), R(2), C(MUTED), 1);
+        pushRoundRect(mesh, knob - R(3), cy - R(6), knob + R(3), cy + R(6), R(2), C(MUTED), pa);
       };
 
       // ---- Text regions (per frame).
@@ -948,14 +949,24 @@ export const documentPage = defineEffect(documentMeta, {
         }
       };
 
-      const queueChromeText = () => {
+      const queueChromeText = (pa: number) => {
         const sw = R(STYLE_W);
         const sb = S.toolbarH;
         text.quad(0, bandY, sw, sb, styleX, 0, sw, sb, 1);
         const stw = R(STATUS_W);
         text.quad(0, bandY + sb, stw, S.statusH, 0, height - S.statusH, stw, S.statusH, 1);
         const ry = bandY + sb + S.statusH;
-        text.quad(0, ry, pageCols, S.rulerH, S.pageX + pageLeft, S.toolbarH, pageCols, S.rulerH, 1);
+        text.quad(
+          0,
+          ry,
+          pageCols,
+          S.rulerH,
+          S.pageX + pageLeft,
+          S.toolbarH,
+          pageCols,
+          S.rulerH,
+          pa,
+        );
       };
 
       return {
@@ -1118,7 +1129,7 @@ export const documentPage = defineEffect(documentMeta, {
             drawCaret(t, Ld, ca);
           }
           const chromeFirst = mesh.count;
-          drawChrome();
+          drawChrome(pa);
           chart.upload();
 
           gl.clearColor(col[DESK][0], col[DESK][1], col[DESK][2], 1);
@@ -1132,7 +1143,7 @@ export const documentPage = defineEffect(documentMeta, {
           }
           chart.draw(width, height, chromeFirst, mesh.count - chromeFirst);
           if (painted) {
-            queueChromeText();
+            queueChromeText(pa);
             text.draw(width, height, textPalette);
           }
           gl.disable(gl.BLEND);
