@@ -842,8 +842,14 @@ export function advanceWalker(w: Walker, world: World, dt: number, rate: number)
 export const MAX_FLICKERS = 2;
 /** Flicker events per second per slot at a flicker of 1. */
 const EVENT_RATE = 1 / 8;
-/** How far from the camera, in cells, a flickering panel may be. */
-const FLICKER_REACH = 6;
+/**
+ * Where a flickering panel may be, in cells from the camera: ahead, from just
+ * past the top of the view (the ceiling shows from about 1.8 cells on), and to
+ * either side, so most flickers are seen and not just felt.
+ */
+const FLICKER_NEAR = 1;
+const FLICKER_FAR = 6;
+const FLICKER_SIDE = 3;
 /** Dims: duration and depth ranges. */
 const DIM_SECONDS = [2, 3] as const;
 const DIM_DEPTH = [0.45, 0.75] as const;
@@ -921,11 +927,24 @@ export function flickerLevel(s: FlickerSlot): number {
   return 1 - env * (BUZZ_DEPTH + BUZZ_WOBBLE * wobble);
 }
 
-/** Starts an event on a lit panel near (camX, camY) not already flickering; false if none was found. */
-function startEvent(f: Flicker, s: FlickerSlot, world: World, camX: number, camY: number): boolean {
-  const reach = FLICKER_REACH / 2;
-  const x = 2 * Math.round(camX / 2 + (f.rng() * 2 - 1) * reach);
-  const y = 2 * Math.round(camY / 2 + (f.rng() * 2 - 1) * reach);
+/**
+ * Starts an event on a lit panel not already flickering, mostly ahead of the
+ * camera at (camX, camY) facing `heading` (radians); false if none was found.
+ */
+function startEvent(
+  f: Flicker,
+  s: FlickerSlot,
+  world: World,
+  camX: number,
+  camY: number,
+  heading: number,
+): boolean {
+  const along = FLICKER_NEAR + f.rng() * (FLICKER_FAR - FLICKER_NEAR);
+  const side = (f.rng() * 2 - 1) * FLICKER_SIDE;
+  const fx = Number.isFinite(heading) ? Math.cos(heading) : 1;
+  const fy = Number.isFinite(heading) ? Math.sin(heading) : 0;
+  const x = 2 * Math.round((camX + along * fx + side * fy) / 2);
+  const y = 2 * Math.round((camY + along * fy - side * fx) / 2);
   if (panelAt(world, x, y) !== PANEL_LIT) {
     return false;
   }
@@ -949,7 +968,7 @@ function startEvent(f: Flicker, s: FlickerSlot, world: World, camX: number, camY
 /**
  * Runs the flicker schedule for `dt` seconds: each slot's event plays out, then
  * the slot waits for its next at a rate set by `amount` (0 never starts one),
- * on a lit panel near the camera.
+ * on a lit panel near the camera, mostly ahead of it along `heading`.
  */
 export function advanceFlicker(
   f: Flicker,
@@ -958,6 +977,7 @@ export function advanceFlicker(
   amount: number,
   camX: number,
   camY: number,
+  heading: number,
 ): void {
   const step = Math.max(0, dt);
   const rate = clamp(Number.isFinite(amount) ? amount : 0, 0, 1) * EVENT_RATE;
@@ -972,7 +992,7 @@ export function advanceFlicker(
       continue;
     }
     s.wait += step * rate;
-    if (s.wait >= s.due && !startEvent(f, s, world, camX, camY)) {
+    if (s.wait >= s.due && !startEvent(f, s, world, camX, camY, heading)) {
       // No lit panel there: look again a little later.
       s.wait = s.due - 0.05;
     }

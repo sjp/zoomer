@@ -646,7 +646,7 @@ export const backrooms = defineEffect(backroomsMeta, {
           haze = approach(haze, hazeParam(p.haze), step / HAZE_EASE);
 
           advanceWalker(walker, world, step, walkRate(p.speed));
-          advanceFlicker(flicker, world, step, p.flicker, walker.x, walker.y);
+          advanceFlicker(flicker, world, step, p.flicker, walker.x, walker.y, walker.angle);
           pulse = (pulse + step / REC_PULSE) % 1;
 
           const ox = windowOrigin(walker.x);

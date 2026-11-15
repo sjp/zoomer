@@ -495,7 +495,7 @@ describe("flicker", () => {
     let events = 0;
     let lowest = 1;
     for (let i = 0; i < 30 * 600; i++) {
-      advanceFlicker(f, world, 1 / 30, 1, 4.5, 3.5);
+      advanceFlicker(f, world, 1 / 30, 1, 4.5, 3.5, 0);
       let drop = 0;
       for (let k = 0; k < MAX_FLICKERS; k++) {
         const s = f.slots[k];
@@ -520,7 +520,7 @@ describe("flicker", () => {
     const bad: string[] = [];
     let flickers = 0;
     for (let i = 0; i < 30 * 300; i++) {
-      advanceFlicker(f, world, 1 / 30, 1, 20.5, -9.5);
+      advanceFlicker(f, world, 1 / 30, 1, 20.5, -9.5, i * 0.001);
       const [a, b] = f.slots;
       for (const s of f.slots) {
         if (!s.active) {
@@ -540,11 +540,34 @@ describe("flicker", () => {
     expect(flickers).toBeGreaterThan(0);
   });
 
+  it.each([0, 1, 2, 3])("flickers panels mostly ahead of the camera (heading %d)", (q) => {
+    const heading = (q * Math.PI) / 2;
+    const fx = Math.cos(heading);
+    const fy = Math.sin(heading);
+    let ahead = 0;
+    let events = 0;
+    for (const seed of SEEDS) {
+      const world = createWorld(seed);
+      const f = createFlicker(seed);
+      for (let i = 0; i < 30 * 300; i++) {
+        advanceFlicker(f, world, 1 / 30, 1, 10.5, 6.5, heading);
+        for (const s of f.slots) {
+          if (s.active && s.t === 1 / 30) {
+            events++;
+            ahead += (s.x + 0.5 - 10.5) * fx + (s.y + 0.5 - 6.5) * fy > 0 ? 1 : 0;
+          }
+        }
+      }
+    }
+    expect(events).toBeGreaterThan(100);
+    expect(ahead / events).toBeGreaterThan(0.75);
+  });
+
   it("stays steady at a flicker of 0", () => {
     const world = createWorld(1);
     const f = createFlicker(1);
     for (let i = 0; i < 30 * 300; i++) {
-      advanceFlicker(f, world, 1 / 30, 0, 0.5, 0.5);
+      advanceFlicker(f, world, 1 / 30, 0, 0.5, 0.5, 0);
       expect(f.slots.every((s) => !s.active)).toBe(true);
     }
   });
@@ -555,7 +578,7 @@ describe("flicker", () => {
       const f = createFlicker(2);
       const out: number[] = [];
       for (let i = 0; i < 30 * 60; i++) {
-        advanceFlicker(f, world, 1 / 30, 0.7, 3.5, 3.5);
+        advanceFlicker(f, world, 1 / 30, 0.7, 3.5, 3.5, 1);
         out.push(flickerLevel(f.slots[0]), flickerLevel(f.slots[1]));
       }
       return out;
