@@ -289,22 +289,30 @@ export function leniaStep(
     oy[i] = s * taps.data[t * 3 + 1];
     wt[i] = taps.data[t * 3 + 2];
   }
+  // A copy of A with `pad` wrapped cells either side of each row, so no fetch
+  // (whole-cell offset and the cell after it) needs wrapping along x.
+  let pad = 0;
+  for (let i = 0; i < n; i++) {
+    pad = Math.max(pad, -ox[i], ox[i] + 1);
+  }
+  const pw = w + 2 * pad;
+  const padded = new Float32Array(pw * h);
   for (let y = 0; y < h; y++) {
+    for (let x = -pad; x < w + pad; x++) {
+      padded[y * pw + x + pad] = A[y * w + (((x % w) + w) % w)];
+    }
+  }
+  for (let y = 0; y < h; y++) {
+    // Where each fetch reads in `padded` for the row's cell at x = 0.
     for (let i = 0; i < n; i++) {
-      rows[i] = ((((y + oy[i]) % h) + h) % h) * w;
+      rows[i] = ((((y + oy[i]) % h) + h) % h) * pw + pad + ox[i];
     }
     for (let x = 0; x < w; x++) {
       let u = 0;
       for (let i = 0; i < n; i++) {
-        let x0 = x + ox[i];
-        if (x0 < 0) {
-          x0 += w;
-        } else if (x0 >= w) {
-          x0 -= w;
-        }
-        const x1 = x0 + 1 === w ? 0 : x0 + 1;
-        const a = A[rows[i] + x0];
-        u += wt[i] * (a + (A[rows[i] + x1] - a) * fr[i]);
+        const k = rows[i] + x;
+        const a = padded[k];
+        u += wt[i] * (a + (padded[k + 1] - a) * fr[i]);
       }
       const v = clamp(A[y * w + x] + dt * growth(u, rule.mu, rule.sigma), 0, 1);
       out[y * w + x] = opts.quantise === true ? quantise16(v) : v;
