@@ -1,4 +1,5 @@
 import { type CanvasTexture, createCanvasTexture } from "../canvas-texture";
+import { createCrossfadeSlots } from "../fade";
 import { beginFrame, createUniforms, scopedProgram, TO_CLIP_GLSL, withScope } from "../gl";
 import { createLowResTarget, lowResSize } from "../lowres";
 import { clamp } from "../math";
@@ -172,9 +173,6 @@ export const geocities = defineEffect(geocitiesMeta, {
       let width = 1;
       let height = 1;
       let size = -1;
-      let current = 0;
-      let mix = 0;
-      let fading = false;
       let count = 0;
 
       const put = (
@@ -264,6 +262,7 @@ export const geocities = defineEffect(geocitiesMeta, {
         slot.art = null;
         slot.painted = -1;
       };
+      const fade = createCrossfadeSlots([slots[0], slots[1]], CROSSFADE, empty);
 
       /** Writes a slot's sprites (target px), every one at opacity `alpha`; returns the first marquee sprite. */
       const putSlot = (slot: Slot, alpha: number, blink: number) => {
@@ -452,29 +451,20 @@ export const geocities = defineEffect(geocitiesMeta, {
           }
 
           // A new style, text or tile crossfades in, one change at a time.
-          const shown = slots[current];
+          const shown = fade.current;
           if (shown.painted < 0) {
             fill(shown, style, text, marquee, tile);
           } else if (
-            !fading &&
+            !fade.fading &&
             (shown.style !== style ||
               shown.text !== text ||
               shown.marquee !== marquee ||
               shown.tile !== tile)
           ) {
-            fill(slots[1 - current], style, text, marquee, tile);
-            fading = true;
-            mix = 0;
+            fill(fade.next, style, text, marquee, tile);
+            fade.start();
           }
-          if (fading) {
-            mix = Math.min(1, mix + step / CROSSFADE);
-            if (mix >= 1) {
-              empty(slots[current]);
-              current = 1 - current;
-              fading = false;
-              mix = 0;
-            }
-          }
+          fade.step(step);
 
           stepGeoClock(clock, step, motion);
           // Allocates once, on the first frame.
@@ -482,8 +472,10 @@ export const geocities = defineEffect(geocitiesMeta, {
           stepHitCounter(counter, step, clock.t, p.counter);
           const blink = blinkAlpha(clock, motion);
 
-          const a = slots[current];
-          const b = slots[1 - current];
+          const a = fade.current;
+          const b = fade.next;
+          const fading = fade.fading;
+          const mix = fade.mix;
           count = 0;
           const aFirst = count;
           const aStrip = putSlot(a, 1, blink);
