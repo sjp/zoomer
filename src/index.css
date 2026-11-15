@@ -628,6 +628,38 @@ select:disabled {
   text-align: left;
 }
 
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Reset sits on the left, the everyday actions on the right. */
+.footer-actions .text-button {
+  margin-right: auto;
+}
+
+.text-button {
+  padding: 6px 4px;
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+
+.text-button:hover:not(:disabled) {
+  color: var(--text);
+  background: none;
+  text-decoration: underline;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+}
+
 .link-button {
   padding: 0;
   border: none;
@@ -658,7 +690,8 @@ select:disabled {
     min-height: 44px;
   }
 
-  .star-button {
+  .star-button,
+  .icon-button {
     min-width: 44px;
     min-height: 44px;
   }

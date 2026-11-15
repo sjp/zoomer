@@ -63,7 +63,9 @@ describe("ControlPanel", () => {
   it("resets one param to its default", () => {
     const props = renderPanel({ values: { ...defaults(warp.params), speed: 2 } });
     expect(
-      screen.getAllByRole("button", { name: /^Reset / }).map((b) => b.getAttribute("aria-label")),
+      screen
+        .getAllByRole("button", { name: /^Reset (?!all$)/ })
+        .map((b) => b.getAttribute("aria-label")),
     ).toEqual(["Reset Speed"]);
     fireEvent.click(screen.getByRole("button", { name: "Reset Speed" }));
     expect(props.onParamChange).toHaveBeenCalledExactlyOnceWith("speed", warp.params.speed.default);
@@ -180,6 +182,20 @@ describe("ControlPanel", () => {
     expect(screen.getByRole("button", { name: "Fullscreen" }).title).toBe("Fullscreen");
     expect(screen.getByRole("button", { name: /^Effect: / }).title).toBe("Choose an effect");
     expect(screen.getByRole("button", { name: /^Add Warp/ }).title).not.toMatch(/\(S\)$/);
+  });
+
+  it("offers Reset all apart from the icon buttons, which keep their names", () => {
+    const props = renderPanel();
+    const fullscreen = screen.getByRole("button", { name: "Fullscreen" });
+    const copy = screen.getByRole("button", { name: "Copy link" });
+    expect(fullscreen.textContent).toBe("");
+    expect(fullscreen.title).toBe("Fullscreen (F)");
+    expect(copy.textContent).toBe("");
+    expect(copy.title).toMatch(/^Copy a link/);
+    fireEvent.click(copy);
+    expect(props.onCopyLink).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Reset all" }));
+    expect(props.onReset).toHaveBeenCalledTimes(1);
   });
 
   it("leaves the Fullscreen button out when fullscreen isn't offered", () => {

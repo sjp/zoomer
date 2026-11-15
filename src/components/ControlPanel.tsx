@@ -252,21 +252,53 @@ export function ControlPanel(props: Props) {
       </details>
 
       <footer className="panel-footer">
-        <div className="row">
-          <button type="button" onClick={props.onReset}>
-            Reset
+        <div className="footer-actions">
+          {/* Apart from the others and quieter, since it throws away every change. */}
+          <button
+            type="button"
+            className="text-button"
+            title="Put every setting of this effect back to its default"
+            onClick={props.onReset}
+          >
+            Reset all
           </button>
           {props.onFullscreen && (
-            <button type="button" onClick={props.onFullscreen} title={`Fullscreen${shortcut("F")}`}>
-              Fullscreen
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Fullscreen"
+              title={`Fullscreen${shortcut("F")}`}
+              onClick={props.onFullscreen}
+            >
+              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <path
+                  d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           )}
           <button
             type="button"
-            onClick={props.onCopyLink}
+            className="icon-button"
+            aria-label="Copy link"
             title="Copy a link with every setting, that opens with the controls hidden (for OBS browser sources)"
+            onClick={props.onCopyLink}
           >
-            Copy link
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path
+                d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
         {canHover && (
