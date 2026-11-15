@@ -128,6 +128,12 @@ describe("formatters", () => {
     expect(formatCompact(3_210_000)).toBe("3.21M");
     expect(formatCompact(999_999)).toBe("1.00M");
     expect(formatCompact(1.05e9)).toBe("1.05B");
+    expect(formatCompact(999.4)).toBe("999");
+    expect(formatCompact(999.5)).toBe("1.00K");
+    expect(formatCompact(999.99)).toBe("1.00K");
+    expect(formatCompact(-999.7)).toBe("-1.00K");
+    expect(formatCompact(-0.3)).toBe("0");
+    expect(formatCompact(-0.6)).toBe("-1");
   });
 
   it("shows more decimals for pennies", () => {

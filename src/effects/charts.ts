@@ -172,10 +172,12 @@ export function formatCompact(v: number): string {
     return "-";
   }
   const a = Math.abs(v);
-  const sign = v < 0 ? "-" : "";
-  if (a < 1e3) {
-    return sign + Math.round(a).toString();
+  if (a < 999.5) {
+    // A value that rounds to zero shows no sign; 999.5 and up round to "1.00K" below.
+    const n = Math.round(a);
+    return (v < 0 && n !== 0 ? "-" : "") + n.toString();
   }
+  const sign = v < 0 ? "-" : "";
   const [div, unit] = a < 999.5e3 ? [1e3, "K"] : a < 999.5e6 ? [1e6, "M"] : [1e9, "B"];
   const n = a / div;
   return sign + n.toFixed(n < 9.995 ? 2 : n < 99.95 ? 1 : 0) + unit;
