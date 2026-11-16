@@ -35,6 +35,8 @@ const BACKDROP_OPTIONS = [
 export type CardId = (typeof CARD_OPTIONS)[number]["value"];
 /** The `timer` select's values. */
 export type TimerMode = (typeof TIMER_OPTIONS)[number]["value"];
+/** The `backdrop` select's values. */
+export type BackdropId = (typeof BACKDROP_OPTIONS)[number]["value"];
 
 /** The scene's own params, before the stream overlays'. */
 export const STARTING_SOON_PARAMS = {
