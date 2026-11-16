@@ -2,7 +2,9 @@
  * The chat column overlay: a translucent panel down one side with a thin
  * header and a made-up live chat (from `chat-feed.ts`). Each line has an
  * optional badge, the viewer's name in its own colour, then the message, which
- * may wrap to two lines and show emotes inline (`emote-art.ts`).
+ * may wrap to two lines and show emotes inline (`emote-art.ts`). The layer's
+ * shared stream events (follows, subs, gifts, hosts) show as highlighted
+ * lines among the messages.
  *
  * The chat never scrolls continuously. When the feed brings new lines in, the
  * message area is redrawn once at its new resting state; for the next quarter
@@ -25,6 +27,7 @@ import {
   CHAT_BADGE_COUNT,
   CHAT_MAX_BATCH,
   CHAT_PREFILL,
+  chatEventLine,
   type ChatMessage,
   chatMessage,
   type ChatToken,
@@ -50,6 +53,9 @@ type Ctx = OffscreenCanvasRenderingContext2D;
 
 /** The chat's seed: every scene shows the same made-up regulars. */
 const SEED = 0x5eed;
+
+/** Event lines waiting beyond this many (after a burst) are dropped, oldest first. */
+const MAX_WAITING_EVENTS = 4;
 
 /** Sizes at 1080p. */
 const HEADER = 40;
@@ -261,9 +267,11 @@ function drawBadge(ctx: Ctx, shape: number, cx: number, cy: number, size: number
 
 export const chatOverlay: OverlayDefinition = {
   meta: chatMeta,
-  create() {
+  create({ events }) {
     const feed = createChatFeed(SEED);
     const entries: Entry[] = [];
+    /** Event lines from the stream, waiting for the column's next step. */
+    const waiting: ChatMessage[] = [];
     let ownText: string | null = null;
     let own: string[] = [];
 
@@ -289,8 +297,7 @@ export const chatOverlay: OverlayDefinition = {
     /** Band edges, scratch for `drawGl`. */
     const cuts = new Float64Array(FADE_BANDS + 4);
 
-    const add = (index: number) => {
-      const message = chatMessage(SEED, index, own);
+    const add = (message: ChatMessage) => {
       entries.push({
         message,
         tokens: chatTokens(message.text),
@@ -444,12 +451,25 @@ export const chatOverlay: OverlayDefinition = {
         }
         if (entries.length === 0) {
           for (let i = Math.max(0, CHAT_PREFILL - HISTORY); i < CHAT_PREFILL; i++) {
-            add(i);
+            add(chatMessage(SEED, i, own));
           }
         }
-        const n = feed.step(step, number(values.chatBusy, 0.3));
-        for (let i = feed.released - n; i < feed.released; i++) {
-          add(i);
+        for (const e of events.fresh) {
+          waiting.push(chatEventLine(e));
+          if (waiting.length > MAX_WAITING_EVENTS) {
+            waiting.shift();
+          }
+        }
+        const n = feed.step(step, number(values.chatBusy, 0.3), waiting.length);
+        const shown = feed.events;
+        for (let i = feed.released - (n - shown); i < feed.released; i++) {
+          add(chatMessage(SEED, i, own));
+        }
+        for (let i = 0; i < shown; i++) {
+          const line = waiting.shift();
+          if (line !== undefined) {
+            add(line);
+          }
         }
         pending = Math.min(HISTORY, pending + n);
         title = text(values.chatTitle, "");

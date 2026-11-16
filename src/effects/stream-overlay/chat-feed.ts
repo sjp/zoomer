@@ -2,15 +2,18 @@
  * The chat column's made-up chat, without any drawing: who says what, when
  * messages arrive, and how they are batched into the column's steps.
  *
- * Message number `i` is fixed by the seed alone (its viewer, badge, words, and
- * whether it is a follow or subscribe event), so the chat reads the same
- * whatever the busy slider does; only the arrival times depend on it. The
- * viewer's own lines, when given, are mixed in among the built-in ones.
+ * Message number `i` is fixed by the seed alone (its viewer, badge and words),
+ * so the chat reads the same whatever the busy slider does; only the arrival
+ * times depend on it. The viewer's own lines, when given, are mixed in among
+ * the built-in ones. Event lines ("mossy_kettle followed!") aren't the chat's
+ * own: they come from the overlay layer's shared stream events
+ * (`chatEventLine`), so they match the alerts and the goal bar.
  */
 import { hash32 } from "../noise";
 import { sanitizeText } from "../params";
 import { chatMeta } from "./chat.meta";
 import { emoteIndex } from "./emote-art";
+import type { StreamEvent } from "./stream-events";
 import { makeUsername } from "./usernames";
 
 /**
@@ -180,9 +183,6 @@ export const CHAT_MESSAGES: readonly string[] = [
   "gg everyone",
 ];
 
-/** What an event line says after the viewer's name. */
-export const CHAT_EVENT_TEXTS: readonly string[] = ["followed!", "subscribed!"];
-
 /** Badge shapes a viewer may wear before their name (`ChatMessage.badge` 1 to this). */
 export const CHAT_BADGE_COUNT = 4;
 
@@ -225,8 +225,6 @@ const REGULAR_SHARE = 0.7;
 /** Viewer numbers for one-off viewers start here, plus the message number. */
 const NEW_VIEWER_BASE = 1000;
 
-/** Share of messages that are follow or subscribe events. */
-const EVENT_SHARE = 0.05;
 /**
  * Share of messages taken from the viewer's own lines: this much per line,
  * up to `OWN_SHARE_MAX`, so a single line doesn't come round too often.
@@ -238,12 +236,10 @@ const BADGE_SHARE = 0.45;
 
 /** Salts that keep each seeded choice independent of the others. */
 const SALT_GAP = 1;
-const SALT_EVENT = 2;
 const SALT_REGULAR = 3;
 const SALT_REGULAR_PICK = 4;
 const SALT_OWN = 5;
 const SALT_OWN_PICK = 6;
-const SALT_EVENT_TEXT = 7;
 const SALT_BADGE = 8;
 const SALT_ORDER = 9;
 
@@ -303,15 +299,12 @@ export function chatBadge(seed: number, user: number): number {
  * 30 % from five lines on. Allocates: call it once per message, when it arrives.
  */
 export function chatMessage(seed: number, index: number, own: readonly string[]): ChatMessage {
-  const event = index >= CHAT_PREFILL && unit(seed, SALT_EVENT, index) < EVENT_SHARE;
-  const regular = !event && unit(seed, SALT_REGULAR, index) < REGULAR_SHARE;
+  const regular = unit(seed, SALT_REGULAR, index) < REGULAR_SHARE;
   const user = regular
     ? hashOf(seed, SALT_REGULAR_PICK, index) % REGULARS
     : NEW_VIEWER_BASE + index;
   let text: string;
-  if (event) {
-    text = CHAT_EVENT_TEXTS[hashOf(seed, SALT_EVENT_TEXT, index) % CHAT_EVENT_TEXTS.length];
-  } else if (
+  if (
     own.length > 0 &&
     unit(seed, SALT_OWN, index) < Math.min(OWN_SHARE_MAX, OWN_SHARE_PER_LINE * own.length)
   ) {
@@ -325,7 +318,37 @@ export function chatMessage(seed: number, index: number, own: readonly string[])
     name: makeUsername(seed, user),
     badge: chatBadge(seed, user),
     text,
-    event,
+    event: false,
+  };
+}
+
+/** What an event line says after the viewer's name. */
+export function chatEventText(event: StreamEvent): string {
+  const n = String(event.amount);
+  if (event.kind === "follow") {
+    return "followed!";
+  }
+  if (event.kind === "sub") {
+    return event.amount > 1 ? `subscribed for ${n} months!` : "subscribed!";
+  }
+  if (event.kind === "gift") {
+    return event.amount > 1 ? `gifted ${n} subs!` : "gifted a sub!";
+  }
+  return `is hosting with ${n} viewers!`;
+}
+
+/**
+ * The highlighted chat line for a stream event, under the event's own name
+ * and without a badge. Its `index` is the event's. Allocates.
+ */
+export function chatEventLine(event: StreamEvent): ChatMessage {
+  return {
+    index: event.index,
+    user: event.user,
+    name: event.name,
+    badge: 0,
+    text: chatEventText(event),
+    event: true,
   };
 }
 
@@ -361,6 +384,8 @@ export function chatTokens(text: string): ChatToken[] {
 
 /** The chat's clock: messages arriving, and steps of the column bringing them in. */
 interface ChatFeed {
+  /** How many of the lines the last step brought in were waiting event lines. */
+  readonly events: number;
   /** Messages that have arrived (including `CHAT_PREFILL` from the start). */
   readonly arrived: number;
   /** Messages the column has brought in: numbers 0 to `released - 1`. */
@@ -368,13 +393,15 @@ interface ChatFeed {
   /** Seconds since the feed started. */
   readonly time: number;
   /**
-   * Advances `dt` seconds at `busy`. Returns how many messages the column
-   * brings in now (0 for no step). Each gap between arrivals uses the busy
-   * value at the arrival that starts it, so a change applies from the next
-   * message on. Steps come at least `CHAT_STEP_SECONDS` apart and bring at
-   * most `CHAT_MAX_BATCH` messages, the rest waiting for the next.
+   * Advances `dt` seconds at `busy`, with `waiting` event lines waiting to be
+   * shown. Returns how many lines the column brings in now (0 for no step):
+   * waiting event lines first (`events` of them), then messages. Each gap
+   * between arrivals uses the busy value at the arrival that starts it, so a
+   * change applies from the next message on. Steps come at least
+   * `CHAT_STEP_SECONDS` apart and bring at most `CHAT_MAX_BATCH` lines, the
+   * rest waiting for the next.
    */
-  step: (dt: number, busy: number) => number;
+  step: (dt: number, busy: number, waiting?: number) => number;
 }
 
 /** A feed under `seed`, starting with `CHAT_PREFILL` messages already in. */
@@ -384,7 +411,11 @@ export function createChatFeed(seed: number): ChatFeed {
   let released = CHAT_PREFILL;
   let nextAt = -1;
   let lastStep = -Infinity;
+  let events = 0;
   return {
+    get events() {
+      return events;
+    },
     get arrived() {
       return arrived;
     },
@@ -394,8 +425,9 @@ export function createChatFeed(seed: number): ChatFeed {
     get time() {
       return time;
     },
-    step(dt, busy) {
+    step(dt, busy, waiting = 0) {
       time += Number.isFinite(dt) && dt > 0 ? dt : 0;
+      events = 0;
       if (nextAt < 0) {
         nextAt = arrivalGap(seed, arrived - 1, busy);
       }
@@ -408,11 +440,13 @@ export function createChatFeed(seed: number): ChatFeed {
         arrived++;
       }
       released = Math.max(released, arrived - MAX_BACKLOG);
-      if (arrived > released && time - lastStep >= CHAT_STEP_SECONDS) {
-        const n = Math.min(CHAT_MAX_BATCH, arrived - released);
+      const wait = Number.isFinite(waiting) ? Math.max(0, Math.floor(waiting)) : 0;
+      if ((arrived > released || wait > 0) && time - lastStep >= CHAT_STEP_SECONDS) {
+        events = Math.min(CHAT_MAX_BATCH, wait);
+        const n = Math.min(CHAT_MAX_BATCH - events, arrived - released);
         released += n;
         lastStep = time;
-        return n;
+        return events + n;
       }
       return 0;
     },

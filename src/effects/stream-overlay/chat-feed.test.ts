@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   arrivalGap,
-  CHAT_EVENT_TEXTS,
   CHAT_MAX_BATCH,
   CHAT_MESSAGES,
   CHAT_PREFILL,
   CHAT_STEP_SECONDS,
   chatBadge,
+  chatEventLine,
+  chatEventText,
   chatMessage,
   chatRate,
   chatTokens,
@@ -14,6 +15,7 @@ import {
   parseChatLines,
 } from "./chat-feed";
 import { emoteIndex } from "./emote-art";
+import { type StreamEvent, streamEvent } from "./stream-events";
 
 /** Runs a feed for `seconds` at `busy`, returning the time and size of each step. */
 function run(seed: number, busy: number, seconds: number, dt = 1 / 30) {
@@ -121,16 +123,9 @@ describe("chatMessage", () => {
     expect(new Set(mine).size).toBe(count);
   });
 
-  it("has regulars who come back, a few events from new viewers, and badges per viewer", () => {
+  it("has regulars who come back, no events of its own, and badges per viewer", () => {
     const messages = Array.from({ length: 2000 }, (_, i) => chatMessage(3, i, []));
-    const events = messages.filter((m) => m.event);
-    expect(events.length / messages.length).toBeGreaterThan(0.03);
-    expect(events.length / messages.length).toBeLessThan(0.07);
-    for (const e of events) {
-      expect(CHAT_EVENT_TEXTS).toContain(e.text);
-      expect(e.index).toBeGreaterThanOrEqual(CHAT_PREFILL);
-      expect(messages.filter((m) => m.user === e.user)).toHaveLength(1);
-    }
+    expect(messages.filter((m) => m.event)).toEqual([]);
     const byUser = new Map<number, number>();
     for (const m of messages) {
       byUser.set(m.user, (byUser.get(m.user) ?? 0) + 1);
@@ -140,6 +135,39 @@ describe("chatMessage", () => {
     const badged = [...byUser.keys()].filter((u) => chatBadge(3, u) > 0).length;
     expect(badged / byUser.size).toBeGreaterThan(0.35);
     expect(badged / byUser.size).toBeLessThan(0.55);
+  });
+});
+
+describe("chatEventLine", () => {
+  const event = (kind: StreamEvent["kind"], amount: number): StreamEvent => ({
+    index: 7,
+    kind,
+    user: 200_007,
+    name: "mossy_kettle",
+    amount,
+  });
+
+  it.each([
+    ["follow", 1, "followed!"],
+    ["sub", 1, "subscribed!"],
+    ["sub", 6, "subscribed for 6 months!"],
+    ["gift", 1, "gifted a sub!"],
+    ["gift", 5, "gifted 5 subs!"],
+    ["host", 12, "is hosting with 12 viewers!"],
+  ] as const)("says what a %s of %i did", (kind, amount, text) => {
+    expect(chatEventText(event(kind, amount))).toBe(text);
+  });
+
+  it("is a highlighted line under the event's own name", () => {
+    const e = streamEvent(2, 3, "all");
+    expect(chatEventLine(e)).toEqual({
+      index: 3,
+      user: e.user,
+      name: e.name,
+      badge: 0,
+      text: chatEventText(e),
+      event: true,
+    });
   });
 });
 
@@ -220,6 +248,37 @@ describe("createChatFeed", () => {
     expect(busyFirst).toBeCloseTo(quietFirst, 5);
     // Then the busy one speeds up.
     expect(busy.arrived - quiet.arrived).toBeGreaterThan(50);
+  });
+
+  it("brings waiting event lines in first, within the step's batch and spacing", () => {
+    const feed = createChatFeed(5);
+    let waiting = 3;
+    const steps: { time: number; n: number; events: number }[] = [];
+    /** Event lines counted on frames without a step: always 0. */
+    const quiet: number[] = [];
+    for (let t = 0; t < 30; t += 1 / 60) {
+      const n = feed.step(1 / 60, 1, waiting);
+      quiet.push(n > 0 ? 0 : feed.events);
+      if (n > 0) {
+        steps.push({ time: feed.time, n, events: feed.events });
+        waiting -= feed.events;
+      }
+    }
+    expect(waiting).toBe(0);
+    expect(quiet.every((e) => e === 0)).toBe(true);
+    expect(steps[0]).toEqual({ time: steps[0].time, n: 2, events: 2 });
+    expect(steps[1].events).toBe(1);
+    expect(steps[1].time - steps[0].time).toBeGreaterThanOrEqual(CHAT_STEP_SECONDS - 1e-9);
+    for (const s of steps) {
+      expect(s.n).toBeLessThanOrEqual(CHAT_MAX_BATCH);
+    }
+  });
+
+  it("steps for an event line even when no message is waiting", () => {
+    const feed = createChatFeed(1);
+    expect(feed.step(1 / 60, 0, 1)).toBe(1);
+    expect(feed.events).toBe(1);
+    expect(feed.released).toBe(CHAT_PREFILL);
   });
 
   it("drops a long backlog after a stall rather than replaying it", () => {

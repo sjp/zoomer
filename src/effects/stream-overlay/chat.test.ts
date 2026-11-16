@@ -89,11 +89,14 @@ function setup(busy = 1) {
     Object.entries(schema).map(([k, d]) => [k, d.default]),
   );
   values.chatBusy = busy;
+  const events = createStreamEvents();
+  /** The stream's average gap, as the layer would read it. */
+  const stream = { every: 60 };
   const instance: OverlayInstance = chatOverlay.create({
     gl: {} as WebGL2RenderingContext,
     scope: createScope(),
     reserveSprites: () => 0,
-    events: createStreamEvents(),
+    events,
   });
   const clears: Rect[][] = [];
   let pending: Rect[] = [];
@@ -108,6 +111,7 @@ function setup(busy = 1) {
   };
   let first = true;
   const frame = (dt = DT) => {
+    events.step(dt, stream.every, "all");
     instance.update(dt, values, view);
     pending = [];
     instance.draw2d(canvas, view, first);
@@ -131,7 +135,7 @@ function setup(busy = 1) {
     instance.drawGl?.(draw, v);
     return out;
   };
-  return { instance, view, values, clears, frame, run, quads, target };
+  return { instance, events, stream, view, values, clears, frame, run, quads, target };
 }
 
 describe("chatOverlay", () => {
@@ -152,6 +156,24 @@ describe("chatOverlay", () => {
     expect(said).toContain("Chat");
     // The column starts full of messages.
     expect(said.filter((t) => t === ":").length).toBeGreaterThan(10);
+  });
+
+  it("shows the stream's events as highlighted lines under the same names", () => {
+    const { events, stream, frame } = setup(0);
+    stream.every = 20;
+    const names: string[] = [];
+    for (let t = 0; t < 120; t += DT) {
+      frame();
+      for (const e of events.fresh) {
+        names.push(e.name);
+      }
+    }
+    expect(names.length).toBeGreaterThan(2);
+    const said = MeasuringCanvas.calls.filter((c) => c.method === "fillText").map((c) => c.args[0]);
+    for (const name of names) {
+      expect(said).toContain(name);
+    }
+    expect(said.some((t) => /^(followed|subscribed|gifted|hosting)/.test(String(t)))).toBe(true);
   });
 
   it("redraws the messages once per step, never while they move, under twice a second", () => {
