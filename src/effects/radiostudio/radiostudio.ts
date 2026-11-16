@@ -1,3 +1,4 @@
+import { BOOM_MIC_GLSL } from "../boom-mic";
 import { advanceGraph, createGraphWalk, walkWander } from "../graph-walk";
 import { unitRgbMemo } from "../color";
 import {
@@ -528,88 +529,15 @@ void desk(vec2 f) {
   lay(lit(METAL * 0.5), cover(length(q - pivot) - 0.0065), vec2(0.0), 0.2);
 }
 
+/** Paints a part of the microphone: a matte colour under the room's light, catching no sign glow from its own tilt. */
+void micLay(vec3 c, float a, float r) {
+  lay(lit(c), a, vec2(0.0), r);
+}
+${BOOM_MIC_GLSL}
+
 /** The broadcast microphone on its sprung boom arm, with its shadow on the wall. */
 void mic(vec2 f) {
-  // Nothing of it (or its shadow) reaches past these.
-  if (f.x < ARM0.x - 0.03 || f.x > ARM1.x + 0.03) {
-    return;
-  }
-  vec2 a0 = ARM0.xy;
-  vec2 a1 = ARM0.zw;
-  vec2 a2 = ARM1.xy;
-  vec2 m = MIC.xy;
-  vec2 mh = MIC.zw;
-  vec2 bodyC = vec2(m.x, m.y - mh.y - 0.045);
-  vec2 bodyH = vec2(0.022, 0.06);
-  // Shadows on the wall, down and to the right.
-  vec2 s = f - vec2(0.012, -0.02);
-  float sd = min(sdSeg(s, a0, a1), sdSeg(s, a1, a2)) - 0.006;
-  sd = min(sd, sdBox(s - m, mh, mh.x));
-  sd = min(sd, sdBox(s - bodyC, bodyH + vec2(0.02, 0.0), 0.02));
-  col *= 1.0 - 0.35 * (1.0 - smoothstep(-0.004, 0.02, sd));
-  // The cable, sagging down to the desk.
-  vec2 c0 = bodyC - vec2(0.0, bodyH.y);
-  vec2 c2 = vec2(m.x - 0.06, ARM1.z);
-  vec2 c1 = vec2(m.x + 0.02, 0.5 * (c0.y + c2.y) - 0.05);
-  float cd = 1e3;
-  vec2 prev = c0;
-  for (int i = 1; i <= 6; i++) {
-    float t = float(i) / 6.0;
-    vec2 p = mix(mix(c0, c1, t), mix(c1, c2, t), t);
-    cd = min(cd, sdSeg(f, prev, p));
-    prev = p;
-  }
-  lay(lit(vec3(0.03)), cover(cd - 0.0028), vec2(0.0), 0.3);
-  // The arm: two tubes with springs alongside, and the elbow.
-  for (int i = 0; i < 2; i++) {
-    vec2 p0 = i == 0 ? a0 : a1;
-    vec2 p1 = i == 0 ? a1 : a2;
-    vec2 dir = normalize(p1 - p0);
-    vec2 n = vec2(-dir.y, dir.x);
-    float along = dot(f - p0, dir);
-    float acr = dot(f - p0, n);
-    float tube = sdSeg(f, p0, p1) - 0.0048;
-    vec3 tc = vec3(0.05) + vec3(0.18) * smoothstep(0.0048, 0.0, abs(acr - 0.0015)) * 0.6;
-    lay(lit(tc), cover(tube), vec2(0.0), 0.4);
-    float len = length(p1 - p0);
-    vec2 s0 = p0 + dir * len * 0.2 + n * 0.0115;
-    vec2 s1 = p0 + dir * len * 0.7 + n * 0.0115;
-    float spring = sdSeg(f, s0, s1) - 0.0034;
-    vec3 sc = METAL * (0.35 + 0.55 * pow(0.5 + 0.5 * sin(along * TAU / 0.0042), 2.0));
-    lay(lit(sc), cover(spring), vec2(0.0), 0.4);
-    float link = min(sdSeg(f, s0, s0 - n * 0.0115), sdSeg(f, s1, s1 - n * 0.0115)) - 0.0012;
-    lay(lit(METAL * 0.5), cover(link), vec2(0.0), 0.4);
-  }
-  lay(lit(vec3(0.07)), cover(length(f - a1) - 0.011), vec2(0.0), 0.4);
-  lay(lit(METAL * 0.55), cover(length(f - a1) - 0.004), vec2(0.0), 0.4);
-  // The shock mount: a cage round the body, hung on elastic cords.
-  vec2 bq = f - bodyC;
-  float cage = min(sdBox(vec2(bq.x, abs(bq.y) - 0.03), vec2(0.045, 0.0028), 0.0015), sdBox(vec2(abs(bq.x) - 0.045, bq.y), vec2(0.0028, 0.033), 0.0015));
-  float cords = 1e3;
-  for (int i = -1; i <= 1; i += 2) {
-    for (int j = -1; j <= 1; j += 2) {
-      cords = min(cords, sdSeg(bq, vec2(float(i) * 0.045, float(j) * 0.03), vec2(float(i) * 0.02, float(-j) * 0.012)));
-    }
-  }
-  // The yoke from the arm's tip to the cage.
-  float yoke = sdSeg(f, a2, bodyC + vec2(0.045, 0.0)) - 0.003;
-  lay(lit(vec3(0.07)), cover(min(cage, yoke)), vec2(0.0), 0.4);
-  lay(lit(vec3(0.02)), cover(cords - 0.001), vec2(0.0), 0.3);
-  // The body: a dark metal cylinder with a bright band.
-  float bd = sdBox(bq, bodyH, 0.012);
-  float cyl = bq.x / bodyH.x;
-  vec3 body = vec3(0.12, 0.12, 0.13) * (0.55 + 0.6 * sqrt(max(0.0, 1.0 - cyl * cyl)) * smoothstep(1.0, -0.6, cyl));
-  body = mix(body, METAL * (0.6 + 0.4 * smoothstep(0.6, -0.4, cyl)), step(abs(bq.y - bodyH.y + 0.012), 0.004));
-  lay(lit(body), cover(bd), vec2(0.0), 0.3);
-  lay(lit(vec3(0.02)), cover(cords - 0.001) * step(abs(bq.x), bodyH.x), vec2(0.0), 0.3);
-  // The foam windscreen on top.
-  vec2 wq = f - m;
-  float wd = sdBox(wq, mh, mh.x);
-  float wx = wq.x / mh.x;
-  float stip = 0.85 + 0.3 * rand(floor(f * 520.0), 29u);
-  vec3 wind = vec3(0.075, 0.075, 0.08) * stip * (0.5 + 0.75 * sqrt(max(0.0, 1.0 - wx * wx)) * smoothstep(1.1, -0.7, wx));
-  wind *= 0.8 + 0.3 * smoothstep(-mh.y, mh.y, wq.y);
-  lay(lit(wind), cover(wd), vec2(0.0), 0.5);
+  boomMic(f, ARM0.xy, ARM0.zw, ARM1.xy, MIC.xy, MIC.zw, vec2(MIC.x - 0.06, ARM1.z));
 }
 
 vec4 room(vec2 f) {
