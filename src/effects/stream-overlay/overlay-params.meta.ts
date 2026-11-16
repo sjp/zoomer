@@ -12,13 +12,14 @@
  */
 import type { ParamDef, ParamSchema } from "../types";
 import { OVERLAY_SIDE_OPTIONS, type OverlayMeta } from "./overlay-types.meta";
+import { splitsMeta } from "./splits.meta";
 
 /**
  * Every overlay, in registration order: the order of the toggles, of each
  * overlay's group in the panel, and of precedence when two column overlays
  * want the same side (the earlier one keeps it).
  */
-export const OVERLAY_METAS: readonly OverlayMeta[] = [];
+export const OVERLAY_METAS: readonly OverlayMeta[] = [splitsMeta];
 
 /** The group holding the toggles and the shared look. */
 export const OVERLAYS_GROUP = "Overlays";
