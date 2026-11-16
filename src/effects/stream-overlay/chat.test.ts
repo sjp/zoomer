@@ -15,6 +15,7 @@ import {
 } from "./overlay-layer";
 import { computeOverlayLayout, type Rect } from "./overlay-layout";
 import { streamOverlayParams } from "./overlay-params.meta";
+import { createStreamEvents } from "./stream-events";
 
 const DT = 1 / 60;
 
@@ -92,6 +93,7 @@ function setup(busy = 1) {
     gl: {} as WebGL2RenderingContext,
     scope: createScope(),
     reserveSprites: () => 0,
+    events: createStreamEvents(),
   });
   const clears: Rect[][] = [];
   let pending: Rect[] = [];

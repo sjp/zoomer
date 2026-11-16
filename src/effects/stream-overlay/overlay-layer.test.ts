@@ -20,6 +20,7 @@ import {
 import { type Rect, SLOT_EASE_SECONDS } from "./overlay-layout";
 import { OVERLAY_METAS, streamOverlayParams } from "./overlay-params.meta";
 import { OVERLAY_SIDE_OPTIONS, type OverlayMeta, type OverlaySlot } from "./overlay-types.meta";
+import type { StreamEventsView } from "./stream-events";
 
 /** What a test overlay saw, frame by frame. */
 interface Log {
@@ -174,6 +175,47 @@ describe("the registry", () => {
     scope.dispose();
     expect(fake.live()).toEqual([]);
     expect(fake.errors).toEqual([]);
+  });
+});
+
+describe("the shared stream events", () => {
+  beforeEach(() => {
+    vi.stubGlobal("OffscreenCanvas", FakeOffscreenCanvas);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Runs a layer of every registered overlay, all `on` or all off, logging each event's frame, kind and name. */
+  const runStream = (on: boolean) => {
+    const spied: { events: StreamEventsView | null } = { events: null };
+    const spy: OverlayDefinition = {
+      meta: testOverlay("spy", ["edges"]).def.meta,
+      create(ctx) {
+        spied.events = ctx.events;
+        return { update: () => undefined, draw2d: () => undefined };
+      },
+    };
+    const defs = [...OVERLAY_DEFINITIONS, spy];
+    const { frame, values } = setup(defs);
+    for (const d of defs) {
+      values[d.meta.toggle] = on;
+    }
+    values.alertEvery = 20;
+    const log: string[] = [];
+    for (let i = 0; i < 2400; i++) {
+      frame(0.25);
+      for (const e of spied.events?.fresh ?? []) {
+        log.push(`${String(i)} ${e.kind} ${e.name}`);
+      }
+    }
+    return log;
+  };
+
+  it("runs the same whether the overlays are on or off", () => {
+    const off = runStream(false);
+    expect(off.length).toBeGreaterThan(4);
+    expect(runStream(true)).toEqual(off);
   });
 });
 

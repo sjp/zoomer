@@ -14,6 +14,7 @@ import type { OverlayCanvas, OverlayInstance, OverlayView } from "./overlay-laye
 import { computeOverlayLayout, type Rect } from "./overlay-layout";
 import { streamOverlayParams } from "./overlay-params.meta";
 import type { OverlaySlot } from "./overlay-types.meta";
+import { createStreamEvents } from "./stream-events";
 
 const DT = 1 / 60;
 
@@ -135,6 +136,7 @@ function setup(width = 1920, height = 1080) {
     gl: {} as WebGL2RenderingContext,
     scope: createScope(),
     reserveSprites: () => 0,
+    events: createStreamEvents(),
   });
   const clears: Rect[][] = [];
   let pending: Rect[] = [];

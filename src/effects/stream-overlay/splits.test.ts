@@ -9,6 +9,7 @@ import { streamOverlayParams } from "./overlay-params.meta";
 import { DIFF_FADE_SECONDS, splitsOverlay } from "./splits";
 import { parseSplitLine, planSplits, simulateRun, START_SECONDS, textSeed } from "./splits-run";
 import { splitsMeta } from "./splits.meta";
+import { createStreamEvents } from "./stream-events";
 
 const DT = 1 / 60;
 
@@ -52,6 +53,7 @@ function setup(column?: Rect) {
     gl: {} as WebGL2RenderingContext,
     scope: createScope(),
     reserveSprites: () => 0,
+    events: createStreamEvents(),
   });
   const clears: Rect[][] = [];
   let pending: Rect[] = [];

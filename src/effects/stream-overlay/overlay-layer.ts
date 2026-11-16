@@ -22,7 +22,9 @@
  * there is no pass at all, and the canvas is freed.
  *
  * An overlay's toggle fades it in and out over `OVERLAY_FADE_SECONDS`; it
- * keeps updating while hidden, so it comes back in the right state. A column
+ * keeps updating while hidden, so it comes back in the right state. The
+ * layer also runs the stream's made-up supporter events (`stream-events.ts`),
+ * which the overlays share through their context. A column
  * overlay whose side changes slides there (`overlay-layout.ts`).
  */
 import { createCanvasAtlas } from "../canvas-texture";
@@ -46,6 +48,14 @@ import type { OverlayMeta, OverlaySide, OverlaySlot } from "./overlay-types.meta
 import { chatOverlay } from "./chat";
 import { frameOverlay } from "./frame";
 import { splitsOverlay } from "./splits";
+import {
+  createStreamEvents,
+  EVENT_EVERY_KEY,
+  EVENT_GAP_DEFAULT,
+  EVENT_KINDS_KEY,
+  eventKinds,
+  type StreamEventsView,
+} from "./stream-events";
 
 /** Seconds an overlay takes to fade in or out when toggled. */
 export const OVERLAY_FADE_SECONDS = 0.5;
@@ -143,6 +153,12 @@ export interface OverlayContext {
    * once, the first time any sprite is drawn. Call only while being built.
    */
   reserveSprites: (count: number, paint: SpritePainter) => number;
+  /**
+   * The stream's supporter events (follows, subs, gifts, hosts), shared by
+   * every overlay and stepped by the layer each frame before any `update`,
+   * whichever overlays are on: read `events.fresh` in `update`.
+   */
+  readonly events: StreamEventsView;
 }
 
 /** A running overlay. Every method is called by the layer; none is called after `dispose`. */
@@ -321,7 +337,8 @@ export function createStreamOverlays(
   if (byId.size !== definitions.length) {
     throw new Error("Two stream overlays share an id");
   }
-  const context: OverlayContext = { gl, scope, reserveSprites };
+  const events = createStreamEvents();
+  const context: OverlayContext = { gl, scope, reserveSprites, events };
   let columns = 0;
   const build = (def: OverlayDefinition): Entry => {
     const meta = def.meta;
@@ -554,6 +571,11 @@ export function createStreamOverlays(
       }
       opacity = op;
       const step = dt / OVERLAY_FADE_SECONDS;
+      events.step(
+        dt,
+        Number(values[EVENT_EVERY_KEY] ?? EVENT_GAP_DEFAULT),
+        eventKinds(values[EVENT_KINDS_KEY]),
+      );
 
       // Fades and toggles first, so the columns know who still holds one.
       let visible = 0;
