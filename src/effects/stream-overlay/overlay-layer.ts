@@ -44,6 +44,7 @@ import {
 import { OVERLAY_ACCENT_KEY, OVERLAY_OPACITY_KEY } from "./overlay-params.meta";
 import type { OverlayMeta, OverlaySide, OverlaySlot } from "./overlay-types.meta";
 import { chatOverlay } from "./chat";
+import { frameOverlay } from "./frame";
 import { splitsOverlay } from "./splits";
 
 /** Seconds an overlay takes to fade in or out when toggled. */
@@ -174,7 +175,11 @@ export interface OverlayDefinition {
 }
 
 /** Every overlay's implementation, in the same order as `OVERLAY_METAS`. */
-export const OVERLAY_DEFINITIONS: readonly OverlayDefinition[] = [splitsOverlay, chatOverlay];
+export const OVERLAY_DEFINITIONS: readonly OverlayDefinition[] = [
+  splitsOverlay,
+  chatOverlay,
+  frameOverlay,
+];
 
 /** The layer a streamer scene owns. */
 export interface StreamOverlays {

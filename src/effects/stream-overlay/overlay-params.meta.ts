@@ -13,6 +13,7 @@
 import type { ParamDef, ParamSchema } from "../types";
 import { OVERLAY_SIDE_OPTIONS, type OverlayMeta } from "./overlay-types.meta";
 import { chatMeta } from "./chat.meta";
+import { frameMeta } from "./frame.meta";
 import { splitsMeta } from "./splits.meta";
 
 /**
@@ -20,7 +21,7 @@ import { splitsMeta } from "./splits.meta";
  * overlay's group in the panel, and of precedence when two column overlays
  * want the same side (the earlier one keeps it).
  */
-export const OVERLAY_METAS: readonly OverlayMeta[] = [splitsMeta, chatMeta];
+export const OVERLAY_METAS: readonly OverlayMeta[] = [splitsMeta, chatMeta, frameMeta];
 
 /** The group holding the toggles and the shared look. */
 export const OVERLAYS_GROUP = "Overlays";
