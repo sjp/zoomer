@@ -37,6 +37,7 @@ import { diningcarMeta } from "./diningcar/diningcar.meta";
 import { lamproomMeta } from "./lamproom/lamproom.meta";
 import { captainscabinMeta } from "./captainscabin/captainscabin.meta";
 import { bedroom80sMeta } from "./bedroom80s/bedroom80s.meta";
+import { monitorglowMeta } from "./monitorglow/monitorglow.meta";
 import { chemlabMeta } from "./chemlab/chemlab.meta";
 import { submarineMeta } from "./submarine/submarine.meta";
 import { observatoryMeta } from "./observatory/observatory.meta";
@@ -213,6 +214,10 @@ export const effects: readonly EffectEntry[] = [
   {
     ...bedroom80sMeta,
     load: () => import("./bedroom80s/bedroom80s").then((m) => m.bedroom80s),
+  },
+  {
+    ...monitorglowMeta,
+    load: () => import("./monitorglow/monitorglow").then((m) => m.monitorglow),
   },
   { ...chemlabMeta, load: () => import("./chemlab/chemlab").then((m) => m.chemlab) },
   { ...submarineMeta, load: () => import("./submarine/submarine").then((m) => m.submarine) },
