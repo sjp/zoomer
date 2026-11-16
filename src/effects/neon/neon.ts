@@ -11,25 +11,14 @@ import {
 } from "../gl";
 import {
   breath,
-  centrelineDistance,
-  drawClip,
-  fallbackWidthEm,
-  FIELD_TEXEL,
-  fieldGrid,
-  GLOW_TEXEL,
-  glowField,
-  glowGrid,
-  HALO_RADII,
-  LINE_PITCH,
-  placeClips,
-  REF_HEIGHT,
+  buildNeonTubes,
+  measureLines,
+  NEON_EMIT_GLSL,
   SHIMMER_GLSL,
   SHIMMER_PERIOD,
-  signLayout,
-  signLines,
-  tubeRadius,
   warmUp,
-} from "./neon-sim";
+} from "../neon-tubes";
+import { LINE_PITCH, signLayout, signLines } from "./neon-sim";
 import { neonMeta, type NeonPosition } from "./neon.meta";
 import { HASH32_GLSL } from "../noise";
 import { defineEffect } from "../types";
@@ -37,12 +26,6 @@ import { createSettledValue } from "../rebuild";
 
 /** Seconds the text and the canvas aspect must hold still before the sign is rebuilt. */
 const INPUT_SETTLE = 0.3;
-/**
- * A rounded system font stack at a light weight, so the strokes are thin and even
- * like bent tube. No font is bundled.
- */
-const FONT_FAMILY = `ui-rounded, "SF Pro Rounded", "Varela Round", "Nunito", "Quicksand", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-const FONT_WEIGHT = 300;
 /** Most mounting clips per line. */
 const MAX_CLIPS = 4;
 /** Wall light per unit of blurred tube coverage. */
@@ -81,6 +64,7 @@ out vec4 outColor;
 ${DITHER_GLSL}
 ${HASH32_GLSL}
 ${SHIMMER_GLSL}
+${NEON_EMIT_GLSL}
 float hash2(vec2 c) {
   uvec2 u = uvec2(ivec2(c) + 65536);
   return float(hash32(u.x ^ hash32(u.y + 0x9e3779b9u)) >> 8) / 16777215.0;
@@ -137,16 +121,6 @@ vec3 wall(vec2 p, out float relief, out float gloss) {
   gloss = (1.0 - grout) * (0.8 + 0.4 * hash2(cell + 13.0));
   return mix(tile, vec3(0.16, 0.16, 0.16), grout);
 }
-/** One line's light at centreline distance d: tube body with a white-hot core, then halo. */
-vec3 emit(float d, vec3 c) {
-  float r = uTube.x;
-  float body = 1.0 - smoothstep(r - uTube.w, r + uTube.w, d);
-  float x = d / (uTube.z * r);
-  vec3 tube = mix(c * 1.3, vec3(1.0), 0.85 * exp(-x * x)) * body;
-  float halo = 0.55 * exp(-d / (1.4 * r)) + 0.16 * exp(-d / (4.5 * r));
-  halo *= 1.0 - smoothstep(0.5 * uTube.y, uTube.y, d);
-  return tube + c * halo * (1.0 - body);
-}
 void main() {
   vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uScale;
   float relief;
@@ -174,7 +148,7 @@ void main() {
     // Unlit glass shows faintly while the tubes warm up.
     col = mix(col, vec3(0.08, 0.085, 0.09), body * (1.0 - uLit) * 0.7);
     float s = uLit * (1.0 + uShimmer * ripple(p.x, uTime));
-    col += s * (emit(f.r, uC1) + emit(f.g, uC2));
+    col += s * (neonEmit(f.r, uC1, uTube) + neonEmit(f.g, uC2, uTube));
   }
   outColor = vec4(col + dither8(gl_FragCoord.xy), 1.0);
 }
@@ -183,7 +157,7 @@ void main() {
 /**
  * A neon sign on a wall at night, spelling the user's text in glowing tubes. The
  * text is drawn once with a system font on an OffscreenCanvas, turned into a
- * distance field to the strokes' centrelines on the CPU (neon-sim.ts) and a
+ * distance field to the strokes' centrelines on the CPU (neon-tubes.ts) and a
  * blurred low-res copy that lights the wall; both rebuild only when the text,
  * position or aspect ratio changes. Each frame is a single full-screen pass.
  */
@@ -260,97 +234,14 @@ export const neon = defineEffect(neonMeta, {
         if (!hasSign) {
           return;
         }
-        const measure = new OffscreenCanvas(1, 1).getContext("2d");
-        if (measure) {
-          measure.font = `${String(FONT_WEIGHT)} 100px ${FONT_FAMILY}`;
-        }
-        const widths = lines.map((l) => {
-          // Undefined without a context, and from the tests' fake one, whose methods all return undefined.
-          const metrics = measure?.measureText(l.text);
-          const w = metrics?.width;
-          return typeof w === "number" && w > 0 ? w / 100 : fallbackWidthEm(l.text);
-        });
-        const layout = signLayout(aspect, position, widths);
-        const radius = tubeRadius(layout.font);
-        const reach = HALO_RADII * radius;
-        const grid = fieldGrid(layout, radius);
-        const { cols, rows } = grid;
-        const toTexel = REF_HEIGHT / FIELD_TEXEL;
-
-        // Line 1 in red, line 2 in green, so each gets its own field.
-        const canvas = new OffscreenCanvas(cols, rows);
-        const ctx = canvas.getContext("2d");
-        const rowCentre = (k: number) =>
-          (layout.y + (k + 0.5) * LINE_PITCH * layout.font) * toTexel - grid.top / FIELD_TEXEL;
-        let pixels: Uint8ClampedArray | undefined;
-        if (ctx) {
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, cols, rows);
-          ctx.globalCompositeOperation = "lighter";
-          ctx.font = `${String(FONT_WEIGHT)} ${String(layout.font * toTexel)}px ${FONT_FAMILY}`;
-          ctx.textAlign = layout.align;
-          ctx.textBaseline = "middle";
-          const ax = layout.anchor * toTexel - grid.left / FIELD_TEXEL;
-          lines.forEach((l, k) => {
-            ctx.fillStyle = l.index === 0 ? "#f00" : "#0f0";
-            ctx.fillText(l.text, ax, rowCentre(k));
-          });
-          const image = ctx.getImageData(0, 0, cols, rows) as ImageData | undefined;
-          pixels = image?.data;
-        }
-        const masks = [new Uint8Array(cols * rows), new Uint8Array(cols * rows)];
-        if (pixels) {
-          for (let i = 0; i < cols * rows; i++) {
-            masks[0][i] = pixels[4 * i] > 127 ? 1 : 0;
-            masks[1][i] = pixels[4 * i + 1] > 127 ? 1 : 0;
-          }
-        }
-        const dists = masks.map((m) => centrelineDistance(m, cols, rows, reach).dist);
-
-        // Clips along each line's tubes.
-        const cover = new Float32Array(cols * rows);
-        const shade = new Float32Array(cols * rows);
-        const halfPitch = Math.trunc(0.5 * LINE_PITCH * layout.font * toTexel);
-        lines.forEach((l, k) => {
-          const c = rowCentre(k);
-          const top = Math.max(0, Math.floor(c - halfPitch));
-          const bottom = Math.min(rows, Math.ceil(c + halfPitch));
-          const mid = c + 0.08 * layout.font * toTexel;
-          const dist = dists[l.index];
-          for (const [x, y] of placeClips(dist, cols, top, bottom, mid, radius, MAX_CLIPS)) {
-            drawClip(cover, shade, cols, rows, x, y, radius);
-          }
-        });
-
-        const data = new Float32Array(cols * rows * 4);
-        for (let i = 0; i < cols * rows; i++) {
-          data[4 * i] = dists[0][i];
-          data[4 * i + 1] = dists[1][i];
-          data[4 * i + 2] = cover[i];
-          data[4 * i + 3] = shade[i];
-        }
-        upload(fieldTex, cols, rows, gl.RGBA16F, gl.RGBA, data);
-
-        const gg = glowGrid(grid);
-        const g0 = glowField(dists[0], grid, gg, radius);
-        const g1 = glowField(dists[1], grid, gg, radius);
-        const glow = new Float32Array(gg.cols * gg.rows * 2);
-        for (let i = 0; i < g0.length; i++) {
-          glow[2 * i] = g0[i];
-          glow[2 * i + 1] = g1[i];
-        }
-        upload(glowTex, gg.cols, gg.rows, gl.RG16F, gl.RG, glow);
-
-        field4[0] = grid.left;
-        field4[1] = grid.top;
-        field4[2] = 1 / (cols * FIELD_TEXEL);
-        field4[3] = 1 / (rows * FIELD_TEXEL);
-        glow4[0] = gg.left;
-        glow4[1] = gg.top;
-        glow4[2] = 1 / (gg.cols * GLOW_TEXEL);
-        glow4[3] = 1 / (gg.rows * GLOW_TEXEL);
-        tube4[0] = radius;
-        tube4[1] = reach;
+        const layout = signLayout(aspect, position, measureLines(lines.map((l) => l.text)));
+        const tubes = buildNeonTubes(lines, { ...layout, pitch: LINE_PITCH }, MAX_CLIPS);
+        upload(fieldTex, tubes.field.cols, tubes.field.rows, gl.RGBA16F, gl.RGBA, tubes.field.data);
+        upload(glowTex, tubes.glow.cols, tubes.glow.rows, gl.RG16F, gl.RG, tubes.glow.data);
+        field4.splice(0, 4, ...tubes.fieldBox);
+        glow4.splice(0, 4, ...tubes.glowBox);
+        tube4[0] = tubes.radius;
+        tube4[1] = tubes.reach;
         tube4[2] = 0.45;
       };
 
