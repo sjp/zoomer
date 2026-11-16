@@ -86,6 +86,14 @@ export function drawPanel(
 }
 
 /**
+ * The width of `text` in the context's current font, or 0 where the context
+ * gives no metrics (a stand-in canvas without text support).
+ */
+function textWidth(ctx: Ctx, text: string): number {
+  return (ctx.measureText(text) as TextMetrics | undefined)?.width ?? 0;
+}
+
+/**
  * `text` cut to fit `maxWidth` in the context's current font, with an ellipsis
  * where it was cut. Text that fits comes back unchanged; "" if not even the
  * ellipsis fits. Counts in code points, so it never splits a surrogate pair.
@@ -94,12 +102,12 @@ export function fitText(ctx: Ctx, text: string, maxWidth: number): string {
   if (!(maxWidth > 0)) {
     return "";
   }
-  if (ctx.measureText(text).width <= maxWidth) {
+  if (textWidth(ctx, text) <= maxWidth) {
     return text;
   }
   const chars = Array.from(text);
   const fits = (n: number) =>
-    ctx.measureText(`${chars.slice(0, n).join("").trimEnd()}…`).width <= maxWidth;
+    textWidth(ctx, `${chars.slice(0, n).join("").trimEnd()}…`) <= maxWidth;
   if (!fits(0)) {
     return "";
   }
@@ -141,7 +149,32 @@ export function fillLine(
   ctx.textAlign = align;
   ctx.textBaseline = "middle";
   ctx.fillText(shown, Math.round(x), Math.round(y));
-  return ctx.measureText(shown).width;
+  return textWidth(ctx, shown);
+}
+
+const isDigit = (c: string) => c >= "0" && c <= "9";
+
+/** The widest digit's width in the context's current font. */
+function digitWidth(ctx: Ctx): number {
+  let digit = 0;
+  for (let d = 0; d <= 9; d++) {
+    digit = Math.max(digit, textWidth(ctx, String(d)));
+  }
+  return digit;
+}
+
+/**
+ * The width `fillTabular` gives `text` in `font` (setting it on the context),
+ * for sizing a column of figures before drawing them.
+ */
+export function measureTabular(ctx: Ctx, text: string, font: string): number {
+  ctx.font = font;
+  const digit = digitWidth(ctx);
+  let width = 0;
+  for (const c of text) {
+    width += isDigit(c) ? digit : textWidth(ctx, c);
+  }
+  return width;
 }
 
 /**
@@ -161,12 +194,9 @@ export function fillTabular(
   align: CanvasTextAlign = "left",
 ): number {
   ctx.font = font;
-  let digit = 0;
-  for (let d = 0; d <= 9; d++) {
-    digit = Math.max(digit, ctx.measureText(String(d)).width);
-  }
+  const digit = digitWidth(ctx);
   const chars = Array.from(text);
-  const widths = chars.map((c) => (c >= "0" && c <= "9" ? digit : ctx.measureText(c).width));
+  const widths = chars.map((c) => (isDigit(c) ? digit : textWidth(ctx, c)));
   const total = widths.reduce((a, b) => a + b, 0);
   let left = x;
   if (align === "right" || align === "end") {

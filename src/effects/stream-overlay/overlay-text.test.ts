@@ -7,6 +7,7 @@ import {
   fillTabular,
   fitText,
   hashString,
+  measureTabular,
   OVERLAY_FONT_STACK,
   overlayFont,
   PANEL_MUTED,
@@ -146,6 +147,28 @@ describe("fillTabular", () => {
     fillTabular(ctx, "12", 0, 0, "20px x", PANEL_TEXT, "left");
     fillTabular(ctx, "12", 100, 0, "20px x", PANEL_TEXT, "center");
     expect(calls("fillText").map((c) => c.args[1])).toEqual([5, 15, 95, 105]);
+  });
+});
+
+describe("measureTabular", () => {
+  it("gives the width fillTabular draws", () => {
+    const ctx = context();
+    expect(measureTabular(ctx, "1:05.3", "20px x")).toBe(60);
+    expect(measureTabular(ctx, "", "20px x")).toBe(0);
+  });
+});
+
+describe("on a canvas without text metrics", () => {
+  const bare = new Proxy(
+    {},
+    { get: () => () => undefined },
+  ) as unknown as OffscreenCanvasRenderingContext2D;
+
+  it("measures nothing and draws without throwing", () => {
+    expect(fitText(bare, "Speedrun", 100)).toBe("Speedrun");
+    expect(fillLine(bare, "Speedrun", 0, 0, "20px x", PANEL_TEXT, 100)).toBe(0);
+    expect(fillTabular(bare, "1:05.3", 0, 0, "20px x", PANEL_TEXT)).toBe(0);
+    expect(measureTabular(bare, "1:05.3", "20px x")).toBe(0);
   });
 });
 
