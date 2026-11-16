@@ -17,6 +17,7 @@ import {
   MIN_SHOT,
   PEAK,
   REST,
+  restartGlow,
   screenFlicker,
   shotRange,
   stepGlow,
@@ -74,6 +75,20 @@ describe("the shot schedule", () => {
   it.each(GENRES.map((g) => [g]))("%s is deterministic per seed", (genre) => {
     expect(levels(3, genre, 0.7, 3000)).toEqual(levels(3, genre, 0.7, 3000));
     expect(levels(3, genre, 0.7, 3000)).not.toEqual(levels(4, genre, 0.7, 3000));
+  });
+
+  it("restarts exactly as a new schedule starts", () => {
+    const a = createGlowSchedule(0, "adventure", 0);
+    for (let i = 0; i < 1000; i++) {
+      stepGlow(a, DT, "adventure", 0, 0);
+    }
+    restartGlow(a, 6, "racing", 0.5);
+    const b = createGlowSchedule(6, "racing", 0.5);
+    for (let i = 0; i < 2000; i++) {
+      stepGlow(a, DT, "racing", 0.5, 6);
+      stepGlow(b, DT, "racing", 0.5, 6);
+    }
+    expect(a).toEqual(b);
   });
 
   it("doesn't depend on the frame rate", () => {

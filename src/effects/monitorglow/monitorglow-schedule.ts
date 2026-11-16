@@ -405,7 +405,7 @@ export function createGlowSchedule(seed: number, genre: Genre, intensity: number
     to: new Float64Array(LOOK_SIZE),
     events: new Float64Array(MAX_EVENTS * EVENT_SIZE),
     eventCount: 0,
-    intensity: clamp(intensity, 0, 1),
+    intensity: 0,
     rngBase: 0,
     rngIndex: 0,
     light: new Float64Array(3),
@@ -414,13 +414,23 @@ export function createGlowSchedule(seed: number, genre: Genre, intensity: number
     centre: 0,
     base: new Float64Array(LOOK_SIZE),
   };
+  restartGlow(s, seed, genre, intensity);
+  return s;
+}
+
+/** Starts `s` over at time 0, as `createGlowSchedule` would, without allocating. */
+export function restartGlow(s: GlowSchedule, seed: number, genre: Genre, intensity: number): void {
+  s.time = 0;
+  s.genre = genre;
+  s.look = -1;
+  s.intensity = clamp(intensity, 0, 1);
+  s.to.fill(0);
   beginShot(s, 0, 0, seed, genre);
   // The first shot starts on its look.
   s.from.set(s.to);
   s.ease = 0;
   scheduleEvents(s, TABLES[genre], MIN_REPEAT);
   evaluate(s);
-  return s;
 }
 
 /**
