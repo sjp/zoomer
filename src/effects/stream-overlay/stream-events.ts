@@ -15,7 +15,7 @@ import { hash32 } from "../noise";
 import { makeUsername } from "./usernames";
 
 /** What happened. */
-type StreamEventKind = "follow" | "sub" | "gift" | "host";
+export type StreamEventKind = "follow" | "sub" | "gift" | "host";
 
 /** Which kinds the stream holds: `all` mixes them, the others hold only that kind. */
 export type StreamEventKinds = "all" | "follows" | "gifts";
