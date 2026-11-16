@@ -8,13 +8,13 @@ import {
   frameGeometry,
   frameOverlay,
   TICKER_FADE_SECONDS,
+  TICKER_TURN_SECONDS,
 } from "./frame";
-import { FOLLOW_GAP_SECONDS } from "./goal";
 import type { OverlayCanvas, OverlayInstance, OverlayView } from "./overlay-layer";
 import { computeOverlayLayout, type Rect } from "./overlay-layout";
 import { streamOverlayParams } from "./overlay-params.meta";
 import type { OverlaySlot } from "./overlay-types.meta";
-import { createStreamEvents } from "./stream-events";
+import { createStreamEvents, type StreamEventKinds } from "./stream-events";
 
 const DT = 1 / 60;
 
@@ -132,12 +132,15 @@ function setup(width = 1920, height = 1080) {
   const values: AnyParamValues = Object.fromEntries(
     Object.entries(schema).map(([k, d]) => [k, d.default]),
   );
+  const events = createStreamEvents();
   const instance: OverlayInstance = frameOverlay.create({
     gl: {} as WebGL2RenderingContext,
     scope: createScope(),
     reserveSprites: () => 0,
-    events: createStreamEvents(),
+    events,
   });
+  /** The stream's average gap and kinds, as the layer would read them. */
+  const stream = { every: 60, kinds: "all" as StreamEventKinds };
   const clears: Rect[][] = [];
   let pending: Rect[] = [];
   const canvas: OverlayCanvas = {
@@ -152,6 +155,7 @@ function setup(width = 1920, height = 1080) {
   let first = true;
   const frame = (dt = DT) => {
     vi.advanceTimersByTime(dt * 1000);
+    events.step(dt, stream.every, stream.kinds);
     instance.update(dt, values, view);
     pending = [];
     instance.draw2d(canvas, view, first);
@@ -179,7 +183,7 @@ function setup(width = 1920, height = 1080) {
   };
   const said = () =>
     MeasuringCanvas.calls.filter((c) => c.method === "fillText").map((c) => String(c.args[0]));
-  return { instance, view, values, layout, clears, frame, run, quads, said };
+  return { instance, events, stream, view, values, layout, clears, frame, run, quads, said };
 }
 
 const asRect = (q: (number | boolean)[]) => ({
@@ -242,7 +246,7 @@ describe("frameOverlay", () => {
     }
   });
 
-  it("redraws only the clock's rect, once a second, between follows", () => {
+  it("redraws only the clock's rect, once a second, between events", () => {
     const { frame, run, clears } = setup();
     frame();
     run(10);
@@ -255,25 +259,62 @@ describe("frameOverlay", () => {
     expect(all[0].h).toBe(36);
   });
 
-  it("ticks the goal and cross-fades the ticker to the new follower", () => {
-    const { frame, run, clears, said } = setup();
+  it("ticks the goal and cross-fades the ticker to each new follower from the stream", () => {
+    const { events, stream, frame, run, clears, said } = setup();
+    stream.kinds = "follows";
+    stream.every = 20;
     frame();
     const before = said().filter((t) => t === "Latest follower:").length;
     const firstName = said()[said().indexOf("Latest follower:") + 1];
-    run(1.5 * FOLLOW_GAP_SECONDS);
-    expect(said().join("")).toContain("81 / 100");
+    expect(firstName).toBe(events.latestFollow.name);
+    const named: string[] = [];
+    while (events.follows < 2) {
+      frame();
+      if (events.fresh.length > 0) {
+        named.push(events.fresh[0].name);
+      }
+    }
+    run(1);
+    expect(said().join("")).toContain("82 / 100");
     const names = new Set(
       said().flatMap((t, i, all) => (all[i - 1] === "Latest follower:" ? [t] : [])),
     );
-    expect(names.has(firstName)).toBe(true);
-    expect(names.size).toBeGreaterThanOrEqual(2);
-    // The ticker's rect is redrawn for the fade's length, not for ever.
+    expect([...names]).toEqual([firstName, ...named]);
+    // The ticker's rect is redrawn for the fades' length, not for ever.
     const ticker = clears.flat().filter((r) => r.w > 300 && r.h === 36);
     const redraws = said().filter((t) => t === "Latest follower:").length - before;
-    expect(ticker.length).toBeGreaterThanOrEqual(TICKER_FADE_SECONDS / DT);
-    expect(ticker.length).toBeLessThan(3 * (TICKER_FADE_SECONDS / DT));
+    expect(ticker.length).toBeGreaterThanOrEqual(2 * (TICKER_FADE_SECONDS / DT));
+    expect(ticker.length).toBeLessThan(6 * (TICKER_FADE_SECONDS / DT));
     // Mid-fade, both names are drawn.
     expect(redraws).toBeGreaterThan(ticker.length);
+  });
+
+  it("turns the ticker to the latest supporter and back", () => {
+    const { events, stream, frame, run, said } = setup();
+    stream.every = 300;
+    frame();
+    run(TICKER_TURN_SECONDS + 1);
+    expect(said()).toContain("Latest supporter:");
+    const supporter = said()[said().indexOf("Latest supporter:") + 1];
+    expect(supporter).toBe(events.latestSupport.name);
+    const from = said().length;
+    run(TICKER_TURN_SECONDS);
+    expect(said().slice(from)).toContain("Latest follower:");
+  });
+
+  it("turns the ticker to a new supporter as soon as one arrives", () => {
+    const { events, stream, frame, said } = setup();
+    stream.kinds = "gifts";
+    stream.every = 20;
+    frame();
+    while (events.count === 0) {
+      frame();
+    }
+    const from = said().length;
+    frame();
+    const after = said().slice(from);
+    expect(after[after.indexOf("Latest supporter:") + 1]).toBe(events.latestSupport.name);
+    expect(events.latestSupport.index).toBe(0);
   });
 
   it("fades a switched-off part out in place and stops redrawing it", () => {

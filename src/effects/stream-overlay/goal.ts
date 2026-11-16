@@ -1,11 +1,7 @@
 /**
- * The follower goal, without any drawing: when made-up follows arrive, and
- * the goal they count towards.
- *
- * The goal and its source of follows are kept apart. `createFollowSchedule`
- * is a seeded stand-in source; anything else that produces follows (a stream
- * of events shared with other overlays, say) can drive the goal instead by
- * calling `add` for each one.
+ * The follower goal, without any drawing: the count, the target and the bar's
+ * fill. Whatever produces follows (the overlay layer's shared stream events)
+ * drives it by calling `add`.
  *
  * The count starts at `goalStart` of `goalTarget` and goes up with each
  * follow, never past the target. On reaching it the bar holds full, glowing,
@@ -14,50 +10,12 @@
  * `GOAL_FILL_SECONDS` whatever moved it, a follow or a param change.
  */
 import { approach, smoothstep } from "../math";
-import { hash32 } from "../noise";
-
-/** Average seconds between made-up follows; each gap is 50 % to 150 % of it. */
-export const FOLLOW_GAP_SECONDS = 45;
 
 /** Seconds the bar's fill takes to ease to a new fraction, and its glow to come or go. */
 export const GOAL_FILL_SECONDS = 1;
 
 /** Seconds a reached goal holds full before its target goes up. */
 export const GOAL_HOLD_SECONDS = 15;
-
-/** Seconds between follow `index` (0-based) and the one before it (or the start). */
-export function followGap(seed: number, index: number): number {
-  const u = hash32(hash32(seed ^ 0x6f11) ^ Math.imul(index + 1, 0x9e3779b1)) / 0x1_0000_0000;
-  return FOLLOW_GAP_SECONDS * (0.5 + u);
-}
-
-/** A seeded stream of follows, at `followGap` intervals. */
-interface FollowSchedule {
-  /** Follows so far. Follow number `n` (1-based) is the `n`th. */
-  readonly follows: number;
-  /** Advances by `dt` seconds and returns how many follows arrived. Allocates nothing. */
-  step: (dt: number) => number;
-}
-
-export function createFollowSchedule(seed: number): FollowSchedule {
-  let follows = 0;
-  let wait = followGap(seed, 0);
-  return {
-    get follows() {
-      return follows;
-    },
-    step(dt) {
-      wait -= Number.isFinite(dt) && dt > 0 ? dt : 0;
-      let n = 0;
-      while (wait <= 0) {
-        n++;
-        follows++;
-        wait += followGap(seed, follows);
-      }
-      return n;
-    },
-  };
-}
 
 /** How much the target goes up each time it is reached: half the base target, in tens. */
 export function goalRaise(base: number): number {

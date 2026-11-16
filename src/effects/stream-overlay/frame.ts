@@ -11,9 +11,12 @@
  *   target, and a bar whose fill eases. Its panel is redrawn only while
  *   something in it changes.
  * - At the top right, an uptime clock (`LIVE 1:24:07`, redrawn once a second)
- *   and below it a ticker naming the latest follower, which cross-fades to
- *   each new name and never scrolls. Each has its own switch, and fades in
- *   and out in place.
+ *   and below it a ticker naming the latest follower, and in turn the latest
+ *   supporter (a sub or gift), which cross-fades to each new name and never
+ *   scrolls. Each has its own switch, and fades in and out in place.
+ *
+ * The follows and names come from the layer's shared stream events, so the
+ * goal ticks and the ticker changes with the follow's alert and chat line.
  *
  * The uptime counts from a time of day typed into `uptimeFrom` (the stream's
  * start, so it survives reloads), or from page load when that is empty or
@@ -23,7 +26,7 @@ import { approach, smoothstep } from "../math";
 import type { AnyParamValues } from "../types";
 import { type ClockTime, lastOccurrence, parseClockTime } from "./clock-time";
 import { type FrameStyle, frameMeta, FRAME_STYLE_OPTIONS } from "./frame.meta";
-import { createFollowSchedule, createGoal } from "./goal";
+import { createGoal } from "./goal";
 import type { OverlayCanvas, OverlayDefinition, OverlayDraw, OverlayView } from "./overlay-layer";
 import type { Rect } from "./overlay-layout";
 import {
@@ -37,13 +40,8 @@ import {
   PANEL_TEXT,
   usernameColour,
 } from "./overlay-text";
-import { makeUsername } from "./usernames";
 
 type Ctx = OffscreenCanvasRenderingContext2D;
-
-/** The made-up followers' seed, and the first follower's viewer number (clear of the chat's). */
-const SEED = 0x90a1;
-const FOLLOWER_BASE = 100_000;
 
 /** Border sizes at 1080p: room kept for the glow, corner radius, bracket length and offset. */
 const FRAME_PAD = 28;
@@ -71,6 +69,9 @@ const LIVE_RED = "#ff5a6e";
 
 /** Seconds a new follower's name takes to cross-fade in, and a switched part to fade. */
 export const TICKER_FADE_SECONDS = 0.5;
+/** Seconds the ticker shows one line before turning to the other. */
+export const TICKER_TURN_SECONDS = 12;
+const TICKER_LABELS = ["Latest follower:", "Latest supporter:"] as const;
 const PART_FADE_SECONDS = 0.5;
 /** Seconds the border takes to fade out (then in again) on a style change. */
 const STYLE_DIP_SECONDS = 0.4;
@@ -302,20 +303,39 @@ function queue(
 
 export const frameOverlay: OverlayDefinition = {
   meta: frameMeta,
-  create() {
+  create({ events }) {
     const pageLoad = Date.now() - performance.now();
     const uptime = createUptimeClock(pageLoad);
     const goal = createGoal();
-    const follows = createFollowSchedule(SEED);
 
     let seconds = 0;
     let label = "";
-    /** The ticker's names: the one fading out and the one fading in. */
+    /**
+     * The ticker's lines (0 the latest follower, 1 the latest supporter) and
+     * names: the one fading out and the one fading in.
+     */
+    let tickerFromLine = 0;
     let tickerFrom = "";
-    let tickerTo = makeUsername(SEED, FOLLOWER_BASE);
+    let tickerLine = 0;
+    let tickerTo = events.latestFollow.name;
     let tickerT = 1;
-    /** Bumped with each new name. */
+    /** Seconds the current line has shown. */
+    let tickerHeld = 0;
+    /** Bumped with each new line or name. */
     let tickerVersion = 0;
+
+    /** Cross-fades the ticker to `line`, with its latest name. */
+    const showTicker = (line: number) => {
+      if (tickerT >= 0.5) {
+        tickerFromLine = tickerLine;
+        tickerFrom = tickerTo;
+      }
+      tickerLine = line;
+      tickerTo = line === 0 ? events.latestFollow.name : events.latestSupport.name;
+      tickerT = 0;
+      tickerHeld = 0;
+      tickerVersion++;
+    };
 
     // The border's style: the one on the canvas, and the one asked for.
     let started = false;
@@ -455,7 +475,7 @@ export const frameOverlay: OverlayDefinition = {
     };
 
     /** One ticker line: the muted label, then the name in its colour. */
-    const tickerLine = (ctx: Ctx, name: string, alpha: number) => {
+    const drawTickerLine = (ctx: Ctx, line: number, name: string, alpha: number) => {
       if (alpha <= 0 || name === "") {
         return;
       }
@@ -466,7 +486,7 @@ export const frameOverlay: OverlayDefinition = {
       ctx.globalAlpha = alpha;
       const lead = fillLine(
         ctx,
-        "Latest follower:",
+        TICKER_LABELS[line],
         b.x + pad,
         cy,
         overlayFont(PILL_FONT * k),
@@ -490,8 +510,8 @@ export const frameOverlay: OverlayDefinition = {
       const b = tickerBox;
       drawPanel(ctx, b.x, b.y, b.w, b.h, pillK, view.opacity);
       const e = smoothstep(0, 1, tickerT);
-      tickerLine(ctx, tickerFrom, 1 - e);
-      tickerLine(ctx, tickerTo, e);
+      drawTickerLine(ctx, tickerFromLine, tickerFrom, 1 - e);
+      drawTickerLine(ctx, tickerLine, tickerTo, e);
     };
 
     /**
@@ -525,15 +545,25 @@ export const frameOverlay: OverlayDefinition = {
       update(dt: number, values: Readonly<AnyParamValues>, view: OverlayView) {
         const step = Number.isFinite(dt) && dt > 0 ? dt : 0;
         goal.configure(number(values.goalStart, 0.8), number(values.goalTarget, 100));
-        const n = follows.step(step);
-        if (n > 0) {
-          goal.add(n);
-          tickerFrom = tickerT < 0.5 ? tickerFrom : tickerTo;
-          tickerTo = makeUsername(SEED, FOLLOWER_BASE + follows.follows);
-          tickerT = 0;
-          tickerVersion++;
+        // This frame's events: a follow ticks the goal; the newest event turns the ticker to it.
+        let follows = 0;
+        let turnTo = -1;
+        for (const e of events.fresh) {
+          if (e.kind === "follow") {
+            follows++;
+            turnTo = 0;
+          } else if (e.kind === "sub" || e.kind === "gift") {
+            turnTo = 1;
+          }
         }
+        goal.add(follows);
         goal.step(step);
+        tickerHeld += step;
+        if (turnTo >= 0) {
+          showTicker(turnTo);
+        } else if (tickerHeld >= TICKER_TURN_SECONDS) {
+          showTicker(1 - tickerLine);
+        }
         tickerT = Math.min(1, tickerT + step / TICKER_FADE_SECONDS);
         seconds = uptime.read(text(values.uptimeFrom, ""), Date.now());
         label = text(values.goalLabel, "");

@@ -1,64 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  createFollowSchedule,
-  createGoal,
-  FOLLOW_GAP_SECONDS,
-  followGap,
-  GOAL_FILL_SECONDS,
-  GOAL_HOLD_SECONDS,
-  goalRaise,
-} from "./goal";
+import { createGoal, GOAL_FILL_SECONDS, GOAL_HOLD_SECONDS, goalRaise } from "./goal";
+import { createStreamEvents } from "./stream-events";
 
 const DT = 1 / 60;
-
-/** When each follow arrives over `seconds`, stepping at `dt`. */
-function arrivals(seed: number, seconds: number, dt = DT): number[] {
-  const schedule = createFollowSchedule(seed);
-  const at: number[] = [];
-  for (let t = 0; t < seconds; t += dt) {
-    const n = schedule.step(dt);
-    for (let i = 0; i < n; i++) {
-      at.push(t);
-    }
-  }
-  return at;
-}
-
-describe("the follow schedule", () => {
-  it("is the same for the same seed, whatever the frame rate", () => {
-    const a = arrivals(7, 1200);
-    expect(arrivals(7, 1200)).toEqual(a);
-    const coarse = arrivals(7, 1200, 0.5);
-    expect(coarse).toHaveLength(a.length);
-    coarse.forEach((t, i) => {
-      expect(Math.abs(t - a[i])).toBeLessThan(0.5 + DT);
-    });
-    expect(arrivals(8, 1200)).not.toEqual(a);
-  });
-
-  it.each([0, 1, 99])(
-    "keeps each gap within half to one and a half the average (seed %i)",
-    (seed) => {
-      let sum = 0;
-      for (let i = 0; i < 200; i++) {
-        const gap = followGap(seed, i);
-        expect(gap).toBeGreaterThanOrEqual(0.5 * FOLLOW_GAP_SECONDS);
-        expect(gap).toBeLessThan(1.5 * FOLLOW_GAP_SECONDS);
-        sum += gap;
-      }
-      expect(sum / 200).toBeGreaterThan(0.9 * FOLLOW_GAP_SECONDS);
-      expect(sum / 200).toBeLessThan(1.1 * FOLLOW_GAP_SECONDS);
-    },
-  );
-
-  it("counts several follows in one long step", () => {
-    const schedule = createFollowSchedule(3);
-    const n = schedule.step(10 * FOLLOW_GAP_SECONDS);
-    expect(n).toBe(schedule.follows);
-    expect(n).toBeGreaterThanOrEqual(6);
-    expect(schedule.step(Number.NaN)).toBe(0);
-  });
-});
 
 describe("goalRaise", () => {
   it.each([
@@ -82,11 +26,13 @@ describe("createGoal", () => {
   it("never shows a count above the target, and holds when it's reached", () => {
     const goal = createGoal();
     goal.configure(0.8, 100);
-    const schedule = createFollowSchedule(5);
+    const events = createStreamEvents(5);
     let holds = 0;
     let wasHolding = false;
     for (let t = 0; t < 4 * 3600; t += 0.25) {
-      goal.add(schedule.step(0.25));
+      const before = events.follows;
+      events.step(0.25, 60, "all");
+      goal.add(events.follows - before);
       goal.step(0.25);
       expect(goal.count).toBeLessThanOrEqual(goal.target);
       expect(goal.count < goal.target || goal.holding).toBe(true);

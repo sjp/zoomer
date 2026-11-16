@@ -2,7 +2,7 @@
  * The frame overlay's metadata: the stream furniture round the speaker, as
  * one layout. A decorative border round the speaker area, a follower goal bar
  * at the top left, and at the top right an uptime clock and a ticker naming
- * the latest follower, each of the last two with its own switch.
+ * the latest follower and supporter, each of the last two with its own switch.
  */
 import { CLOCK_TIME_HINT, type OverlayMeta } from "./overlay-types.meta";
 
@@ -57,7 +57,7 @@ export const frameMeta: OverlayMeta = {
     },
     ticker: {
       kind: "boolean",
-      label: "Latest follower",
+      label: "Latest follower and supporter",
       group: "Frame",
       default: true,
     },
