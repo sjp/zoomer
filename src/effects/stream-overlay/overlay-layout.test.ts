@@ -12,7 +12,7 @@ import {
   slotRect,
   type SlotUse,
 } from "./overlay-layout";
-import type { OverlaySide, OverlaySlot } from "./overlay-params.meta";
+import type { OverlaySide, OverlaySlot } from "./overlay-types.meta";
 
 const ASPECTS = [
   ["16:9", 1920, 1080],

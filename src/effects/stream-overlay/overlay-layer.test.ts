@@ -18,13 +18,8 @@ import {
   type StreamOverlays,
 } from "./overlay-layer";
 import { type Rect, SLOT_EASE_SECONDS } from "./overlay-layout";
-import {
-  OVERLAY_METAS,
-  OVERLAY_SIDE_OPTIONS,
-  type OverlayMeta,
-  type OverlaySlot,
-  streamOverlayParams,
-} from "./overlay-params.meta";
+import { OVERLAY_METAS, streamOverlayParams } from "./overlay-params.meta";
+import { OVERLAY_SIDE_OPTIONS, type OverlayMeta, type OverlaySlot } from "./overlay-types.meta";
 
 /** What a test overlay saw, frame by frame. */
 interface Log {

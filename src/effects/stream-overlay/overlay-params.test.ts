@@ -8,15 +8,17 @@ import {
   OVERLAY_ACCENT_KEY,
   OVERLAY_METAS,
   OVERLAY_OPACITY_KEY,
-  OVERLAY_SIDE_OPTIONS,
-  type OverlayMeta,
-  type OverlaySide,
-  type OverlaySlot,
   type OverlayToggleDefaults,
   OVERLAYS_GROUP,
   overlayKeyClashes,
   streamOverlayParams,
 } from "./overlay-params.meta";
+import {
+  OVERLAY_SIDE_OPTIONS,
+  type OverlayMeta,
+  type OverlaySide,
+  type OverlaySlot,
+} from "./overlay-types.meta";
 
 const side = (label: string, def: OverlaySide) =>
   ({

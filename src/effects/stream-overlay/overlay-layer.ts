@@ -41,13 +41,8 @@ import {
   slotRect,
   type SlotUse,
 } from "./overlay-layout";
-import {
-  OVERLAY_ACCENT_KEY,
-  OVERLAY_OPACITY_KEY,
-  type OverlayMeta,
-  type OverlaySide,
-  type OverlaySlot,
-} from "./overlay-params.meta";
+import { OVERLAY_ACCENT_KEY, OVERLAY_OPACITY_KEY } from "./overlay-params.meta";
+import type { OverlayMeta, OverlaySide, OverlaySlot } from "./overlay-types.meta";
 
 /** Seconds an overlay takes to fade in or out when toggled. */
 export const OVERLAY_FADE_SECONDS = 0.5;

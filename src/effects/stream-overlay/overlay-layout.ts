@@ -14,7 +14,7 @@
  * shoulders sit in the middle, not at the bottom).
  */
 import { smoothstep } from "../math";
-import type { OverlaySide, OverlaySlot } from "./overlay-params.meta";
+import type { OverlaySide, OverlaySlot } from "./overlay-types.meta";
 
 export interface Rect {
   x: number;
