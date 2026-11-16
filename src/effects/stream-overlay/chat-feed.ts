@@ -184,10 +184,10 @@ export const CHAT_MESSAGES: readonly string[] = [
 export const CHAT_EVENT_TEXTS: readonly string[] = ["followed!", "subscribed!"];
 
 /** Badge shapes a viewer may wear before their name (`ChatMessage.badge` 1 to this). */
-const CHAT_BADGE_COUNT = 4;
+export const CHAT_BADGE_COUNT = 4;
 
 /** One chat line. Plain data, made once when the line arrives. */
-interface ChatMessage {
+export interface ChatMessage {
   /** Its number in the chat, from 0. */
   readonly index: number;
   /** Who said it: their number (for `makeUsername`) and name. */
@@ -338,7 +338,7 @@ export function arrivalGap(seed: number, index: number, busy: number): number {
 }
 
 /** A word of a chat line, or an emote (`emote` >= 0, an index into `EMOTE_IDS`). */
-interface ChatToken {
+export interface ChatToken {
   readonly text: string;
   readonly emote: number;
 }
