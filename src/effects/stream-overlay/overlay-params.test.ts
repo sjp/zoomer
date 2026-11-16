@@ -4,7 +4,6 @@ import { effects } from "../registry";
 import { defineEffectMeta, type ParamSchema, type ParamValues } from "../types";
 import { parseClockTime } from "./clock-time";
 import {
-  CLOCK_TIME_HINT,
   OVERLAY_ACCENT_KEY,
   OVERLAY_METAS,
   OVERLAY_OPACITY_KEY,
@@ -14,6 +13,7 @@ import {
   streamOverlayParams,
 } from "./overlay-params.meta";
 import {
+  CLOCK_TIME_HINT,
   OVERLAY_SIDE_OPTIONS,
   type OverlayMeta,
   type OverlaySide,

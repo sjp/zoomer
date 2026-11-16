@@ -1,10 +1,18 @@
 /**
  * What an overlay's metadata is made of: the slots it can occupy, the sides a
- * column overlay can take, and the `OverlayMeta` shape itself. Kept apart from
- * the registry in `overlay-params.meta.ts`, so each overlay's own `.meta.ts`
- * file can use these while the registry imports that file, without a cycle.
+ * column overlay can take, the words for a clock-time param's label, and the
+ * `OverlayMeta` shape itself. Kept apart from the registry in
+ * `overlay-params.meta.ts`, so each overlay's own `.meta.ts` file can use
+ * these while the registry imports that file, without a cycle.
  */
 import type { ParamSchema } from "../types";
+
+/**
+ * Words for a clock-time text param's label, so the viewer knows the format and
+ * that it is their own local time (a link opened in another time zone counts to
+ * that zone's clock). Every example here parses with `parseClockTime`.
+ */
+export const CLOCK_TIME_HINT = "local time, e.g. 19:30 or 7:30pm";
 
 /** Which side column a column overlay asks for. */
 export type OverlaySide = "left" | "right";

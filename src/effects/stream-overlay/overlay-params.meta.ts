@@ -29,13 +29,6 @@ export const OVERLAYS_GROUP = "Overlays";
 export const OVERLAY_ACCENT_KEY = "ovAccent";
 export const OVERLAY_OPACITY_KEY = "ovOpacity";
 
-/**
- * Words for a clock-time text param's label, so the viewer knows the format and
- * that it is their own local time (a link opened in another time zone counts to
- * that zone's clock). Every example here parses with `parseClockTime`.
- */
-export const CLOCK_TIME_HINT = "local time, e.g. 19:30 or 7:30pm";
-
 /** A scene's default for each overlay toggle, by toggle key. Missing ones default to off. */
 export type OverlayToggleDefaults = Readonly<Record<string, boolean>>;
 
