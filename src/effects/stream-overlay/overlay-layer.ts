@@ -47,6 +47,7 @@ import { OVERLAY_ACCENT_KEY, OVERLAY_OPACITY_KEY } from "./overlay-params.meta";
 import type { OverlayMeta, OverlaySide, OverlaySlot } from "./overlay-types.meta";
 import { alertsOverlay } from "./alerts";
 import { chatOverlay } from "./chat";
+import { emotesOverlay } from "./emotes";
 import { frameOverlay } from "./frame";
 import { splitsOverlay } from "./splits";
 import {
@@ -197,6 +198,7 @@ export const OVERLAY_DEFINITIONS: readonly OverlayDefinition[] = [
   chatOverlay,
   frameOverlay,
   alertsOverlay,
+  emotesOverlay,
 ];
 
 /** The layer a streamer scene owns. */
