@@ -1,4 +1,9 @@
-import { type CanvasAtlas, createCanvasAtlas, SANS_FONT_STACK } from "../canvas-texture";
+import {
+  type CanvasAtlas,
+  createCanvasAtlas,
+  HAND_FONT_STACK,
+  SANS_FONT_STACK,
+} from "../canvas-texture";
 import { createChartRenderer, pushRect, pushRoundRect } from "../charts";
 import { createColorEase, hexesToUnitRgb } from "../color";
 import { createFadeThrough } from "../fade";
@@ -64,9 +69,6 @@ const MAX_QUADS = 32;
 /** Reference sizes (1080p): count pill width, title region width. */
 const COUNT_W = 44;
 const TITLE_W = 640;
-
-/** A handwritten-looking stack for sticky notes; no font is bundled. */
-const HAND_FONT_STACK = `"Segoe Print", "Bradley Hand", "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive`;
 
 /** Board palette slots: one RGB triple each, then scalars. */
 const BG = 0;

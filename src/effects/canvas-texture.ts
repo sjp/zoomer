@@ -8,6 +8,9 @@ import { resetUnpackState, type Scope } from "./gl";
 /** A clean system sans-serif stack; no font is bundled. */
 export const SANS_FONT_STACK = `"Helvetica Neue", Helvetica, Arial, "Liberation Sans", "DejaVu Sans", sans-serif`;
 
+/** A handwritten-looking stack, for sticky notes and index cards. */
+export const HAND_FONT_STACK = `"Segoe Print", "Bradley Hand", "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive`;
+
 /** A system monospaced stack, for figures that should line up in columns. */
 export const MONO_FONT_STACK = `ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace`;
 
