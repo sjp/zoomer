@@ -230,8 +230,9 @@ function seedTape(tape: Tape, seed: number) {
 
 export function createTape(seed: number): Tape {
   const tape: Tape = {
-    scheduleRng: Math.random,
-    walkRng: Math.random,
+    // Placeholders: seedTape sets both from the seed.
+    scheduleRng: createRng(0),
+    walkRng: createRng(0),
     time: 0,
     wait: 0,
     at: -1,
