@@ -50,6 +50,7 @@ import {
   INTERVAL_MIN,
   type Place,
 } from "./staticfigure-sim";
+import { staticfigureMeta } from "./staticfigure.meta";
 
 const SEEDS = [0, 1, 7, 42, 999];
 const PLACES: readonly Place[] = ["field", "carpark", "hallway"];
@@ -92,6 +93,11 @@ function burstStarts(seed: number, bursts: number, interval = 45): number[] {
 }
 
 describe("burst schedule", () => {
+  it("has the interval slider's range", () => {
+    expect(staticfigureMeta.params.interval.min).toBe(INTERVAL_MIN);
+    expect(staticfigureMeta.params.interval.max).toBe(INTERVAL_MAX);
+  });
+
   it.each(SEEDS)("is the same for the same seed (seed %d)", (seed) => {
     expect(burstStarts(seed, 8)).toEqual(burstStarts(seed, 8));
   });

@@ -132,6 +132,7 @@ import { smokeMeta } from "./smoke/smoke.meta";
 import { snellMeta } from "./snell/snell.meta";
 import { snowMeta } from "./snow/snow.meta";
 import { spiderwebMeta } from "./spiderweb/spiderweb.meta";
+import { staticfigureMeta } from "./staticfigure/staticfigure.meta";
 import { snowWindowMeta } from "./snowwindow/snowwindow.meta";
 import { splitflapMeta } from "./splitflap/splitflap.meta";
 import { startrailsMeta } from "./startrails/startrails.meta";
@@ -284,6 +285,10 @@ export const effects: readonly EffectEntry[] = [
   {
     ...flickerroomMeta,
     load: () => import("./flickerroom/flickerroom").then((m) => m.flickerroom),
+  },
+  {
+    ...staticfigureMeta,
+    load: () => import("./staticfigure/staticfigure").then((m) => m.staticfigure),
   },
   { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
   { ...vaporwaveMeta, load: () => import("./vaporwave/vaporwave").then((m) => m.vaporwave) },
