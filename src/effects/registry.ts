@@ -23,6 +23,7 @@ import { missioncontrolMeta } from "./missioncontrol/missioncontrol.meta";
 import { cockpitMeta } from "./cockpit/cockpit.meta";
 import { balloonrideMeta } from "./balloonride/balloonride.meta";
 import { roadRacerMeta } from "./roadracer/roadracer.meta";
+import { loadingScreenMeta } from "./loadingscreen/loadingscreen.meta";
 import { rollercoasterMeta } from "./rollercoaster/rollercoaster.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
@@ -292,6 +293,10 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./blockcascade/blockcascade").then((m) => m.blockCascade),
   },
   { ...roadRacerMeta, load: () => import("./roadracer/roadracer").then((m) => m.roadRacer) },
+  {
+    ...loadingScreenMeta,
+    load: () => import("./loadingscreen/loadingscreen").then((m) => m.loadingScreen),
+  },
   { ...pipesMeta, load: () => import("./pipes/pipes").then((m) => m.pipes) },
   { ...mazeMeta, load: () => import("./maze/maze").then((m) => m.maze) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
