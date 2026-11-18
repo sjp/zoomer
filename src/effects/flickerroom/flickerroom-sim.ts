@@ -2,13 +2,15 @@
  * Pure logic for the Flicker Room (flickerroom.ts): where the room's things
  * are, how the ceiling tubes light it, the tints, the failing tube's flicker
  * schedule and brightness curve, and the deck of small changes swapped in
- * while that tube is dark. Nothing here touches GL, so it is all unit tested.
+ * while that tube is dark. Nothing here touches GL (the tubes' light pool is
+ * also given as GLSL source), so it is all unit tested.
  *
  * Layout units are "design units": the origin at the frame's centre, y up, and
  * one unit the frame's height at 16:9 (see `fitScale` in `scene-layout.ts`), so
  * the 16:9 frame runs x -0.89..0.89, y -0.5..0.5. Wider frames show more wall at
  * the sides; narrower ones show the whole room smaller.
  */
+import { glslFloat as g } from "../gl";
 import { clamp, smoothstep } from "../math";
 import { createRng, hash32 } from "../noise";
 
@@ -17,19 +19,19 @@ import { createRng, hash32 } from "../noise";
 // ---------------------------------------------------------------------------
 
 /** Where the wall meets the floor. */
-const FLOOR_Y = -0.1;
+export const FLOOR_Y = -0.1;
 
 /** A box: centre x, y and half width, half height. */
 type Box = readonly [number, number, number, number];
 
 /** The things that change, each an index into `THING_BOXES` and the room's state. */
-const THING_SHIFT = 0;
-const THING_TURN = 1;
+export const THING_SHIFT = 0;
+export const THING_TURN = 1;
 export const THING_DOOR = 2;
-const THING_COAT = 3;
-const THING_MAGAZINE = 4;
+export const THING_COAT = 3;
+export const THING_MAGAZINE = 4;
 export const THING_CLOCK = 5;
-const THING_PAPER = 6;
+export const THING_PAPER = 6;
 export const THING_FIGURE = 7;
 export const THINGS = 8;
 
@@ -66,7 +68,8 @@ const POOL_FLOOR_Y = -0.3;
 
 /**
  * How much of tube `i`'s light reaches the room at (x, y), 0..1: a pool round
- * the tube's x, brightest high on the wall and in a band across the floor.
+ * the tube's x, brightest high on the wall and in a band across the floor. The
+ * room's shader bakes the same function (`POOL_GLSL`) into its light masks.
  */
 export function tubePool(i: number, x: number, y: number): number {
   const dx = x - TUBE_X[i];
@@ -77,6 +80,19 @@ export function tubePool(i: number, x: number, y: number): number {
   const dy = (y - POOL_FLOOR_Y) / 0.14;
   return lateral * (0.35 + 0.5 * Math.exp(-0.5 * dy * dy));
 }
+
+/** GLSL for `float tubePool(float tubeX, vec2 p)`, the shader twin of `tubePool`. */
+export const POOL_GLSL = /* glsl */ `
+float tubePool(float tubeX, vec2 p) {
+  float dx = p.x - tubeX;
+  float lateral = exp(-dx * dx / ${g(2 * POOL_SIGMA * POOL_SIGMA)});
+  if (p.y >= ${g(FLOOR_Y)}) {
+    return lateral * (0.45 + 0.55 * smoothstep(${g(FLOOR_Y)}, 0.5, p.y));
+  }
+  float dy = (p.y - ${g(POOL_FLOOR_Y)}) / 0.14;
+  return lateral * (0.35 + 0.5 * exp(-0.5 * dy * dy));
+}
+`;
 
 // ---------------------------------------------------------------------------
 // Tints

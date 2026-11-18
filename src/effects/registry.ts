@@ -95,6 +95,7 @@ import { murmurationMeta } from "./murmuration/murmuration.meta";
 import { mystifyMeta } from "./mystify/mystify.meta";
 import { beziersMeta } from "./beziers/beziers.meta";
 import { eyewallMeta } from "./eyewall/eyewall.meta";
+import { flickerroomMeta } from "./flickerroom/flickerroom.meta";
 import { lorenzMeta } from "./lorenz/lorenz.meta";
 import { lighthouseMeta } from "./lighthouse/lighthouse.meta";
 import { meteorsMeta } from "./meteors/meteors.meta";
@@ -280,6 +281,10 @@ export const effects: readonly EffectEntry[] = [
   { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
   { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
   { ...eyewallMeta, load: () => import("./eyewall/eyewall").then((m) => m.eyewall) },
+  {
+    ...flickerroomMeta,
+    load: () => import("./flickerroom/flickerroom").then((m) => m.flickerroom),
+  },
   { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
   { ...vaporwaveMeta, load: () => import("./vaporwave/vaporwave").then((m) => m.vaporwave) },
   {
