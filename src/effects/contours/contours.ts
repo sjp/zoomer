@@ -7,6 +7,12 @@ import {
   withScope,
   scopedProgram,
 } from "../gl";
+import {
+  BSPLINE_GLSL,
+  CONTOUR_LEVEL_GLSL,
+  ENCODE_HEIGHT_GLSL,
+  heightDecodeScale,
+} from "../contour-field";
 import { createLowResTarget } from "../lowres";
 import { wrap } from "../math";
 import { contoursMeta } from "./contours.meta";
@@ -40,10 +46,6 @@ const INDEX_WIDTH = 1.8;
 /** Opacity of ordinary and index lines. */
 const LINE_ALPHA = 0.7;
 const INDEX_ALPHA = 1;
-/** Scale of the residual channel in the RGBA16F encoding (see `NOISE_FRAGMENT`). */
-export const RESIDUAL_SCALE = 1024;
-/** Steps per byte of the RGBA8 fallback encoding (see `NOISE_FRAGMENT`). */
-export const HEIGHT_BYTE = 255;
 /**
  * Offset of a level's own band and index test from the level: bands take the
  * colour of their mid-height, and level k is tested at k + LEVEL_CENTRE so float
@@ -54,71 +56,6 @@ export const LEVEL_CENTRE = 0.5;
 /** Canvas-to-field divisor that gives `FIELD_ROWS` rows; never below 1. */
 export function fieldDivisor(height: number): number {
   return Math.max(1, height / FIELD_ROWS);
-}
-
-/**
- * Cubic B-spline basis: the weight of each of the four taps around a sample at
- * fraction `t` past texel i (taps i-1, i, i+1, i+2) as a polynomial in `t`, by
- * coefficient of 1, t, t² and t³. The shader's weights are generated from it.
- */
-export const BSPLINE_BASIS: readonly (readonly [number, number, number, number])[] = [
-  [1 / 6, -3 / 6, 3 / 6, -1 / 6],
-  [4 / 6, 0, -6 / 6, 3 / 6],
-  [1 / 6, 3 / 6, 3 / 6, -3 / 6],
-  [0, 0, 0, 1 / 6],
-];
-
-/** Evaluates a cubic `c` at `t`. */
-const cubic = (c: readonly number[], t: number) => c[0] + t * (c[1] + t * (c[2] + t * c[3]));
-
-/** GLSL for cubic `c` in the variables `t`, `t2` and `t3`. */
-const cubicGlsl = (c: readonly number[]) =>
-  `${glslFloat(c[0])} + ${glslFloat(c[1])} * t + ${glslFloat(c[2])} * t2 + ${glslFloat(c[3])} * t3`;
-
-/** Cubic B-spline weights of the taps i-1, i, i+1 and i+2 at fraction `t` (0..1). They sum to 1. */
-export function bsplineWeights(t: number): [number, number, number, number] {
-  const [b0, b1, b2, b3] = BSPLINE_BASIS;
-  return [cubic(b0, t), cubic(b1, t), cubic(b2, t), cubic(b3, t)];
-}
-
-/** Texel offsets from i of the two bilinear taps' pairs: (i-1, i) and (i+1, i+2). */
-export const BSPLINE_TAP_BASE = [-1, 1] as const;
-
-/**
- * The B-spline as two bilinear taps per axis (Sigg & Hadwiger, GPU Gems 2 ch. 20):
- * weight `g0` at texel position `i + BSPLINE_TAP_BASE[0] + o0`, weight `g1` at
- * `i + BSPLINE_TAP_BASE[1] + o1`, where `o0`, `o1` are in [0, 1] so each tap blends
- * a pair of texels linearly. `sampleBSpline` in the shader is generated from the
- * same basis and tap offsets.
- */
-export function bsplineTaps(t: number): { g0: number; g1: number; o0: number; o1: number } {
-  const [w0, w1, w2, w3] = bsplineWeights(t);
-  const g0 = w0 + w1;
-  const g1 = w2 + w3;
-  return { g0, g1, o0: w1 / g0, o1: w3 / g1 };
-}
-
-/**
- * RGBA8 fallback encoding of a height in [0, 1), as the 8-bit branch of
- * `NOISE_FRAGMENT` writes it: hi and lo bytes with h = hi/255 + lo/255².
- */
-export function packHeight8(h: number): [number, number] {
-  const s = Math.min(Math.max(h, 0), 1) * HEIGHT_BYTE;
-  const hi = Math.floor(s);
-  return [hi, Math.round((s - hi) * HEIGHT_BYTE)];
-}
-
-/** `uDecode`: the weight of the second channel in `decodeHeight`, for each encoding. */
-export function heightDecodeScale(isFloat: boolean): number {
-  return isFloat ? 1 / RESIDUAL_SCALE : 1 / HEIGHT_BYTE;
-}
-
-/**
- * The shader's `decode`: height from the field texture's two channels (as sampled,
- * 0..1 for RGBA8) and `heightDecodeScale`. Linear, so it survives filtering.
- */
-export function decodeHeight(r: number, g: number, scale: number): number {
-  return r + g * scale;
 }
 
 /** `uIndexInv`: 1 / `every` (rounded), or 0 when index contours are off. */
@@ -216,7 +153,7 @@ uniform float uZ;
 uniform float uFloat;
 
 out vec4 outColor;
-
+${ENCODE_HEIGHT_GLSL}
 vec4 permute(vec4 x) { return mod((x * 34.0 + 10.0) * x, 289.0); }
 
 float snoise(vec3 v) {
@@ -269,15 +206,7 @@ void main() {
   n *= 1.0 / 1.65;
   // Soft clip keeps h in (0, 1) without flat clamped plateaus.
   float h = 0.5 + 0.5 * tanh(1.4 * n);
-  vec2 enc;
-  if (uFloat > 0.5) {
-    float hr = unpackHalf2x16(packHalf2x16(vec2(h, 0.0))).x;
-    enc = vec2(hr, (h - hr) * ${glslFloat(RESIDUAL_SCALE)});
-  } else {
-    float s = h * ${glslFloat(HEIGHT_BYTE)};
-    float hi = floor(s);
-    enc = vec2(hi / ${glslFloat(HEIGHT_BYTE)}, s - hi);
-  }
+  vec2 enc = encodeHeight(h, uFloat);
   outColor = vec4(enc, 0.0, 1.0);
 }
 `;
@@ -308,48 +237,25 @@ uniform vec3 uHighColor;
 
 float decode(vec2 t) { return t.x + t.y * uDecode; }
 
-float sampleBSpline(vec2 uv) {
-  vec2 st = uv * uLowResSize - 0.5;
-  vec2 i = floor(st);
-  vec2 t = st - i;
-  vec2 t2 = t * t;
-  vec2 t3 = t2 * t;
-  // Weights from BSPLINE_BASIS; w2 is implied, as the weights sum to 1.
-  vec2 w0 = ${cubicGlsl(BSPLINE_BASIS[0])};
-  vec2 w1 = ${cubicGlsl(BSPLINE_BASIS[1])};
-  vec2 w3 = ${cubicGlsl(BSPLINE_BASIS[3])};
-  vec2 g0 = w0 + w1;
-  vec2 g1 = 1.0 - g0;
-  // Tap centres in texels (texel k is centred at k + 0.5), then in uv.
-  vec2 inv = 1.0 / uLowResSize;
-  vec2 c0 = (i + ${glslFloat(BSPLINE_TAP_BASE[0] + 0.5)} + w1 / g0) * inv;
-  vec2 c1 = (i + ${glslFloat(BSPLINE_TAP_BASE[1] + 0.5)} + w3 / g1) * inv;
-  vec2 a = texture(uLowRes, c0).rg;
-  vec2 b = texture(uLowRes, vec2(c1.x, c0.y)).rg;
-  vec2 c = texture(uLowRes, vec2(c0.x, c1.y)).rg;
-  vec2 d = texture(uLowRes, c1).rg;
-  return decode(g0.y * (g0.x * a + g1.x * b) + g1.y * (g0.x * c + g1.x * d));
-}
-
+${BSPLINE_GLSL}
+${CONTOUR_LEVEL_GLSL}
 vec4 composite(vec2 uv) {
   float h;
   if (uBSpline > 0.5) {
-    h = sampleBSpline(uv);
+    h = decode(textureBSpline(uLowRes, uLowResSize, uv).rg);
   } else {
     h = decode(texture(uLowRes, uv).rg);
   }
-  float x = h * uLevels;
-  // Level units per pixel; length() rather than fwidth() so width is isotropic.
-  float grad = max(length(vec2(dFdx(x), dFdy(x))), 1e-6);
-  float k = floor(x + 0.5);
+  vec3 level = contourLevel(h * uLevels);
+  float k = level.x;
   // Signed distance in px to the nearest level k.
-  float sd = (x - k) / grad;
+  float sd = level.y;
   bool isIndex = uIndexInv > 0.0 && fract((k + ${glslFloat(LEVEL_CENTRE)}) * uIndexInv) < uIndexInv;
   float hw = isIndex ? uHalfWidth.y : uHalfWidth.x;
   float alpha = isIndex ? uAlpha.y : uAlpha.x;
   // Box-filtered coverage of a line of width 2 * hw.
   float cov = clamp(hw + 0.5 - abs(sd), 0.0, 1.0);
-  cov *= smoothstep(uCrowd.x, uCrowd.y, 1.0 / grad);
+  cov *= smoothstep(uCrowd.x, uCrowd.y, 1.0 / level.z);
 
   // Bands blend across a 1 px edge at each level, so they don't alias.
   float band = k - 1.0 + clamp(sd + 0.5, 0.0, 1.0);
