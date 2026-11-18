@@ -1,4 +1,4 @@
-import { SANS_FONT_STACK } from "../canvas-texture";
+import { SANS_FONT_STACK, SERIF_FONT_STACK } from "../canvas-texture";
 import { createChartRenderer, pushPolyline, pushRect, pushRoundRect } from "../charts";
 import { createColorEase, hexesToUnitRgb } from "../color";
 import { createFadeThrough } from "../fade";
@@ -69,9 +69,6 @@ const SQUIGGLE_POINTS = 96;
 /** Reference sizes (1080p): the style box's width, the status text's width. */
 const STYLE_W = 150;
 const STATUS_W = 420;
-
-/** A serif stack for the page's body text, which reads as a printed report. */
-const SERIF_FONT_STACK = `Georgia, Cambria, "Times New Roman", "Liberation Serif", "DejaVu Serif", serif`;
 
 /** Palette slots: one RGB triple each. */
 const DESK = 0;
