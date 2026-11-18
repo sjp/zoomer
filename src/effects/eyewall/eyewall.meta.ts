@@ -42,8 +42,8 @@ export const eyewallMeta = defineEffectMeta({
     },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Fun", "Abstract"],
-  tags: ["creepy", "eyes", "watching", "horror", "halloween", "spooky", "uncanny", "blink"],
+  categories: ["Creepy", "Fun", "Abstract"],
+  tags: ["eyes", "watching", "horror", "halloween", "spooky", "uncanny", "blink"],
   cost: "low",
   context: "webgl2",
 });

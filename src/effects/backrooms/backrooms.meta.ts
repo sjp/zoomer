@@ -30,7 +30,7 @@ export const backroomsMeta = defineEffectMeta({
     haze: { kind: "number", label: "Haze", min: 0, max: 1, step: 0.05, default: 0.5 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Fun", "Retro"],
+  categories: ["Fun", "Retro", "Creepy"],
   tags: [
     "meme",
     "liminal",

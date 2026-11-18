@@ -35,7 +35,7 @@ export const staticfigureMeta = defineEffectMeta({
     overlay: { kind: "boolean", label: "Timestamp", default: true },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Retro"],
+  categories: ["Creepy", "Retro"],
   tags: [
     "analog horror",
     "vhs",

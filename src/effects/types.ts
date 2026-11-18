@@ -123,6 +123,7 @@ export const EFFECT_CATEGORIES = [
   "Retro",
   "Screensavers",
   "Fun",
+  "Creepy",
 ] as const;
 export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
 

@@ -32,9 +32,8 @@ export const flickerroomMeta = defineEffectMeta({
     hum: { kind: "number", label: "Tube hum", min: 0, max: 1, step: 0.05, default: 0.5 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Scenes", "Fun"],
+  categories: ["Creepy", "Scenes", "Fun"],
   tags: [
-    "creepy",
     "liminal",
     "waiting room",
     "fluorescent",
