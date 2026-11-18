@@ -10,6 +10,7 @@ import {
   withScope,
 } from "../gl";
 import { createDayClock } from "../horizon/horizon-sim";
+import { EASED_GRAIN_GLSL } from "../grain";
 import { approach, clamp } from "../math";
 import { HASH32_GLSL } from "../noise";
 import { createSettledValue } from "../rebuild";
@@ -141,16 +142,14 @@ uniform float uScanPeriod;
 uniform vec3 uBand;
 out vec4 outColor;
 ${HASH32_GLSL}
-float grainAt(uvec2 c, uint seed) {
-  return float(hash32(c.x * 0x9e3779b9u ^ hash32(c.y + seed * 0x85ebca6bu)) >> 8) * (1.0 / 16777216.0) - 0.5;
-}
+${EASED_GRAIN_GLSL}
 void main() {
   vec2 p = gl_FragCoord.xy;
   float scan = 1.0 - ${SCAN_DEPTH.toFixed(3)} * (0.5 + 0.5 * cos(6.2831853 * p.y / uScanPeriod));
   vec2 q = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
   float vig = 1.0 - 0.25 * smoothstep(0.45, 1.1, length(q));
   uvec2 cell = uvec2(p / uCell);
-  float n = (grainAt(cell, uSeed) * uGrainMix.x + grainAt(cell, uSeed + 1u) * uGrainMix.y) * 2.0;
+  float n = easedGrain(cell, uSeed, uGrainMix);
   float g = 0.5 + 0.35 * n;
   float m = scan * vig * (1.0 - uGrain * (1.0 - g));
   float d = (p.y - uBand.x) / uBand.y;
