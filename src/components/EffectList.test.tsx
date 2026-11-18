@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
+import { act } from "../test/act";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
 import { EFFECT_CATEGORIES } from "../effects/types";

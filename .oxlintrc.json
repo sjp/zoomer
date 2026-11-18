@@ -310,14 +310,14 @@
       "files": ["**/*.test.ts", "**/*.test.tsx", "src/test/**"],
       "rules": {
         "typescript/no-unsafe-type-assertion": "off",
-        "typescript/no-floating-promises": [
+        "no-restricted-imports": [
           "error",
           {
-            "allowForKnownSafeCalls": [
+            "paths": [
               {
-                "from": "package",
-                "package": "@testing-library/preact",
-                "name": "act"
+                "name": "@testing-library/preact",
+                "importNames": ["act"],
+                "message": "Import act from src/test/act, which returns a promise only for async callbacks, so no-floating-promises flags the calls that must be awaited."
               }
             ]
           }

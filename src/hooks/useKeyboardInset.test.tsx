@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { act, cleanup, renderHook } from "@testing-library/preact";
+import { cleanup, renderHook } from "@testing-library/preact";
+import { act } from "../test/act";
 import { afterEach, describe, expect, it } from "vitest";
 import { useKeyboardInset } from "./useKeyboardInset";
 
