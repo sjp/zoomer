@@ -97,7 +97,7 @@ const EYE_RATIO = 1.6 / 2.2;
 const STATION_COUNTS = [3, 3, 2] as const;
 const DEPTH_FIRST = [0, 3, 6] as const;
 export const STATIONS = 8;
-/** The figure's head tilt, radians: at least the first, up to the sum. */
+/** The range of the figure's head tilt, radians, either way. */
 const TILT = [0.08, 0.14] as const;
 /** After a burst that brings it: the chance it comes a step nearer from far and from mid. */
 const ADVANCE = [0.55, 0.35] as const;
