@@ -1,4 +1,5 @@
-import { createCanvasTexture, MONO_FONT_STACK, paintCanvas } from "../canvas-texture";
+import { createOsdDrawer, osdText, paintStamp } from "../camcorder-osd";
+import { createCanvasTexture, paintCanvas } from "../canvas-texture";
 import {
   beginFrame,
   createDataTexture,
@@ -70,21 +71,6 @@ const OSD_MARGIN = 54;
 const REC_PULSE = 2;
 /** Where unused flicker slots point: no cell of the window. */
 const NO_CELL = -1000;
-const MONTHS = [
-  "JAN.",
-  "FEB.",
-  "MAR.",
-  "APR.",
-  "MAY",
-  "JUN.",
-  "JUL.",
-  "AUG.",
-  "SEP.",
-  "OCT.",
-  "NOV.",
-  "DEC.",
-] as const;
-
 const FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
@@ -400,35 +386,10 @@ vec4 composite(vec2 uv) {
 }
 `;
 
-/** Draws a premultiplied canvas texture into the viewport (set to its rectangle). */
-const OVERLAY_FRAGMENT = /* glsl */ `#version 300 es
-precision highp float;
-uniform sampler2D uTex;
-uniform float uAlpha;
-in vec2 vUv;
-out vec4 outColor;
-void main() {
-  outColor = texture(uTex, vec2(vUv.x, 1.0 - vUv.y)) * uAlpha;
-}
-`;
-
 /** A window origin wrapped into +-PATTERN_WRAP / 2 (unchanged nearer the start). */
 const wrapOrigin = (o: number) => o - PATTERN_WRAP * Math.round(o / PATTERN_WRAP);
 
 const hazeParam = (v: number) => clamp(Number.isFinite(v) ? v : 0.5, 0, 1);
-
-const two = (n: number) => (n < 10 ? "0" : "") + String(n);
-
-/** Paints the camcorder date stamp, right-aligned in two lines: "PM 3:04:05", "NOV. 14 2026". */
-function paintStamp(ctx: OffscreenCanvasRenderingContext2D, w: number, h: number, ms: number) {
-  const d = new Date(ms);
-  const hours = d.getHours();
-  const line1 = `${hours < 12 ? "AM" : "PM"} ${String(hours % 12 === 0 ? 12 : hours % 12)}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
-  const line2 = `${MONTHS[d.getMonth()]} ${String(d.getDate())} ${String(d.getFullYear())}`;
-  ctx.clearRect(0, 0, w, h);
-  osdText(ctx, h / 2.6, w - h * 0.06, h * 0.06, line1, "right");
-  osdText(ctx, h / 2.6, w - h * 0.06, h * 0.06 + h / 2.2, line2, "right");
-}
 
 /** Paints the "REC" label beside the space left for its dot. */
 function paintRec(ctx: OffscreenCanvasRenderingContext2D, w: number, h: number) {
@@ -448,26 +409,6 @@ function paintDot(ctx: OffscreenCanvasRenderingContext2D, size: number) {
   ctx.fill();
 }
 
-/** White on-screen-display text with a dark outline, as camcorders print it. */
-function osdText(
-  ctx: OffscreenCanvasRenderingContext2D,
-  px: number,
-  x: number,
-  y: number,
-  text: string,
-  align: CanvasTextAlign,
-) {
-  ctx.font = `bold ${String(Math.round(px))}px ${MONO_FONT_STACK}`;
-  ctx.textAlign = align;
-  ctx.textBaseline = "top";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(1, px * 0.14);
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
-  ctx.strokeText(text, x, y);
-  ctx.fillStyle = "#f4f4ee";
-  ctx.fillText(text, x, y);
-}
-
 /**
  * The Backrooms: a slow first-person walk through endless empty yellow office
  * rooms, on a long straight route that bends only now and then. A fragment shader casts one ray per pixel through a window of cells
@@ -481,7 +422,6 @@ export const backrooms = defineEffect(backroomsMeta, {
   create(gl) {
     return withScope((scope) => {
       const program = scopedProgram(gl, scope, FULLSCREEN_VERTEX, FRAGMENT);
-      const overlay = scopedProgram(gl, scope, FULLSCREEN_VERTEX, OVERLAY_FRAGMENT);
       const triangle = scope.own(createFullscreenTriangle(gl));
       const target = scope.own(createLowResTarget(gl, { composite: FOOTAGE_COMPOSITE }));
       const texData = new Uint8Array(WINDOW * WINDOW * 4);
@@ -512,12 +452,10 @@ export const backrooms = defineEffect(backroomsMeta, {
       ]);
       gl.useProgram(program);
       u.i1("uCells", 0);
-      const ou = createUniforms(gl, overlay, ["uTex", "uAlpha"]);
-      gl.useProgram(overlay);
-      ou.i1("uTex", 0);
       const cu = createUniforms(gl, target.program, ["uAspect"]);
       const flickData = new Float32Array(MAX_FLICKERS * 3);
 
+      const osdDrawer = createOsdDrawer(gl, scope);
       const stampTex = createCanvasTexture(gl, scope, { premultiply: true });
       const recTex = createCanvasTexture(gl, scope, { premultiply: true });
       const dotTex = createCanvasTexture(gl, scope, { premultiply: true });
@@ -589,21 +527,6 @@ export const backrooms = defineEffect(backroomsMeta, {
         if (dot) {
           dotTex.upload(dot);
         }
-      };
-
-      /** Draws one overlay texture into the rectangle (x, y from the top-left, px). */
-      const drawOverlay = (
-        tex: WebGLTexture,
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        a: number,
-      ) => {
-        gl.viewport(x, height - y - h, w, h);
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        ou.f1("uAlpha", a);
-        triangle.draw();
       };
 
       return {
@@ -707,24 +630,20 @@ export const backrooms = defineEffect(backroomsMeta, {
             paintStamp(stampCtx, stampW, stampH, second * 1000);
             stampTex.upload(stampCtx.canvas);
           }
-          gl.useProgram(overlay);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.enable(gl.BLEND);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+          osdDrawer.begin();
           const glow = 0.6 + 0.4 * (0.5 + 0.5 * Math.cos(pulse * Math.PI * 2));
-          drawOverlay(dotTex.texture, margin, margin, dotSize, dotSize, fade * glow);
-          drawOverlay(recTex.texture, margin + dotSize, margin, recW, recH, fade);
-          drawOverlay(
+          osdDrawer.draw(dotTex.texture, margin, margin, dotSize, dotSize, fade * glow, height);
+          osdDrawer.draw(recTex.texture, margin + dotSize, margin, recW, recH, fade, height);
+          osdDrawer.draw(
             stampTex.texture,
             width - margin - stampW,
             height - margin - stampH,
             stampW,
             stampH,
             fade,
+            height,
           );
-          gl.disable(gl.BLEND);
-          gl.bindTexture(gl.TEXTURE_2D, null);
-          gl.viewport(0, 0, width, height);
+          osdDrawer.end(width, height);
         },
         dispose: () => {
           scope.dispose();
