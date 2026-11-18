@@ -18,11 +18,13 @@ import { createRng, hash32 } from "../noise";
 /** A socket's height over its width. */
 export const SOCKET_ASPECT = 0.62;
 /** The eye's opening (almond) within its socket, in socket radii: half-width, upper and lower height. */
-const ALMOND_HALF_WIDTH = 0.86;
-const ALMOND_UPPER = 0.34;
-const ALMOND_LOWER = 0.25;
-/** The iris's travel ellipse's half-width, in socket radii. */
+export const ALMOND_HALF_WIDTH = 0.86;
+export const ALMOND_UPPER = 0.34;
+export const ALMOND_LOWER = 0.25;
+/** The iris's radius, and its travel ellipse's half-width and half-height, in socket radii. */
+export const IRIS_RADIUS = 0.36;
 export const IRIS_TRAVEL_X = 0.42;
+export const IRIS_TRAVEL_Y = 0.1;
 /**
  * The almond's area per radius², for brightness budgets: its lids are
  * `(1 - x²)^0.75` and `1 - x²` curves, whose areas this rounds up.
@@ -514,10 +516,11 @@ export function eyePupil(wall: Wall, i: number): number {
 }
 
 /**
- * For an eye's fade `life`: how open its lid may be (0..1). An appearing eye
- * fades in shut, then opens.
+ * For an eye's fade `life`: how far its socket has faded in (0..1), and how
+ * open its lid may be (0..1). An appearing eye fades in shut, then opens.
  */
-const eyeFadeOpen = (life: number) => clamp(life * 2 - 1, 0, 1);
+export const eyeAlpha = (life: number) => clamp(life * 2, 0, 1);
+export const eyeFadeOpen = (life: number) => clamp(life * 2 - 1, 0, 1);
 
 /**
  * Whether eye `i` is wanted with these params: among the first `densityCount`,

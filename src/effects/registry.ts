@@ -94,6 +94,7 @@ import { catMeta } from "./cat/cat.meta";
 import { murmurationMeta } from "./murmuration/murmuration.meta";
 import { mystifyMeta } from "./mystify/mystify.meta";
 import { beziersMeta } from "./beziers/beziers.meta";
+import { eyewallMeta } from "./eyewall/eyewall.meta";
 import { lorenzMeta } from "./lorenz/lorenz.meta";
 import { lighthouseMeta } from "./lighthouse/lighthouse.meta";
 import { meteorsMeta } from "./meteors/meteors.meta";
@@ -278,6 +279,7 @@ export const effects: readonly EffectEntry[] = [
   { ...geocitiesMeta, load: () => import("./geocities/geocities").then((m) => m.geocities) },
   { ...suchwowMeta, load: () => import("./suchwow/suchwow").then((m) => m.suchwow) },
   { ...backroomsMeta, load: () => import("./backrooms/backrooms").then((m) => m.backrooms) },
+  { ...eyewallMeta, load: () => import("./eyewall/eyewall").then((m) => m.eyewall) },
   { ...stonksMeta, load: () => import("./stonks/stonks").then((m) => m.stonks) },
   { ...vaporwaveMeta, load: () => import("./vaporwave/vaporwave").then((m) => m.vaporwave) },
   {
