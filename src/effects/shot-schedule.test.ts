@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FILM_PALETTES } from "./cinema/cinema-sim";
 import { GENRE_PALETTES } from "./monitorglow/monitorglow-schedule";
 import {
   createShotSchedule,
@@ -25,6 +26,7 @@ import {
 /** Every palette the effects use, by name. */
 const PALETTES: Readonly<Record<string, ShotPalette>> = {
   ...GENRE_PALETTES,
+  ...FILM_PALETTES,
 };
 const NAMES = Object.keys(PALETTES);
 /** The palette with the most events. */

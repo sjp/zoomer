@@ -1,6 +1,6 @@
 /**
  * A screen's light as a schedule of "shots": what a film or game throws on a
- * room, as Monitor Glow's wall shows it.
+ * room: Monitor Glow's wall, and Cinema Auditorium's beam and screen.
  *
  * Each shot holds one look from a palette (a colour and brightness, the
  * pool's size and where it centres) for 4 to 20 seconds, after easing over
