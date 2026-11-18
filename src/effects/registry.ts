@@ -24,6 +24,7 @@ import { rollercoasterMeta } from "./rollercoaster/rollercoaster.meta";
 import { lunarlanderMeta } from "./lunarlander/lunarlander.meta";
 import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
+import { talkshowMeta } from "./talkshow/talkshow.meta";
 import { tradingMeta } from "./trading/trading.meta";
 import { dashboardMeta } from "./dashboard/dashboard.meta";
 import { spreadsheetMeta } from "./spreadsheet/spreadsheet.meta";
@@ -199,6 +200,7 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./radiostudio/radiostudio").then((m) => m.radiostudio),
   },
   { ...newsdeskMeta, load: () => import("./newsdesk/newsdesk").then((m) => m.newsdesk) },
+  { ...talkshowMeta, load: () => import("./talkshow/talkshow").then((m) => m.talkshow) },
   { ...tradingMeta, load: () => import("./trading/trading").then((m) => m.trading) },
   { ...dashboardMeta, load: () => import("./dashboard/dashboard").then((m) => m.dashboard) },
   {
