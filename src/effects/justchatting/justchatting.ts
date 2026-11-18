@@ -17,7 +17,7 @@ import { approach, smoothstep } from "../math";
 import { buildNeonTubes, measureLines, NEON_EMIT_GLSL } from "../neon-tubes";
 import { HASH32_GLSL } from "../noise";
 import { createSettledValue } from "../rebuild";
-import { fitScale } from "../scene-layout";
+import { DESIGN_GLSL, fitScale } from "../scene-layout";
 import { SDF2D_GLSL } from "../sdf-glsl";
 import { createStreamOverlays } from "../stream-overlay/overlay-layer";
 import { advanceSwell, createSwell, swayGlsl } from "../sway";
@@ -71,13 +71,6 @@ const v4 = (a: number, b: number, c: number, d: number) =>
 const PLANT = plantParts();
 const PLANT_W = PLANT_RIGHT - PLANT_LEFT;
 const PLANT_H = PLANT_TOP - PLANT_BOTTOM;
-
-/** Design units of a fragment (see fitScale): frame heights at 16:9, centred. */
-const DESIGN_GLSL = /* glsl */ `
-vec2 design(vec2 frag, vec2 res, float k) {
-  return (frag - 0.5 * res) / (res.y * k);
-}
-`;
 
 /**
  * Where things are, in the room's own layout (sign on the right; plant, window

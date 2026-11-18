@@ -12,7 +12,7 @@ import {
   withScope,
 } from "../gl";
 import { approach, smoothstep } from "../math";
-import { fitScale } from "../scene-layout";
+import { DESIGN_GLSL, fitScale } from "../scene-layout";
 import { SDF2D_GLSL } from "../sdf-glsl";
 import { createStreamOverlays } from "../stream-overlay/overlay-layer";
 import { defineEffect } from "../types";
@@ -76,13 +76,6 @@ function toPalette(value: string): PaletteId {
 
 const v3 = (c: readonly number[]) => `vec3(${F(c[0])}, ${F(c[1])}, ${F(c[2])})`;
 const N = String(PANEL_COUNT);
-
-/** Design units of a fragment (see fitScale): frame heights at 16:9, centred. */
-const DESIGN_GLSL = /* glsl */ `
-vec2 design(vec2 frag, vec2 res, float k) {
-  return (frag - 0.5 * res) / (res.y * k);
-}
-`;
 
 /**
  * The room with the panels on the right, drawn once per resize with four
