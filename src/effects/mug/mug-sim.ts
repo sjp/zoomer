@@ -1,7 +1,8 @@
 /**
  * Pure JS side of the Steaming Mug effect (mug.ts): the mug's layout in its
- * corner, the steam emitter and draft (configuring the smoke model in
- * smoke-sim.ts), and the drink and room palettes.
+ * corner, the steam's box and the draft (configuring the smoke model in
+ * smoke-sim.ts, with the emitter and flow from cup-steam.ts), and the drink
+ * and room palettes.
  *
  * Screen units are "height units": x runs 0..aspect across the canvas and y
  * 0..1 from the bottom up, so the mug keeps its size and shape at any aspect
@@ -12,7 +13,6 @@
 import type { ShelfPalette } from "../bookshelf";
 import { clamp } from "../math";
 import type { DrinkId, RoomId } from "./mug.meta";
-import type { Flow } from "../smoke/smoke-sim";
 import { lookup } from "../lookup";
 
 /** Mug body radius and height, and the rim's ellipse ratio (minor / major) seen from above. */
@@ -113,50 +113,8 @@ export function steamGrid(l: MugLayout, out: Int32Array | number[]): void {
   out[1] = Math.max(1, Math.ceil(((l.steam[3] - l.steam[1]) * 1080) / STEAM_CELL_REF));
 }
 
-/** Emitter settings for the smoke field, in sim units. */
-export interface SteamEmitter {
-  /** Splat strength (0: no new steam). */
-  strength: number;
-  /** Seconds for density to fall by e at the surface. */
-  life: number;
-  /** Wisp modulation along the surface (see `wispFactor` in smoke-sim.ts). */
-  wisp: number;
-}
-
-/** Emitter segment half-width and splat radius, sim units. */
+/** Emitter segment half-width, sim units. */
 export const STEAM_HALF_WIDTH = (MUG_R - MUG_WALL) * 0.6 * STEAM_SCALE;
-export const STEAM_RADIUS = 0.018;
-/** Life at steam 0 and 1, and the extra fade per sim unit of height. */
-export const STEAM_LIFE = [1.1, 2.1] as const;
-export const STEAM_HEIGHT_DECAY = 0.5;
-/** Wisp amount at steam 0 and 1: more steam fills in between the wisps. */
-export const STEAM_WISP = [0.9, 0.6] as const;
-/** Wisps per sim unit along the surface, and their drift (rad/s). */
-export const WISP_K = 70;
-export const WISP_SPEED = 0.5;
-
-/** Maps the `steam` param (0..1) to bounded emitter values. */
-export function steamEmitter(steam: number, out: SteamEmitter): SteamEmitter {
-  const s = clamp(Number.isFinite(steam) ? steam : 0, 0, 1);
-  out.strength = s;
-  out.life = STEAM_LIFE[0] + (STEAM_LIFE[1] - STEAM_LIFE[0]) * s;
-  out.wisp = STEAM_WISP[0] + (STEAM_WISP[1] - STEAM_WISP[0]) * s;
-  return out;
-}
-
-/** Steam rise (sim units/s), curl strength, and the band over which the curl sets in. */
-const STEAM_RISE = 0.3;
-const STEAM_CURL = 3.2;
-const STEAM_ONSET = [0, 0.45] as const;
-
-/** Fills the parts of the smoke flow that don't depend on time. */
-export function steamFlow(out: Flow): Flow {
-  out.rise = STEAM_RISE;
-  out.curl = STEAM_CURL;
-  out.onset0 = STEAM_ONSET[0];
-  out.onset1 = STEAM_ONSET[1];
-  return out;
-}
 
 /** Peak gust and steady lean at draft 1, sim units/s per sim unit of height. */
 export const DRAFT_GUST = 0.3;

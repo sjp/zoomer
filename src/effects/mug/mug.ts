@@ -9,6 +9,18 @@ import {
   withScope,
   scopedProgram,
 } from "../gl";
+import {
+  LIT_CELLS,
+  LIT_GAIN,
+  STEAM_HEIGHT_DECAY,
+  STEAM_OPACITY,
+  STEAM_RADIUS,
+  steamEmitter,
+  type SteamEmitter,
+  steamFlow,
+  WISP_K,
+  WISP_SPEED,
+} from "../cup-steam";
 import { createLowResTarget } from "../lowres";
 import { wrap } from "../math";
 import {
@@ -34,16 +46,9 @@ import {
   SHELF_PALETTE,
   SHELF_SEED,
   STEAM_HALF_WIDTH,
-  STEAM_HEIGHT_DECAY,
-  STEAM_RADIUS,
-  steamEmitter,
-  type SteamEmitter,
-  steamFlow,
   steamGrid,
   steamRegion,
   TABLE_Y,
-  WISP_K,
-  WISP_SPEED,
 } from "./mug-sim";
 import { mugMeta } from "./mug.meta";
 import { createSmokeField } from "../smoke/smoke-field";
@@ -56,11 +61,6 @@ import { createChangeKey } from "../change-key";
 const ROOM_TEXEL_REF = 4;
 /** Shelf blur (0..1, see `shelfBlurLod`). */
 const SHELF_BLUR = 0.8;
-/** Steam density to opacity: alpha = 1 - exp(-STEAM_OPACITY * density). */
-const STEAM_OPACITY = 1.8;
-/** Lit-edge gain per unit of density drop towards the light, and the fetch offset in cells. */
-const LIT_GAIN = 6;
-const LIT_CELLS = 1.5;
 /** Direction towards the key light (outer side, above, in front), before normalising. */
 const LIGHT = [0.55, 0.5, 0.67] as const;
 
