@@ -12,15 +12,14 @@
 import { hexesToUnitRgb } from "../color";
 import { GLYPH_H } from "../dot-matrix";
 import { clamp, smoothstep } from "../math";
+import { type AtlasCell, luma } from "../pixel-atlas";
 import {
   ARCADE_PALETTE,
   CELL,
-  type Cell,
   CYCLE,
   GLYPH_ADVANCE,
   glyphCell,
   type LogoLayout,
-  luma,
   textWidth,
 } from "./arcade-art";
 import {
@@ -180,7 +179,7 @@ const tint = new Float32Array(3);
 
 function put(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   cell: number,
   cx: number,
   cy: number,
@@ -221,7 +220,7 @@ function put(
 /** An unrotated sprite at its cell's size, scaled, with its top-left at (x, y). */
 function putAt(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   cell: number,
   x: number,
   y: number,
@@ -240,7 +239,7 @@ function putAt(
 /** A line of text with its top-left at (x, y). */
 function text(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   str: string,
   x: number,
   y: number,
@@ -260,7 +259,7 @@ function text(
 /** `value` as `digits` zero-padded digits with the top-left at (x, y). */
 function number(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   value: number,
   digits: number,
   x: number,
@@ -277,7 +276,7 @@ function number(
 }
 
 /** "CREDIT 0" in the bottom-right corner. */
-function credit(scene: Scene, cells: readonly Cell[], view: GameView, layer: number): void {
+function credit(scene: Scene, cells: readonly AtlasCell[], view: GameView, layer: number): void {
   const s = "CREDIT 0";
   const x = view.width - MARGIN - textWidth(s.length, 1);
   text(scene, cells, s, x, view.height - MARGIN - GLYPH_H, 1, PALE, 0.85, layer);
@@ -297,7 +296,7 @@ function cycleColour(col: number, local: number): void {
 
 function drawTitle(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   local: number,
   layer: number,
@@ -329,7 +328,7 @@ const SPARKS = 6;
 
 function drawDemo(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   t: number,
   layer: number,
@@ -461,7 +460,7 @@ const ROW_FADE = 0.25;
 
 function drawScores(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   local: number,
   layer: number,
@@ -480,7 +479,7 @@ function drawScores(
 
 function drawCoin(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   local: number,
   layer: number,
@@ -534,7 +533,7 @@ function drawCoin(
 
 function drawPhase(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   index: number,
   local: number,
@@ -562,7 +561,7 @@ function drawPhase(
  */
 export function buildScene(
   scene: Scene,
-  cells: readonly Cell[],
+  cells: readonly AtlasCell[],
   view: GameView,
   loopTime: number,
   starTime: number,

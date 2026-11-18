@@ -5,8 +5,8 @@
  * sprites, bevelled blocks for the title logo, everything packed into one
  * RGBA8 atlas, and the logo's layout.
  */
-import { hexToRgb } from "../color";
 import { GLYPH_H, GLYPH_W, GLYPHS, glyphRows } from "../dot-matrix";
+import { packPixelAtlas, type PixelGrid } from "../pixel-atlas";
 
 /** The arcade palette, by digit 0-f: a made-up set of 16 colours. */
 export const ARCADE_PALETTE: readonly string[] = [
@@ -31,11 +31,8 @@ export const ARCADE_PALETTE: readonly string[] = [
 /** Palette digits the title logo's colour cycles through, in order. */
 export const CYCLE: readonly number[] = [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
-/** A sprite: rows of palette digits, "." transparent. */
-type Grid = readonly string[];
-
 /** The tug, facing +x: a cab with a window, an orange stripe and a two-pronged grab at the front. */
-const TUG: Grid = [
+const TUG: PixelGrid = [
   "......3333.....",
   "....33444433...",
   "..334bbbb4433..",
@@ -48,9 +45,9 @@ const TUG: Grid = [
 ];
 
 /** The engine's glow, drawn behind the tug while it accelerates. */
-const FLAME: Grid = ["778", "7888", "778"];
+const FLAME: PixelGrid = ["778", "7888", "778"];
 
-const CRATE: Grid = [
+const CRATE: PixelGrid = [
   "88888888",
   "8f7777f8",
   "87f77f78",
@@ -61,7 +58,7 @@ const CRATE: Grid = [
   "88888888",
 ];
 
-const MINE: Grid = [
+const MINE: PixelGrid = [
   "....6....",
   ".6..6..6.",
   "..66666..",
@@ -73,7 +70,7 @@ const MINE: Grid = [
   "....6....",
 ];
 
-const PLATE: Grid = [
+const PLATE: PixelGrid = [
   "..33333.....",
   ".3444433....",
   "3444444433..",
@@ -83,7 +80,7 @@ const PLATE: Grid = [
   ".....3333...",
 ];
 
-const GIRDER: Grid = [
+const GIRDER: PixelGrid = [
   ".33333333333.",
   "3444444444443",
   "34f222222f243",
@@ -91,7 +88,7 @@ const GIRDER: Grid = [
   ".33333333333.",
 ];
 
-const CHUNK: Grid = [
+const CHUNK: PixelGrid = [
   "...fff...",
   ".ff77ff..",
   "f777777f.",
@@ -102,11 +99,11 @@ const CHUNK: Grid = [
   "....ff...",
 ];
 
-const SPARK: Grid = [".5.", "555", ".5."];
-const DOT: Grid = ["5"];
+const SPARK: PixelGrid = [".5.", "555", ".5."];
+const DOT: PixelGrid = ["5"];
 
 /** A copyright sign, wider than the font's glyphs. */
-const COPYRIGHT: Grid = [
+const COPYRIGHT: PixelGrid = [
   "..555..",
   ".5...5.",
   "5..55.5",
@@ -120,7 +117,7 @@ const COPYRIGHT: Grid = [
 const MAX_BLOCK = 8;
 
 /** A bevelled square block `size` px wide: light top and left, shaded bottom and right. */
-function blockGrid(size: number): Grid {
+function blockGrid(size: number): PixelGrid {
   if (size <= 1) {
     return ["4"];
   }
@@ -136,26 +133,8 @@ function blockGrid(size: number): Grid {
 }
 
 /** A glyph of the dot-matrix font as a white sprite. */
-function glyphGrid(ch: string): Grid {
+function glyphGrid(ch: string): PixelGrid {
   return glyphRows(ch).map((r) => r.replaceAll("#", "5"));
-}
-
-/** One sprite in the atlas: its rect (px, y down) and its mean luminance over the rect. */
-export interface Cell {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  /** Mean luminance (0..1) of the cell, transparent texels counting as black. */
-  lum: number;
-}
-
-interface Atlas {
-  width: number;
-  height: number;
-  /** RGBA8, rows top first, straight alpha (0 or 255). */
-  pixels: Uint8Array;
-  cells: Cell[];
 }
 
 /** Cell indices in the atlas. Glyphs follow `CELL.glyph0` in the font's order. */
@@ -175,8 +154,8 @@ export const CELL = {
 } as const;
 
 /** The grids in cell order. */
-function atlasGrids(): Grid[] {
-  const grids: Grid[] = [TUG, FLAME, CRATE, MINE, PLATE, GIRDER, CHUNK, SPARK, DOT, COPYRIGHT];
+function atlasGrids(): PixelGrid[] {
+  const grids: PixelGrid[] = [TUG, FLAME, CRATE, MINE, PLATE, GIRDER, CHUNK, SPARK, DOT, COPYRIGHT];
   for (let s = 1; s <= MAX_BLOCK; s++) {
     grids.push(blockGrid(s));
   }
@@ -186,57 +165,12 @@ function atlasGrids(): Grid[] {
   return grids;
 }
 
-/** Rec. 601 luma of 0-255 channels, 0..1. */
-export const luma = (r: number, g: number, b: number) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
 const ATLAS_WIDTH = 128;
 /** Transparent px round each cell, so a rotated sprite never samples its neighbour. */
 const PAD = 1;
 
 /** Packs every sprite into one atlas, in rows. */
-export function buildAtlas(): Atlas {
-  const grids = atlasGrids();
-  const cells: Cell[] = [];
-  let x = PAD;
-  let y = PAD;
-  let rowH = 0;
-  for (const g of grids) {
-    const w = Math.max(...g.map((r) => r.length));
-    const h = g.length;
-    if (x + w + PAD > ATLAS_WIDTH) {
-      x = PAD;
-      y += rowH + PAD;
-      rowH = 0;
-    }
-    cells.push({ x, y, w, h, lum: 0 });
-    x += w + PAD;
-    rowH = Math.max(rowH, h);
-  }
-  const height = y + rowH + PAD;
-  const pixels = new Uint8Array(ATLAS_WIDTH * height * 4);
-  const rgb = ARCADE_PALETTE.map((hex) => hexToRgb(hex));
-  grids.forEach((g, i) => {
-    const cell = cells[i];
-    let sum = 0;
-    g.forEach((row, ry) => {
-      for (let rx = 0; rx < row.length; rx++) {
-        const digit = Number.parseInt(row[rx], 16);
-        if (Number.isNaN(digit)) {
-          continue;
-        }
-        const [r, gr, b] = rgb[digit];
-        const o = ((cell.y + ry) * ATLAS_WIDTH + cell.x + rx) * 4;
-        pixels[o] = r;
-        pixels[o + 1] = gr;
-        pixels[o + 2] = b;
-        pixels[o + 3] = 255;
-        sum += luma(r, gr, b);
-      }
-    });
-    cell.lum = sum / (cell.w * cell.h);
-  });
-  return { width: ATLAS_WIDTH, height, pixels, cells };
-}
+export const buildAtlas = () => packPixelAtlas(atlasGrids(), ARCADE_PALETTE, ATLAS_WIDTH, PAD);
 
 /** The atlas cell for a character of the font (-1 for a space or one it lacks). */
 export function glyphCell(ch: string): number {
