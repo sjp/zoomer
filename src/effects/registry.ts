@@ -41,6 +41,7 @@ import { monitorglowMeta } from "./monitorglow/monitorglow.meta";
 import { gamerdenMeta } from "./gamerden/gamerden.meta";
 import { startingsoonMeta } from "./startingsoon/startingsoon.meta";
 import { justchattingMeta } from "./justchatting/justchatting.meta";
+import { evidenceMeta } from "./evidence/evidence.meta";
 import { chemlabMeta } from "./chemlab/chemlab.meta";
 import { submarineMeta } from "./submarine/submarine.meta";
 import { observatoryMeta } from "./observatory/observatory.meta";
@@ -234,6 +235,7 @@ export const effects: readonly EffectEntry[] = [
     ...justchattingMeta,
     load: () => import("./justchatting/justchatting").then((m) => m.justchatting),
   },
+  { ...evidenceMeta, load: () => import("./evidence/evidence").then((m) => m.evidence) },
   { ...chemlabMeta, load: () => import("./chemlab/chemlab").then((m) => m.chemlab) },
   { ...submarineMeta, load: () => import("./submarine/submarine").then((m) => m.submarine) },
   {
