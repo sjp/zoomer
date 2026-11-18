@@ -13,15 +13,10 @@ import {
 } from "../gl";
 import { fitScale } from "../scene-layout";
 import { SDF2D_GLSL } from "../sdf-glsl";
+import { createShotSchedule, restartShots, screenFlicker, stepShots } from "../shot-schedule";
 import { createStreamOverlays } from "../stream-overlay/overlay-layer";
 import { defineEffect } from "../types";
-import {
-  createGlowSchedule,
-  type Genre,
-  restartGlow,
-  screenFlicker,
-  stepGlow,
-} from "./monitorglow-schedule";
+import { type Genre, GENRE_PALETTES } from "./monitorglow-schedule";
 import { monitorglowMeta } from "./monitorglow.meta";
 
 /** Where the monitor sits, seen from the wall: in front of the speaker, below eye level (design units). */
@@ -263,7 +258,7 @@ export const monitorglow = defineEffect(monitorglowMeta, {
       let roomDrawn = false;
       const wallRgb = unitRgbMemo();
       const stripRgb = unitRgbMemo();
-      const schedule = createGlowSchedule(0, "adventure", 0);
+      const schedule = createShotSchedule(0, GENRE_PALETTES.adventure, 0);
       let started = false;
 
       return {
@@ -279,13 +274,13 @@ export const monitorglow = defineEffect(monitorglowMeta, {
         },
         frame(dt, p) {
           beginFrame(gl, width, height);
-          const genre = toGenre(p.genre);
+          const palette = GENRE_PALETTES[toGenre(p.genre)];
           if (!started) {
             // The first frame starts the show on the link's settings, with no ease in.
             started = true;
-            restartGlow(schedule, p.seed, genre, p.intensity);
+            restartShots(schedule, p.seed, palette, p.intensity);
           }
-          stepGlow(schedule, dt, genre, p.intensity, p.seed);
+          stepShots(schedule, dt, palette, p.intensity, p.seed);
 
           if (roomTarget) {
             // 1. The room, once per resize.
