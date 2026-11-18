@@ -70,8 +70,8 @@ const BLINK_HOLD = 0.05;
 const BLINK_OPEN = 0.2;
 export const BLINK_TOTAL = BLINK_CLOSE + BLINK_HOLD + BLINK_OPEN;
 /** Gaps between an eye's blinks at a blink rate of 1x, seconds. */
-export const BLINK_GAP_MIN = 3;
-export const BLINK_GAP_MAX = 12;
+export const BLINK_GAP_MIN = 30;
+export const BLINK_GAP_MAX = 120;
 /** Chance a blink comes as a pair, and the pause between the two. */
 const DOUBLE_CHANCE = 0.2;
 const DOUBLE_PAUSE = 0.15;
@@ -411,7 +411,7 @@ export function advanceEvents(ev: Events, dt: number, amount: number): void {
 export interface WallParams {
   density: number;
   clearing: number;
-  /** Blink rate 0..1; 0.5 is one blink every 3-12 s. */
+  /** Blink rate 0..1; 0.5 is one blink every 30-120 s. */
   blink: number;
   events: number;
   seed: number;

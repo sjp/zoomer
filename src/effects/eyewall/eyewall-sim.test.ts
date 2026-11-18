@@ -306,7 +306,7 @@ describe("blinks", () => {
   });
 
   it.each(SEEDS)(
-    "come every 3 to 12 s at the default rate, sometimes in pairs (seed %d)",
+    "come every 30 to 120 s at the default rate, sometimes in pairs (seed %d)",
     (seed) => {
       const wall = createWall(seed);
       const p = params({ seed, events: 0 });
@@ -320,7 +320,7 @@ describe("blinks", () => {
       let pairs = 0;
       let shortest = Number.POSITIVE_INFINITY;
       let longest = 0;
-      run(wall, 180, p, () => {
+      run(wall, 900, p, () => {
         time += DT;
         for (let i = 0; i < n; i++) {
           if (wall.blinks[i] !== count[i]) {
