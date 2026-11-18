@@ -1,10 +1,9 @@
 import { growLive, stepLife, trimLive } from "../fade";
+import { buildGrainTexture, GRAIN_SIZE } from "../frost-texture";
 import {
   blurWidth,
-  buildGrainTexture,
   FLUTE_SQUASH,
   glassPreset,
-  GRAIN_SIZE,
   shapeColor,
   writeShapeUniforms,
   type GlassPreset,
