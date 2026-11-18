@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { createRng } from "../effects/noise";
 import { createFrameLimiter, frameDelta, MAX_FRAME_DT } from "./frameRate";
 
-/** Simulates `seconds` of a display at `hz` and counts frames the limiter draws. */
+/**
+ * Simulates `seconds` of a display at `hz` and counts frames the limiter draws. The
+ * timestamp jitter is seeded so every run sees the same frames.
+ */
 function countFrames(hz: number, fps: number | undefined, seconds = 10) {
   const shouldDraw = createFrameLimiter();
+  const random = createRng(hz * 1000 + (fps ?? 0));
   let drawn = 0;
   for (let i = 0; i < hz * seconds; i++) {
-    const jitter = (Math.random() - 0.5) * 1.5;
+    const jitter = (random() - 0.5) * 1.5;
     if (shouldDraw(1000 + (i * 1000) / hz + jitter, fps)) {
       drawn++;
     }
