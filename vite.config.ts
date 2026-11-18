@@ -7,13 +7,14 @@ import { configDefaults, defineConfig } from "vitest/config";
  * Content-Security-Policy for the built site. GitHub Pages can't send headers, so it
  * goes in a <meta> tag (which can't express frame-ancestors, report-uri or sandbox).
  * The build has no inline scripts and no data: or blob: subresources: the recording
- * download is a blob: link navigation, which CSP doesn't govern. 'unsafe-inline' in
- * style-src covers the UI's inline style attributes.
+ * download is a blob: link navigation, which CSP doesn't govern. style-src needs no
+ * 'unsafe-inline': the UI's inline styles (the slider fill, the bottom sheet's height)
+ * are set through the DOM's style object, which the policy doesn't restrict.
  */
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self'",
   "img-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
