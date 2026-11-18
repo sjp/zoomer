@@ -43,6 +43,7 @@ import { startingsoonMeta } from "./startingsoon/startingsoon.meta";
 import { justchattingMeta } from "./justchatting/justchatting.meta";
 import { evidenceMeta } from "./evidence/evidence.meta";
 import { detectiveMeta } from "./detective/detective.meta";
+import { weathermapMeta } from "./weathermap/weathermap.meta";
 import { chemlabMeta } from "./chemlab/chemlab.meta";
 import { submarineMeta } from "./submarine/submarine.meta";
 import { observatoryMeta } from "./observatory/observatory.meta";
@@ -238,6 +239,7 @@ export const effects: readonly EffectEntry[] = [
   },
   { ...evidenceMeta, load: () => import("./evidence/evidence").then((m) => m.evidence) },
   { ...detectiveMeta, load: () => import("./detective/detective").then((m) => m.detective) },
+  { ...weathermapMeta, load: () => import("./weathermap/weathermap").then((m) => m.weathermap) },
   { ...chemlabMeta, load: () => import("./chemlab/chemlab").then((m) => m.chemlab) },
   { ...submarineMeta, load: () => import("./submarine/submarine").then((m) => m.submarine) },
   {
