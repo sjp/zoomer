@@ -52,7 +52,7 @@ export const gamerdenMeta = defineEffectMeta({
     ...GAMER_DEN_PARAMS,
     ...streamOverlayParams(),
   },
-  categories: ["Scenes", "Night", "Cosy"],
+  categories: ["Scenes", "Night", "Games"],
   tags: ["stream", "streamer", "gaming", "twitch", "rgb", "led", "hexagon", "setup"],
   cost: "low",
   context: "webgl2",

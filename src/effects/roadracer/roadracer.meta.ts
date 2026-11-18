@@ -46,7 +46,7 @@ export const roadRacerMeta = defineEffectMeta({
     },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Retro", "Fun"],
+  categories: ["Games", "Retro"],
   tags: [
     "racing",
     "driving",

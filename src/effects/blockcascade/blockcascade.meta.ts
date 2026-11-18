@@ -42,7 +42,7 @@ export const blockCascadeMeta = defineEffectMeta({
     skill: { kind: "number", label: "Skill", min: 0, max: 1, step: 0.05, default: 0.7 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Geometric", "Fun", "Calm"],
+  categories: ["Games", "Geometric", "Calm"],
   tags: ["falling blocks", "block game", "line clear", "polyomino", "idle", "retro gaming"],
   cost: "very low",
   context: "webgl2",

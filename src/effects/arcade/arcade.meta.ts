@@ -39,7 +39,7 @@ export const arcadeMeta = defineEffectMeta({
     pace: { kind: "number", label: "Pace", min: MIN_PACE, max: MAX_PACE, step: 0.05, default: 1 },
     seed: { kind: "number", label: "Variation", min: 0, max: 999, step: 1, default: 1 },
   },
-  categories: ["Retro", "Fun", "Night"],
+  categories: ["Games", "Retro", "Night"],
   tags: ["coin-op", "80s", "retro gaming", "video game", "pixel art", "joystick", "scanlines"],
   cost: "low",
   context: "webgl2",
