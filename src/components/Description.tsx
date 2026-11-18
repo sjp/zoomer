@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 /**
  * The effect's description. With `clamp` (on a phone, where height is scarce) it shows

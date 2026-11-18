@@ -1,4 +1,5 @@
-import { useEffect, useRef, type Ref } from "react";
+import type { Ref } from "preact";
+import { useEffect, useRef } from "preact/hooks";
 import type { AnyParamValues, EffectDefinition } from "../effects/types";
 import type { FrameRate } from "../lib/frameRate";
 import { createRenderLoop, type FrameStats, type RenderLoop } from "../lib/renderLoop";

@@ -1,7 +1,7 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ComponentChildren, type ErrorInfo } from "preact";
 
 interface Props {
-  children: ReactNode;
+  children: ComponentChildren;
 }
 
 interface State {
@@ -16,7 +16,7 @@ interface State {
 export class PanelErrorBoundary extends Component<Props, State> {
   override state: State = { crashed: false };
 
-  static getDerivedStateFromError(): State {
+  static override getDerivedStateFromError(): State {
     return { crashed: true };
   }
 
@@ -29,7 +29,7 @@ export class PanelErrorBoundary extends Component<Props, State> {
       return this.props.children;
     }
     return (
-      <aside className="panel" role="alert">
+      <div className="panel" role="alert">
         <p className="effect-error">The controls crashed. The background keeps running.</p>
         <button
           type="button"
@@ -40,7 +40,7 @@ export class PanelErrorBoundary extends Component<Props, State> {
         >
           Reload
         </button>
-      </aside>
+      </div>
     );
   }
 }

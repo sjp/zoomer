@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ListableEffect } from "../effects/list";
 import { EFFECT_CATEGORIES } from "../effects/types";
@@ -228,7 +228,7 @@ describe("EffectList", () => {
 
   it("reports search and sort changes", () => {
     const { input, props } = renderList();
-    fireEvent.change(input, { target: { value: "sea" } });
+    fireEvent.input(input, { target: { value: "sea" } });
     expect(props.onQueryChange).toHaveBeenCalledExactlyOnceWith("sea");
     fireEvent.change(screen.getByLabelText("Sort effects"), { target: { value: "az" } });
     expect(props.onSortChange).toHaveBeenCalledExactlyOnceWith("az");

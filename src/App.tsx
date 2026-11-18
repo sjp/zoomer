@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
@@ -514,8 +514,8 @@ export function App() {
             d="M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+            stroke-width="2"
+            stroke-linecap="round"
           />
         </svg>
       </button>

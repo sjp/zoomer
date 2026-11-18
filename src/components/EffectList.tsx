@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import type { ComponentChildren, TargetedKeyboardEvent } from "preact";
+import { useCallback, useEffect, useId, useRef, useState } from "preact/hooks";
 import {
   EFFECT_SORTS,
   FAVOURITES_GROUP,
@@ -54,7 +47,7 @@ export interface EffectListProps {
   onPrefetch: (id: string) => void;
   onClose: () => void;
   /** Shown at the end of the search row, e.g. a button that closes the list. */
-  searchEnd?: ReactNode;
+  searchEnd?: ComponentChildren;
   /**
    * Puts the sort select beside the search instead of on a row of its own under the
    * chips, with the count. For wider panels with little height to spare, as on phones.
@@ -142,9 +135,9 @@ export function EffectList(props: EffectListProps) {
           d={dir === 1 ? "M7.5 4.5L13 10l-5.5 5.5" : "M12.5 4.5L7 10l5.5 5.5"}
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
       </svg>
     </button>
@@ -156,7 +149,6 @@ export function EffectList(props: EffectListProps) {
 
   useEffect(() => {
     inputRef.current?.focus();
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- focusRequest is a counter whose only job is to re-run this effect
   }, [props.focusRequest]);
 
   useEffect(() => {
@@ -209,7 +201,6 @@ export function EffectList(props: EffectListProps) {
     if (active) {
       document.getElementById(optionDomId(uid, active.id))?.scrollIntoView({ block: "nearest" });
     }
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- scrollRequest is a counter whose only job is to re-run this effect after starring
   }, [active, uid, scrollRequest]);
 
   const activate = (effect: ListableEffect | undefined) => {
@@ -220,7 +211,7 @@ export function EffectList(props: EffectListProps) {
     onPrefetch(effect.id);
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (e: TargetedKeyboardEvent<HTMLInputElement>) => {
     const i = active ? effects.indexOf(active) : -1;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -308,7 +299,7 @@ export function EffectList(props: EffectListProps) {
     }
   }
 
-  const renderOption = (effect: ListableEffect): ReactNode => {
+  const renderOption = (effect: ListableEffect): ComponentChildren => {
     const isActive = effect === active;
     const isCurrent = effect.id === currentId;
     const isFavourite = favourites?.has(effect.id) ?? false;
@@ -361,8 +352,9 @@ export function EffectList(props: EffectListProps) {
       aria-label="Sort effects"
       value={sort}
       onChange={(e) => {
-        if (isEffectSort(e.target.value)) {
-          props.onSortChange(e.target.value);
+        const value = e.currentTarget.value;
+        if (isEffectSort(value)) {
+          props.onSortChange(value);
         }
       }}
     >
@@ -381,6 +373,9 @@ export function EffectList(props: EffectListProps) {
           ref={inputRef}
           type="search"
           role="combobox"
+          // Preact's types only allow a combobox input that names a datalist; the
+          // popup here is the listbox below, so there is none.
+          list={undefined}
           aria-label="Search effects"
           aria-expanded="true"
           aria-controls={listboxId}
@@ -389,10 +384,10 @@ export function EffectList(props: EffectListProps) {
           aria-activedescendant={active ? optionId(active.id) : undefined}
           placeholder="Search effects"
           autoComplete="off"
-          spellCheck={false}
+          spellcheck={false}
           value={query}
-          onChange={(e) => {
-            changeQuery(e.target.value);
+          onInput={(e) => {
+            changeQuery(e.currentTarget.value);
           }}
           onKeyDown={onKeyDown}
         />

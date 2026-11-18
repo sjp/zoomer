@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react";
+import { preact } from "@preact/preset-vite";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { configDefaults, defineConfig } from "vitest/config";
@@ -8,7 +8,7 @@ import { configDefaults, defineConfig } from "vitest/config";
  * goes in a <meta> tag (which can't express frame-ancestors, report-uri or sandbox).
  * The build has no inline scripts and no data: or blob: subresources: the recording
  * download is a blob: link navigation, which CSP doesn't govern. 'unsafe-inline' in
- * style-src covers React's inline style attributes.
+ * style-src covers the UI's inline style attributes.
  */
 const CSP = [
   "default-src 'self'",
@@ -21,8 +21,8 @@ const CSP = [
 ].join("; ");
 
 /**
- * Injects the CSP at build time only. The dev server needs an inline script (the React
- * Refresh preamble) and a websocket for HMR, which the production policy forbids.
+ * Injects the CSP at build time only. The dev server needs a websocket for HMR
+ * (Prefresh), which the production policy forbids.
  */
 function contentSecurityPolicy(): Plugin {
   return {
@@ -61,7 +61,9 @@ export default defineConfig({
   // project subpath (https://<user>.github.io/<repo>/).
   base: "./",
   cacheDir: CACHE_DIR,
-  plugins: [react(), contentSecurityPolicy()],
+  // No react -> preact/compat aliases: the app imports preact directly, and an alias
+  // would hide a stray react import instead of failing the build.
+  plugins: [preact({ reactAliasesEnabled: false }), contentSecurityPolicy()],
   // Agent worktrees live under .claude/; keep their copies of the tests out of the run.
   // e2e/ holds the Playwright browser tests, run by `npm run test:browser`, and
   // *.perf.test.ts the frame-timing tests, run one file at a time by `npm run test:perf`.

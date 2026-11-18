@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { Ref } from "react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import type { Ref } from "preact";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { defaults, encodeHash } from "./effects/params";
@@ -10,7 +10,7 @@ import { mockMedia } from "./test/media";
 
 // No WebGL here: a bare canvas stands in for the effect canvas.
 vi.mock("./components/EffectCanvas", () => ({
-  EffectCanvas: ({ ref }: { ref?: Ref<HTMLCanvasElement> }) => <canvas ref={ref} />,
+  EffectCanvas: ({ ref }: { ref?: Ref<HTMLCanvasElement> }) => <canvas ref={ref ?? null} />,
 }));
 
 // A recording that runs until the test finishes it, at the asked-for length by default.
@@ -112,11 +112,11 @@ describe("App", () => {
     });
     const replace = vi.spyOn(window.history, "replaceState");
     const slider = screen.getByRole<HTMLInputElement>("slider", { name: /^Speed/ });
-    fireEvent.change(slider, { target: { value: "3" } });
+    fireEvent.input(slider, { target: { value: "3" } });
     act(() => {
       vi.advanceTimersByTime(200);
     });
-    fireEvent.change(slider, { target: { value: "4" } });
+    fireEvent.input(slider, { target: { value: "4" } });
     act(() => {
       vi.advanceTimersByTime(200);
     });
@@ -338,5 +338,19 @@ describe("App", () => {
     press("h", chip);
     expect(panelVisible()).toBe(true);
     expect(screen.getByRole("option", { name: /\(current\)/ }).textContent).toContain(WARP.name);
+  });
+
+  it("names the icons' SVG attributes as SVG spells them", () => {
+    // Preact sets attributes as written, so a camelCase name like strokeWidth would be
+    // an unknown SVG attribute and silently do nothing.
+    render(<App />);
+    press("/");
+    const names = new Set(
+      [...document.querySelectorAll("svg, svg *")].flatMap((el) =>
+        [...el.attributes].map((a) => a.name),
+      ),
+    );
+    expect(names.has("stroke-width")).toBe(true);
+    expect([...names].filter((n) => n !== "viewBox" && /[A-Z]/.test(n))).toEqual([]);
   });
 });

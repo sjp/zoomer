@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/preact";
+import { createRef } from "preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EffectDefinition } from "../effects/types";
 import type { RenderLoop, RenderLoopOptions } from "../lib/renderLoop";
@@ -60,6 +61,37 @@ describe("EffectCanvas", () => {
     expect(loops[0].loop.dispose).toHaveBeenCalledTimes(1);
     expect(loops[1].options.resolution).toBe("720p");
     expect(loops[1].options.effect).toBe(B);
+  });
+
+  it("hands its canvas to a ref passed as a prop", () => {
+    const objectRef = createRef<HTMLCanvasElement>();
+    const view = render(
+      <EffectCanvas
+        effect={A}
+        params={{}}
+        resolution="window"
+        frameRate="display"
+        ref={objectRef}
+      />,
+    );
+    const canvas = view.container.querySelector("canvas");
+    expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+    expect(objectRef.current).toBe(canvas);
+    expect(loops[0].options.canvas).toBe(canvas);
+
+    const callbackRef = vi.fn<(node: HTMLCanvasElement | null) => void>();
+    view.rerender(
+      <EffectCanvas
+        effect={A}
+        params={{}}
+        resolution="window"
+        frameRate="display"
+        ref={callbackRef}
+      />,
+    );
+    expect(callbackRef).toHaveBeenLastCalledWith(canvas);
+    view.unmount();
+    expect(callbackRef).toHaveBeenLastCalledWith(null);
   });
 
   it("passes the recording size lock to the loop", () => {

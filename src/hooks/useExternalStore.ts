@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 /**
  * Reads a value that lives outside the component tree (a `Store`, a media query) and

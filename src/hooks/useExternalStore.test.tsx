@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
-import { useLayoutEffect } from "react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/preact";
+import { useLayoutEffect } from "preact/hooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createStore, type Store } from "../lib/store";
 import { useExternalStore } from "./useExternalStore";

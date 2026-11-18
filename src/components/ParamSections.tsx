@@ -1,4 +1,5 @@
-import { useId, type ReactNode } from "react";
+import type { ComponentChildren } from "preact";
+import { useId } from "preact/hooks";
 import { changedCount, groupParams } from "../effects/param-groups";
 import type { AnyParamValues, ParamSchema, ParamValue } from "../effects/types";
 import { ColourSwatch, ParamControl } from "./ParamControl";
@@ -9,7 +10,7 @@ interface SectionProps {
   onToggle: () => void;
   /** Shown as "N changed" in the header when above zero. */
   changed?: number;
-  children: ReactNode;
+  children: ComponentChildren;
 }
 
 /**
@@ -40,9 +41,9 @@ export function Section({ title, open, onToggle, changed = 0, children }: Sectio
             d="M7.5 5l5 5-5 5"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           />
         </svg>
         <span id={`${id}-title`} className="section-title">
@@ -126,14 +127,14 @@ export function ParamSections({
         run.colours && run.keys.length > 1 ? (
           <div key={`${effectId}-${run.keys.join(",")}`} className="swatches">
             {run.keys.map((key) => {
-              const { key: reactKey, ...rest } = props(key);
-              return <ColourSwatch key={reactKey} {...rest} />;
+              const { key: itemKey, ...rest } = props(key);
+              return <ColourSwatch key={itemKey} {...rest} />;
             })}
           </div>
         ) : (
           run.keys.map((key) => {
-            const { key: reactKey, ...rest } = props(key);
-            return <ParamControl key={reactKey} {...rest} />;
+            const { key: itemKey, ...rest } = props(key);
+            return <ParamControl key={itemKey} {...rest} />;
           })
         ),
       )}

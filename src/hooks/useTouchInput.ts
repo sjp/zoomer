@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "preact/hooks";
 
 /**
  * Whether the latest pointer input came from a touch screen. A pen or mouse that

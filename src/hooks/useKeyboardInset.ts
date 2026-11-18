@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect } from "preact/hooks";
 
 /**
  * While `active`, keeps the `--keyboard-inset` CSS variable on the root element at how

@@ -1,4 +1,5 @@
-import { useRef, type PointerEvent } from "react";
+import type { TargetedPointerEvent } from "preact";
+import { useRef } from "preact/hooks";
 
 /** How far a finger moves before a press on the handle counts as a drag, in px. */
 const TAP_SLOP = 6;
@@ -29,7 +30,7 @@ export function SheetHandle({ open, onOpenChange, onDismiss, onDrag, sheetHeight
   // Whether the last press was a drag, so the click that may follow it is ignored.
   const dragged = useRef(false);
 
-  const end = (e: PointerEvent<HTMLButtonElement>, cancelled: boolean) => {
+  const end = (e: TargetedPointerEvent<HTMLButtonElement>, cancelled: boolean) => {
     const d = drag.current;
     if (!d || e.pointerId !== d.pointerId) {
       return;

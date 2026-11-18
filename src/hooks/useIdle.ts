@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "preact/hooks";
 
 /**
  * True once there has been no pointer, touch, scroll or keyboard activity for `ms`.

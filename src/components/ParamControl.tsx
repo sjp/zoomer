@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import type { ComponentChildren } from "preact";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { isDefault, sanitizeText, stepDecimals } from "../effects/params";
 import type { ParamDef, ParamValue, TextParam } from "../effects/types";
 
@@ -43,9 +44,9 @@ function ResetButton({
           d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2M3.5 2.5v2.6h2.6"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
       </svg>
     </button>
@@ -70,7 +71,7 @@ function LabelRow({
   def: ParamDef;
   value: ParamValue;
   onReset: (() => void) | undefined;
-  after?: ReactNode;
+  after?: ComponentChildren;
   /** For a group of buttons, which a label element can't name: the text's id. */
   labelId?: string | undefined;
 }) {
@@ -113,8 +114,8 @@ export function ColourSwatch({ id, def, value, onChange, onReset }: Props) {
         aria-label={def.label}
         title={def.label}
         value={String(value)}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onInput={(e) => {
+          onChange(e.currentTarget.value);
         }}
       />
       <div className="swatch-caption">
@@ -193,7 +194,7 @@ export function Segmented<T extends string | number>({
 
 export function ParamControl({ id, def, value, onChange, onReset }: Props) {
   const inputId = `param-${id}`;
-  const label = (after?: ReactNode) => (
+  const label = (after?: ComponentChildren) => (
     <LabelRow inputId={inputId} def={def} value={value} onReset={onReset} after={after} />
   );
   switch (def.kind) {
@@ -215,8 +216,8 @@ export function ParamControl({ id, def, value, onChange, onReset }: Props) {
             max={def.max}
             step={def.step}
             value={n}
-            onChange={(e) => {
-              onChange(Number(e.target.value));
+            onInput={(e) => {
+              onChange(Number(e.currentTarget.value));
             }}
           />
         </div>
@@ -230,8 +231,8 @@ export function ParamControl({ id, def, value, onChange, onReset }: Props) {
             id={inputId}
             type="color"
             value={String(value)}
-            onChange={(e) => {
-              onChange(e.target.value);
+            onInput={(e) => {
+              onChange(e.currentTarget.value);
             }}
           />
         </div>
@@ -245,7 +246,7 @@ export function ParamControl({ id, def, value, onChange, onReset }: Props) {
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => {
-              onChange(e.target.checked);
+              onChange(e.currentTarget.checked);
             }}
           />
         </div>
@@ -278,7 +279,7 @@ export function ParamControl({ id, def, value, onChange, onReset }: Props) {
             id={inputId}
             value={String(value)}
             onChange={(e) => {
-              onChange(e.target.value);
+              onChange(e.currentTarget.value);
             }}
           >
             {def.options.map((o) => (
@@ -309,7 +310,7 @@ interface TextProps {
   def: TextParam;
   value: string;
   onChange: (value: string) => void;
-  label: ReactNode;
+  label: ComponentChildren;
 }
 
 /**
@@ -317,16 +318,16 @@ interface TextProps {
  * raw text is held locally, since normalising or truncating it mid-composition
  * would break the IME; it is sanitised once composition ends.
  *
- * When sanitising changes the text (a stripped character, an over-long line), React
- * writes the new value into the textarea, which moves the caret to the end; it is put
- * back where it was, less whatever was removed before it.
+ * When sanitising changes the text (a stripped character, an over-long line), the
+ * re-render writes the new value into the textarea, which moves the caret to the end;
+ * it is put back where it was, less whatever was removed before it.
  */
 function TextControl({ inputId, def, value, onChange, label }: TextProps) {
   const [composing, setComposing] = useState<string | null>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<number | null>(null);
-  // Re-renders even when the sanitised value equals the current one, so the caret
-  // is still restored after React puts the old value back.
+  // Re-renders even when the sanitised value equals the current one, so the old value
+  // is written back over the edit and the caret is restored.
   const [, setCaretRequests] = useState(0);
   useLayoutEffect(() => {
     const caret = caretRef.current;
@@ -354,7 +355,7 @@ function TextControl({ inputId, def, value, onChange, label }: TextProps) {
         id={inputId}
         rows={def.maxLines}
         cols={def.maxLength}
-        spellCheck={false}
+        spellcheck={false}
         autoComplete="off"
         value={composing ?? value}
         onCompositionStart={(e) => {
@@ -364,11 +365,11 @@ function TextControl({ inputId, def, value, onChange, label }: TextProps) {
           setComposing(null);
           commit(e.currentTarget);
         }}
-        onChange={(e) => {
+        onInput={(e) => {
           if (composing !== null) {
-            setComposing(e.target.value);
+            setComposing(e.currentTarget.value);
           } else {
-            commit(e.target);
+            commit(e.currentTarget);
           }
         }}
       />

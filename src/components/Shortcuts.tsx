@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef } from "preact/hooks";
 
 /** The keyboard shortcuts, as the app handles them in `App.tsx`. */
 const SHORTCUTS = [

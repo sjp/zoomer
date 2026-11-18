@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockMedia } from "../test/media";
 import { useCanHover, useMediaQuery } from "./useMediaQuery";

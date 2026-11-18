@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { useState } from "preact/hooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParamDef, ParamValue } from "../effects/types";
 import { ParamControl } from "./ParamControl";
@@ -24,8 +24,22 @@ describe("ParamControl", () => {
     const input = screen.getByRole<HTMLInputElement>("slider");
     expect(input.type).toBe("range");
     expect(screen.getByText("1.50")).toBeTruthy();
-    fireEvent.change(input, { target: { value: "0.25" } });
+    fireEvent.input(input, { target: { value: "0.25" } });
     expect(onChange).toHaveBeenCalledExactlyOnceWith(0.25);
+  });
+
+  it("follows a slider drag on each input, before any change fires", () => {
+    const { onChange } = renderControl(
+      { kind: "number", label: "Speed", min: 0, max: 2, step: 0.05, default: 1 },
+      1,
+    );
+    const input = screen.getByRole<HTMLInputElement>("slider");
+    fireEvent.input(input, { target: { value: "1.2" } });
+    fireEvent.input(input, { target: { value: "1.4" } });
+    expect(onChange.mock.calls).toEqual([[1.2], [1.4]]);
+    // The release fires change, which must not report the value a second time.
+    fireEvent.change(input);
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 
   it("fills the slider's track up to its value", () => {
@@ -212,13 +226,13 @@ describe("ParamControl", () => {
       const { onChange } = renderControl(def, "");
       const area = screen.getByLabelText<HTMLTextAreaElement>("Sign");
       expect(area.getAttribute("rows")).toBe("2");
-      fireEvent.change(area, { target: { value: "abcdefgh\nij\nkl‮" } });
+      fireEvent.input(area, { target: { value: "abcdefgh\nij\nkl‮" } });
       expect(onChange).toHaveBeenCalledExactlyOnceWith("abcde\nij");
     });
 
     /** Types into the textarea the way a browser does: a new value, then the caret. */
     function edit(area: HTMLTextAreaElement, text: string, caret: number) {
-      // The prototype's setter, so React's value tracker sees a real edit.
+      // The prototype's setter, so DOM sees a real edit.
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(
         area,
         text,
@@ -256,7 +270,7 @@ describe("ParamControl", () => {
 
     it("keeps the caret in place when the sanitised text is unchanged", () => {
       const area = renderStateful("abcd");
-      // A stripped character typed after "ab": React puts the old value back.
+      // A stripped character typed after "ab": the old value is written back.
       edit(area, "ab\u202ecd", 3);
       expect(area.value).toBe("abcd");
       expect(area.selectionStart).toBe(2);
@@ -266,7 +280,7 @@ describe("ParamControl", () => {
       const { onChange } = renderControl(def, "ab");
       const area = screen.getByLabelText<HTMLTextAreaElement>("Sign");
       fireEvent.compositionStart(area);
-      fireEvent.change(area, { target: { value: "abcdefg" } });
+      fireEvent.input(area, { target: { value: "abcdefg" } });
       expect(onChange).not.toHaveBeenCalled();
       expect(area.value).toBe("abcdefg");
       fireEvent.compositionEnd(area);

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParamSchema, ParamValue } from "../effects/types";
 import { defined } from "../test/defined";
@@ -70,7 +70,7 @@ describe("ParamSections", () => {
 
   it("reports changes and resets by key", () => {
     const { onParamChange } = renderSections({ a: num("A"), b: num("B", "X") }, { b: 9 });
-    fireEvent.change(screen.getByRole("slider", { name: /^A/ }), { target: { value: "3" } });
+    fireEvent.input(screen.getByRole("slider", { name: /^A/ }), { target: { value: "3" } });
     fireEvent.click(screen.getByRole("button", { name: "Reset B" }));
     expect(onParamChange.mock.calls).toEqual([
       ["a", 3],

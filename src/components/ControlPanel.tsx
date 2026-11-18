@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AnyParamValues, EffectMeta, ParamValue } from "../effects/types";
 import type { FrameStats } from "./EffectCanvas";
 import { useExternalStore } from "../hooks/useExternalStore";
@@ -217,9 +217,9 @@ export function ControlPanel(props: Props) {
           d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
       </svg>
     </button>
@@ -237,9 +237,9 @@ export function ControlPanel(props: Props) {
           d="M8.5 11.5a3.2 3.2 0 0 0 4.6 0l2.6-2.6a3.2 3.2 0 0 0-4.6-4.6l-1 1M11.5 8.5a3.2 3.2 0 0 0-4.6 0l-2.6 2.6a3.2 3.2 0 0 0 4.6 4.6l1-1"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
       </svg>
     </button>
@@ -272,9 +272,9 @@ export function ControlPanel(props: Props) {
                 d={path}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               />
             </svg>
           </button>
@@ -332,8 +332,8 @@ export function ControlPanel(props: Props) {
                     d="M5.5 5.5l9 9M14.5 5.5l-9 9"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
                   />
                 </svg>
               </button>
@@ -359,9 +359,9 @@ export function ControlPanel(props: Props) {
                   d="M5 7.5l5 5 5-5"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                 />
               </svg>
             </button>
@@ -380,9 +380,9 @@ export function ControlPanel(props: Props) {
                   d={sheet ? "M5 5l5 5 5-5M5 11l5 5 5-5" : "M5 5l5 5-5 5M11 5l5 5-5 5"}
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                 />
               </svg>
             </button>
@@ -470,7 +470,7 @@ export function ControlPanel(props: Props) {
                     disabled={recording}
                     title={recording ? "Locked while recording" : undefined}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = e.currentTarget.value;
                       if (isResolution(value)) {
                         props.onResolutionChange(value);
                       }
@@ -489,7 +489,7 @@ export function ControlPanel(props: Props) {
                     id="frame-rate"
                     value={props.frameRate}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = e.currentTarget.value;
                       if (isFrameRate(value)) {
                         props.onFrameRateChange(value);
                       }

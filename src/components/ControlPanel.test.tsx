@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { useState, type ComponentProps } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import type { ComponentProps } from "preact";
+import { useState } from "preact/hooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEffect } from "../effects/registry";
 import { defaults } from "../effects/params";
@@ -63,7 +64,7 @@ describe("ControlPanel", () => {
   it("builds a control for every param and reports changes by key", () => {
     const props = renderPanel();
     expect(screen.getAllByRole("slider").length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByRole("slider", { name: /^Speed/ }), { target: { value: "2" } });
+    fireEvent.input(screen.getByRole("slider", { name: /^Speed/ }), { target: { value: "2" } });
     expect(props.onParamChange).toHaveBeenCalledExactlyOnceWith("speed", 2);
   });
 
