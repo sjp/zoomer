@@ -22,13 +22,7 @@ import { createSeaWater, createSeaWaterFrame, SEA_SKY_GLSL } from "../sea/sea-wa
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { advanceSwell } from "../sway";
 import { defineEffect } from "../types";
-import {
-  DROP_CLEAR,
-  DROP_DIR_GLSL,
-  DROP_FRAGMENT,
-  DROP_VERTEX,
-  OFFSET_RANGE,
-} from "../windowrain/windowrain-drops";
+import { DROP_CLEAR, DROP_DIR_GLSL, DROP_FRAGMENT, DROP_VERTEX, OFFSET_RANGE } from "../glass-rain";
 import {
   createRainSim,
   DEFAULT_CONFIG,
@@ -37,7 +31,7 @@ import {
   resizeRainSim,
   stepRainSim,
   writeDropInstances,
-} from "../windowrain/windowrain-sim";
+} from "../glass-rain-sim";
 import { type CabinWeather, captainscabinMeta } from "./captainscabin.meta";
 import {
   BEAM_Y0,

@@ -29,14 +29,8 @@ import {
   resizeRainSim,
   stepRainSim,
   writeDropInstances,
-} from "../windowrain/windowrain-sim";
-import {
-  DROP_CLEAR,
-  DROP_DIR_GLSL,
-  DROP_FRAGMENT,
-  DROP_VERTEX,
-  OFFSET_RANGE,
-} from "../windowrain/windowrain-drops";
+} from "../glass-rain-sim";
+import { DROP_CLEAR, DROP_DIR_GLSL, DROP_FRAGMENT, DROP_VERTEX, OFFSET_RANGE } from "../glass-rain";
 import { type LensSide, lamproomMeta } from "./lamproom.meta";
 import {
   advanceLens,

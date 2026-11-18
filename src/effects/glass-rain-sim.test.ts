@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FADE_OUT } from "../fade";
-import { createRng } from "../noise";
+import { FADE_OUT } from "./fade";
+import { createRng } from "./noise";
 import {
   buildGrid,
   cellOf,
@@ -31,7 +31,7 @@ import {
   writeWipeStamps,
   type RainSim,
   type RainSimConfig,
-} from "./windowrain-sim";
+} from "./glass-rain-sim";
 
 const SMALL: RainSimConfig = { maxStatic: 200, maxTrails: 40, maxRunners: 8, cellSize: 16 };
 

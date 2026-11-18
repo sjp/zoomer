@@ -1,9 +1,9 @@
 /**
- * The rain-on-glass drop map, shared by Rain on a Window and the Neon-Noir
- * Apartment: drop sprites from `writeDropInstances` drawn into an RGBA8 map of
+ * The rain-on-glass drop map, shared by Rain on a Window and the Scenes with
+ * rain on a window (`glass-rain-sim.ts` runs the drops): drop sprites from `writeDropInstances` drawn into an RGBA8 map of
  * refraction offsets, dome heights and coverage, and the GLSL that decodes it.
  */
-import { glslFloat, TO_CLIP_GLSL } from "../gl";
+import { glslFloat, TO_CLIP_GLSL } from "./gl";
 
 /**
  * Drop lens: a drop shows the background around its centre, inverted and

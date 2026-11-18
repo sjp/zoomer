@@ -1,6 +1,7 @@
 /**
- * CPU simulation for the rain-on-a-window effect: pure, allocation-free per step,
- * with no GL dependency so it can be unit tested.
+ * CPU simulation of raindrops on a window pane, for Rain on a Window and the
+ * Scenes with rain on their glass: pure, allocation-free per step, with no GL
+ * dependency so it can be unit tested.
  *
  * Coordinates are reference units (a 1080-unit-tall frame), y down.
  *
@@ -22,7 +23,7 @@
  * rebuilt each step in O(droplets), so each runner only tests nearby droplets.
  */
 
-import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
+import { FADE_OUT, growLive, stepLife, trimLive } from "./fade";
 
 export const DEAD = 0;
 export const STATIC = 1;

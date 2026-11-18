@@ -29,7 +29,7 @@ import {
   resizeRainSim,
   stepRainSim,
   writeDropInstances,
-} from "../windowrain/windowrain-sim";
+} from "../glass-rain-sim";
 import {
   DROP_CLEAR,
   DROP_DIR_GLSL,
@@ -37,7 +37,7 @@ import {
   DROP_VERTEX,
   ENC_MID,
   OFFSET_RANGE,
-} from "../windowrain/windowrain-drops";
+} from "../glass-rain";
 import { type AdvertSide, noirMeta } from "./noir.meta";
 import {
   type AdvertRect,

@@ -26,17 +26,11 @@ import {
   wipeStampCapacity,
   writeDropInstances,
   writeWipeStamps,
-} from "./windowrain-sim";
+} from "../glass-rain-sim";
 import { wrap } from "../math";
 import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import { unitRgbMemo } from "../color";
-import {
-  DROP_CLEAR,
-  DROP_DIR_GLSL,
-  DROP_FRAGMENT,
-  DROP_VERTEX,
-  OFFSET_RANGE,
-} from "./windowrain-drops";
+import { DROP_CLEAR, DROP_DIR_GLSL, DROP_FRAGMENT, DROP_VERTEX, OFFSET_RANGE } from "../glass-rain";
 
 /** Background divisors: the background is heavily defocused, so it can be very low-res. */
 const BG_DIVISORS = { high: 2, balanced: 3, low: 4 } as const;
