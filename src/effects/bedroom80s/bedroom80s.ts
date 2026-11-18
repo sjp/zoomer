@@ -14,7 +14,8 @@ import {
   scissorBox,
   scopedProgram,
 } from "../gl";
-import { HALF_DUTY, SLAT_GAP_GLSL } from "../blinds/blinds-sim";
+import { HALF_DUTY } from "../blinds/blinds-sim";
+import { SLAT_GAP_GLSL } from "../slats";
 import {
   BASE_RADIUS,
   fillBlobs,

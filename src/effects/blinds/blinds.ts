@@ -11,10 +11,10 @@ import {
   HALF_DUTY,
   layoutShape,
   sunColor,
-  SLAT_GAP_GLSL,
   sunLevelAt,
 } from "./blinds-sim";
 import { type Rgb, unitRgbMemo } from "../color";
+import { SLAT_GAP_GLSL } from "../slats";
 import { FADE_OUT, growLive, stepLife, trimLive } from "../fade";
 import {
   beginFrame,

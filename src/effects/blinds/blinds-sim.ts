@@ -4,9 +4,10 @@
  * motes), and the cloud-dimming curve. Allocates nothing per call.
  */
 import type { Rgb } from "../color";
-import { clamp, fract, smoothstep } from "../math";
+import { clamp, smoothstep } from "../math";
 import type { Noise } from "../noise";
 import { lookup } from "../lookup";
+import { slatGap } from "../slats";
 
 /** Lit fraction of each stripe period (the gap between two slats). */
 const DUTY = 0.56;
@@ -104,24 +105,6 @@ export function bandW(x: number, y: number, s: BlindsShape): number {
 export function bandT(xn: number, side: number): number {
   return clamp(0.5 - 0.5 * xn * side, 0, 1);
 }
-
-/**
- * Light through a row of slats at stripe phase `n` (in periods; gaps centred on
- * half-integers) with penumbra `pen` (in periods), when each gap reaches
- * `halfGap` periods either side of its centre. 1 in the gap, 0 behind a slat.
- */
-function slatGap(n: number, pen: number, halfGap: number): number {
-  const g = Math.abs(fract(n) - 0.5);
-  return 1 - smoothstep(halfGap - 0.5 * pen, halfGap + 0.5 * pen, g);
-}
-
-/** GLSL twin of `slatGap`: `float slatGap(float n, float pen, float halfGap)`. */
-export const SLAT_GAP_GLSL = /* glsl */ `
-float slatGap(float n, float pen, float halfGap) {
-  float g = abs(fract(n) - 0.5);
-  return 1.0 - smoothstep(halfGap - 0.5 * pen, halfGap + 0.5 * pen, g);
-}
-`;
 
 /**
  * Stripe profile at stripe phase `n` (in periods; lit gaps centred on half-integers)

@@ -1,7 +1,6 @@
 import { createChangeKey } from "../change-key";
 import { generateCity } from "../city/city-sim";
 import { createSkyline, type SkylineStyle, TV_RGB } from "../city/city-skyline";
-import { SLAT_GAP_GLSL } from "../blinds/blinds-sim";
 import type { Rgb } from "../color";
 import {
   beginFrame,
@@ -19,6 +18,7 @@ import {
 import { lowResSize } from "../lowres";
 import { approach } from "../math";
 import { createRng, HASH32_GLSL, VALUE_NOISE_GLSL } from "../noise";
+import { SLAT_GAP_GLSL } from "../slats";
 import { createSpriteBatch, polygonStrip } from "../sprites";
 import { defineEffect } from "../types";
 import {
