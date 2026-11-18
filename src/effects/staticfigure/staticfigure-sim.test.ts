@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MAX_FEATURE_PX_PER_FRAME, MAX_PATTERN_HZ, pxPerReferenceFrame } from "../motion-limits";
+import {
+  MAX_FEATURE_PX_PER_FRAME,
+  MAX_MEAN_STEP,
+  MAX_PATTERN_HZ,
+  pxPerReferenceFrame,
+} from "../motion-limits";
 import {
   advanceTape,
   BAND_HALF,
@@ -29,7 +34,6 @@ import {
   jitterAt,
   JITTER_HZ,
   JITTER_PX,
-  MAX_MEAN_STEP,
   NEAR,
   placeParam,
   requestBurst,

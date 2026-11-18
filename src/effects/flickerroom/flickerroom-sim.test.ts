@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_MEAN_STEP } from "../motion-limits";
 import { createRng } from "../noise";
 import { fitScale } from "../scene-layout";
 import {
@@ -21,7 +22,6 @@ import {
   humLevel,
   INTERVAL_MAX,
   INTERVAL_MIN,
-  MAX_MEAN_STEP,
   MAX_SLOPE,
   shapeFlicker,
   stoppedSecond,

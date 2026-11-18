@@ -12,6 +12,13 @@ export const MAX_PATTERN_HZ = 5;
 /** No thin bright feature moves further than this per frame, in px at 1080p and 30 fps. */
 export const MAX_FEATURE_PX_PER_FRAME = 10;
 
+/**
+ * The most a flicker, burst, clear or other change of light may move the frame's
+ * mean brightness (0..1 display values) from one frame to the next at 30 fps, so
+ * the codec never sees a flash.
+ */
+export const MAX_MEAN_STEP = 0.03;
+
 /** Peak over mean speed of a smoothstep ease (3x^2 - 2x^3 peaks at slope 1.5). */
 export const EASE_PEAK = 1.5;
 

@@ -118,12 +118,6 @@ export const TINTS: Readonly<Record<string, readonly number[]>> = {
 /** The brightest any surface's colour is in the room's art, for brightness budgets. */
 export const ALBEDO_MAX = 0.75;
 
-/**
- * The most the frame's mean brightness (0..1 display values) changes between
- * frames at 30 fps while the tube flickers.
- */
-export const MAX_MEAN_STEP = 0.03;
-
 // ---------------------------------------------------------------------------
 // The flicker curve
 // ---------------------------------------------------------------------------

@@ -55,11 +55,6 @@ export const BAND_HALF = 0.06;
 export const STATIC_LIFT = 0.08;
 export const STATIC_NOISE = 0.16;
 export const STATIC_GAIN = 1.2;
-/**
- * The most the frame's mean brightness (0..1 display values) changes between
- * frames at 30 fps while a burst plays.
- */
-export const MAX_MEAN_STEP = 0.03;
 /** The band rolls up the frame at this speed, frame heights a second. */
 export const BAND_SPEED = 0.25;
 /** Where the band's centre starts, frame heights from the bottom. */
