@@ -18,25 +18,28 @@ describe("key art", () => {
 
   it.each(ARTS)("keeps the %s lights within bounds", (art) => {
     const out = new Float32Array(MAX_LIGHTS * LIGHT_STRIDE);
+    let most = 0;
+    let lowest = Number.POSITIVE_INFINITY;
+    let highest = Number.NEGATIVE_INFINITY;
     for (let t = 0; t < 200; t += 0.7) {
       const n = artLights(art, 16 / 9, t, out);
-      expect(n).toBeLessThanOrEqual(MAX_LIGHTS);
+      most = Math.max(most, n);
       for (let i = 0; i < n; i++) {
         const o = i * LIGHT_STRIDE;
-        expect(out[o]).toBeGreaterThanOrEqual(0);
-        expect(out[o]).toBeLessThanOrEqual(1);
-        expect(out[o + 1]).toBeGreaterThanOrEqual(0);
-        expect(out[o + 1]).toBeLessThanOrEqual(1);
-        expect(out[o + 3]).toBeGreaterThanOrEqual(0);
-        expect(out[o + 3]).toBeLessThanOrEqual(1);
+        lowest = Math.min(lowest, out[o], out[o + 1], out[o + 3]);
+        highest = Math.max(highest, out[o], out[o + 1], out[o + 3]);
       }
     }
+    expect(most).toBeLessThanOrEqual(MAX_LIGHTS);
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThanOrEqual(1);
   });
 
   it.each(ARTS.flatMap((art) => [16 / 9, 21 / 9].map((aspect) => [art, aspect] as const)))(
     "keeps the %s lights out of the middle third at aspect %f, wherever the drift is",
     (art, aspect) => {
       const out = new Float32Array(MAX_LIGHTS * LIGHT_STRIDE);
+      const inMiddle: number[] = [];
       // The drift's widest swing: its window's centre at either end of its range, at either zoom.
       for (const zoom of [1, MAX_ZOOM]) {
         const size = 1 / (OVERSCAN * zoom);
@@ -51,11 +54,14 @@ describe("key art", () => {
                 continue;
               }
               const x = (out[o] - u0) / size;
-              expect(x < 1 / 3 || x > 2 / 3).toBe(true);
+              if (!(x < 1 / 3 || x > 2 / 3)) {
+                inMiddle.push(x);
+              }
             }
           }
         }
       }
+      expect(inMiddle).toEqual([]);
     },
   );
 
@@ -63,6 +69,8 @@ describe("key art", () => {
     const a = new Float32Array(MAX_LIGHTS * LIGHT_STRIDE);
     const b = new Float32Array(MAX_LIGHTS * LIGHT_STRIDE);
     const dt = 1 / 30;
+    let fastest = 0;
+    let biggestBlink = 0;
     for (let t = 0; t < 200; t += 0.25) {
       const n = artLights(art, 16 / 9, t, a);
       artLights(art, 16 / 9, t + dt, b);
@@ -71,10 +79,12 @@ describe("key art", () => {
         // Painting widths to frame heights: a painting is OVERSCAN frames, 16:9 wide.
         const du = (b[o] - a[o]) * OVERSCAN * (16 / 9);
         const dv = (b[o + 1] - a[o + 1]) * OVERSCAN;
-        expect(pxPerReferenceFrame(Math.hypot(du, dv) / dt)).toBeLessThan(MAX_FEATURE_PX_PER_FRAME);
-        // At most 0.5 Hz: a full swing takes at least a second, so a frame moves under a tenth of it.
-        expect(Math.abs(b[o + 3] - a[o + 3])).toBeLessThan(0.1);
+        fastest = Math.max(fastest, pxPerReferenceFrame(Math.hypot(du, dv) / dt));
+        biggestBlink = Math.max(biggestBlink, Math.abs(b[o + 3] - a[o + 3]));
       }
     }
+    expect(fastest).toBeLessThan(MAX_FEATURE_PX_PER_FRAME);
+    // At most 0.5 Hz: a full swing takes at least a second, so a frame moves under a tenth of it.
+    expect(biggestBlink).toBeLessThan(0.1);
   });
 });

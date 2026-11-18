@@ -107,11 +107,11 @@ describe("layoutBoard", () => {
 
   it.each(SEEDS)("gives no pin more than three of the board's strings for seed %i", (seed) => {
     const layout = layoutBoard(seed);
+    let most = 0;
     for (let n = 15; n <= MAX_DENSITY; n++) {
-      for (const d of degrees(layout, n)) {
-        expect(d).toBeLessThanOrEqual(MAX_PIN_STRINGS - 1);
-      }
+      most = Math.max(most, ...degrees(layout, n));
     }
+    expect(most).toBeLessThanOrEqual(MAX_PIN_STRINGS - 1);
   });
 
   it.each(SEEDS)("joins the shown items into one web at every density for seed %i", (seed) => {
@@ -222,7 +222,6 @@ describe("advanceGrow", () => {
       run(g, layout, 6000, density, true, (s) => {
         const n = cardsUp(s);
         peak = Math.max(peak, n);
-        expect(density + n).toBeLessThanOrEqual(MAX_ITEMS);
         const now = s.cards.filter((c) => c.live && c.leaving < 0).map((c) => c.id);
         removals.push(...up.filter((id) => !now.includes(id)).map((id) => ({ id, rest: now })));
         up = now;
@@ -234,6 +233,7 @@ describe("advanceGrow", () => {
         expect(k === 0 || r.id > removals[k - 1].id).toBe(true);
       }
       expect(removals.length).toBeGreaterThan(0);
+      expect(density + peak).toBeLessThanOrEqual(MAX_ITEMS);
       expect(peak).toBe(Math.min(MAX_ITEMS - density, density, MAX_ADDED));
       expect(cleared).toBe(true);
     },
@@ -242,6 +242,8 @@ describe("advanceGrow", () => {
   it("places added cards in the outer thirds, off the title card", () => {
     const g = createGrow(11);
     let seen = 0;
+    let nearest = Number.POSITIVE_INFINITY;
+    const onTitle = new Set<number>();
     run(
       g,
       layout,
@@ -251,19 +253,25 @@ describe("advanceGrow", () => {
       (s) => {
         for (const c of s.cards.filter((card) => card.live)) {
           seen++;
-          expect(Math.abs(c.item.u - 0.5)).toBeGreaterThanOrEqual(1 / 6 - 1e-9);
-          expect(coversTitle(c.item, layout.title)).toBe(false);
+          nearest = Math.min(nearest, Math.abs(c.item.u - 0.5));
+          if (coversTitle(c.item, layout.title)) {
+            onTitle.add(c.id);
+          }
         }
       },
       2,
     );
     expect(seen).toBeGreaterThan(0);
+    expect(nearest).toBeGreaterThanOrEqual(1 / 6 - 1e-9);
+    expect([...onTitle]).toEqual([]);
   });
 
   it.each([15, 22, 30])(
     "keeps every pin to four strings, each landing on a shown item at density %i",
     (density) => {
       const g = createGrow(13);
+      let furthest = 0;
+      let most = 0;
       // Two steps a second is enough to see every card up.
       run(
         g,
@@ -274,15 +282,15 @@ describe("advanceGrow", () => {
         (s) => {
           const d = degrees(layout, density);
           for (const c of s.cards.filter((card) => card.live)) {
-            expect(c.target).toBeLessThan(density);
+            furthest = Math.max(furthest, c.target);
             d[c.target]++;
           }
-          for (const n of d) {
-            expect(n).toBeLessThanOrEqual(MAX_PIN_STRINGS);
-          }
+          most = Math.max(most, ...d);
         },
         2,
       );
+      expect(furthest).toBeLessThan(density);
+      expect(most).toBeLessThanOrEqual(MAX_PIN_STRINGS);
     },
   );
 

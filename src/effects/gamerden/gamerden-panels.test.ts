@@ -212,17 +212,21 @@ describe("the Reactive ripples", () => {
 
   it("rise and fall smoothly, one way each", () => {
     let prev = 0;
+    let biggestFall = 0;
     for (let t = 0.001; t < RIPPLE_RISE; t += 0.001) {
       const e = rippleEnvelope(t);
-      expect(e).toBeGreaterThanOrEqual(prev);
+      biggestFall = Math.max(biggestFall, prev - e);
       prev = e;
     }
+    expect(biggestFall).toBeLessThanOrEqual(0);
     prev = rippleEnvelope(RIPPLE_RISE);
+    let biggestRise = 0;
     for (let t = RIPPLE_RISE; t < RIPPLE_RISE + RIPPLE_FADE + 0.1; t += 0.001) {
       const e = rippleEnvelope(t);
-      expect(e).toBeLessThanOrEqual(prev + 1e-12);
+      biggestRise = Math.max(biggestRise, e - prev);
       prev = e;
     }
+    expect(biggestRise).toBeLessThanOrEqual(1e-12);
   });
 
   it("are finished before their slot is reused", () => {
@@ -320,6 +324,8 @@ describe("the panel show", () => {
 
   it("keeps every colour in range", () => {
     const show = createPanelShow();
+    let lowest = Number.POSITIVE_INFINITY;
+    let highest = Number.NEGATIVE_INFINITY;
     for (let f = 0; f < 60 * 60; f++) {
       const colours = show.step(
         1 / 60,
@@ -329,9 +335,11 @@ describe("the panel show", () => {
         1,
       );
       for (const v of colours) {
-        expect(v).toBeGreaterThanOrEqual(0);
-        expect(v).toBeLessThanOrEqual(1);
+        lowest = Math.min(lowest, v);
+        highest = Math.max(highest, v);
       }
     }
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThanOrEqual(1);
   });
 });

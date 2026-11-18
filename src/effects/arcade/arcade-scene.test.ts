@@ -67,18 +67,32 @@ describe("the scene", () => {
   it.each(SIZES)("stays within its sprite budget and the game's bounds at %i x %i", (w, h) => {
     const v = view(w, h, 7, "WWWW WWWW WWWW W", "MMM");
     const scene = createScene();
+    let most = 0;
+    let nonFinite = 0;
+    // The furthest any sprite reaches past each edge: its right edge to the
+    // left, its left edge to the right and its top edge below.
+    let leftmost = Number.POSITIVE_INFINITY;
+    let rightmost = Number.NEGATIVE_INFINITY;
+    let lowest = Number.NEGATIVE_INFINITY;
     for (let t = 0; t < LOOP_SECONDS; t += 0.25) {
       buildScene(scene, atlas.cells, v, t, t);
-      expect(scene.count).toBeLessThan(MAX_SPRITES);
+      most = Math.max(most, scene.count);
       for (let i = 0; i < scene.count; i++) {
         const o = i * STRIDE;
         const [cx, cy, hw, hh] = scene.data.subarray(o, o + 4);
-        expect(Number.isFinite(cx + cy + hw + hh)).toBe(true);
-        expect(cx + hw).toBeGreaterThan(-24);
-        expect(cx - hw).toBeLessThan(w + 24);
-        expect(cy - hh).toBeLessThan(h + 24);
+        if (!Number.isFinite(cx + cy + hw + hh)) {
+          nonFinite++;
+        }
+        leftmost = Math.min(leftmost, cx + hw);
+        rightmost = Math.max(rightmost, cx - hw);
+        lowest = Math.max(lowest, cy - hh);
       }
     }
+    expect(most).toBeLessThan(MAX_SPRITES);
+    expect(nonFinite).toBe(0);
+    expect(leftmost).toBeGreaterThan(-24);
+    expect(rightmost).toBeLessThan(w + 24);
+    expect(lowest).toBeLessThan(h + 24);
   });
 
   it("keeps the demo's HUD and the table in the outer thirds at wide aspects", () => {

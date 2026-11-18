@@ -158,6 +158,8 @@ describe("springs", () => {
     it(`keeps the ${name} bounded under jolts at the minimum gap`, () => {
       const s = createSpring();
       let since = 0;
+      let nonFinite = 0;
+      let peak = 0;
       for (let t = 0; t < 120; t += DT) {
         since += DT;
         if (since >= MIN_JOLT_GAP) {
@@ -165,9 +167,13 @@ describe("springs", () => {
           s.v += kick;
         }
         const x = stepSpring(s, DT, hz, damping, max);
-        expect(Number.isFinite(x)).toBe(true);
-        expect(Math.abs(x)).toBeLessThanOrEqual(max);
+        if (!Number.isFinite(x)) {
+          nonFinite++;
+        }
+        peak = Math.max(peak, Math.abs(x));
       }
+      expect(nonFinite).toBe(0);
+      expect(peak).toBeLessThanOrEqual(max);
     });
   }
 

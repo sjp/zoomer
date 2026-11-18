@@ -273,15 +273,18 @@ describe("route", () => {
     let cy = 0;
     let heading = laneAt(world, cx, cy).dirOut;
     let corners = 0;
+    const broken: string[] = [];
     for (let i = 0; i < 5000; i++) {
       cx += DIR_X[heading];
       cy += DIR_Y[heading];
       const lane = laneAt(world, cx, cy);
-      expect(lane.style).not.toBe(STYLE_NONE);
-      expect(lane.dirIn).toBe(heading);
+      if (lane.style === STYLE_NONE || lane.dirIn !== heading) {
+        broken.push(`${String(cx)},${String(cy)}`);
+      }
       corners += lane.corner ? 1 : 0;
       heading = lane.dirOut;
     }
+    expect(broken).toEqual([]);
     // Legs are 6 to 11 chunks long.
     expect(corners).toBeGreaterThan(5000 / 12);
     expect(corners).toBeLessThan(5000 / 6);
@@ -408,10 +411,12 @@ describe("walker", () => {
     const w = createWalker();
     resetWalker(w, world);
     const start = w.angle;
+    const angles = new Set<number>();
     for (let i = 0; i < 30 * 40; i++) {
       advanceWalker(w, world, 1 / 30, walkRate(DEFAULT_SPEED));
-      expect(w.angle).toBe(start);
+      angles.add(w.angle);
     }
+    expect([...angles]).toEqual([start]);
   });
 
   it("bends round a quarter turn and alternates left and right", () => {
@@ -593,10 +598,12 @@ describe("flicker", () => {
   it("stays steady at a flicker of 0", () => {
     const world = createWorld(1);
     const f = createFlicker(1);
+    let active = 0;
     for (let i = 0; i < 30 * 300; i++) {
       advanceFlicker(f, world, 1 / 30, 0, 0.5, 0.5, 0);
-      expect(f.slots.every((s) => !s.active)).toBe(true);
+      active += f.slots.some((s) => s.active) ? 1 : 0;
     }
+    expect(active).toBe(0);
   });
 
   it("schedules the same events for the same variation", () => {

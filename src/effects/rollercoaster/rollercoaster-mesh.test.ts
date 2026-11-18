@@ -21,21 +21,30 @@ function expectWellFormed(mesh: Mesh) {
   const vertices = mesh.vertices.length / VERTEX_FLOATS;
   expect(Number.isInteger(vertices)).toBe(true);
   expect(mesh.indices.length % 3).toBe(0);
-  for (const i of mesh.indices) {
-    expect(i).toBeLessThan(vertices);
-  }
+  expect(mesh.indices.reduce((most, i) => Math.max(most, i), 0)).toBeLessThan(vertices);
+  const nonFinite: number[] = [];
+  const badMaterials = new Set<number>();
+  // The normal length furthest from 1.
+  let worstNormal = 1;
   for (let v = 0; v < vertices; v++) {
     const o = v * VERTEX_FLOATS;
     for (let k = 0; k < 6; k++) {
-      expect(Number.isFinite(mesh.vertices[o + k])).toBe(true);
+      if (!Number.isFinite(mesh.vertices[o + k])) {
+        nonFinite.push(o + k);
+      }
     }
-    expect(
-      Math.hypot(mesh.vertices[o + 3], mesh.vertices[o + 4], mesh.vertices[o + 5]),
-    ).toBeCloseTo(1, 4);
+    const length = Math.hypot(mesh.vertices[o + 3], mesh.vertices[o + 4], mesh.vertices[o + 5]);
+    if (!(Math.abs(length - 1) <= Math.abs(worstNormal - 1))) {
+      worstNormal = length;
+    }
     const mat = mesh.vertices[o + 6] % ROTATING;
-    expect(Number.isInteger(mat)).toBe(true);
-    expect(mat).toBeLessThan(MATERIAL_COUNT);
+    if (!Number.isInteger(mat) || mat >= MATERIAL_COUNT) {
+      badMaterials.add(mat);
+    }
   }
+  expect(nonFinite).toEqual([]);
+  expect(worstNormal).toBeCloseTo(1, 4);
+  expect([...badMaterials]).toEqual([]);
 }
 
 describe("buildScene", () => {
@@ -47,10 +56,12 @@ describe("buildScene", () => {
 
   it("stands on the ground", () => {
     const scene = buildScene(track);
+    let lowest = Infinity;
     for (let v = 0; v < scene.vertices.length; v += VERTEX_FLOATS) {
-      // The Ferris wheel's slanting legs sink a little way in.
-      expect(scene.vertices[v + 1]).toBeGreaterThan(-0.6);
+      lowest = Math.min(lowest, scene.vertices[v + 1]);
     }
+    // The Ferris wheel's slanting legs sink a little way in.
+    expect(lowest).toBeGreaterThan(-0.6);
   });
 });
 
@@ -84,12 +95,16 @@ describe("treeSites", () => {
   it("keeps every tree well clear of the track", () => {
     const trees = treeSites(track);
     expect(trees.length / 5).toBeGreaterThan(60);
+    // The least clearance of any tree beyond its radius plus 6 m.
+    let tightest = Number.POSITIVE_INFINITY;
     for (let t = 0; t < trees.length; t += 5) {
       const [x, z, , r] = trees.slice(t, t + 4);
       for (let i = 0; i < track.count; i++) {
-        expect(Math.hypot(track.pos[i * 3] - x, track.pos[i * 3 + 2] - z)).toBeGreaterThan(r + 6);
+        const d = Math.hypot(track.pos[i * 3] - x, track.pos[i * 3 + 2] - z);
+        tightest = Math.min(tightest, d - (r + 6));
       }
     }
+    expect(tightest).toBeGreaterThan(0);
   });
 });
 

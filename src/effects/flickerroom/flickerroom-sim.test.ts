@@ -109,12 +109,17 @@ describe("flicker shape", () => {
 describe("hum", () => {
   it("wobbles the failing tube by at most HUM_DEPTH, and not at all at 0", () => {
     let lo = 1;
+    let hi = 0;
+    // Every level the hum gives at depth 0.
+    const flat = new Set<number>();
     for (let t = 0; t < 120; t += 0.05) {
       const l = humLevel(t, 1, 0.7);
       lo = Math.min(lo, l);
-      expect(l).toBeLessThanOrEqual(1);
-      expect(humLevel(t, 0, 0.7)).toBe(1);
+      hi = Math.max(hi, l);
+      flat.add(humLevel(t, 0, 0.7));
     }
+    expect(hi).toBeLessThanOrEqual(1);
+    expect([...flat]).toEqual([1]);
     expect(lo).toBeGreaterThanOrEqual(1 - HUM_DEPTH - 1e-12);
     expect(lo).toBeLessThan(1 - 0.5 * HUM_DEPTH);
   });
@@ -134,18 +139,17 @@ describe("schedule", () => {
       },
       40,
     );
-    let i = 0;
+    const again: number[] = [];
     run(
       b,
       1 / 30,
       6,
       (c) => {
-        expect(failingLevel(b, 0.5)).toBe(levels[i++]);
-        expect(c).toBe(levels[i++]);
+        again.push(failingLevel(b, 0.5), c);
       },
       40,
     );
-    expect(i).toBe(levels.length);
+    expect(again).toEqual(levels);
   });
 
   it("differs between seeds", () => {

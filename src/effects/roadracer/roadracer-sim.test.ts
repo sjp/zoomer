@@ -83,15 +83,23 @@ describe("course", () => {
   it.each(SEEDS)("loops with smooth curves and hills for seed %i", (seed) => {
     const { curve, elev } = buildCourse(seed);
     expect(curve.length).toBe(SEGMENTS);
+    let sharpest = 0;
+    let curveStep = 0;
+    let elevStep = 0;
+    let kink = 0;
     for (let i = 0; i < SEGMENTS; i++) {
       const prev = (i + SEGMENTS - 1) % SEGMENTS;
       const next = (i + 1) % SEGMENTS;
-      expect(Math.abs(curve[i])).toBeLessThanOrEqual(K_MAX + 1e-6);
+      sharpest = Math.max(sharpest, Math.abs(curve[i]));
       // Eased over several segments: no step in the curvature, no kink in the hills.
-      expect(Math.abs(curve[next] - curve[i])).toBeLessThan(0.02);
-      expect(Math.abs(elev[next] - elev[i])).toBeLessThan(0.25);
-      expect(Math.abs(elev[next] - 2 * elev[i] + elev[prev])).toBeLessThan(0.06);
+      curveStep = Math.max(curveStep, Math.abs(curve[next] - curve[i]));
+      elevStep = Math.max(elevStep, Math.abs(elev[next] - elev[i]));
+      kink = Math.max(kink, Math.abs(elev[next] - 2 * elev[i] + elev[prev]));
     }
+    expect(sharpest).toBeLessThanOrEqual(K_MAX + 1e-6);
+    expect(curveStep).toBeLessThan(0.02);
+    expect(elevStep).toBeLessThan(0.25);
+    expect(kink).toBeLessThan(0.06);
     // Straight and flat through the start line, where the loop joins.
     expect(curve[0]).toBe(0);
     expect(elev[0]).toBe(0);
@@ -109,12 +117,17 @@ describe("course", () => {
   it("places scenery in order round the lap, beside the road", () => {
     const course = buildCourse(3);
     expect(course.itemCount).toBeGreaterThan(100);
+    const items = Array.from(course.itemS.subarray(0, course.itemCount));
+    expect(Math.min(...items)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...items)).toBeLessThan(LAP);
+    expect(items).toEqual(items.toSorted((a, b) => a - b));
+    const onRoad: number[] = [];
     for (let i = 0; i < course.itemCount; i++) {
-      expect(course.itemS[i]).toBeGreaterThanOrEqual(0);
-      expect(course.itemS[i]).toBeLessThan(LAP);
-      expect(Math.abs(course.itemX[i])).toBeGreaterThan(ROAD_HALF);
-      expect(course.itemS[i]).toBeGreaterThanOrEqual(i > 0 ? course.itemS[i - 1] : 0);
+      if (Math.abs(course.itemX[i]) <= ROAD_HALF) {
+        onRoad.push(i);
+      }
     }
+    expect(onRoad).toEqual([]);
     expect(firstItemAt(course, 0)).toBe(0);
     expect(firstItemAt(course, LAP)).toBe(course.itemCount);
   });
@@ -129,10 +142,8 @@ describe("course", () => {
 
   it.each(SEEDS)("draws a closed course map in 0..1 for seed %i", (seed) => {
     const { map } = buildCourse(seed);
-    for (const v of map) {
-      expect(v).toBeGreaterThanOrEqual(-1e-6);
-      expect(v).toBeLessThanOrEqual(1 + 1e-6);
-    }
+    expect(Math.min(...map)).toBeGreaterThanOrEqual(-1e-6);
+    expect(Math.max(...map)).toBeLessThanOrEqual(1 + 1e-6);
     const n = SEGMENTS;
     const gap = Math.hypot(map[0] - map[(n - 1) * 2], map[1] - map[(n - 1) * 2 + 1]);
     expect(gap).toBeLessThan(0.05);
@@ -217,6 +228,9 @@ describe("codec limits", () => {
       const course = buildCourse(seed);
       const frame = createRoadFrame(1100);
       const rows = 1080;
+      // The fastest row's motion and the furthest a row is drawn from its point, in px.
+      let fastest = 0;
+      let offset = 0;
       for (let s = 0; s < LAP; s += 7.3) {
         projectRoad(frame, course, s, 1, V_TOP, rows);
         const step = V_TOP / 30;
@@ -231,11 +245,13 @@ describe("codec limits", () => {
           const ground = sampleLoop(course.elev, s + z);
           const now = projectY(frame.camY - ground, z);
           const after = projectY(camNext - ground, z - step);
-          expect(Math.abs(after - now) * 1080).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
+          fastest = Math.max(fastest, Math.abs(after - now) * 1080);
           // And the row is where that point is drawn, give or take the table's straight steps.
-          expect(Math.abs(now - ((r + 0.5) / rows - HORIZON)) * 1080).toBeLessThan(4);
+          offset = Math.max(offset, Math.abs(now - ((r + 0.5) / rows - HORIZON)) * 1080);
         }
       }
+      expect(fastest).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
+      expect(offset).toBeLessThan(4);
     },
   );
 

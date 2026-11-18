@@ -150,6 +150,8 @@ describe("scene", () => {
       const pb = newProjection();
       const step = V_TOP / 30;
       let checked = 0;
+      // The fastest any visible sprite's corner moves in a frame, in px at 1080p.
+      let fastest = 0;
       for (let s = 0.37; s < LAP; s += 1.9) {
         projectRoad(a, course, s, 1, V_TOP, 540);
         projectRoad(b, course, s + step, 1, V_TOP, 540);
@@ -173,19 +175,18 @@ describe("scene", () => {
             }
             const corner = (p: SpriteProjection, sx: number, top: boolean) =>
               [p.x + sx * p.halfWidth, p.base - (top ? p.height : 0)] as const;
-            let worst = 0;
             for (const sx of [-1, 1]) {
               for (const top of [false, true]) {
                 const [x0, y0] = corner(pa, sx, top);
                 const [x1, y1] = corner(pb, sx, top);
-                worst = Math.max(worst, Math.hypot(x1 - x0, y1 - y0) * 1080);
+                fastest = Math.max(fastest, Math.hypot(x1 - x0, y1 - y0) * 1080);
               }
             }
-            expect(worst).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME * 1.05);
             checked++;
           }
         }
       }
+      expect(fastest).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME * 1.05);
       expect(checked).toBeGreaterThan(1000);
     },
   );

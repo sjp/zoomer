@@ -50,11 +50,11 @@ describe("never-finishing progress", () => {
 
   it.each(SEEDS)("stays within 0 and 99 %% for seed %i over an hour", (seed) => {
     const { values } = sample(seed, 3600);
-    for (const v of values) {
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(CEILING);
-      expect(Math.floor(v)).toBeLessThanOrEqual(99);
-    }
+    const lowest = Math.min(...values);
+    const highest = Math.max(...values);
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThanOrEqual(CEILING);
+    expect(Math.floor(highest)).toBeLessThanOrEqual(99);
   });
 
   it.each(SEEDS)("stalls and slips back in every four minutes for seed %i", (seed) => {
@@ -62,6 +62,8 @@ describe("never-finishing progress", () => {
     const window = 240 * RATE;
     let lastStall = 0;
     let lastSlip = 0;
+    let longestStall = 0;
+    let longestSlip = 0;
     for (let i = 0; i < kinds.length; i++) {
       if (kinds[i] === SEGMENT.stall) {
         lastStall = i;
@@ -69,9 +71,11 @@ describe("never-finishing progress", () => {
       if (kinds[i] === SEGMENT.slip || kinds[i] === SEGMENT.reset) {
         lastSlip = i;
       }
-      expect(i - lastStall).toBeLessThan(window);
-      expect(i - lastSlip).toBeLessThan(window);
+      longestStall = Math.max(longestStall, i - lastStall);
+      longestSlip = Math.max(longestSlip, i - lastSlip);
     }
+    expect(longestStall).toBeLessThan(window);
+    expect(longestSlip).toBeLessThan(window);
   });
 
   it.each(SEEDS)("finishes phases and starts new ones for seed %i", (seed) => {
@@ -94,10 +98,12 @@ describe("never-finishing progress", () => {
 
   it.each(SEEDS)("never moves the bar's end faster than the codec limit, seed %i", (seed) => {
     const { values } = sample(seed, 3600);
+    let fastest = 0;
     for (let i = 1; i < values.length; i++) {
       const perSecond = (Math.abs(values[i] - values[i - 1]) / 100) * RATE;
-      expect((perSecond * BAR_MAX_WIDTH) / 30).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
+      fastest = Math.max(fastest, (perSecond * BAR_MAX_WIDTH) / 30);
     }
+    expect(fastest).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
   });
 
   it("reads the same backwards as forwards", () => {
@@ -125,12 +131,14 @@ describe("steady progress", () => {
       6,
     );
     let last = 0;
+    let fastest = 0;
     for (let t = 0; t <= loop * 2; t += 1 / RATE) {
       const v = steadyAt(t, loop, p).value;
       const perSecond = (Math.abs(v - last) / 100) * RATE;
-      expect((perSecond * BAR_MAX_WIDTH) / 30).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
+      fastest = Math.max(fastest, (perSecond * BAR_MAX_WIDTH) / 30);
       last = v;
     }
+    expect(fastest).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
   });
 });
 
@@ -166,11 +174,15 @@ describe("tips", () => {
   });
 
   it.each([2, 3, 4, 14])("never shows the same one of %i tips twice in a row", (count) => {
+    const repeats: [number, number][] = [];
     for (const seed of SEEDS) {
       for (let slot = 1; slot < count * 12; slot++) {
-        expect(tipAt(seed, slot, count)).not.toBe(tipAt(seed, slot - 1, count));
+        if (tipAt(seed, slot, count) === tipAt(seed, slot - 1, count)) {
+          repeats.push([seed, slot]);
+        }
       }
     }
+    expect(repeats).toEqual([]);
   });
 
   it("orders the tips by seed", () => {
@@ -184,18 +196,21 @@ describe("drift", () => {
   it.each(SEEDS)("keeps the window inside the painting for seed %i", (seed) => {
     const d = createDrift();
     const w = createDriftWindow();
+    let lowest = Number.POSITIVE_INFINITY;
+    let highest = Number.NEGATIVE_INFINITY;
     for (let t = 0; t < 240; t += 0.5) {
       driftWindow(driftAt(seed, t, d), w);
-      expect(w.u0).toBeGreaterThanOrEqual(0);
-      expect(w.v0).toBeGreaterThanOrEqual(0);
-      expect(w.u0 + w.size).toBeLessThanOrEqual(1);
-      expect(w.v0 + w.size).toBeLessThanOrEqual(1);
+      lowest = Math.min(lowest, w.u0, w.v0);
+      highest = Math.max(highest, w.u0 + w.size, w.v0 + w.size);
     }
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThanOrEqual(1);
   });
 
   it.each([16 / 9, 21 / 9, 32 / 9, 4 / 3, 9 / 16])(
     "moves slower than the codec limit at aspect %f",
     (aspect) => {
+      let fastest = 0;
       for (const seed of SEEDS) {
         const d = createDrift();
         const a = createDriftWindow();
@@ -217,10 +232,11 @@ describe("drift", () => {
             const pv = a.v0 + cv * a.size;
             const du = ((pu - b.u0) / b.size - cu) * frameW;
             const dv = (pv - b.v0) / b.size - cv;
-            expect(pxPerReferenceFrame(Math.hypot(du, dv) * 30)).toBeLessThan(1);
+            fastest = Math.max(fastest, pxPerReferenceFrame(Math.hypot(du, dv) * 30));
           }
         }
       }
+      expect(fastest).toBeLessThan(1);
     },
   );
 
@@ -238,13 +254,15 @@ describe("emblem", () => {
   it("turns no faster than once every two seconds", () => {
     expect(EMBLEM_TURN_SECONDS).toBeGreaterThanOrEqual(2);
     const dt = 1 / 120;
+    let fastest = 0;
     for (let t = 0; t < 10; t += dt) {
       let step = emblemAngle(t + dt) - emblemAngle(t);
       if (step < 0) {
         step += Math.PI * 2;
       }
-      expect(step / dt / (Math.PI * 2)).toBeLessThanOrEqual(0.5 + 1e-9);
+      fastest = Math.max(fastest, step / dt / (Math.PI * 2));
     }
+    expect(fastest).toBeLessThanOrEqual(0.5 + 1e-9);
   });
 
   it("stays in range for large times", () => {

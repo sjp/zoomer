@@ -195,15 +195,24 @@ describe("edit scheduler", () => {
     expect(L.sparseMiddle).toBe(true);
     const s = createSheet(4, 0, 0, L);
     const e = s.editor;
+    // Every column in the middle third the editor or an edit landed in.
+    const middle = new Set<number>();
     run(s, 300, 2, () => {
-      expect(inMiddleThird(L, e.col)).toBe(false);
-      expect(inMiddleThird(L, e.fromCol)).toBe(false);
+      for (const col of [e.col, e.fromCol]) {
+        if (inMiddleThird(L, col)) {
+          middle.add(col);
+        }
+      }
       for (let i = 0; i < s.changeCount; i++) {
         const t = s.tables[cellTable(s.changes[i])];
-        expect(inMiddleThird(L, t.col0 + 1 + cellCol(s.changes[i]))).toBe(false);
+        const col = t.col0 + 1 + cellCol(s.changes[i]);
+        if (inMiddleThird(L, col)) {
+          middle.add(col);
+        }
       }
       s.changeCount = 0;
     });
+    expect([...middle]).toEqual([]);
   });
 
   it("never shows more typed characters than the value has", () => {

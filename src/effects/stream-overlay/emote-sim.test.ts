@@ -210,6 +210,7 @@ describe("createEmoteWall", () => {
     const layout = computeOverlayLayout(w, h);
     const wall = createEmoteWall();
     let shown = 0;
+    const stray: string[] = [];
     for (let i = 0; i < 900; i++) {
       wall.step(1 / 30, 1, true);
       if (i % 200 === 0) {
@@ -223,9 +224,12 @@ describe("createEmoteWall", () => {
         const r = layout.edgeRight;
         const inLeft = lo >= l.x && hi <= l.x + l.w;
         const inRight = lo >= r.x && hi <= r.x + r.w;
-        expect(inLeft || inRight).toBe(true);
+        if (!inLeft && !inRight) {
+          stray.push(`frame ${String(i)}: ${lo.toFixed(1)}..${hi.toFixed(1)}`);
+        }
       }
     }
+    expect(stray).toEqual([]);
     expect(shown).toBeGreaterThan(0);
   });
 

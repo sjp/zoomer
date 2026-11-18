@@ -113,10 +113,12 @@ describe("applause schedule", () => {
   it("ramps up and down smoothly, capping its brightness", () => {
     const levels = runApplause(5, 600, () => true);
     const maxStep = (EASE_PEAK * DT) / Math.min(APPLAUSE_UP, APPLAUSE_DOWN);
+    let steepest = 0;
     for (let i = 1; i < levels.length; i++) {
-      expect(Math.abs(levels[i] - levels[i - 1])).toBeLessThanOrEqual(maxStep + 1e-9);
-      expect(levels[i]).toBeLessThanOrEqual(1);
+      steepest = Math.max(steepest, Math.abs(levels[i] - levels[i - 1]));
     }
+    expect(steepest).toBeLessThanOrEqual(maxStep + 1e-9);
+    expect(Math.max(...levels.slice(1))).toBeLessThanOrEqual(1);
     const first = starts(levels)[0] / DT;
     const cue = levels.slice(first);
     const rise = cue.findIndex((l) => l >= 1);
@@ -163,12 +165,14 @@ describe("band lights", () => {
 
   it("breathe slowly", () => {
     const a = createBandLights(4);
+    let steepest = 0;
     for (let i = 0; i < BAND_LIGHTS; i++) {
       for (let t = 0; t < 30; t += DT) {
         const d = Math.abs(bandLightLevel(a, i, t + DT) - bandLightLevel(a, i, t));
-        expect(d).toBeLessThan(0.01);
+        steepest = Math.max(steepest, d);
       }
     }
+    expect(steepest).toBeLessThan(0.01);
   });
 });
 

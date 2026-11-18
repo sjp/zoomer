@@ -323,6 +323,12 @@ describe("confetti", () => {
       const b: ConfettiPiece = { ...a };
       const third = Math.max(area.top, h / 3);
       let seen = 0;
+      let fastest = 0;
+      let brightest = 0;
+      let highestKind = 0;
+      // Pieces showing below their limit, and pieces still showing after their life.
+      const low: string[] = [];
+      const lingering: string[] = [];
       for (let alert = 0; alert < 6; alert++) {
         const n = confettiCount(7, alert);
         for (let i = 0; i < n; i++) {
@@ -331,21 +337,29 @@ describe("confetti", () => {
             confettiPiece(7, alert, i, t + 1 / 30, cx, cy, banner, area, pixel, b);
             // Per frame at 30 fps, in 1080p pixels, while it shows.
             const move = a.alpha > 0 || b.alpha > 0 ? Math.hypot(b.x - a.x, b.y - a.y) / s : 0;
-            expect(move).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
-            expect(a.alpha).toBeLessThanOrEqual(CONFETTI_PEAK);
-            expect(a.kind).toBeLessThan(CONFETTI_KINDS);
+            fastest = Math.max(fastest, move);
+            brightest = Math.max(brightest, a.alpha);
+            highestKind = Math.max(highestKind, a.kind);
             if (a.alpha > 0) {
               seen++;
             }
             const r = a.half * Math.SQRT2;
             const overSpeaker = a.x + r > area.left && a.x - r < area.right;
-            const low = a.y + r > (overSpeaker ? area.top : third);
-            expect(a.alpha > 0 && low).toBe(false);
+            if (a.alpha > 0 && a.y + r > (overSpeaker ? area.top : third)) {
+              low.push(`alert ${String(alert)} piece ${String(i)} at ${t.toFixed(2)} s`);
+            }
           }
           confettiPiece(7, alert, i, CONFETTI_LIFE_SECONDS + 0.31, cx, cy, banner, area, pixel, a);
-          expect(a.alpha).toBe(0);
+          if (a.alpha !== 0) {
+            lingering.push(`alert ${String(alert)} piece ${String(i)}`);
+          }
         }
       }
+      expect(fastest).toBeLessThanOrEqual(MAX_FEATURE_PX_PER_FRAME);
+      expect(brightest).toBeLessThanOrEqual(CONFETTI_PEAK);
+      expect(highestKind).toBeLessThan(CONFETTI_KINDS);
+      expect(low).toEqual([]);
+      expect(lingering).toEqual([]);
       expect(seen).toBeGreaterThan(1000);
     },
   );
@@ -353,14 +367,16 @@ describe("confetti", () => {
   it("fades in and out rather than popping", () => {
     const area = areaOf(1920, 1080);
     const a: ConfettiPiece = { x: 0, y: 0, half: 0, angle: 0, flip: 1, alpha: 0, kind: 0 };
+    let biggest = 0;
     for (let i = 0; i < 40; i++) {
       let last = 0;
       for (let t = 0; t < 5; t += DT) {
         confettiPiece(3, 0, i, t, 960, 60, 500, area, false, a);
-        expect(Math.abs(a.alpha - last)).toBeLessThan(0.2);
+        biggest = Math.max(biggest, Math.abs(a.alpha - last));
         last = a.alpha;
       }
     }
+    expect(biggest).toBeLessThan(0.2);
   });
 
   it("doesn't spin or tumble in the pixel style", () => {

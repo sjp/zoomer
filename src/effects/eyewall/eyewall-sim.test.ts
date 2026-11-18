@@ -59,12 +59,15 @@ describe("layout", () => {
     layOut(l, seed);
     expect(l.count).toBeGreaterThan(300);
     expect(l.count).toBeLessThan(MAX_EYES);
+    // The narrowest gap between two sockets' edges; negative where they overlap.
+    let tightest = Number.POSITIVE_INFINITY;
     for (let i = 0; i < l.count; i++) {
       for (let j = 0; j < i; j++) {
         const d = Math.hypot(l.x[i] - l.x[j], (l.y[i] - l.y[j]) / SOCKET_ASPECT);
-        expect(d).toBeGreaterThan(l.r[i] + l.r[j]);
+        tightest = Math.min(tightest, d - (l.r[i] + l.r[j]));
       }
     }
+    expect(tightest).toBeGreaterThan(0);
   });
 
   it.each(SEEDS)("is the same every time for a seed (seed %d)", (seed) => {
@@ -127,14 +130,16 @@ describe("layout", () => {
     }
     expect(shown.length).toBeGreaterThan(20);
     let added = 0;
+    const dropped = new Set<number>();
     run(wall, 4, { ...low, density: 0.9 }, () => {
       for (const i of shown) {
-        expect(wall.life[i]).toBe(1);
+        if (wall.life[i] !== 1) {
+          dropped.add(i);
+        }
       }
     });
-    shown.forEach((i, k) => {
-      expect(wall.layout.x[i]).toBe(xs[k]);
-    });
+    expect([...dropped]).toEqual([]);
+    expect(shown.map((i) => wall.layout.x[i])).toEqual(xs);
     for (let i = 0; i < wall.layout.count; i++) {
       added += wall.life[i] === 1 && !shown.includes(i) ? 1 : 0;
     }
@@ -155,6 +160,8 @@ describe("clearing", () => {
       run(wall, 3, p);
       const c = clearingOval(clearing, hw, { cx: 0, cy: 0, rx: 0, ry: 0 });
       let visible = 0;
+      // The least oval distance of any socket's rim: under 1 is inside the oval.
+      let nearest = Number.POSITIVE_INFINITY;
       for (let i = 0; i < wall.layout.count; i++) {
         if (wall.life[i] === 0) {
           continue;
@@ -165,9 +172,10 @@ describe("clearing", () => {
           const a = (k / 64) * 2 * Math.PI;
           const px = x + r * Math.cos(a);
           const py = y + SOCKET_ASPECT * r * Math.sin(a);
-          expect(((px - c.cx) / c.rx) ** 2 + ((py - c.cy) / c.ry) ** 2).toBeGreaterThanOrEqual(1);
+          nearest = Math.min(nearest, ((px - c.cx) / c.rx) ** 2 + ((py - c.cy) / c.ry) ** 2);
         }
       }
+      expect(nearest).toBeGreaterThanOrEqual(1);
       expect(visible).toBeGreaterThan(10);
     },
   );
@@ -187,15 +195,19 @@ describe("gaze", () => {
     const out = { x: 0, y: 0 };
     let lastX = Number.NaN;
     let maxStep = 0;
+    let maxX = 0;
+    let maxY = 0;
     for (let t = 0; t < 600; t += DT) {
       gazeTarget(5, t, hw, out);
-      expect(Math.abs(out.x)).toBeLessThanOrEqual(hw / 3);
-      expect(Math.abs(out.y)).toBeLessThanOrEqual(1 / 6);
+      maxX = Math.max(maxX, Math.abs(out.x));
+      maxY = Math.max(maxY, Math.abs(out.y));
       if (!Number.isNaN(lastX)) {
         maxStep = Math.max(maxStep, Math.abs(out.x - lastX));
       }
       lastX = out.x;
     }
+    expect(maxX).toBeLessThanOrEqual(hw / 3);
+    expect(maxY).toBeLessThanOrEqual(1 / 6);
     // Slow: a couple of pixels a frame at 1080p30 at most, before the eyes' lag.
     expect(maxStep * 1080).toBeLessThan(3);
   });
@@ -380,9 +392,11 @@ describe("events", () => {
     }
     expect(overlaps).toBe(0);
     expect(spans.length).toBeGreaterThan(20);
+    let shortest = Number.POSITIVE_INFINITY;
     for (let k = 1; k < spans.length; k++) {
-      expect(spans[k][0] - spans[k - 1][1]).toBeGreaterThanOrEqual(MIN_EVENT_GAP - DT);
+      shortest = Math.min(shortest, spans[k][0] - spans[k - 1][1]);
     }
+    expect(shortest).toBeGreaterThanOrEqual(MIN_EVENT_GAP - DT);
   });
 
   it("plays all three kinds", () => {
@@ -402,10 +416,12 @@ describe("events", () => {
 
   it("never start at 0", () => {
     const ev = createWall(5).events;
+    const seen = new Set<number>();
     for (let i = 0; i < 30 * 600; i++) {
       advanceEvents(ev, DT, 0);
-      expect(ev.kind).toBe(EVENT_NONE);
+      seen.add(ev.kind);
     }
+    expect([...seen]).toEqual([EVENT_NONE]);
   });
 
   it.each([EVENT_ALL, EVENT_WAVE])(

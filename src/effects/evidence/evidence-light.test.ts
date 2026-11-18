@@ -44,15 +44,19 @@ describe("lightings", () => {
 describe("humLevel", () => {
   it("stays within its depth, under 3 % of the lamp's brightness", () => {
     expect(HUM_DEPTH).toBeLessThan(0.03);
+    let deepest = 0;
     for (let t = 0; t < 120; t += 0.01) {
-      expect(Math.abs(humLevel(t) - 1)).toBeLessThanOrEqual(HUM_DEPTH + 1e-12);
+      deepest = Math.max(deepest, Math.abs(humLevel(t) - 1));
     }
+    expect(deepest).toBeLessThanOrEqual(HUM_DEPTH + 1e-12);
   });
 
   it("changes by under half a percent a frame at 30 fps", () => {
+    let biggest = 0;
     for (let t = 0; t < 60; t += 1 / 30) {
-      expect(Math.abs(humLevel(t + 1 / 30) - humLevel(t))).toBeLessThan(0.005);
+      biggest = Math.max(biggest, Math.abs(humLevel(t + 1 / 30) - humLevel(t)));
     }
+    expect(biggest).toBeLessThan(0.005);
   });
 
   it("treats a non-finite time as zero", () => {
@@ -66,10 +70,12 @@ describe("clippingLift", () => {
     let lifts = 0;
     let was = false;
     const n = 600 * 30;
+    let lowest = Number.POSITIVE_INFINITY;
+    let highest = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < n; i++) {
       const v = clippingLift(i / 30, seed);
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThanOrEqual(1);
+      lowest = Math.min(lowest, v);
+      highest = Math.max(highest, v);
       if (v > 0) {
         lifted++;
       }
@@ -78,15 +84,19 @@ describe("clippingLift", () => {
       }
       was = v > 0.2;
     }
+    expect(lowest).toBeGreaterThanOrEqual(0);
+    expect(highest).toBeLessThanOrEqual(1);
     expect(lifted / n).toBeLessThan(0.3);
     expect(lifts).toBeGreaterThanOrEqual(15);
     expect(lifts).toBeLessThanOrEqual(38);
   });
 
   it("moves smoothly", () => {
+    let biggest = 0;
     for (let t = 0; t < 300; t += 1 / 30) {
-      expect(Math.abs(clippingLift(t + 1 / 30, 1) - clippingLift(t, 1))).toBeLessThan(0.06);
+      biggest = Math.max(biggest, Math.abs(clippingLift(t + 1 / 30, 1) - clippingLift(t, 1)));
     }
+    expect(biggest).toBeLessThan(0.06);
   });
 
   it("rests before the start and for non-finite times", () => {

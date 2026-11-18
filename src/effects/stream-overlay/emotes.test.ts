@@ -111,19 +111,27 @@ describe("emotesOverlay", () => {
     values.emoteRate = 1;
     let seen = 0;
     let lowest = Infinity;
+    // Sprites that aren't an emote, aren't behind the panels, are unseen or overbright,
+    // or sit in the middle third.
+    const wrong: { frame: number; cell: number; x: number; alpha: number; back: number }[] = [];
     for (let i = 0; i < 600; i++) {
       frame();
       for (const [cell, x, y, , , alpha, back] of sprites()) {
         seen++;
         lowest = Math.min(lowest, y);
-        expect(cell).toBeGreaterThanOrEqual(FIRST_CELL);
-        expect(cell).toBeLessThan(FIRST_CELL + EMOTE_IDS.length);
-        expect(back).toBe(1);
-        expect(alpha).toBeGreaterThan(0);
-        expect(alpha).toBeLessThanOrEqual(1);
-        expect(x < layout.edgeLeft.w || x > layout.edgeRight.x).toBe(true);
+        const ok =
+          cell >= FIRST_CELL &&
+          cell < FIRST_CELL + EMOTE_IDS.length &&
+          back === 1 &&
+          alpha > 0 &&
+          alpha <= 1 &&
+          (x < layout.edgeLeft.w || x > layout.edgeRight.x);
+        if (!ok) {
+          wrong.push({ frame: i, cell, x, alpha, back });
+        }
       }
     }
+    expect(wrong).toEqual([]);
     expect(seen).toBeGreaterThan(100);
     // They rise most of the way up.
     expect(lowest).toBeLessThan(0.3 * h);

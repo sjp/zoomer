@@ -29,18 +29,24 @@ describe("createGoal", () => {
     const events = createStreamEvents(5);
     let holds = 0;
     let wasHolding = false;
+    let over = 0;
+    let fullNotHolding = 0;
     for (let t = 0; t < 4 * 3600; t += 0.25) {
       const before = events.follows;
       events.step(0.25, 60, "all");
       goal.add(events.follows - before);
       goal.step(0.25);
-      expect(goal.count).toBeLessThanOrEqual(goal.target);
-      expect(goal.count < goal.target || goal.holding).toBe(true);
+      over = Math.max(over, goal.count - goal.target);
+      if (goal.count >= goal.target && !goal.holding) {
+        fullNotHolding++;
+      }
       if (goal.holding && !wasHolding) {
         holds++;
       }
       wasHolding = goal.holding;
     }
+    expect(over).toBeLessThanOrEqual(0);
+    expect(fullNotHolding).toBe(0);
     expect(holds).toBeGreaterThanOrEqual(3);
   });
 
@@ -77,14 +83,16 @@ describe("createGoal", () => {
     const goal = createGoal();
     goal.configure(0.5, 20);
     let last = 0;
+    let biggestDrop = 0;
     for (let i = 0; i < 2000; i++) {
       if (i % 7 === 0) {
         goal.add(1 + (i % 3));
       }
       goal.step(0.5);
-      expect(goal.target).toBeGreaterThanOrEqual(last);
+      biggestDrop = Math.max(biggestDrop, last - goal.target);
       last = goal.target;
     }
+    expect(biggestDrop).toBeLessThanOrEqual(0);
     expect(last).toBeGreaterThan(20);
   });
 

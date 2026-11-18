@@ -73,9 +73,12 @@ describe("price walk", () => {
     (seed, speed) => {
       const { heads } = run(seed, 600, speed, false);
       const window = Math.round(10 / DT);
+      // The most any window ends below where it started.
+      let worstLoss = 0;
       for (let j = 0; j + window < heads.length; j++) {
-        expect(heads[j + window]).toBeGreaterThanOrEqual(heads[j] - 1e-12);
+        worstLoss = Math.max(worstLoss, heads[j] - heads[j + window]);
       }
+      expect(worstLoss).toBeLessThanOrEqual(1e-12);
     },
   );
 
