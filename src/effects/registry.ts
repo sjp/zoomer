@@ -13,6 +13,7 @@ import { bluescreenMeta } from "./bluescreen/bluescreen.meta";
 import { jazzMeta } from "./jazz/jazz.meta";
 import { bokehMeta } from "./bokeh/bokeh.meta";
 import { bouncingLogoMeta } from "./bouncinglogo/bouncinglogo.meta";
+import { arcadeMeta } from "./arcade/arcade.meta";
 import { bridgeMeta } from "./bridge/bridge.meta";
 import { geocitiesMeta } from "./geocities/geocities.meta";
 import { memphisMeta } from "./memphis/memphis.meta";
@@ -283,6 +284,7 @@ export const effects: readonly EffectEntry[] = [
     load: () => import("./bouncinglogo/bouncinglogo").then((m) => m.bouncingLogo),
   },
   { ...toastersMeta, load: () => import("./toasters/toasters").then((m) => m.toasters) },
+  { ...arcadeMeta, load: () => import("./arcade/arcade").then((m) => m.arcade) },
   { ...pipesMeta, load: () => import("./pipes/pipes").then((m) => m.pipes) },
   { ...mazeMeta, load: () => import("./maze/maze").then((m) => m.maze) },
   { ...marblerunMeta, load: () => import("./marblerun/marblerun").then((m) => m.marblerun) },
