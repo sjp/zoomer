@@ -26,6 +26,7 @@ import { radiostudioMeta } from "./radiostudio/radiostudio.meta";
 import { newsdeskMeta } from "./newsdesk/newsdesk.meta";
 import { talkshowMeta } from "./talkshow/talkshow.meta";
 import { cinemaMeta } from "./cinema/cinema.meta";
+import { hackerdenMeta } from "./hackerden/hackerden.meta";
 import { tradingMeta } from "./trading/trading.meta";
 import { dashboardMeta } from "./dashboard/dashboard.meta";
 import { spreadsheetMeta } from "./spreadsheet/spreadsheet.meta";
@@ -203,6 +204,7 @@ export const effects: readonly EffectEntry[] = [
   { ...newsdeskMeta, load: () => import("./newsdesk/newsdesk").then((m) => m.newsdesk) },
   { ...talkshowMeta, load: () => import("./talkshow/talkshow").then((m) => m.talkshow) },
   { ...cinemaMeta, load: () => import("./cinema/cinema").then((m) => m.cinema) },
+  { ...hackerdenMeta, load: () => import("./hackerden/hackerden").then((m) => m.hackerden) },
   { ...tradingMeta, load: () => import("./trading/trading").then((m) => m.trading) },
   { ...dashboardMeta, load: () => import("./dashboard/dashboard").then((m) => m.dashboard) },
   {
