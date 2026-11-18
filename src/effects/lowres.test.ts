@@ -140,3 +140,18 @@ describe("release", () => {
     expect(fake.errors).toEqual([]);
   });
 });
+
+describe("blit", () => {
+  it("draws into the full size by default, or into a given rect", () => {
+    const { gl } = createFakeGl();
+    const target = createLowResTarget(gl, {
+      composite: "vec4 composite(vec2 uv) { return vec4(uv, 0.0, 1.0); }",
+    });
+    target.resize(800, 600, 4);
+    target.blit();
+    expect(Array.from(gl.getParameter(gl.VIEWPORT) as Int32Array)).toEqual([0, 0, 800, 600]);
+    target.blit(300, 200, 40, 50);
+    expect(Array.from(gl.getParameter(gl.VIEWPORT) as Int32Array)).toEqual([40, 50, 300, 200]);
+    target.dispose();
+  });
+});

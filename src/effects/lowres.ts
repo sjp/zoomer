@@ -115,11 +115,13 @@ interface LowResTarget {
    *
    * The viewport defaults to the full size passed to `resize`. Pass an explicit
    * output size when the target covers only part of the canvas but the
-   * `composite` shader must shade all of it.
+   * `composite` shader must shade all of it, and an origin (`outX`, `outY`, px
+   * from the bottom-left) to draw it into a rect of the framebuffer; `vUv`
+   * spans that rect.
    *
    * A no-op when rendering direct: the image is already on the canvas.
    */
-  blit: (outWidth?: number, outHeight?: number) => void;
+  blit: (outWidth?: number, outHeight?: number, outX?: number, outY?: number) => void;
   /** Low-res size in pixels. */
   readonly width: number;
   readonly height: number;
@@ -303,11 +305,11 @@ function buildLowResTarget(
         rt?.bind();
       }
     },
-    blit(outWidth = fullWidth, outHeight = fullHeight) {
+    blit(outWidth = fullWidth, outHeight = fullHeight, outX = 0, outY = 0) {
       if (direct) {
         return;
       }
-      gl.viewport(0, 0, outWidth, outHeight);
+      gl.viewport(outX, outY, outWidth, outHeight);
       if (premultiplied) {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
