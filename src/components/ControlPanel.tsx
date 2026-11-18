@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { AnyParamValues, EffectMeta, ParamValue } from "../effects/types";
 import type { FrameStats } from "./EffectCanvas";
+import { useExternalStore } from "../hooks/useExternalStore";
 import { FRAME_RATES, type FrameRate } from "../lib/frameRate";
 import { RESOLUTIONS, type Resolution } from "../lib/resolution";
 import type { Store } from "../lib/store";
@@ -556,7 +557,7 @@ function FpsMeter({
   stats: Store<FrameStats | undefined>;
   target: number | undefined;
 }) {
-  const current = useSyncExternalStore(stats.subscribe, stats.get);
+  const current = useExternalStore(stats.subscribe, stats.get);
   if (!current) {
     return null;
   }

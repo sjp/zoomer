@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { EffectCanvas, type FrameStats } from "./components/EffectCanvas";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
@@ -9,6 +9,7 @@ import { defaultEffect, effectLoader, effects, getEffect } from "./effects/regis
 import type { AnyParamValues, EffectCategory, EffectDefinition, ParamValue } from "./effects/types";
 import { useIdle } from "./hooks/useIdle";
 import { useKeyboardInset } from "./hooks/useKeyboardInset";
+import { useExternalStore } from "./hooks/useExternalStore";
 import { useCanHover, usePanelLayout } from "./hooks/useMediaQuery";
 import { useTouchInput } from "./hooks/useTouchInput";
 import { copyText } from "./lib/clipboard";
@@ -107,7 +108,7 @@ export function App() {
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<ReadonlySet<EffectCategory>>(() => new Set());
   const [favouritesStore] = useState(() => createFavourites());
-  const favourites = useSyncExternalStore(favouritesStore.subscribe, favouritesStore.get);
+  const favourites = useExternalStore(favouritesStore.subscribe, favouritesStore.get);
   const listOptions = useMemo(
     () => ({ sort, query, categories, favourites }),
     [sort, query, categories, favourites],

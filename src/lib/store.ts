@@ -1,5 +1,5 @@
 /**
- * A minimal observable value for `useSyncExternalStore`. Lets a fast-changing value
+ * A minimal observable value for `useExternalStore`. Lets a fast-changing value
  * (like frame stats) re-render only the component that shows it, not the whole tree.
  */
 export interface Store<T> {
